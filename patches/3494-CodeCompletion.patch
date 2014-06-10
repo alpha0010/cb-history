@@ -1,0 +1,261 @@
+Index: src/plugins/codecompletion/parser/tokentree.cpp
+===================================================================
+--- src/plugins/codecompletion/parser/tokentree.cpp	(revision 9443)
++++ src/plugins/codecompletion/parser/tokentree.cpp	(working copy)
+@@ -115,7 +115,7 @@
+     if (!newToken)
+         return -1;
+ 
+-    return AddToken(newToken, -1);
++    return AddToken(newToken, -1); // -1 means we add a new slot to the Token list (vector)
+ }
+ 
+ int TokenTree::insert(int loc, Token* newToken)
+@@ -332,7 +332,33 @@
+     return result.size();
+ }
+ 
+-int TokenTree::AddToken(Token* newToken, int fileIdx)
++void TokenTree::RenameToken(Token* token, const wxString& newName)
++{
++    if (!token)
++        return;
++    // remove the old token index from the TokenIdxSet mapped by old name.
++    int slotNo = m_Tree.GetItemNo(token->m_Name);
++    if (slotNo)
++    {
++        TokenIdxSet& curList = m_Tree.GetItemAtPos(slotNo);
++    // Note: As we have no way to actually delete keys in the TokenSearchTree,
++    // the previous name index path of the token will still exist, as well as its TokenIdxSet slot,
++    // but this slot will be empty and as result will lead to nothing.
++    // This is the same thing the RemoveToken procedure does.
++        curList.erase(token->m_Index);
++    };
++    token->m_Name = newName;
++
++    static TokenIdxSet tmpTokens = TokenIdxSet();
++
++    size_t tokenIdx = m_Tree.AddItem(newName, tmpTokens);
++    TokenIdxSet& curList = m_Tree.GetItemAtPos(tokenIdx);
++
++    // add the old token index to the TokenIdxSet mapped by new name, note Token index is not changed
++    curList.insert(token->m_Index);
++}
++
++int TokenTree::AddToken(Token* newToken, int forceIdx)
+ {
+     if (!newToken)
+         return -1;
+@@ -345,10 +371,10 @@
+     size_t tokenIdx = m_Tree.AddItem(name, tmpTokens);
+     TokenIdxSet& curList = m_Tree.GetItemAtPos(tokenIdx);
+ 
+-    int newItem = AddTokenToList(newToken, fileIdx);
++    int newItem = AddTokenToList(newToken, forceIdx);
+     curList.insert(newItem);
+ 
+-    size_t fIdx = (fileIdx<0) ? newToken->m_FileIdx : (size_t)fileIdx;
++    size_t fIdx = newToken->m_FileIdx;
+     m_FileMap[fIdx].insert(newItem);
+ 
+     // Add Token (if applicable) to the namespaces indexes
+@@ -464,7 +490,11 @@
+ 
+     int result = -1;
+ 
+-    if (forceidx >= 0) // Reading from cache?
++    // if the token index is specified, then just replace the specified slot to the newToken, this
++    // usually happens we construct the whole TokenTree from cache.
++    // other wise, we just append one to the vector or reused free slots stored in m_FreeTokens
++    // so, it is normal cases in any parsing stages.
++    if (forceidx >= 0)
+     {
+         if ((size_t)forceidx >= m_Tokens.size())
+         {
+@@ -474,7 +504,7 @@
+         m_Tokens[forceidx] = newToken;
+         result = forceidx;
+     }
+-    else // For real-time parsing
++    else
+     {
+         if (m_FreeTokens.size())
+         {
+Index: src/plugins/codecompletion/parser/parserthread.cpp
+===================================================================
+--- src/plugins/codecompletion/parser/parserthread.cpp	(revision 9443)
++++ src/plugins/codecompletion/parser/parserthread.cpp	(working copy)
+@@ -139,6 +139,7 @@
+     const wxString kw__C_          (_T("\"C\""));
+     const wxString kw_for          (_T("for"));
+     // length: 4
++    const wxString kw___at         (_T("__at"));
+     const wxString kw_else         (_T("else"));
+     const wxString kw_enum         (_T("enum"));
+     const wxString kw_elif         (_T("elif"));
+@@ -727,6 +728,10 @@
+                 m_Str.Clear();
+                 SkipToOneOfChars(ParserConsts::colon, true, true);
+             }
++            else if (token == ParserConsts::kw___at)
++            {
++                m_Tokenizer.GetToken(); // skip arguments
++            }
+             else
+                 switchHandled = false;
+             break;
+@@ -1859,6 +1864,8 @@
+             newToken->m_ImplLine = lineNr;
+             newToken->m_ImplLineStart = m_Tokenizer.GetLineNumber();
+ 
++            newToken->m_IsUnnamed = true;
++
+             DoParse(); // recursion
+ 
+             m_LastParent     = lastParent;
+@@ -2380,7 +2387,10 @@
+         }
+ 
+         if (!newEnum) // either named or first unnamed enum
++            {
+             newEnum = DoAddToken(tkEnum, token, lineNr);
++            newEnum->m_IsUnnamed = true;
++            };
+         level = m_Tokenizer.GetNestingLevel();
+         m_Tokenizer.GetToken(); // skip {
+     }
+@@ -2762,6 +2772,10 @@
+                   token.wx_str(), m_Str.wx_str(),
+                   (m_LastParent ? m_LastParent->m_Name.wx_str() : _T("<no-parent>")));
+ 
++            // Detects anonymous ancestor and gives him a name based on the first found alias.
++            if (m_Str.StartsWith(g_UnnamedSymbol))
++                RefineUnnamedTypeToken(tkUndefined, token);
++
+             Token* newToken = DoAddToken(tkVariable, token, m_Tokenizer.GetLineNumber());
+             if (!newToken)
+             {
+@@ -2812,8 +2826,14 @@
+                   (m_LastParent ? m_LastParent->m_Name.wx_str() : _T("<no-parent>")));
+ 
+             m_Str.clear();
+-            wxString tempAncestor = ancestor;
+-            m_Str = tempAncestor;
++            m_Str = ancestor;
++
++            // Detects anonymous ancestor and gives him a name based on the first found alias.
++            if (m_Str.StartsWith(g_UnnamedSymbol))
++            {
++                RefineUnnamedTypeToken(tkTypedef | tkClass, token);
++                ancestor = m_Str;
++            }
+ 
+             Token* newToken = DoAddToken(tkTypedef, token, m_Tokenizer.GetLineNumber());
+             if (!newToken)
+@@ -2822,7 +2842,7 @@
+                 break;
+             }
+             else
+-                newToken->m_AncestorsString = tempAncestor;
++                newToken->m_AncestorsString = ancestor;
+         }
+         else // unexpected
+         {
+@@ -3298,3 +3318,23 @@
+     }
+     return alive;
+ }
++
++void  ParserThread::RefineUnnamedTypeToken(short int type, wxString alias)
++{
++    // we expect the m_Str are storing the unnamed type token, like UnnamedClassXX_XXX
++    // now, we are going to rename its name to class_YYY, YYY is the alias name
++    Token* unnamedAncestor = TokenExists(m_Str, m_LastParent, type);
++    if (unnamedAncestor && unnamedAncestor->m_IsUnnamed) // Unnamed ancestor found - rename it to something useful.
++    {
++        if (m_Str.Contains(_T("Union")))
++            m_Str = _T("union");
++        else if (m_Str.Contains(_T("Struct")))
++            m_Str = _T("struct");
++        else
++            m_Str = _T("tag");
++        m_Str << m_FileIdx << _T("_") << m_StructUnionUnnamedCount << _T("_") << alias;
++
++        m_TokenTree->RenameToken(unnamedAncestor, m_Str);
++    }
++}
++
+Index: src/plugins/codecompletion/parser/tokentree.h
+===================================================================
+--- src/plugins/codecompletion/parser/tokentree.h	(revision 9443)
++++ src/plugins/codecompletion/parser/tokentree.h	(working copy)
+@@ -55,6 +55,7 @@
+ 
+     // Token specific functions
+     void   RecalcFreeList();
++    void   RenameToken(Token* token, const wxString& newName);
+ 
+     // This will convert the Token's ancestor string to it's IDs
+     void   RecalcInheritanceChain(Token* token);
+@@ -110,12 +111,21 @@
+ protected:
+     Token*        GetTokenAt(int idx);
+     Token const * GetTokenAt(int idx) const;
+-    int           AddToken(Token* newToken, int fileIdx);
++    int           AddToken(Token* newToken, int forceidx = -1);
+ 
+     void          RemoveToken(int idx);
+     void          RemoveToken(Token* oldToken);
+ 
+-    int           AddTokenToList(Token* newToken, int forceidx);
++    /** add the Token pointer to the vector<Token*>, mostly the default value forceidx = -1 is used
++     *  which add a new slot in the vector or reused an empty slot. if forceidx >= 0, this means
++     *  we need to replace the value in the specified slot index, the later case only happens we are
++     *  re-construct the Tokentree from the cache.
++     *  @ret always return the used slot index in the vector.
++     */
++    int           AddTokenToList(Token* newToken, int forceidx = -1);
++    /** Remove the Token specified by the idx in the vector<Token*>, note the Token instance is
++     *  destroyed, and the slot becomes empty. The empty slot was recored and will be re-used later.
++     */
+     void          RemoveTokenFromList(int idx);
+ 
+     void RecalcFullInheritance(int parentIdx, TokenIdxSet& result); // called by RecalcData
+Index: src/plugins/codecompletion/parser/parserthread.h
+===================================================================
+--- src/plugins/codecompletion/parser/parserthread.h	(revision 9443)
++++ src/plugins/codecompletion/parser/parserthread.h	(working copy)
+@@ -342,6 +342,9 @@
+     /** Only for debug */
+     bool IsStillAlive(const wxString& funcInfo);
+ 
++    /** change a unnamed token'name to a human readable name */
++    void  RefineUnnamedTypeToken(short int type, wxString alias);
++
+     /** if we regard the parserThread class as a syntax analyzer, then the Tokenizer class is
+       * regard as the lexer, which always feeds a wxString by calling m_Tokenizer.GetToken()
+       */
+Index: src/plugins/codecompletion/parser/token.cpp
+===================================================================
+--- src/plugins/codecompletion/parser/token.cpp	(revision 9443)
++++ src/plugins/codecompletion/parser/token.cpp	(working copy)
+@@ -58,6 +58,7 @@
+     m_IsOperator(false),
+     m_IsLocal(false),
+     m_IsTemp(false),
++    m_IsUnnamed(false),
+     m_Index(-1),
+     m_ParentIndex(-1),
+     m_UserData(0),
+Index: src/plugins/codecompletion/parser/token.h
+===================================================================
+--- src/plugins/codecompletion/parser/token.h	(revision 9443)
++++ src/plugins/codecompletion/parser/token.h	(working copy)
+@@ -97,6 +97,7 @@
+     bool                         m_IsLocal;       // found in a local source file, otherwise in wxString
+     bool                         m_IsTemp;        // local (automatic) variable
+     bool                         m_IsConst;       // the member method is const (yes/no)
++    bool                         m_IsUnnamed;     // Is anonymous token? (e.g. unnamed struct or union)
+ 
+     int                          m_Index;         // current Token index in the tree
+     int                          m_ParentIndex;   // Parent Token index

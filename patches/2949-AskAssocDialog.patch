@@ -1,0 +1,91 @@
+Index: src/src/app.cpp
+===================================================================
+--- src/src/app.cpp	(revision 6187)
++++ src/src/app.cpp	(working copy)
+@@ -343,15 +343,15 @@
+ 
+             switch(dlg.ShowModal())
+             {
+-            case 0:
++            case ASC_ASSOC_DLG_NO_DONT_ASK:
+                 Manager::Get()->GetConfigManager(_T("app"))->Write(_T("/environment/check_associations"), false);
+                 break;
+-            case 1:
++            case ASC_ASSOC_DLG_NO_ONLY_NOW:
+                 break;
+-            case 2:
++            case ASC_ASSOC_DLG_YES_C_FILES:
+                 Associations::SetCore();
+                 break;
+-            case 3:
++            case ASC_ASSOC_DLG_YES_ALL_FILES:
+                 Associations::SetAll();
+                 break;
+             };
+Index: src/src/associations.cpp
+===================================================================
+--- src/src/associations.cpp	(revision 6187)
++++ src/src/associations.cpp	(working copy)
+@@ -372,6 +372,8 @@
+ 
+ BEGIN_EVENT_TABLE(AskAssocDialog, wxScrollingDialog)
+     EVT_BUTTON(XRCID("wxID_OK"), AskAssocDialog::OnOK)
++    EVT_BUTTON(wxID_CANCEL, AskAssocDialog::OnESC)
++    EVT_CHAR_HOOK(AskAssocDialog::OnCharHook)
+ END_EVENT_TABLE()
+ 
+ 
+@@ -379,9 +381,29 @@
+ AskAssocDialog::AskAssocDialog(wxWindow* parent)
+ {
+     wxXmlResource::Get()->LoadObject(this, parent, _T("askAssoc"),_T("wxScrollingDialog"));
++    SetEscapeId(wxID_NONE);
+ }
+ 
+ void AskAssocDialog::OnOK(wxCommandEvent& event)
+ {
+     EndModal(XRCCTRL(*this, "choice", wxRadioBox)->GetSelection());
+ }
++
++void AskAssocDialog::OnESC(wxCommandEvent& event)
++{
++    EndModal(ASC_ASSOC_DLG_NO_ONLY_NOW);
++}
++
++void AskAssocDialog::OnCharHook(wxKeyEvent& event)
++{
++    if ( event.GetKeyCode() == WXK_ESCAPE )
++    {
++        Close(); //wxDialog::Close() send button event with id wxID_CANCEL (wxWidgets 2.8)
++    }
++    else if( event.GetKeyCode() == WXK_RETURN )
++    {
++        EndModal(XRCCTRL(*this, "choice", wxRadioBox)->GetSelection());
++    }
++
++    event.Skip();
++}
+Index: src/src/associations.h
+===================================================================
+--- src/src/associations.h	(revision 6187)
++++ src/src/associations.h	(working copy)
+@@ -65,12 +65,19 @@
+         DECLARE_EVENT_TABLE()
+ };
+ 
++#define ASC_ASSOC_DLG_NO_DONT_ASK       0
++#define ASC_ASSOC_DLG_NO_ONLY_NOW       1
++#define ASC_ASSOC_DLG_YES_C_FILES       2
++#define ASC_ASSOC_DLG_YES_ALL_FILES     3
++
+ class AskAssocDialog : public wxScrollingDialog
+ {
+     public:
+         AskAssocDialog(wxWindow* parent);
+     protected:
+         void OnOK(wxCommandEvent& event);
++        void OnESC(wxCommandEvent& event);
++        void OnCharHook(wxKeyEvent& event);
+     private:
+         DECLARE_EVENT_TABLE()
+ };

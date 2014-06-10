@@ -1,0 +1,170 @@
+Index: src/CodeBlocks.cbp
+===================================================================
+--- src/CodeBlocks.cbp	(revision 3645)
++++ src/CodeBlocks.cbp	(working copy)
+@@ -1246,6 +1246,12 @@
+ 		<Unit filename="plugins\compilergcc\compilerOW.h">
+ 			<Option target="Compiler" />
+ 		</Unit>
++		<Unit filename="plugins\compilergcc\compilerOWgenerator.cpp">
++			<Option target="Compiler" />
++		</Unit>
++		<Unit filename="plugins\compilergcc\compilerOWgenerator.h">
++			<Option target="Compiler" />
++		</Unit>
+ 		<Unit filename="plugins\compilergcc\compilerSDCC.cpp">
+ 			<Option target="Compiler" />
+ 		</Unit>
+Index: src/plugins/compilergcc/compilerOW.cpp
+===================================================================
+--- src/plugins/compilergcc/compilerOW.cpp	(revision 3645)
++++ src/plugins/compilergcc/compilerOW.cpp	(working copy)
+@@ -15,6 +15,7 @@
+ 
+ #include <messagemanager.h>
+ #include <manager.h>
++#include "compilerOWgenerator.h"
+ 
+ #include <wx/utils.h>
+ #include <wx/filefn.h>
+@@ -37,6 +38,11 @@
+     return c;
+ }
+ 
++CompilerCommandGenerator* CompilerOW::GetCommandGenerator()
++{
++    return new CompilerOWGenerator;
++}
++
+ void CompilerOW::Reset()
+ {
+     /*
+@@ -49,10 +55,10 @@
+ 	m_Programs.LD               = wxT("wcl386.exe");
+ 	m_Programs.LIB              = wxT("wlib.exe");
+ 	m_Programs.WINDRES          = wxT("wrc.exe");
+-	m_Programs.MAKE             = wxT("mingw32-make.exe");
++	m_Programs.MAKE             = wxT("wmake.exe");
+ 
+ 	m_Switches.includeDirs      = wxT("-i");
+-	m_Switches.libDirs          = wxT("-L");
++	m_Switches.libDirs          = wxT("/\"LIBP ");
+ 	m_Switches.linkLibs         = wxT("");
+ 	m_Switches.libPrefix        = wxT("");
+ 	m_Switches.libExtension     = wxT("lib");
+@@ -338,7 +344,7 @@
+ void CompilerOW::LoadDefaultRegExArray()
+ {
+     m_RegExes.Clear();
+-    m_RegExes.Add(RegExStruct(_("Note"), cltError, wxT("(") + FilePathWithSpaces + _T(")\\(([0-9]+)\\): Note! (.+)"), 3, 1, 2));
++    m_RegExes.Add(RegExStruct(_("Note"), cltWarning, wxT("(") + FilePathWithSpaces + _T(")\\(([0-9]+)\\): Note! (.+)"), 3, 1, 2));
+     m_RegExes.Add(RegExStruct(_("Compiler error"), cltError, wxT("(") + FilePathWithSpaces + _T(")\\(([0-9]+)\\): Error! (.+)"), 3, 1, 2));
+     m_RegExes.Add(RegExStruct(_("Compiler warning"), cltWarning, wxT("(") + FilePathWithSpaces + _T(")\\(([0-9]+)\\): Warning! (.+)"), 3, 1, 2));
+ }
+@@ -347,11 +353,13 @@
+ {
+ #ifdef __WXMSW__
+     wxLogNull ln;
+-    wxRegKey key; // defaults to HKCR
++    /* Following code is Not necessary as OpenWatcom does not write to
++       Registry anymore */
++    /*wxRegKey key; // defaults to HKCR
+     key.SetName(wxT("HKEY_LOCAL_MACHINE\\Software\\Open Watcom\\c_1.0"));
+     if (key.Open())
+         // found; read it
+-        key.QueryValue(wxT("Install Location"), m_MasterPath);
++        key.QueryValue(wxT("Install Location"), m_MasterPath);*/
+ 
+     if (m_MasterPath.IsEmpty())
+         // just a guess; the default installation dir
+@@ -361,6 +369,10 @@
+     {
+         AddIncludeDir(m_MasterPath + wxFILE_SEP_PATH + wxT("h"));
+         AddIncludeDir(m_MasterPath + wxFILE_SEP_PATH + wxT("h") + wxFILE_SEP_PATH + wxT("nt"));
++        AddLibDir(m_MasterPath + wxFILE_SEP_PATH + wxT("lib386"));
++        AddLibDir(m_MasterPath + wxFILE_SEP_PATH + wxT("lib386") + wxFILE_SEP_PATH + wxT("nt"));
++        AddResourceIncludeDir(m_MasterPath + wxFILE_SEP_PATH + wxT("h"));
++        AddResourceIncludeDir(m_MasterPath + wxFILE_SEP_PATH + wxT("h") + wxFILE_SEP_PATH + wxT("nt"));
+         m_ExtraPaths.Add(m_MasterPath + wxFILE_SEP_PATH + wxT("binnt"));
+         m_ExtraPaths.Add(m_MasterPath + wxFILE_SEP_PATH + wxT("binw"));
+     }
+Index: src/plugins/compilergcc/compilerOW.h
+===================================================================
+--- src/plugins/compilergcc/compilerOW.h	(revision 3645)
++++ src/plugins/compilergcc/compilerOW.h	(working copy)
+@@ -17,6 +17,7 @@
+ 
+         virtual void LoadSettings(const wxString& baseKey);
+ 		virtual void SetMasterPath(const wxString& path);
++		virtual CompilerCommandGenerator* GetCommandGenerator();
+ 	protected:
+         Compiler * CreateCopy();
+ 	private:
+Index: src/plugins/compilergcc/compilerOWgenerator.cpp
+===================================================================
+--- src/plugins/compilergcc/compilerOWgenerator.cpp	(revision 0)
++++ src/plugins/compilergcc/compilerOWgenerator.cpp	(revision 0)
+@@ -0,0 +1,34 @@
++#ifdef __WXMSW__
++
++#include <sdk.h>
++#include "compilerOWgenerator.h"
++
++
++CompilerOWGenerator::CompilerOWGenerator()
++{
++    //ctor
++}
++
++CompilerOWGenerator::~CompilerOWGenerator()
++{
++    //dtor
++}
++
++wxString CompilerOWGenerator::SetupLibrariesDirs(Compiler* compiler, ProjectBuildTarget* target)
++{
++    wxArrayString LibDirs = compiler->GetLibDirs();
++    if (LibDirs.IsEmpty())
++        return wxEmptyString;
++    int i, Count = LibDirs.GetCount();
++    wxString Result = _T("");
++    for (i = 0; i < Count; ++i)
++        Result = Result + compiler->GetSwitches().libDirs + LibDirs[i] + _T("\" ");
++    //Now Read all the targets
++    LibDirs = target->GetLibDirs();
++    Count = LibDirs.GetCount();
++    for (i = 0; i < Count; ++i)
++        Result = Result + compiler->GetSwitches().libDirs + LibDirs[i] + _T("\" ");
++    return Result;
++}
++
++#endif // __WXMSW__
+Index: src/plugins/compilergcc/compilerOWgenerator.h
+===================================================================
+--- src/plugins/compilergcc/compilerOWgenerator.h	(revision 0)
++++ src/plugins/compilergcc/compilerOWgenerator.h	(revision 0)
+@@ -0,0 +1,24 @@
++#ifdef __WXMSW__ // For Windows Only
++
++#ifndef COMPILEROWGENERATOR_H
++#define COMPILEROWGENERATOR_H
++
++#include <compilercommandgenerator.h>
++
++//Overriden to fix OpenWatcom Linking Problem (@Biplab)
++
++class CompilerOWGenerator : public CompilerCommandGenerator
++{
++    public:
++        CompilerOWGenerator();
++        virtual ~CompilerOWGenerator();
++        virtual wxString SetupLibrariesDirs(Compiler* compiler, ProjectBuildTarget* target);
++    protected:
++    private:
++};
++
++
++
++#endif // COMPILEROWGENERATOR_H
++
++#endif // __WXMSW__

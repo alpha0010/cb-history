@@ -1,0 +1,79 @@
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(revision 2546)
++++ src/src/main.cpp	(working copy)
+@@ -107,6 +107,7 @@
+ int idFileSaveAllFiles = XRCID("idFileSaveAllFiles");
+ int idFileSaveProject = XRCID("idFileSaveProject");
+ int idFileSaveProjectAs = XRCID("idFileSaveProjectAs");
++int idFileOpenDefWorkspace = XRCID("idFileOpenDefWorkspace");
+ int idFileSaveWorkspace = XRCID("idFileSaveWorkspace");
+ int idFileSaveWorkspaceAs = XRCID("idFileSaveWorkspaceAs");
+ int idFileCloseWorkspace = XRCID("idFileCloseWorkspace");
+@@ -220,6 +222,7 @@
+     EVT_UPDATE_UI(idFileSave, MainFrame::OnFileMenuUpdateUI)
+     EVT_UPDATE_UI(idFileSaveAs, MainFrame::OnFileMenuUpdateUI)
+     EVT_UPDATE_UI(idFileSaveAllFiles, MainFrame::OnFileMenuUpdateUI)
++    EVT_UPDATE_UI(idFileOpenDefWorkspace, MainFrame::OnFileMenuUpdateUI)
+     EVT_UPDATE_UI(idFileSaveWorkspace, MainFrame::OnFileMenuUpdateUI)
+     EVT_UPDATE_UI(idFileSaveWorkspaceAs, MainFrame::OnFileMenuUpdateUI)
+     EVT_UPDATE_UI(idFileCloseWorkspace, MainFrame::OnFileMenuUpdateUI)
+@@ -289,6 +293,7 @@
+     EVT_MENU(idFileSaveAllFiles,  MainFrame::OnFileSaveAllFiles)
+     EVT_MENU(idFileSaveProject,  MainFrame::OnProjectSaveProject)
+     EVT_MENU(idFileSaveProjectAs,  MainFrame::OnProjectSaveProjectAs)
++    EVT_MENU(idFileOpenDefWorkspace,  MainFrame::OnFileOpenDefWorkspace)
+     EVT_MENU(idFileSaveWorkspace,  MainFrame::OnFileSaveWorkspace)
+     EVT_MENU(idFileSaveWorkspaceAs,  MainFrame::OnFileSaveWorkspaceAs)
+     EVT_MENU(idFileCloseWorkspace,  MainFrame::OnFileCloseWorkspace)
+@@ -1878,6 +1889,15 @@
+     DoUpdateStatusBar();
+ }
+ 
++void MainFrame::OnFileOpenDefWorkspace(wxCommandEvent& event)
++{
++    ProjectManager *pman = Manager::Get()->GetProjectManager();
++    if (pman->GetWorkspace() 
++     && pman->GetWorkspace()->IsDefault() == false
++     && pman->LoadWorkspace())
++        AddToRecentProjectsHistory(pman->GetWorkspace()->GetFilename());
++}
++
+ void MainFrame::OnFileSaveWorkspace(wxCommandEvent& event)
+ {
+     if (Manager::Get()->GetProjectManager()->SaveWorkspace())
+@@ -2658,6 +2678,7 @@
+     mbar->Enable(idFileSaveAllFiles, ed);
+     mbar->Enable(idFileSaveProject, prj && prj->GetModified() && canCloseProject);
+     mbar->Enable(idFileSaveProjectAs, prj && canCloseProject);
++    mbar->Enable(idFileOpenDefWorkspace, !(Manager::Get()->GetProjectManager()->GetWorkspace()->IsDefault()) && canCloseProject);
+     mbar->Enable(idFileSaveWorkspace, Manager::Get()->GetProjectManager() && canCloseProject);
+     mbar->Enable(idFileSaveWorkspaceAs, Manager::Get()->GetProjectManager() && canCloseProject);
+     mbar->Enable(idFileCloseWorkspace, Manager::Get()->GetProjectManager() && canCloseProject);
+Index: src/src/main.h
+===================================================================
+--- src/src/main.h	(revision 2546)
++++ src/src/main.h	(working copy)
+@@ -54,6 +54,7 @@
+         void OnFileSave(wxCommandEvent& event);
+         void OnFileSaveAs(wxCommandEvent& event);
+         void OnFileSaveAllFiles(wxCommandEvent& event);
++        void OnFileOpenDefWorkspace(wxCommandEvent& event);
+         void OnFileSaveWorkspace(wxCommandEvent& event);
+         void OnFileSaveWorkspaceAs(wxCommandEvent& event);
+         void OnFileCloseWorkspace(wxCommandEvent& event);
+Index: src/src/resources/main_menu.xrc
+===================================================================
+--- src/src/resources/main_menu.xrc	(revision 2546)
++++ src/src/resources/main_menu.xrc	(working copy)
+@@ -67,6 +67,10 @@
+         <help>Save active project under a different name</help>
+       </object>
+       <object class="separator"/>
++      <object class="wxMenuItem" name="idFileOpenDefWorkspace">
++        <label>Open default workspace</label>
++        <help>Open the default workspace</help>
++      </object>
+       <object class="wxMenuItem" name="idFileSaveWorkspace">
+         <label>Save &amp;workspace</label>
+         <help>Save current workspace</help>

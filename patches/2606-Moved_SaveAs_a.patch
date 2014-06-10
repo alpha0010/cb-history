@@ -1,0 +1,127 @@
+Index: include/cbeditor.h
+===================================================================
+--- include/cbeditor.h	(revision 5332)
++++ include/cbeditor.h	(working copy)
+@@ -274,6 +274,9 @@
+         bool CanPaste() const;
+         bool IsReadOnly() const;
+ 
++        bool CanSelectAll() const;
++        void SelectAll();
++
+         // Workaround for shift-tab bug in wx2.4.2
+         void DoIndent(); /// Indents current line/block
+         void DoUnIndent(); /// UnIndents current line/block
+Index: include/editorbase.h
+===================================================================
+--- include/editorbase.h	(revision 5332)
++++ include/editorbase.h	(working copy)
+@@ -111,6 +111,13 @@
+           * @return True on success, false otherwise. */
+         virtual bool Save() { return true; }
+ 
++        /** @brief Save editor contents under a different filename.
++          *
++          * Save editor contents under a different filename.
++          * The default implementation does nothing and returns true.
++          * @return True on success, false otherwise. */
++        virtual bool SaveAs() { return true; }
++
+         /** @brief Is this a built-in editor?
+           *
+           * Query if this is a built-in editor (a.k.a cbEditor).
+@@ -247,6 +254,13 @@
+           * @return True if the editor is read-only, false if not.
+           */
+         virtual bool IsReadOnly() const { return false; }
++
++        /** Can the editor select everything?
++          *
++          * @return True if the editor can select all content, false if not.
++          */
++        virtual bool CanSelectAll() const { return false; }
++        virtual void SelectAll(){return;}
+     protected:
+         /** Initializes filename data.
+           * @param filename The editor's filename for initialization.
+Index: sdk/cbeditor.cpp
+===================================================================
+--- sdk/cbeditor.cpp	(revision 5332)
++++ sdk/cbeditor.cpp	(working copy)
+@@ -2814,3 +2814,13 @@
+         EditorHooks::CallHooks(this, event);
+     }
+ }
++
++bool cbEditor::CanSelectAll() const
++{
++    return GetControl()->GetLength() > 0;
++}
++
++void cbEditor::SelectAll()
++{
++    GetControl()->SelectAll();
++}
+Index: sdk/editormanager.cpp
+===================================================================
+--- sdk/editormanager.cpp	(revision 5332)
++++ sdk/editormanager.cpp	(working copy)
+@@ -786,7 +786,7 @@
+ 
+ bool EditorManager::SaveAs(int index)
+ {
+-    cbEditor* ed = GetBuiltinEditor(GetEditor(index));
++    EditorBase* ed = InternalGetEditorBase(index);
+     if(!ed)
+         return false;
+     return ed->SaveAs();
+@@ -794,7 +794,7 @@
+ 
+ bool EditorManager::SaveActiveAs()
+ {
+-    cbEditor* ed = GetBuiltinEditor(GetActiveEditor());
++    EditorBase* ed = GetActiveEditor();
+     if (ed)
+     {
+         return ed->SaveAs();
+Index: src/main.cpp
+===================================================================
+--- src/main.cpp	(revision 5332)
++++ src/main.cpp	(working copy)
+@@ -2912,9 +2912,9 @@
+ 
+ void MainFrame::OnEditSelectAll(wxCommandEvent& event)
+ {
+-    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
++    EditorBase* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
+     if (ed)
+-        ed->GetControl()->SelectAll();
++        ed->SelectAll();
+ }
+ 
+ CommentToken GetCommentToken(cbStyledTextCtrl* stc)
+@@ -3733,6 +3733,7 @@
+     bool canRedo = false;
+     bool canPaste = false;
+     bool canCut = false;
++    bool canSelAll = false;
+     int eolMode = -1;
+ 
+     if(Manager::Get()->GetEditorManager() && !Manager::isappShuttingDown())
+@@ -3752,6 +3753,7 @@
+         hasSel = eb->HasSelection();
+         canPaste = eb->CanPaste();
+         canCut = !eb->IsReadOnly() && hasSel;
++        canSelAll = eb->CanSelectAll();
+     }
+ 
+     mbar->Enable(idEditUndo, canUndo);
+@@ -3762,7 +3764,7 @@
+     mbar->Enable(idEditSwapHeaderSource, ed);
+     mbar->Enable(idEditGotoMatchingBrace, ed);
+     mbar->Enable(idEditHighlightMode, ed);
+-    mbar->Enable(idEditSelectAll, ed);
++    mbar->Enable(idEditSelectAll, canSelAll);
+     mbar->Enable(idEditBookmarks, ed);
+     mbar->Enable(idEditFolding, ed);
+     mbar->Enable(idEditEOLMode, ed);

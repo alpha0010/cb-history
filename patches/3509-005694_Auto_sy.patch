@@ -1,0 +1,62 @@
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp   (revision 9363)
++++ src/sdk/editormanager.cpp   (working copy)
+@@ -1195,6 +1195,20 @@
+     CodeBlocksEvent evt2(cbEVT_EDITOR_ACTIVATED, -1, 0, eb);
+     Manager::Get()->GetPluginManager()->NotifyPlugins(evt2);
+ 
++   ConfigManager* cfgEditor = Manager::Get()->GetConfigManager(_T("editor"));
++    if (cfgEditor->ReadBool(_T("/sync_editor_with_project_manager"), false))
++   {
++       cbEditor* ed = GetBuiltinActiveEditor();
++       if (ed)
++       {
++           ProjectFile* pf = ed->GetProjectFile();
++           if (pf)
++           {
++               Manager::Get()->GetProjectManager()->GetUI().ShowFileInTree(*pf);
++           }
++       }
++   }
++
+     if (Manager::Get()->GetConfigManager(_T("app"))->ReadBool(_T("/environment/tabs_stacked_based_switching")))
+     {
+         wxWindow*        wnd;
+Index: src/src/editorconfigurationdlg.cpp
+===================================================================
+--- src/src/editorconfigurationdlg.cpp  (revision 9363)
++++ src/src/editorconfigurationdlg.cpp  (working copy)
+@@ -138,6 +138,7 @@
+     XRCCTRL(*this, "chkCamelCase",                wxCheckBox)->SetValue(cfg->ReadBool(_T("/camel_case"),                 false));
+     XRCCTRL(*this, "chkResetZoom",                wxCheckBox)->SetValue(cfg->ReadBool(_T("/reset_zoom"),                 false));
+     XRCCTRL(*this, "chkZoomAll",                  wxCheckBox)->SetValue(cfg->ReadBool(_T("/zoom_all"),                   false));
++    XRCCTRL(*this, "chkSyncEditorWithProjectManager", wxCheckBox)->SetValue(cfg->ReadBool(_T("/sync_editor_with_project_manager"), false));
+     XRCCTRL(*this, "spnTabSize",                  wxSpinCtrl)->SetValue(cfg->ReadInt(_T("/tab_size"),                    4));
+     XRCCTRL(*this, "cmbViewWS",                   wxChoice)->SetSelection(cfg->ReadInt(_T("/view_whitespace"),           0));
+     XRCCTRL(*this, "rbTabText",                   wxRadioBox)->SetSelection(cfg->ReadBool(_T("/tab_text_relative"),      true)? 1 : 0);
+@@ -981,6 +982,7 @@
+         }
+         cfg->Write(_T("/reset_zoom"),                          resetZoom);
+         cfg->Write(_T("/zoom_all"),                            zoomAll);
++        cfg->Write(_T("/sync_editor_with_project_manager"),    XRCCTRL(*this, "chkSyncEditorWithProjectManager", wxCheckBox)->GetValue());
+ 
+         cfg->Write(_T("/tab_size"),                            XRCCTRL(*this, "spnTabSize",                           wxSpinCtrl)->GetValue());
+         cfg->Write(_T("/view_whitespace"),                     XRCCTRL(*this, "cmbViewWS",                            wxChoice)->GetSelection());
+Index: src/src/resources/editor_configuration.xrc
+===================================================================
+--- src/src/resources/editor_configuration.xrc  (revision 9363)
++++ src/src/resources/editor_configuration.xrc  (working copy)
+@@ -357,6 +357,12 @@
+                                                                        <object class="wxCheckBox" name="chkZoomAll">
+                                                                            <label>Zooming resizes all editors</label>
+                                                                        </object>
++                                                                       <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                                                   </object>
++                                                                   <object class="sizeritem">
++                                                                       <object class="wxCheckBox" name="chkSyncEditorWithProjectManager">
++                                                                           <label>S&amp;ynchronise Editor with Project Manager</label>
++                                                                       </object>
+                                                                        <flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
+                                                                    </object>
+                                                                </object>

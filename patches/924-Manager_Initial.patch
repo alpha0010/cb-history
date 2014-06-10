@@ -1,0 +1,102 @@
+Index: src/sdk/manager.cpp
+===================================================================
+--- src/sdk/manager.cpp	(revision 2191)
++++ src/sdk/manager.cpp	(working copy)
+@@ -50,11 +50,10 @@
+ 
+ #include <wx/toolbar.h>
+ 
++Manager::Manager()
++    : m_pAppWindow(0)
++{
+ 
+-
+-
+-Manager::Manager() : m_pAppWindow(0)
+-{
+ }
+ 
+ Manager::~Manager()
+@@ -64,22 +63,30 @@
+ }
+ 
+ 
+-Manager* Manager::Get(wxFrame *appWindow)
++Manager* Manager::Initialize(wxFrame* appWindow)
+ {
+-    if(appWindow)
++    if (appWindow)
+     {
+-        if(Get()->m_pAppWindow)
++        if (Get()->m_pAppWindow)
+         {
+-            cbThrow(_T("Illegal argument to Manager::Get()"));
++            cbThrow(_("Illegal argument to Manager::Initialize()"));
+         }
++
+         else
+         {
+             Get()->m_pAppWindow = appWindow;
++
+             Initxrc(true);
+             Loadxrc(_T("/manager_resources.zip#zip:*.xrc"));
+             Get()->GetMessageManager()->Log(_("Manager initialized"));
+         }
+     }
++
++    else
++    {
++        cbThrow(_("Illegal argument to Manager::Initialize()"));
++    }
++
+     return Get();
+ }
+ 
+Index: src/sdk/manager.h
+===================================================================
+--- src/sdk/manager.h	(revision 2191)
++++ src/sdk/manager.h	(working copy)
+@@ -111,7 +111,7 @@
+     /// Loads ToolBarAddOn from XRC into existing Toolbar
+ 
+     // Do not use this, use Get()
+-    static Manager* Get(wxFrame* appWindow);
++    static Manager* Initialize(wxFrame* appWindow);
+ 
+     static void AddonToolBar(wxToolBar* toolBar,wxString resid);
+     static bool isToolBar16x16(wxToolBar* toolBar);
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(revision 2191)
++++ src/src/main.cpp	(working copy)
+@@ -521,13 +521,18 @@
+ 	m_pCloseFullScreenBtn = new wxButton(this, idCloseFullScreen, _( "Close Fullscreen" ), wxDefaultPosition );
+ 	m_pCloseFullScreenBtn->Show( false );
+ 
++    Manager::Initialize(this);
++
+     // project manager
+-	Manager::Get(this);
+     m_LayoutManager.AddPane(Manager::Get()->GetProjectManager()->GetNotebook(), wxPaneInfo().
+                               Name(wxT("ManagementPane")).Caption(_("Management")).
+                               BestSize(wxSize(leftW, clientsize.GetHeight())).MinSize(wxSize(100,100)).
+                               Left().Layer(1));
+ 
++    // editor manager
++    m_LayoutManager.AddPane(Manager::Get()->GetEditorManager()->GetNotebook(), wxPaneInfo().Name(wxT("MainPane")).
++                            CenterPane());
++
+     // message manager
+     m_LayoutManager.AddPane(Manager::Get()->GetMessageManager()->GetNotebook(), wxPaneInfo().
+                               Name(wxT("MessagesPane")).Caption(_("Messages")).
+@@ -543,10 +548,6 @@
+     CreateToolbars();
+     SetToolBar(0);
+ 
+-    // editor manager
+-    m_LayoutManager.AddPane(m_pEdMan->GetNotebook(), wxPaneInfo().Name(wxT("MainPane")).
+-                            CenterPane());
+-
+     DoUpdateLayout();
+     DoUpdateLayoutColors();
+     DoUpdateEditorStyle();

@@ -1,0 +1,132 @@
+Index: compilergcc/compilergcc.cpp
+===================================================================
+--- compilergcc/compilergcc.cpp	(revision 2228)
++++ compilergcc/compilergcc.cpp	(working copy)
+@@ -182,7 +182,6 @@
+ 	m_ListPageIndex(-1),
+     m_Menu(0L),
+     m_TargetMenu(0L),
+-	m_pToolbar(0L),
+ 	m_TargetIndex(-1),
+ 	m_ErrorsMenu(0L),
+     m_Project(0L),
+@@ -442,22 +441,6 @@
+ //		delete m_Menu;
+ //		m_Menu = 0L;
+ //	}
+-
+-	if (m_pToolbar)
+-	{
+-		m_pToolbar->DeleteTool(idMenuCompile);
+-		m_pToolbar->DeleteTool(idMenuRun);
+-		m_pToolbar->DeleteTool(idMenuCompileAndRun);
+-		m_pToolbar->DeleteTool(idMenuRebuild);
+-
+-		m_pToolbar->DeleteTool(idToolTarget);
+-		delete m_ToolTarget;
+-		m_ToolTarget = 0L;
+-
+-		m_pToolbar->DeleteTool(idToolTargetLabel);
+-		delete m_ToolTargetLabel;
+-		m_ToolTargetLabel = 0L;
+-	}
+ }
+ 
+ int CompilerGCC::Configure(cbProject* project, ProjectBuildTarget* target)
+@@ -2692,16 +2675,16 @@
+     }
+ 
+ 	// enable/disable compiler toolbar buttons
+-	wxToolBar* tbar = m_pTbar;//Manager::Get()->GetAppWindow()->GetToolBar();
+-	if (tbar)
++	//wxToolBar* tbar = m_pTbar;//Manager::Get()->GetAppWindow()->GetToolBar();
++	if (m_pTbar)
+ 	{
+-        tbar->EnableTool(idMenuCompile, !running && (prj || ed));
+-        tbar->EnableTool(idMenuRun, !running && (prj || ed));
+-        tbar->EnableTool(idMenuCompileAndRun, !running && (prj || ed));
+-        tbar->EnableTool(idMenuRebuild, !running && (prj || ed));
+-        tbar->EnableTool(idMenuKillProcess, running && prj);
++        m_pTbar->EnableTool(idMenuCompile, !running && (prj || ed));
++        m_pTbar->EnableTool(idMenuRun, !running && (prj || ed));
++        m_pTbar->EnableTool(idMenuCompileAndRun, !running && (prj || ed));
++        m_pTbar->EnableTool(idMenuRebuild, !running && (prj || ed));
++        m_pTbar->EnableTool(idMenuKillProcess, running && prj);
+ 
+-        m_ToolTarget = XRCCTRL(*tbar, "idToolTarget", wxComboBox);
++        m_ToolTarget = XRCCTRL(*m_pTbar, "idToolTarget", wxComboBox);
+         if (m_ToolTarget)
+             m_ToolTarget->Enable(!running && prj);
+     }
+Index: compilergcc/compilergcc.h
+===================================================================
+--- compilergcc/compilergcc.h	(revision 2228)
++++ compilergcc/compilergcc.h	(working copy)
+@@ -186,7 +186,6 @@
+ 		int m_ListPageIndex;
+         wxMenu* m_Menu;
+         wxMenu* m_TargetMenu;
+-		wxToolBar* m_pToolbar;
+ 		int m_TargetIndex;
+         wxMenu* m_ErrorsMenu;
+         cbProject* m_Project;
+Index: debuggergdb/debuggergdb.cpp
+===================================================================
+--- debuggergdb/debuggergdb.cpp	(revision 2228)
++++ debuggergdb/debuggergdb.cpp	(working copy)
+@@ -498,11 +498,12 @@
+ 
+ bool DebuggerGDB::BuildToolBar(wxToolBar* toolBar)
+ {
+-	m_pTbar = toolBar;
+-    /* Loads toolbar using new Manager class functions */
+ #ifdef implement_debugger_toolbar
+     if (!m_IsAttached || !toolBar)
+ 		return false;
++
++	m_pTbar = toolBar;
++    /* Loads toolbar using new Manager class functions */
+     wxString my_16x16=Manager::isToolBar16x16(toolBar) ? _T("_16x16") : _T("");
+     Manager::AddonToolBar(toolBar,wxString(_T("debugger_toolbar"))+my_16x16);
+     toolBar->Realize();
+@@ -1449,15 +1450,18 @@
+ 	}
+ 
+     #ifdef implement_debugger_toolbar
+-	wxToolBar* tbar = m_pTbar;//Manager::Get()->GetAppWindow()->GetToolBar();
+-    tbar->EnableTool(idMenuDebug, (!m_pProcess || stopped) && en);
+-    tbar->EnableTool(idMenuRunToCursor, en && ed && stopped);
+-    tbar->EnableTool(idMenuNext, m_pProcess && en && stopped);
+-    tbar->EnableTool(idMenuNextInstr, m_pProcess && en && stopped);
+-    tbar->EnableTool(idMenuStep, en && stopped);
+-    tbar->EnableTool(idMenuStepOut, m_pProcess && en && stopped);
+-    tbar->EnableTool(idMenuStop, m_pProcess && en);
+-    tbar->EnableTool(idDebuggerToolInfo, m_pProcess && en);
++    if (m_pTbar)
++    {
++        //wxToolBar* tbar = m_pTbar;//Manager::Get()->GetAppWindow()->GetToolBar();
++        m_pTbar->EnableTool(idMenuDebug, (!m_pProcess || stopped) && en);
++        m_pTbar->EnableTool(idMenuRunToCursor, en && ed && stopped);
++        m_pTbar->EnableTool(idMenuNext, m_pProcess && en && stopped);
++        m_pTbar->EnableTool(idMenuNextInstr, m_pProcess && en && stopped);
++        m_pTbar->EnableTool(idMenuStep, en && stopped);
++        m_pTbar->EnableTool(idMenuStepOut, m_pProcess && en && stopped);
++        m_pTbar->EnableTool(idMenuStop, m_pProcess && en);
++        m_pTbar->EnableTool(idDebuggerToolInfo, m_pProcess && en);
++    }
+ 	#endif
+ 
+     // allow other UpdateUI handlers to process this event
+Index: debuggergdb/examinememorydlg.cpp
+===================================================================
+--- debuggergdb/examinememorydlg.cpp	(revision 2228)
++++ debuggergdb/examinememorydlg.cpp	(working copy)
+@@ -90,7 +90,7 @@
+             m_pText->AppendText(_T('\n')); // prepend a newline
+         long a;
+         addr.ToLong(&a, 16);
+-        m_pText->AppendText(wxString::Format(_T("0x%x: %s"), a, m_LineText));
++        m_pText->AppendText(wxString::Format(_T("0x%lx: %s"), a, m_LineText));
+         for (int i = 0; i < 67; ++i)
+             m_LineText[i] = _T(' ');
+     }

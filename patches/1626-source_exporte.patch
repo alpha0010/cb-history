@@ -1,0 +1,80 @@
+--- src/plugins/contrib/source_exporter//wxPdfDocument/src/pdfimage.cpp.orig	2006-11-05 23:17:39.000000000 +0100
++++ src/plugins/contrib/source_exporter//wxPdfDocument/src/pdfimage.cpp	2006-11-06 01:13:16.000000000 +0100
+@@ -572,30 +572,53 @@
+   m_dataSize = 0;
+   m_data     = NULL;
+ 
++#if wxCHECK_VERSION(2, 7, 0)
++  wxGIFDecoder gif;
++  if (!gif.CanRead(*imageStream))
++#else
+   wxGIFDecoder gif(imageStream);
+   if (!gif.CanRead())
++#endif
+   {
+     wxLogDebug(_T("wxPdfImage::ParseGIF: '%s' not a GIF file."), m_name.c_str());
+     return false;
+   }
+ 
++#if wxCHECK_VERSION(2, 7, 0)
++  if (gif.LoadGIF(*imageStream) != wxGIF_OK)
++#else
+   if (gif.ReadGIF() != wxGIF_OK)
++#endif
+   {
+     wxLogDebug(_T("wxPdfImage::ParseGIF: Invalid GIF file '%s'."), m_name.c_str());
+     return false;
+   }
+ 
+   isValid = true;
++#if wxCHECK_VERSION(2, 7, 0)
++  wxSize size = gif.GetFrameSize(0);
++  m_width = size.GetWidth();
++  m_height = size.GetHeight();
++#else
+   m_width = gif.GetWidth();
+   m_height = gif.GetHeight();
++#endif
+   m_cs = _T("Indexed");
+   m_bpc    = 8;
+ 
+   m_palSize  = 768;
+   m_pal = new char[m_palSize];
++#if wxCHECK_VERSION(2, 7, 0)
++  memcpy(m_pal,gif.GetPalette(0),m_palSize);
++#else
+   memcpy(m_pal,gif.GetPalette(),m_palSize);
++#endif
+ 
++#if wxCHECK_VERSION(2, 7, 0)
++  int trns = gif.GetTransparentColourIndex(0);
++#else
+   int trns = gif.GetTransparentColour();
++#endif
+   if (trns != -1)
+   {
+     m_trnsSize = 3;
+@@ -611,7 +634,11 @@
+     m_f = _T("FlateDecode");
+     wxMemoryOutputStream* p = new wxMemoryOutputStream();
+     wxZlibOutputStream q(*p);
++#if wxCHECK_VERSION(2, 7, 0)
++    q.Write(gif.GetData(0),m_dataSize);
++#else
+     q.Write(gif.GetData(),m_dataSize);
++#endif
+     q.Close();
+     m_dataSize = p->TellO();
+     m_data = new char[m_dataSize];
+@@ -622,7 +649,11 @@
+   {
+     m_f = _T("");
+     m_data = new char[m_dataSize];
++#if wxCHECK_VERSION(2, 7, 0)
++    memcpy(m_data,gif.GetData(0),m_dataSize);
++#else
+     memcpy(m_data,gif.GetData(),m_dataSize);
++#endif
+   }
+ 
+   return isValid;

@@ -1,0 +1,137 @@
+Index: src/plugins/codecompletion/nativeparser.cpp
+===================================================================
+--- src/plugins/codecompletion/nativeparser.cpp	(revision 8449)
++++ src/plugins/codecompletion/nativeparser.cpp	(working copy)
+@@ -849,7 +849,7 @@
+     return MarkItemsByAI(&searchData, result, reallyUseAI, isPrefix, caseSensitive, caretPos);
+ }
+ 
+-void NativeParser::GetCallTips(int chars_per_line, wxArrayString &items, int& typedCommas)
++void NativeParser::GetCallTips(int chars_per_line, wxArrayString &items, int& typedCommas, int pos)
+ {
+     items.Clear();
+     typedCommas = 0;
+@@ -865,7 +865,8 @@
+     TRACE(_T("NativeParser::GetCallTips()"));
+ 
+     ccSearchData searchData = { ed->GetControl(), ed->GetFilename() };
+-    int pos = searchData.control->GetCurrentPos();
++    if (pos == wxNOT_FOUND)
++        pos = searchData.control->GetCurrentPos();
+     int nest = 0;
+     while (--pos > 0)
+     {
+Index: src/plugins/codecompletion/codecompletion.h
+===================================================================
+--- src/plugins/codecompletion/codecompletion.h	(revision 8449)
++++ src/plugins/codecompletion/codecompletion.h	(working copy)
+@@ -196,6 +196,7 @@
+ 
+     /** show code suggestion list*/
+     void DoCodeComplete();
++    void DoShowCallTip(int caretPos = wxNOT_FOUND);
+ 
+     /** ContextMenu->Insert-> declaration/implementation*/
+     int DoClassMethodDeclImpl();
+Index: src/plugins/codecompletion/codecompletion.cpp
+===================================================================
+--- src/plugins/codecompletion/codecompletion.cpp	(revision 8449)
++++ src/plugins/codecompletion/codecompletion.cpp	(working copy)
+@@ -1005,6 +1005,11 @@
+ 
+ void CodeCompletion::ShowCallTip()
+ {
++    DoShowCallTip();
++}
++
++void CodeCompletion::DoShowCallTip(int caretPos)
++{
+     if (!IsAttached() || !m_InitDone)
+         return;
+ 
+@@ -1021,7 +1026,9 @@
+         return;
+ 
+     // calculate the size of the calltips window
+-    int pos = ed->GetControl()->GetCurrentPos();
++    int pos = caretPos;
++    if (pos == wxNOT_FOUND)
++        pos = ed->GetControl()->GetCurrentPos();
+     wxPoint p = ed->GetControl()->PointFromPosition(pos); // relative point
+     int pixelWidthPerChar = ed->GetControl()->TextWidth(wxSCI_STYLE_LINENUMBER, _T("W"));
+     int maxCalltipLineSizeInChars = (ed->GetSize().x - p.x) / pixelWidthPerChar;
+@@ -1041,7 +1048,7 @@
+     int start = 0, end = 0, count = 0, typedCommas = 0;
+ 
+     wxArrayString items;
+-    m_NativeParser.GetCallTips(maxCalltipLineSizeInChars, items, typedCommas);
++    m_NativeParser.GetCallTips(maxCalltipLineSizeInChars, items, typedCommas, caretPos);
+     std::set< wxString, std::less<wxString> > unique_tips; // check against this before inserting a new tip in the list
+     wxString definition;
+     for (unsigned int i = 0; i < items.GetCount(); ++i)
+@@ -2514,6 +2521,13 @@
+         return;
+     }
+ 
++    int pos = ed->GetControl()->PositionFromPointClose(event.GetX(), event.GetY());
++    if (pos < 0 || pos >= ed->GetControl()->GetLength())
++    {
++        event.Skip();
++        return;
++    }
++
+     // ignore comments, strings, preprocesor, etc
+     int style = event.GetInt();
+     if (   (style != wxSCI_C_DEFAULT)
+@@ -2522,17 +2536,11 @@
+         && (style != wxSCI_C_WORD2)
+         && (style != wxSCI_C_GLOBALCLASS) )
+     {
++        DoShowCallTip(pos);
+         event.Skip();
+         return;
+     }
+ 
+-    int pos = ed->GetControl()->PositionFromPointClose(event.GetX(), event.GetY());
+-    if (pos < 0 || pos >= ed->GetControl()->GetLength())
+-    {
+-        event.Skip();
+-        return;
+-    }
+-
+     TRACE(_T("OnEditorTooltip"));
+ 
+     TokenIdxSet result;
+@@ -2572,7 +2580,9 @@
+ 
+         CC_LOCKER_TRACK_TT_MTX_UNLOCK(s_TokenTreeMutex)
+ 
+-        if (!calltip.IsEmpty())
++        if (calltip.IsEmpty())
++            DoShowCallTip(pos);
++        else
+         {
+             calltip.RemoveLast(); // last \n
+ 
+@@ -2593,6 +2603,8 @@
+             TRACE(calltip);
+         }
+     }
++    else
++        DoShowCallTip(pos);
+ 
+     event.Skip();
+ }
+Index: src/plugins/codecompletion/nativeparser.h
+===================================================================
+--- src/plugins/codecompletion/nativeparser.h	(revision 8449)
++++ src/plugins/codecompletion/nativeparser.h	(working copy)
+@@ -202,7 +202,7 @@
+      * @param items array to store result in.
+      * @param typedCommas how much comma characters the user has typed in the current line before the cursor.
+      */
+-    void GetCallTips(int chars_per_line, wxArrayString& items, int &typedCommas);
++    void GetCallTips(int chars_per_line, wxArrayString& items, int &typedCommas, int pos = wxNOT_FOUND);
+ 
+     /** Word start position in the editor
+      * @return position index

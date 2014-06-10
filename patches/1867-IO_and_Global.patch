@@ -1,0 +1,331 @@
+Index: src/sdk/scripting/bindings/sc_consts.cpp
+===================================================================
+--- src/sdk/scripting/bindings/sc_consts.cpp	(revision 3557)
++++ src/sdk/scripting/bindings/sc_consts.cpp	(arbetskopia)
+@@ -7,7 +7,11 @@
+ 
+ #include <filefilters.h>
+ #include "sc_base_types.h"
++#include "sc_listdir.h"
+ 
++// This is for wxScintilla constants used when scripting cbEditor
++#include "wx/wxscintilla.h"
++
+ // helper macros to bind constants
+ #define BIND_INT_CONSTANT(a) SqPlus::BindConstant<SQInteger>(a, #a);
+ #define BIND_INT_CONSTANT_NAMED(a,n) SqPlus::BindConstant<SQInteger>(a, n);
+@@ -223,6 +227,20 @@
+         BIND_WXSTR_CONSTANT_NAMED(FileFilters::RESOURCE_DOT_EXT, "DOT_EXT_RESOURCE");
+         BIND_WXSTR_CONSTANT_NAMED(FileFilters::RESOURCEBIN_DOT_EXT, "DOT_EXT_RESOURCEBIN");
+         BIND_WXSTR_CONSTANT_NAMED(FileFilters::XML_DOT_EXT, "DOT_EXT_XML");
+-        BIND_WXSTR_CONSTANT_NAMED(FileFilters::SCRIPT_DOT_EXT, "DOT_EXT_SCRIPT");
++        
++        // For wxScintilla
++        BIND_INT_CONSTANT_NAMED(wxSCI_FIND_WHOLEWORD, "wxSCI_FIND_WHOLEWORD");
++        BIND_INT_CONSTANT_NAMED(wxSCI_FIND_MATCHCASE, "wxSCI_FIND_MATCHCASE");
++        BIND_INT_CONSTANT_NAMED(wxSCI_FIND_WORDSTART, "wxSCI_FIND_WORDSTART");
++        BIND_INT_CONSTANT_NAMED(wxSCI_FIND_REGEXP, "wxSCI_FIND_REGEXP");
++        BIND_INT_CONSTANT_NAMED(wxSCI_FIND_POSIX, "wxSCI_FIND_POSIX");
++        
++        // For ListDirectory
++        BIND_INT_CONSTANT_NAMED(LISTDIR_FILES, "LISTDIR_FILES");
++        BIND_INT_CONSTANT_NAMED(LISTDIR_DIRS, "LISTDIR_DIRS");
++        BIND_INT_CONSTANT_NAMED(LISTDIR_ABS_PATH, "LISTDIR_ABS_PATH");
++        BIND_INT_CONSTANT_NAMED(LISTDIR_DETAILS, "LISTDIR_DETAILS");
++        BIND_INT_CONSTANT_NAMED(LISTDIR_RECURSIVE, "LISTDIR_RECURSIVE");
++        BIND_INT_CONSTANT_NAMED(LISTDIR_DEFAULT, "LISTDIR_DEFAULT");
+     }
+ };
+Index: src/sdk/scripting/bindings/scriptbindings.cpp
+===================================================================
+--- src/sdk/scripting/bindings/scriptbindings.cpp	(revision 3557)
++++ src/sdk/scripting/bindings/scriptbindings.cpp	(arbetskopia)
+@@ -90,6 +90,20 @@
+         }
+         return sa.ThrowError("Invalid arguments to \"ConfigManager::Write\"");
+     }
++    SQInteger ConfigManager_LocateDataFile(HSQUIRRELVM v)
++    {
++        StackHandler sa(v);
++        int paramCount = sa.GetParamCount();
++        if (paramCount == 1 || paramCount == 2 )
++        {
++            wxString filename = *SqPlus::GetInstance<wxString>(v, 2);
++            int search_dirs = sdScriptsUser | sdCurrent | sdScriptsGlobal;
++            if( paramCount == 2 ) search_dirs = *SqPlus::GetInstance<int>(v, 3);
++            wxString path = ConfigManager::LocateDataFile(filename, search_dirs);
++            return SqPlus::ReturnCopy(v, path);
++        }
++        return sa.ThrowError("Invalid arguments to \"ConfigManager::LocateDataFile\"");
++    }
+     SQInteger EditorManager_GetBuiltinEditor(HSQUIRRELVM v)
+     {
+         StackHandler sa(v);
+@@ -327,7 +341,8 @@
+ 
+         SqPlus::SQClassDef<ConfigManager>("ConfigManager").
+                 staticFuncVarArgs(&ConfigManager_Read, "Read", "*").
+-                staticFuncVarArgs(&ConfigManager_Write, "Write", "*");
++                staticFuncVarArgs(&ConfigManager_Write, "Write", "*").
++                staticFuncVarArgs(&ConfigManager_LocateDataFile, "LocatDataFile", "*");
+ 
+         SqPlus::SQClassDef<ProjectFile>("ProjectFile").
+                 func(&ProjectFile::AddBuildTarget, "AddBuildTarget").
+@@ -557,6 +572,7 @@
+                 func(&cbEditor::AutoComplete, "AutoComplete").
+                 func(&cbEditor::AddBreakpoint, "AddBreakpoint").
+                 func(&cbEditor::RemoveBreakpoint, "RemoveBreakpoint").
++
+                 // these are not present in cbEditor; included to help scripts edit text
+                 staticFuncVarArgs(&cbEditor_SetText, "SetText", "*").
+                 staticFuncVarArgs(&cbEditor_GetText, "GetText", "*");
+Index: src/sdk/scripting/bindings/sc_listdir.h
+===================================================================
+--- src/sdk/scripting/bindings/sc_listdir.h	(revision 0)
++++ src/sdk/scripting/bindings/sc_listdir.h	(revision 0)
+@@ -0,0 +1,91 @@
++#ifndef SC_LISTDIR_H
++#define SC_LISTDIR_H
++
++enum
++{
++    LISTDIR_FILES     = 0x0001,       // include files
++    LISTDIR_DIRS      = 0x0002,       // include directories
++    LISTDIR_ABS_PATH  = 0x0004,       // list with absolute paths
++    LISTDIR_DETAILS   = 0x0008,       // list size and filedates
++    LISTDIR_RECURSIVE = 0x0010,       // Go into subdirectories
++
++    LISTDIR_DEFAULT   = LISTDIR_FILES | LISTDIR_DIRS | LISTDIR_DETAILS
++};
++
++// This class  is used for the ListDirectory function
++// Lists both files and/or dirs, optionally recursively
++class wxDirTraverserFlex : public wxDirTraverser {
++public:
++    wxDirTraverserFlex(wxArrayString& files, int flags, const wxString &base_path) 
++    : m_files(files), m_flags(flags) { 
++        m_base_path_len = base_path.Length(); 
++        if( !base_path.EndsWith(wxString(wxFILE_SEP_PATH)) ) m_base_path_len++;
++    }
++
++    wxString FormatDetails( const wxFileName &fn ){
++        wxDateTime dt = fn.GetModificationTime();
++        wxString s = wxString::Format( _T("[%04d-%02d-%02d %02d:%02d]  "), 
++                    dt.GetYear(),dt.GetMonth()+1,dt.GetDay(),
++                    dt.GetHour(), dt.GetMinute() );
++        if( !fn.IsDir() ){
++            wxString tmp = fn.GetHumanReadableSize(_T("No info"),3);
++            // GetHumanReadable size ignores the precison argument on WinXP, correct
++            for( int p=0, cd=0; p<(int)tmp.Length(); p++ ){
++                if( tmp[p]>='0' && tmp[p]<='9' ){
++                    if( ++cd==3 ){
++                        p++;
++                        for( cd=0; ((tmp[p+cd]>='0' && tmp[p+cd]<='9') || 
++                                    tmp[p+cd]==',' || tmp[p+cd]=='.' ) && 
++                                    p+cd<(int)tmp.Length(); cd++ );
++                        tmp = tmp.Left(p) + tmp.Mid(p+cd);
++                        break;
++                    }
++                }
++            }
++            // tmp = wxString::Format( _T("         %s"), (const wxChar*)tmp ).Right(9);
++            // s += wxString::Format( _T("[%s]  "), (const wxChar*)tmp );
++            tmp = wxString::Format( _T("[%s]         "), (const wxChar*)tmp ).Left(13);
++            s += tmp;
++        }
++        else
++            s += _T("[Directory]  ");
++        return s;
++    }
++
++    virtual wxDirTraverseResult OnFile(const wxString& filename){
++        if( m_flags&LISTDIR_FILES ){
++            wxString s;
++            if( m_flags&LISTDIR_DETAILS ){
++                wxFileName fn(filename);
++                s = FormatDetails( fn );
++            }
++            s += m_flags&LISTDIR_ABS_PATH ? filename : filename.Mid(m_base_path_len);
++            m_files.push_back(s);
++        }
++        return wxDIR_CONTINUE;
++    }
++
++    virtual wxDirTraverseResult OnDir(const wxString& dirname){
++        if( m_flags&LISTDIR_DIRS ){
++            wxString s;
++            if( m_flags&LISTDIR_DETAILS ){
++                wxFileName fn;
++                fn.AssignDir( dirname );
++                s = FormatDetails( fn );
++            }
++            s += wxString::Format(_T("[%s]"), (const wxChar*)dirname);
++            m_files.push_back(s);
++        }
++        return m_flags&LISTDIR_RECURSIVE ? wxDIR_CONTINUE : wxDIR_IGNORE;
++    }
++
++private:
++    wxArrayString& m_files;
++    int m_flags;
++    int m_base_path_len;
++    DECLARE_NO_COPY_CLASS(wxDirTraverserFlex)
++};
++
++
++#endif // SC_LISTDIR_H
++
+Index: src/sdk/scripting/bindings/sc_globals.cpp
+===================================================================
+--- src/sdk/scripting/bindings/sc_globals.cpp	(revision 3557)
++++ src/sdk/scripting/bindings/sc_globals.cpp	(arbetskopia)
+@@ -16,7 +16,9 @@
+ #include <wx/colordlg.h>
+ #include <wx/numdlg.h>
+ #include <wx/textdlg.h>
+-#include <infowindow.h>
++#include <wx/clipbrd.h>
++#include <infowindow.h>
++
+ 
+ namespace ScriptBindings
+ {
+@@ -109,6 +111,24 @@
+         return wxGetTextFromUser(message, caption, default_value);
+     }
+ 
++    wxString wx_GetClipboardText( )
++    {
++        if( !wxTheClipboard->Open() )
++            return wxEmptyString;
++        wxTextDataObject tdo;
++        bool b = wxTheClipboard->GetData(tdo); b=b;  // Shut up compiler
++        wxTheClipboard->Close();
++        return tdo.GetText();
++    }
++
++    void wx_SetClipboardText( const wxString &text )
++    {
++        if( !wxTheClipboard->Open() )
++            return;
++        bool b = wxTheClipboard->SetData(new wxTextDataObject(text)); b=b;   // Shut up compiler
++        wxTheClipboard->Close();
++    }
++
+     void Register_Globals()
+     {
+         // global funcs
+@@ -148,5 +168,7 @@
+         SqPlus::RegisterGlobal(wx_GetNumberFromUser, "wxGetNumberFromUser");
+         SqPlus::RegisterGlobal(wx_GetPasswordFromUser, "wxGetPasswordFromUser");
+         SqPlus::RegisterGlobal(wx_GetTextFromUser, "wxGetTextFromUser");
++        SqPlus::RegisterGlobal(wx_SetClipboardText, "wxSetClipboardText");
++        SqPlus::RegisterGlobal(wx_GetClipboardText, "wxGetClipboardText");
+     }
+ }
+Index: src/sdk/scripting/bindings/sc_io.cpp
+===================================================================
+--- src/sdk/scripting/bindings/sc_io.cpp	(revision 3557)
++++ src/sdk/scripting/bindings/sc_io.cpp	(arbetskopia)
+@@ -14,6 +14,7 @@
+ 
+ #include "scriptsecuritywarningdlg.h"
+ #include "sc_base_types.h"
++#include "sc_listdir.h"
+ 
+ namespace ScriptBindings
+ {
+@@ -193,6 +197,25 @@
+             return GetStringFromArray(output);
+         }
+ 
++        wxString ListDirectory(const wxString& path, int flags )
++        {
++            //wxLogNull ln;
++            wxArrayString output;
++            wxDir dir(path);
++            output.Clear();
++            if( !dir.IsOpened() )
++                return wxString(_T("|Error: Failed opening directory.|"));
++            wxDirTraverserFlex dtf(output, flags, path);
++            size_t s = dir.Traverse( dtf, wxEmptyString, flags&(LISTDIR_FILES|LISTDIR_DIRS) ); s=s;
++            
++            wxString sout;
++            for( int i=0; i<output.GetCount(); i++ ){
++                sout += output[i];
++                sout += _T("\n");
++            }
++            return sout;
++        }
++
+     } // namespace IOLib
+ } // namespace ScriptBindings
+ 
+@@ -222,7 +245,8 @@
+                 staticFunc(&IOLib::ChooseDir, "SelectDirectory").
+                 staticFunc(&IOLib::FileExists, "FileExists").
+                 staticFunc(&IOLib::ChooseFile, "SelectFile").
+-                staticFunc(&IOLib::ReadFileContents, "ReadFileContents");
++                staticFunc(&IOLib::ReadFileContents, "ReadFileContents").
++                staticFunc(&IOLib::ListDirectory, "ListDirectory");
+ 
+         #ifndef NO_INSECURE_SCRIPTS
+         SqPlus::BindConstant(true, "allowInsecureScripts");
+Index: src/sdk/scriptingmanager.cpp
+===================================================================
+--- src/sdk/scriptingmanager.cpp	(revision 3557)
++++ src/sdk/scriptingmanager.cpp	(arbetskopia)
+@@ -400,8 +385,10 @@
+     }
+ 
+     // script loading below
+-
+-    if (wxGetKeyState(WXK_SHIFT))
++    // Note: If Ctrl+Shift or Alt+Shift are pressed, we don't want to edit the script.
++    // The user might have assigned a keyboard shortcut to the script, such as
++    // Ctrl-Shift-S to apply a script on an editor.
++    if (wxGetKeyState(WXK_SHIFT) && !wxGetKeyState(WXK_CONTROL) && !wxGetKeyState(WXK_ALT))
+     {
+         wxString script = ConfigManager::LocateDataFile(mbs.scriptOrFunc, sdScriptsUser | sdScriptsGlobal);
+         Manager::Get()->GetEditorManager()->Open(script);
+Index: readme.scriptbindings.txt
+===================================================================
+--- readme.scriptbindings.txt	(revision 0)
++++ readme.scriptbindings.txt	(revision 0)
+@@ -0,0 +1,36 @@
++
++Modifications to scripting/bindings:
++------------------------------------
++
++Some new functions:
++
++
+++    SQInteger ConfigManager_LocateDataFile(HSQUIRRELVM v)
++
++Uses ConfigManager functionality to locate files from scripts.
++
++Takes two arguments, a filename and the search dir flags
++
++
++
+++    wxString wx_GetClipboardText( )
++
++Scripts can read clipboard
++
++
+++    void wx_SetClipboardText( const wxString &text )
++
++Scripts can write to clipboard
++
++
++
+++        wxString ListDirectory(const wxString& path, int flags )
++
++Enables making directory listings from scripts
++
++
++
++Also in src/sdk/scriptingmanager.cpp, just edit scripts when the shift
++key is pressed. Not for ctrl-shift or alt-shift. Otherwise one cannot
++bind scripts to any Shift qualified accelerator.
++

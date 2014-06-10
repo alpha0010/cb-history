@@ -1,0 +1,97 @@
+Index: src/include/projectmanager.h
+===================================================================
+--- src/include/projectmanager.h	(revision 9660)
++++ src/include/projectmanager.h	(working copy)
+@@ -70,7 +70,7 @@
+           */
+         virtual wxTreeItemId GetTreeSelection() = 0;
+ 
+-        virtual void ShowFileInTree(ProjectFile &projectFile) = 0;
++        virtual void ShowFileInTree(ProjectFile &projectFile, const bool switchToProjectsPage) = 0;
+ 
+         virtual void UpdateActiveProject(cbProject *oldProject, cbProject *newProject, bool refresh) = 0;
+         virtual void RemoveProject(cbProject *project) = 0;
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 9660)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -3055,7 +3055,7 @@
+         }
+     }
+     else if (id == idShowFileInProject)
+-        Manager::Get()->GetProjectManager()->GetUI().ShowFileInTree(*m_pProjectFile);
++        Manager::Get()->GetProjectManager()->GetUI().ShowFileInTree(*m_pProjectFile, true);
+     else if (id == idBreakpointAdd)
+         AddBreakpoint(m_pData->m_LastMarginMenuLine);
+     else if (id == idBreakpointEdit)
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(revision 9660)
++++ src/sdk/editormanager.cpp	(working copy)
+@@ -1504,7 +1504,7 @@
+ {
+     ProjectFile* pf = GetBuiltinActiveEditor()->GetProjectFile();
+     if (pf)
+-        Manager::Get()->GetProjectManager()->GetUI().ShowFileInTree(*pf);
++        Manager::Get()->GetProjectManager()->GetUI().ShowFileInTree(*pf, true);
+ }
+ 
+ void EditorManager::OnAppDoneStartup(wxCommandEvent& event)
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(revision 9660)
++++ src/src/main.cpp	(working copy)
+@@ -4630,6 +4630,8 @@
+     DoUpdateAppTitle();
+     DoUpdateStatusBar();
+ 
+     EditorBase *editor = event.GetEditor();
+     if (editor && editor->IsBuiltinEditor())
+     {
+@@ -4638,7 +4640,7 @@
+         {
+             ProjectFile* pf = static_cast<cbEditor*>(editor)->GetProjectFile();
+             if (pf)
+-                m_pPrjManUI->ShowFileInTree(*pf);
++                m_pPrjManUI->ShowFileInTree(*pf, false);
+         }
+     }
+ 
+Index: src/src/projectmanagerui.cpp
+===================================================================
+--- src/src/projectmanagerui.cpp	(revision 9660)
++++ src/src/projectmanagerui.cpp	(working copy)
+@@ -447,15 +447,21 @@
+         m_pNotebook->SetSelection(page);
+ }
+ 
+-void ProjectManagerUI::ShowFileInTree(ProjectFile &projectFile)
++void ProjectManagerUI::ShowFileInTree(ProjectFile &projectFile, const bool switchToProjectsPage)
+ {
+-    SwitchToProjectsPage();
++    if(switchToProjectsPage)
++    {
++        SwitchToProjectsPage();
++    }
+     // first unselect previous selected item if any, needed because of wxTR_MULTIPLE flag
+     m_pTree->UnselectAll();
+ 
+     const wxTreeItemId &itemId = projectFile.GetTreeItemId();
+     if (itemId.IsOk())
+     {
+         m_pTree->EnsureVisible(itemId);
+         m_pTree->SelectItem(itemId, true);
+     }
+Index: src/src/projectmanagerui.h
+===================================================================
+--- src/src/projectmanagerui.h	(revision 9660)
++++ src/src/projectmanagerui.h	(working copy)
+@@ -41,7 +41,7 @@
+         void FinishLoadingProject(cbProject* project, bool newAddition, cb_unused FilesGroupsAndMasks* fgam);
+         void FinishLoadingWorkspace(cbProject* activeProject, const wxString &workspaceTitle);
+ 
+-        void ShowFileInTree(ProjectFile &projectFile);
++        void ShowFileInTree(ProjectFile &projectFile, const bool switchToProjectsPage);
+ 
+         void CreateMenu(wxMenuBar* menuBar);
+ 

@@ -1,0 +1,927 @@
+Index: plugins/astyle/astyle/ASBeautifier.cpp
+===================================================================
+--- plugins/astyle/astyle/ASBeautifier.cpp	(revision 7439)
++++ plugins/astyle/astyle/ASBeautifier.cpp	(working copy)
+@@ -774,7 +774,7 @@
+ 		if (backslashEndsPrevLine)  // must continue to clear variables
+ 			line = ' ';
+ 		else if (emptyLineFill && !isInQuoteContinuation
+-		         && (headerStack->size() > 0 || isInEnum))
++		         && (!headerStack->empty() || isInEnum))
+ 			return preLineWS(prevFinalLineSpaceTabCount, prevFinalLineTabCount);
+ 		else
+ 			return line;
+@@ -900,7 +900,7 @@
+ 	// Flag an indented header in case this line is a one-line block.
+ 	// The header in the header stack will be deleted by a one-line block.
+ 	bool isInExtraHeaderIndent = false;
+-	if (headerStack->size() > 0
++	if (!headerStack->empty()
+ 	        && line.length() > 0
+ 	        && line[0] == '{'
+ 	        && (headerStack->back() != &AS_OPEN_BRACKET
+@@ -977,7 +977,7 @@
+ 	         && line.length() > 0
+ 	         && lineOpeningBlocksNum == 0
+ 	         && lineOpeningBlocksNum == lineClosingBlocksNum
+-	         && (headerStack->size() > 0 && headerStack->back() == &AS_CLASS))
++	         && (!headerStack->empty() && headerStack->back() == &AS_CLASS))
+ 		--tabCount;
+ 
+ 	if (tabCount < 0)
+@@ -1354,7 +1354,7 @@
+ 	if (container != NULL)
+ 	{
+ 		vector<vector<const string*>*>::iterator iter = container->begin();
+-		for (; iter != container->end(); iter++)
++		for (; iter != container->end(); ++iter)
+ 			delete *iter;
+ 		container->clear();
+ 		delete (container);
+@@ -1962,7 +1962,7 @@
+ 				// if have a struct header, this is a declaration not a definition
+ 				if (ch == '('
+ 				        && (isInClassInitializer || isInClassHeaderTab)
+-				        && headerStack->size() > 0
++				        && !headerStack->empty()
+ 				        && headerStack->back() == &AS_STRUCT)
+ 				{
+ 					headerStack->pop_back();
+@@ -2051,7 +2051,7 @@
+ 			// remove inStatementIndent for C++ class initializer
+ 			if (isInClassInitializer)
+ 			{
+-				if (inStatementIndentStack->size() > 0)
++				if (!inStatementIndentStack->empty())
+ 					inStatementIndentStack->pop_back();
+ 				isInStatement = false;
+ 				if (lineBeginsWithBracket)
+@@ -2097,7 +2097,7 @@
+ 				{
+ 					tabCount -= classInitializerTabs;
+ 					// decrease one more if an empty class
+-					if (headerStack->size() > 0
++					if (!headerStack->empty()
+ 					        && (*headerStack).back() == &AS_CLASS)
+ 					{
+ 						int nextChar = getNextProgramCharDistance(line, i);
+@@ -2107,7 +2107,7 @@
+ 				}
+ 			}
+ 
+-			if (bracketIndent && !namespaceIndent && headerStack->size() > 0
++			if (bracketIndent && !namespaceIndent && !headerStack->empty()
+ 			        && (*headerStack).back() == &AS_NAMESPACE)
+ 			{
+ 				shouldIndentBrackettedLine = false;
+@@ -2115,7 +2115,7 @@
+ 			}
+ 
+ 			// an indentable struct is treated like a class in the header stack
+-			if (headerStack->size() > 0
++			if (!headerStack->empty()
+ 			        && (*headerStack).back() == &AS_STRUCT
+ 			        && isInIndentableStruct)
+ 				(*headerStack).back() = &AS_CLASS;
+@@ -2124,7 +2124,7 @@
+ 			blockStatementStack->push_back(isInStatement);
+ 
+ 			inStatementIndentStackSizeStack->push_back(inStatementIndentStack->size());
+-			if (inStatementIndentStack->size() > 0)
++			if (!inStatementIndentStack->empty())
+ 			{
+ 				spaceTabCount = 0;
+ 				inStatementIndentStack->back() = 0;
+@@ -2519,7 +2519,7 @@
+ 					headerStack->pop_back();
+ 
+ 					// do not indent namespace bracket unless namespaces are indented
+-					if (!namespaceIndent && headerStack->size() > 0
++					if (!namespaceIndent && !headerStack->empty()
+ 					        && (*headerStack).back() == &AS_NAMESPACE
+ 					        && i == 0)		// must be the first bracket on the line
+ 						shouldIndentBrackettedLine = false;
+@@ -2583,7 +2583,7 @@
+ 					// do not need second 'class' statement in a row
+ 					else if (!(newHeader == &AS_WHERE
+ 					           || (newHeader == &AS_CLASS
+-					               && headerStack->size() > 0
++					               && !headerStack->empty()
+ 					               && headerStack->back() == &AS_CLASS)))
+ 						headerStack->push_back(newHeader);
+ 
+Index: plugins/astyle/astyle/ASEnhancer.cpp
+===================================================================
+--- plugins/astyle/astyle/ASEnhancer.cpp	(revision 7439)
++++ plugins/astyle/astyle/ASEnhancer.cpp	(working copy)
+@@ -580,7 +580,7 @@
+ 		{
+ 			int lineUnindent = sw.unindentDepth;
+ 			if (line.find_first_not_of(" \t") == i
+-			        && switchStack.size() > 0)
++			        && !switchStack.empty())
+ 				lineUnindent = switchStack[switchStack.size()-1].unindentDepth;
+ 			if (shouldIndentLine)
+ 			{
+Index: plugins/astyle/astyle/ASFormatter.cpp
+===================================================================
+--- plugins/astyle/astyle/ASFormatter.cpp	(revision 7439)
++++ plugins/astyle/astyle/ASFormatter.cpp	(working copy)
+@@ -265,11 +265,11 @@
+ 	ASResource::buildNonParenHeaders(nonParenHeaders, getFileType());
+ 	ASResource::buildPreDefinitionHeaders(preDefinitionHeaders, getFileType());
+ 	ASResource::buildPreCommandHeaders(preCommandHeaders, getFileType());
+-	if (operators->size() == 0)
++	if (operators->empty())
+ 		ASResource::buildOperators(operators);
+-	if (assignmentOperators->size() == 0)
++	if (assignmentOperators->empty())
+ 		ASResource::buildAssignmentOperators(assignmentOperators);
+-	if (castOperators->size() == 0)
++	if (castOperators->empty())
+ 		ASResource::buildCastOperators(castOperators);
+ }
+ 
+Index: plugins/astyle/astyle/astyle_main.cpp
+===================================================================
+--- plugins/astyle/astyle/astyle_main.cpp	(revision 7439)
++++ plugins/astyle/astyle/astyle_main.cpp	(working copy)
+@@ -1213,7 +1213,7 @@
+ 	}
+ 
+ 	// check if files were found (probably an input error if not)
+-	if (fileName.size() == 0)
++	if (fileName.empty())
+ 	{
+ 		fprintf(stderr, _("No file to process %s\n"), filePath.c_str());
+ 		if (hasWildcard && !isRecursive)
+Index: plugins/codecompletion/codecompletion.cpp
+===================================================================
+--- plugins/codecompletion/codecompletion.cpp	(revision 7439)
++++ plugins/codecompletion/codecompletion.cpp	(working copy)
+@@ -529,7 +529,7 @@
+     const wxStringHashMap& hashRepl = Tokenizer::GetTokenReplacementsMap();
+     ConfigManagerContainer::StringToStringMap repl;
+     wxStringHashMap::const_iterator it = hashRepl.begin();
+-    for (; it != hashRepl.end(); it++)
++    for (; it != hashRepl.end(); ++it)
+     {
+         repl[it->first] = it->second;
+     }
+@@ -2132,7 +2132,7 @@
+ 
+     // search previous/next function from current line, default: previous
+     int line = -1;
+-    if (m_FunctionsScope.size())
++    if (!m_FunctionsScope.empty())
+     {
+         unsigned int best_func = 0;
+         bool found_best_func   = false;
+Index: plugins/codecompletion/nativeparser.cpp
+===================================================================
+--- plugins/codecompletion/nativeparser.cpp	(revision 7439)
++++ plugins/codecompletion/nativeparser.cpp	(working copy)
+@@ -2579,7 +2579,7 @@
+         CCLogger::Get()->DebugLog(F(_T("FindAIMatches() Looping %d results"), local_result.size()));
+ 
+     // loop all matches, and recurse
+-    for (TokenIdxSet::iterator it = local_result.begin(); it != local_result.end(); it++)
++    for (TokenIdxSet::iterator it = local_result.begin(); it != local_result.end(); ++it)
+     {
+         int id = *it;
+         Token* token = tree->at(id);
+@@ -2603,7 +2603,7 @@
+             result.insert(id);
+ 
+             // insert enumerators
+-            for (TokenIdxSet::iterator it2 = token->m_Children.begin(); it2 != token->m_Children.end(); it2++)
++            for (TokenIdxSet::iterator it2 = token->m_Children.begin(); it2 != token->m_Children.end(); ++it2)
+                 result.insert(*it2);
+ 
+             continue; // done with this token
+@@ -2788,7 +2788,7 @@
+             {
+                 if (MatchText(token->m_Name, target, caseSens, isPrefix))
+                     result.insert(*it);
+-                else if (token && token->m_TokenKind == tkNamespace && token->m_Aliases.size()) // handle namespace aliases
++                else if (token->m_TokenKind == tkNamespace && token->m_Aliases.size()) // handle namespace aliases
+                 {
+                     for (size_t i = 0; i < token->m_Aliases.size(); ++i)
+                     {
+@@ -2799,7 +2799,7 @@
+                         }
+                     }
+                 }
+-                else if (token && token->m_TokenKind == tkEnum) // check enumerators for match too
++                else if (token->m_TokenKind == tkEnum) // check enumerators for match too
+                     GenerateResultSet(tree, target, *it, result, caseSens, isPrefix, kindMask);
+             }
+         }
+@@ -2817,7 +2817,7 @@
+                 {
+                     if (MatchText(token->m_Name, target, caseSens, isPrefix))
+                         result.insert(*it2);
+-                    else if (token && token->m_TokenKind == tkNamespace && token->m_Aliases.size()) // handle namespace aliases
++                    else if (token->m_TokenKind == tkNamespace && token->m_Aliases.size()) // handle namespace aliases
+                     {
+                         for (size_t i = 0; i < token->m_Aliases.size(); ++i)
+                         {
+@@ -2828,7 +2828,7 @@
+                             }
+                         }
+                     }
+-                    else if (token && token->m_TokenKind == tkEnum) // check enumerators for match too
++                    else if (token->m_TokenKind == tkEnum) // check enumerators for match too
+                         GenerateResultSet(tree, target, *it2, result, caseSens, isPrefix, kindMask);
+                 }
+             }
+@@ -2842,11 +2842,11 @@
+             Token* token = *it;
+             if (token && token->m_ParentIndex == -1)
+             {
+-                if (token && MatchType(token->m_TokenKind, kindMask))
++                if (MatchType(token->m_TokenKind, kindMask))
+                 {
+                     if (MatchText(token->m_Name, target, caseSens, isPrefix))
+                         result.insert(token->m_Index);
+-                    else if (token && token->m_TokenKind == tkNamespace && token->m_Aliases.size()) // handle namespace aliases
++                    else if (token->m_TokenKind == tkNamespace && token->m_Aliases.size()) // handle namespace aliases
+                     {
+                         for (size_t i = 0; i < token->m_Aliases.size(); ++i)
+                         {
+@@ -2857,7 +2857,7 @@
+                             }
+                         }
+                     }
+-                    else if (token && token->m_TokenKind == tkEnum) // check enumerators for match too
++                    else if (token->m_TokenKind == tkEnum) // check enumerators for match too
+                         GenerateResultSet(tree, target, token->m_Index, result, caseSens, isPrefix, kindMask);
+                 }
+             }
+Index: plugins/codecompletion/parser/expression.cpp
+===================================================================
+--- plugins/codecompletion/parser/expression.cpp	(revision 7439)
++++ plugins/codecompletion/parser/expression.cpp	(working copy)
+@@ -119,7 +119,6 @@
+     else if (token == ExpressionConsts::LTOrEqual) return ExpressionNode::LTOrEqual;
+     else if (token == ExpressionConsts::LShift) return ExpressionNode::LShift;
+     else if (token == ExpressionConsts::RShift) return ExpressionNode::RShift;
+-    else if (token == ExpressionConsts::Plus) return ExpressionNode::Plus;
+     else
+     {
+         if (wxIsdigit(token[0])) return ExpressionNode::Numeric;
+Index: plugins/codecompletion/parser/parsertest.cpp
+===================================================================
+--- plugins/codecompletion/parser/parsertest.cpp	(revision 7439)
++++ plugins/codecompletion/parser/parsertest.cpp	(working copy)
+@@ -90,7 +90,7 @@
+ void ParserTest::PrintTree()
+ {
+     TokenList& tokens = m_tokensTree->m_Tokens;
+-    for (TokenList::iterator it = tokens.begin(); it != tokens.end(); it++)
++    for (TokenList::iterator it = tokens.begin(); it != tokens.end(); ++it)
+     {
+         Token* parent = m_tokensTree->at((*it)->m_ParentIndex);
+         if (!parent)
+@@ -110,7 +110,7 @@
+     CCLogger::Get()->Log(log);
+ 
+     TokenIdxSet& ids = token->m_Children;
+-    for (TokenIdxSet::iterator it = ids.begin(); it != ids.end(); it++)
++    for (TokenIdxSet::iterator it = ids.begin(); it != ids.end(); ++it)
+     {
+         Token* token = m_tokensTree->at(*it);
+         PrintTokenTree(token);
+@@ -120,7 +120,7 @@
+ void ParserTest::PrintList()
+ {
+     TokenList& tokens = m_tokensTree->m_Tokens;
+-    for (TokenList::iterator it = tokens.begin(); it != tokens.end(); it++)
++    for (TokenList::iterator it = tokens.begin(); it != tokens.end(); ++it)
+     {
+         wxString log;
+         log << (*it)->GetTokenKindString() << _T(" ") << (*it)->DisplayName() << _T("\t[") << (*it)->m_Line;
+Index: plugins/codecompletion/parser/parserthread.cpp
+===================================================================
+--- plugins/codecompletion/parser/parserthread.cpp	(revision 7439)
++++ plugins/codecompletion/parser/parserthread.cpp	(working copy)
+@@ -2155,10 +2155,10 @@
+         else if (peek == ParserConsts::comma)
+         {
+             m_Tokenizer.UngetToken();
+-            if (components.size() != 0)
++            if (!components.empty())
+             {
+                 wxString ancestor;
+-                while (components.size() > 0)
++                while (!components.empty())
+                 {
+                     wxString tempToken = components.front();
+                     components.pop();
+@@ -2792,7 +2792,7 @@
+                 }
+             }
+         }
+-        return (results.size()>0) ? true : false;
++        return !results.empty();
+     }
+     else
+         return false;
+Index: plugins/codecompletion/parser/searchtree.cpp
+===================================================================
+--- plugins/codecompletion/parser/searchtree.cpp	(revision 7439)
++++ plugins/codecompletion/parser/searchtree.cpp	(working copy)
+@@ -74,7 +74,7 @@
+ 
+         if (includechildren)
+         {
+-            while (curnode->m_Children.size())
++            while (!curnode->m_Children.empty())
+             {
+                 it = curnode->m_Children.end();
+                 --it;
+@@ -376,7 +376,7 @@
+     size_t mindepth = parentnode->GetDepth();
+     SearchTreeItemsMap::iterator i;
+     newmap.clear();
+-    for (i = m_Items.begin();i!=m_Items.end();i++)
++    for (i = m_Items.begin();i!=m_Items.end();++i)
+     {
+         if (i->first <= mindepth)
+             parentnode->m_Items[i->first]=i->second;
+@@ -384,7 +384,7 @@
+             newmap[i->first]=i->second;
+     }
+     m_Items.clear();
+-    for (i = newmap.begin();i!=newmap.end();i++)
++    for (i = newmap.begin();i!=newmap.end();++i)
+         m_Items[i->first]=i->second;
+ }
+ 
+@@ -433,7 +433,7 @@
+     result << slabelno << _T(',') << slabelstart << _T(',') << slabellen;
+     result << _T("\">\n");
+     result << _T("  <items>\n");
+-    for (item = m_Items.begin();item != m_Items.end();item++)
++    for (item = m_Items.begin();item != m_Items.end();++item)
+     {
+         if (item->second)
+         {
+@@ -443,7 +443,7 @@
+     }
+     result << _T("  </items>\n");
+     result << _T("  <children>\n");
+-    for (link = m_Children.begin();link != m_Children.end();link++)
++    for (link = m_Children.begin();link != m_Children.end();++link)
+     {
+         if (link->second)
+         {
+@@ -456,7 +456,7 @@
+     result << _T(" </node>\n");
+     if (withchildren)
+     {
+-        for (link = m_Children.begin();link != m_Children.end();link++)
++        for (link = m_Children.begin();link != m_Children.end();++link)
+         {
+             if (link->second)
+             {
+@@ -482,7 +482,7 @@
+     newprefix << _T("|");
+     SearchTreeLinkMap::iterator i;
+     unsigned int cnt = 0;
+-    for (i = m_Children.begin(); i!= m_Children.end(); i++)
++    for (i = m_Children.begin(); i!= m_Children.end(); ++i)
+     {
+         if (cnt == m_Children.size() - 1)
+             newprefix[newprefix.length() - 1] = _T(' ');
+Index: plugins/codecompletion/parser/tokenizer.h
+===================================================================
+--- plugins/codecompletion/parser/tokenizer.h	(revision 7439)
++++ plugins/codecompletion/parser/tokenizer.h	(working copy)
+@@ -221,7 +221,7 @@
+     static void ConvertToHashReplacementMap(const ConfigManagerContainer::StringToStringMap& map)
+     {
+         ConfigManagerContainer::StringToStringMap::const_iterator it = map.begin();
+-        for (; it != map.end(); it++)
++        for (; it != map.end(); ++it)
+         {
+             s_Replacements[it->first] = it->second;
+         }
+Index: plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- plugins/compilergcc/compilergcc.cpp	(revision 7439)
++++ plugins/compilergcc/compilergcc.cpp	(working copy)
+@@ -3051,14 +3051,15 @@
+     else
+     {
+         cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
++        ProjectFile* pf;
+         if (ed)
+         {
+             // make sure it is saved
+             ed->Save();
+             file.Assign(ed->GetFilename());
++            // Now activate the project this file belongs to
++            pf = ed->GetProjectFile();
+         }
+-        // Now activate the project this file belongs to
+-        ProjectFile* pf = ed->GetProjectFile();
+         if (pf)
+         {
+             cbProject* CurProject = pf->GetParentProject();
+Index: plugins/debuggergdb/debuggergdb.cpp
+===================================================================
+--- plugins/debuggergdb/debuggergdb.cpp	(revision 7439)
++++ plugins/debuggergdb/debuggergdb.cpp	(working copy)
+@@ -1456,7 +1456,7 @@
+             }
+         }
+ 
+-        if (target && !target->GetExecutionParameters().IsEmpty())
++        if (!target->GetExecutionParameters().IsEmpty())
+             m_State.GetDriver()->SetArguments(target->GetExecutionParameters());
+ 
+         // set the file to debug
+Index: plugins/debuggergdb/gdb_commands.h
+===================================================================
+--- plugins/debuggergdb/gdb_commands.h	(revision 7439)
++++ plugins/debuggergdb/gdb_commands.h	(working copy)
+@@ -724,7 +724,7 @@
+                     SqPlus::SquirrelFunction<wxString&> f(cbU2C(m_Cmd));
+                     m_Cmd = f(w_type, m_pWatch->keyword, watch->array_start, watch->array_count);
+                 }
+-                catch (SquirrelError e)
++                catch (SquirrelError& e)
+                 {
+                     m_Cmd = cbC2U(e.desc);
+                 }
+@@ -747,7 +747,7 @@
+                     SqPlus::SquirrelFunction<wxString&> f(cbU2C(m_ParseFunc));
+                     w << f(output, m_pWatch->array_start);
+                 }
+-                catch (SquirrelError e)
++                catch (SquirrelError& e)
+                 {
+                     w << cbC2U(e.desc);
+                 }
+@@ -858,7 +858,7 @@
+                     SqPlus::SquirrelFunction<wxString&> f(cbU2C(m_Cmd));
+                     m_Cmd = f(w_type, what, 0, 0);
+                 }
+-                catch (SquirrelError e)
++                catch (SquirrelError& e)
+                 {
+                     m_Cmd = cbC2U(e.desc);
+                     m_pDriver->DebugLog(_T("Script exception: ") + m_Cmd);
+@@ -882,7 +882,7 @@
+                         SqPlus::SquirrelFunction<wxString&> f(cbU2C(m_ParseFunc));
+                         contents << f(output, 0);
+                     }
+-                    catch (SquirrelError e)
++                    catch (SquirrelError& e)
+                     {
+                         contents << cbC2U(e.desc);
+                         m_pDriver->DebugLog(_T("Script exception: ") + contents);
+Index: plugins/debuggergdb/gdb_driver.cpp
+===================================================================
+--- plugins/debuggergdb/gdb_driver.cpp	(revision 7439)
++++ plugins/debuggergdb/gdb_driver.cpp	(working copy)
+@@ -118,7 +118,7 @@
+             SqPlus::SquirrelFunction<void> f("RegisterTypes");
+             f(this);
+         }
+-        catch (SquirrelError e)
++        catch (SquirrelError& e)
+         {
+             m_pDBG->Log(wxString::Format(_T("Invalid debugger script: '%s'"), script.c_str()));
+             m_pDBG->Log(cbC2U(e.desc));
+Index: sdk/cbstatusbar.cpp
+===================================================================
+--- sdk/cbstatusbar.cpp	(revision 7439)
++++ sdk/cbstatusbar.cpp	(working copy)
+@@ -85,7 +85,7 @@
+ }
+ void cbStatusBar::RemoveField(cbPlugin *plugin)
+ {
+-    for ( ElementVector::iterator it = m_elements.begin() ; it != m_elements.end() ; it++ )
++    for ( ElementVector::iterator it = m_elements.begin() ; it != m_elements.end() ; ++it )
+     {
+         if ( it->plugin == plugin )
+         {
+Index: sdk/editor_hooks.cpp
+===================================================================
+--- sdk/editor_hooks.cpp	(revision 7439)
++++ sdk/editor_hooks.cpp	(working copy)
+@@ -48,7 +48,7 @@
+ 
+ bool EditorHooks::HasRegisteredHooks()
+ {
+-    return s_HookFunctorsMap.size() != 0;
++    return !s_HookFunctorsMap.empty();
+ }
+ 
+ void EditorHooks::CallHooks(cbEditor* editor, wxScintillaEvent& event)
+Index: sdk/filefilters.cpp
+===================================================================
+--- sdk/filefilters.cpp	(revision 7439)
++++ sdk/filefilters.cpp	(working copy)
+@@ -22,7 +22,7 @@
+ // The rest will be added by editor lexers ;)
+ void FileFilters::AddDefaultFileFilters()
+ {
+-    if (s_Filters.size() != 0)
++    if ( !s_Filters.empty() )
+         return;
+     Add(_("Code::Blocks workspace files"),         _T("*.workspace"));
+     Add(_("Code::Blocks project files"),           _T("*.cbp"));
+Index: sdk/projectloader_hooks.cpp
+===================================================================
+--- sdk/projectloader_hooks.cpp	(revision 7439)
++++ sdk/projectloader_hooks.cpp	(working copy)
+@@ -46,7 +46,7 @@
+ 
+ bool ProjectLoaderHooks::HasRegisteredHooks()
+ {
+-    return s_HookFunctorsMap.size() != 0;
++    return !s_HookFunctorsMap.empty();
+ }
+ 
+ void ProjectLoaderHooks::CallHooks(cbProject* project, TiXmlElement* elem, bool isLoading)
+Index: sdk/projectmanager.cpp
+===================================================================
+--- sdk/projectmanager.cpp	(revision 7439)
++++ sdk/projectmanager.cpp	(working copy)
+@@ -2433,6 +2433,7 @@
+             SetProject(project, backupTitle != project->GetTitle());
+         }
+         // if project title has changed, update the appropriate tab tooltips
++		// Here is a missing project validity check or the validity checks above are redundant?
+         wxString newTitle = project->GetTitle();
+         if (backupTitle != newTitle)
+         {
+Index: sdk/scripting/bindings/sc_plugin.cpp
+===================================================================
+--- sdk/scripting/bindings/sc_plugin.cpp	(revision 7439)
++++ sdk/scripting/bindings/sc_plugin.cpp	(working copy)
+@@ -64,7 +64,7 @@
+     {
+         arr = f();
+     }
+-    catch (SquirrelError e)
++    catch (SquirrelError& e)
+     {
+         cbMessageBox(cbC2U(e.desc), _("Script error"), wxICON_ERROR);
+         return ret;
+@@ -110,7 +110,7 @@
+         {
+             arr = f(typ, data);
+         }
+-        catch (SquirrelError e)
++        catch (SquirrelError& e)
+         {
+             cbMessageBox(cbC2U(e.desc), _("Script error"), wxICON_ERROR);
+             continue;
+@@ -165,7 +165,7 @@
+             {
+                 f(callback.menuIndex);
+             }
+-            catch (SquirrelError e)
++            catch (SquirrelError& e)
+             {
+                 cbMessageBox(cbC2U(e.desc), _("Script error"), wxICON_ERROR);
+             }
+@@ -190,7 +190,7 @@
+             {
+                 f(callback.menuIndex);
+             }
+-            catch (SquirrelError e)
++            catch (SquirrelError& e)
+             {
+                 cbMessageBox(cbC2U(e.desc), _("Script error"), wxICON_ERROR);
+             }
+@@ -275,7 +275,7 @@
+             {
+                 f();
+             }
+-            catch (SquirrelError e)
++            catch (SquirrelError& e)
+             {
+                 cbMessageBox(cbC2U(e.desc), _("Script error"), wxICON_ERROR);
+             }
+@@ -351,7 +351,7 @@
+         script = SquirrelVM::CompileBuffer(s_cbScriptPlugin, "cbScriptPlugin");
+         SquirrelVM::RunScript(script);
+     }
+-    catch (SquirrelError e)
++    catch (SquirrelError& e)
+     {
+         cbMessageBox(wxString::Format(_("Failed to register script plugins framework.\n\n%s"),
+                                         cbC2U(e.desc).c_str()),
+Index: sdk/scripting/sqstdlib/sqstdio.cpp
+===================================================================
+--- sdk/scripting/sqstdlib/sqstdio.cpp	(revision 7439)
++++ sdk/scripting/sqstdlib/sqstdio.cpp	(working copy)
+@@ -196,9 +196,8 @@
+ 
+ static SQInteger _io_file_lexfeed_ASCII(SQUserPointer file)
+ {
+-	SQInteger ret;
+ 	char c;
+-	if( ( ret=sqstd_fread(&c,sizeof(c),1,(FILE *)file )>0) )
++	if( sqstd_fread(&c,sizeof(c),1,(FILE *)file ) > 0 )
+ 		return c;
+ 	return 0;
+ }
+@@ -242,18 +241,16 @@
+ 
+ static SQInteger _io_file_lexfeed_UCS2_LE(SQUserPointer file)
+ {
+-	SQInteger ret;
+ 	wchar_t c;
+-	if( ( ret=sqstd_fread(&c,sizeof(c),1,(FILE *)file )>0) )
++	if( sqstd_fread(&c,sizeof(c),1,(FILE *)file ) > 0 )
+ 		return (SQChar)c;
+ 	return 0;
+ }
+ 
+ static SQInteger _io_file_lexfeed_UCS2_BE(SQUserPointer file)
+ {
+-	SQInteger ret;
+ 	unsigned short c;
+-	if( ( ret=sqstd_fread(&c,sizeof(c),1,(FILE *)file )>0) ) {
++	if( sqstd_fread(&c,sizeof(c),1,(FILE *)file ) > 0 ) {
+ 		c = ((c>>8)&0x00FF)| ((c<<8)&0xFF00);
+ 		return (SQChar)c;
+ 	}
+Index: sdk/scriptingmanager.cpp
+===================================================================
+--- sdk/scriptingmanager.cpp	(revision 7439)
++++ sdk/scriptingmanager.cpp	(working copy)
+@@ -178,7 +178,7 @@
+     {
+         script = SquirrelVM::CompileBuffer(cbU2C(buffer), cbU2C(debugName));
+     }
+-    catch (SquirrelError e)
++    catch (SquirrelError& e)
+     {
+         cbMessageBox(wxString::Format(_T("Filename: %s\nError: %s\nDetails: %s"), debugName.c_str(), cbC2U(e.desc).c_str(), s_ScriptErrors.c_str()), _("Script compile error"), wxICON_ERROR);
+         m_IncludeSet.erase(incName);
+@@ -190,7 +190,7 @@
+     {
+         SquirrelVM::RunScript(script);
+     }
+-    catch (SquirrelError e)
++    catch (SquirrelError& e)
+     {
+         cbMessageBox(wxString::Format(_T("Filename: %s\nError: %s\nDetails: %s"), debugName.c_str(), cbC2U(e.desc).c_str(), s_ScriptErrors.c_str()), _("Script run error"), wxICON_ERROR);
+         m_IncludeSet.erase(incName);
+Index: sdk/wxpropgrid/samples/propgridsample.h
+===================================================================
+--- sdk/wxpropgrid/samples/propgridsample.h	(revision 7439)
++++ sdk/wxpropgrid/samples/propgridsample.h	(working copy)
+@@ -59,7 +59,7 @@
+     }
+     wxVector3f( double x, double y, double z )
+     {
+-        x = x; y = y; z = z;
++        this->x = x; this->y = y; this->z = z;
+     }
+ 
+     double x, y, z;
+Index: sdk/wxpropgrid/samples/tests.cpp
+===================================================================
+--- sdk/wxpropgrid/samples/tests.cpp	(revision 7439)
++++ sdk/wxpropgrid/samples/tests.cpp	(working copy)
+@@ -656,7 +656,7 @@
+ 
+         wxArrayPGProperty::reverse_iterator it2;
+ 
+-        for ( it2 = array.rbegin(); it2 != array.rend(); it2++ )
++        for ( it2 = array.rbegin(); it2 != array.rend(); ++it2 )
+         {
+             wxPGProperty* p = (wxPGProperty*)*it2;
+             RT_MSG(wxString::Format(wxT("Deleting '%s' ('%s')"),p->GetLabel().c_str(),p->GetName().c_str()));
+Index: sdk/wxpropgrid/src/propgrid.cpp
+===================================================================
+--- sdk/wxpropgrid/src/propgrid.cpp	(revision 7439)
++++ sdk/wxpropgrid/src/propgrid.cpp	(working copy)
+@@ -1043,7 +1043,7 @@
+                 {
+                     int depth = 1;
+ 
+-                    if ( it != text.end() ) it++;
++                    if ( it != text.end() ) ++it;
+                     pos++;
+                     size_t startPos = pos;
+ 
+@@ -1051,7 +1051,7 @@
+                     while ( it != text.end() && depth > 0 )
+                     {
+                         a = *it;
+-                        it++;
++                        ++it;
+                         pos++;
+ 
+                         if ( a == wxT(']') )
+@@ -1333,7 +1333,7 @@
+ 
+             // Children in list can be in any order, but we will give hint to
+             // GetPropertyByNameWH(). This optimizes for full list parsing.
+-            for ( node = list.begin(); node != list.end(); node++ )
++            for ( node = list.begin(); node != list.end(); ++node )
+             {
+                 wxVariant& childValue = *((wxVariant*)*node);
+                 wxPGProperty* child = GetPropertyByNameWH(childValue.GetName(), i);
+@@ -2432,7 +2432,7 @@
+         {
+             const wxString& childName = child->GetBaseName();
+ 
+-            for ( ; node != pList->end(); node++ )
++            for ( ; node != pList->end(); ++node )
+             {
+                 const wxVariant& item = *((const wxVariant*)*node);
+                 if ( item.GetName() == childName )
+@@ -5122,7 +5122,7 @@
+ 
+     dst_str.clear();
+ 
+-    for ( ; i != src_str.end(); i++ )
++    for ( ; i != src_str.end(); ++i )
+     {
+         wxUniChar a = wxPGGetIterChar(src_str, i);
+ 
+@@ -5182,7 +5182,7 @@
+ 
+     dst_str.clear();
+ 
+-    for ( ; i != src_str.end(); i++ )
++    for ( ; i != src_str.end(); ++i )
+     {
+         wxChar a = wxPGGetIterChar(src_str, i);
+ 
+@@ -9066,7 +9066,7 @@
+ 
+         for ( it = m_actionTriggers.begin();
+               it != m_actionTriggers.end();
+-              it++ )
++              ++it )
+         {
+             if ( it->second == action )
+             {
+@@ -10084,7 +10084,7 @@
+ {
+     wxPGHashMapS2P::iterator it;
+ 
+-    for ( it = m_map.begin(); it != m_map.end(); it++ )
++    for ( it = m_map.begin(); it != m_map.end(); ++it )
+     {
+         wxVariantData* data = (wxVariantData*) it->second;
+         data->DecRef();
+@@ -10166,7 +10166,7 @@
+                 }
+                 else
+                 {
+-                    i++;
++                    ++i;
+                     m_curPos = i;
+                     return true;
+                 }
+@@ -10178,7 +10178,7 @@
+                 prev_a = wxT('\0');
+             }
+         }
+-        i++;
++        ++i;
+     }
+ 
+     m_curPos = str.end();
+@@ -12612,7 +12612,7 @@
+ 
+     //
+     // Second pass for special entries
+-    for ( node = list.begin(); node != list.end(); node++ )
++    for ( node = list.begin(); node != list.end(); ++node )
+     {
+         wxVariant *current = (wxVariant*)*node;
+ 
+@@ -12679,7 +12679,7 @@
+ 
+     if ( numSpecialEntries )
+     {
+-        for ( node = list.begin(); node != list.end(); node++ )
++        for ( node = list.begin(); node != list.end(); ++node )
+         {
+             wxVariant *current = (wxVariant*)*node;
+ 
+@@ -12710,7 +12710,7 @@
+                                 wxVariantList& list2 = current->GetList();
+                                 wxVariantList::const_iterator node2;
+ 
+-                                for ( node2 = list2.begin(); node2 != list2.end(); node2++ )
++                                for ( node2 = list2.begin(); node2 != list2.end(); ++node2 )
+                                 {
+                                     wxVariant *attr = (wxVariant*)*node2;
+                                     foundProp->SetAttribute( attr->GetName(), *attr );
+@@ -13569,7 +13569,7 @@
+             int state = 0;
+             bool labelValid = false;
+ 
+-            for ( ; it != choicesString.end(); it++ )
++            for ( ; it != choicesString.end(); ++it )
+             {
+                 wxChar c = *it;
+ 
+Index: sdk/wxpropgrid/src/props.cpp
+===================================================================
+--- sdk/wxpropgrid/src/props.cpp	(revision 7439)
++++ sdk/wxpropgrid/src/props.cpp	(working copy)
+@@ -174,7 +174,7 @@
+     wxString::const_iterator end = wxstr.end();
+ 
+     // Skip spaces
+-    while ( i != end && wxIsspace(*i) ) i++;
++    while ( i != end && wxIsspace(*i) ) ++i;
+ 
+     // Starts with sign?
+     *sign = wxT(' ');
+@@ -184,20 +184,20 @@
+         if ( c == wxT('+') || c == wxT('-') )
+         {
+             *sign = c;
+-            i++;
++            ++i;
+         }
+     }
+ 
+     // Starts with 0x?
+     if ( i != end && *i == wxT('0') )
+     {
+-        i++;
++        ++i;
+         if ( i != end )
+         {
+             if ( *i == wxT('x') && (base == 16 || base == 0) )
+             {
+                 base = 16;
+-                i++;
++                ++i;
+             }
+             else
+             {
+@@ -208,13 +208,13 @@
+             }
+         }
+         else
+-            i--;
++            --i;
+     }
+ 
+     if ( base == 0 )
+         base = 10;
+ 
+-    for ( ; i != end; i++ )
++    for ( ; i != end; ++i )
+     {
+         unsigned int n;
+ 
+@@ -455,7 +455,7 @@
+ 
+         int firstNonZeroPos = 0;
+ 
+-        for ( ; i != iMax; i++ )
++        for ( ; i != iMax; ++i )
+         {
+             wxChar c = *i;
+             if ( c != wxT('0') && c != wxT(' ') )
+@@ -853,7 +853,7 @@
+         wxString::const_iterator i = target.end() - 1;
+         size_t new_len = target.length() - 1;
+ 
+-        for ( ; i != target.begin(); i-- )
++        for ( ; i != target.begin(); --i )
+         {
+             if ( wxPGGetIterChar(target, i) != wxT('0') )
+                 break;
+@@ -1532,8 +1532,8 @@
+                 else if ( selected == this )
+                     oldSel = -2;
+             }
++            state->DoClearSelection();
+         }
+-        state->DoClearSelection();
+     }
+ 
+     // Delete old children
+Index: sdk/wxscintilla/src/scintilla/lexers/LexSQL.cxx
+===================================================================
+--- sdk/wxscintilla/src/scintilla/lexers/LexSQL.cxx	(revision 7439)
++++ sdk/wxscintilla/src/scintilla/lexers/LexSQL.cxx	(working copy)
+@@ -67,7 +67,7 @@
+ class SQLStates {
+ public :
+ 	void Set(int lineNumber, unsigned short int sqlStatesLine) {
+-		if (!sqlStatement.size() == 0 || !sqlStatesLine == 0) {
++		if (!sqlStatement.empty() || sqlStatesLine != 0) {
+ 			sqlStatement.resize(lineNumber + 1, 0);
+ 			sqlStatement[lineNumber] = sqlStatesLine;
+ 		}

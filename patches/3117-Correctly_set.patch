@@ -1,0 +1,58 @@
+Index: src/plugins/debuggergdb/cdb_driver.cpp
+===================================================================
+--- src/plugins/debuggergdb/cdb_driver.cpp	(revision 6920)
++++ src/plugins/debuggergdb/cdb_driver.cpp	(working copy)
+@@ -24,7 +24,8 @@
+ static wxRegEx reFile(_T("[ \t]([A-z]+.*)[ \t]+\\[([A-z]:)(.*) @ ([0-9]+)\\]"));
+ 
+ CDB_driver::CDB_driver(DebuggerGDB* plugin)
+-    : DebuggerDriver(plugin)
++    : DebuggerDriver(plugin),
++    m_Debuggee(wxEmptyString)
+ {
+     //ctor
+ }
+@@ -62,6 +63,10 @@
+     // finally, add the program to debug
+     cmd << _T(' ') << debuggee;
+ 
++    // Because of the lack of ChDir functionality for a process which has already been launched,
++    // do a dodgy workaround by starting with a dummy version of the process, then starting in the right folder later.
++    m_Debuggee.assign(debuggee);
++
+     if (!m_WorkingDir.IsEmpty())
+         wxSetWorkingDirectory(m_WorkingDir);
+ 
+@@ -104,7 +109,19 @@
+ 
+ void CDB_driver::Prepare(ProjectBuildTarget* /*target*/, bool /*isConsole*/)
+ {
+-    // default initialization
++	if (!m_Debuggee.IsEmpty())
++	{
++		// Workaround for setting the correct working dir:
++		wxString cmd = _T(".kill; .createdir ");
++		cmd << m_WorkingDir;
++		QueueCommand(new DebuggerCmd(this,cmd)); // Kill the process and CD to the right place
++
++		cmd = _T(".create ");
++		cmd << m_Debuggee << _T("; g");
++		QueueCommand(new DebuggerCmd(this,cmd)); // Restart the process in the correct directory
++
++		m_Debuggee.Clear();
++	}
+ }
+ 
+ void CDB_driver::Start(bool /*breakOnEntry*/)
+Index: src/plugins/debuggergdb/cdb_driver.h
+===================================================================
+--- src/plugins/debuggergdb/cdb_driver.h	(revision 6920)
++++ src/plugins/debuggergdb/cdb_driver.h	(working copy)
+@@ -49,6 +49,7 @@
+         virtual void ParseOutput(const wxString& output);
+     protected:
+     private:
++    	wxString m_Debuggee;
+ };
+ 
+ #endif // CDB_DRIVER_H

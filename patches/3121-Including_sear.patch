@@ -1,0 +1,30 @@
+--- src/plugins/debuggergdb/debuggergdb.cpp.original	2011-01-19 14:53:56.877095951 +0100
++++ src/plugins/debuggergdb/debuggergdb.cpp	2011-01-19 15:37:55.227135231 +0100
+@@ -2189,8 +2189,25 @@
+     cbProject* project = Manager::Get()->GetProjectManager()->GetActiveProject();
+     ProjectFile* f = project ? project->GetFileByFilename(filename, false, true) : 0;
+     wxFileName fname(filename);
+-    if (project && fname.IsRelative())
+-        fname.MakeAbsolute(project->GetBasePath());
++    if (project && fname.IsRelative()) 
++    {
++        wxArrayString& pdirs = GetSearchDirs(project);
++        wxFileName tmp = fname;        
++        for (size_t i = 0; i < pdirs.GetCount(); ++i) 
++        {
++            tmp = fname;
++            tmp.MakeAbsolute(pdirs[i]);
++            if (tmp.FileExists()) 
++            {
++                fname = tmp;
++                break;
++            }
++        }
++        if (fname.IsRelative()) 
++        {
++            fname.MakeAbsolute(project->GetBasePath());
++        }
++    }
+     // gdb can't work with spaces in filenames, so we have passed it the shorthand form (C:\MYDOCU~1 etc)
+     // revert this change now so the file can be located and opened...
+     // we do this by calling GetLongPath()

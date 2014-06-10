@@ -1,0 +1,229 @@
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 8133)
++++ src/sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -543,6 +543,7 @@
+     if (cookie == wxNOT_FOUND)
+         cookie = 0;
+     cmbThemes->SetSelection(cookie);
++    XRCCTRL(*this, "chkColoursWxSmith", wxCheckBox)->SetValue(cfg->ReadBool(_T("/colour_sets/highlight_wxsmith"), true));
+     ChangeTheme();
+ }
+ 
+@@ -612,6 +613,7 @@
+     {
+         wxString sel = cmbLangs->GetStringSelection();
+         m_Lang = m_Theme->GetHighlightLanguage(sel);
++        XRCCTRL(*this, "chkColoursWxSmith", wxCheckBox)->Show(sel == wxT("C/C++"));
+     }
+ 
+     CreateColoursSample();
+@@ -727,6 +729,7 @@
+     {
+         wxString sel = XRCCTRL(*this, "cmbLangs", wxComboBox)->GetStringSelection();
+         m_Lang = m_Theme->GetHighlightLanguage(sel);
++        XRCCTRL(*this, "chkColoursWxSmith", wxCheckBox)->Show(sel == wxT("C/C++"));
+     }
+     FillColourComponents();
+     CreateColoursSample();
+@@ -930,6 +933,7 @@
+             cfg->Write(_T("/colour_sets/active_colour_set"), m_Theme->GetName());
+         }
+         cfg->Write(_T("/colour_sets/active_lang"), XRCCTRL(*this, "cmbLangs", wxComboBox)->GetStringSelection());
++        cfg->Write(_T("/colour_sets/highlight_wxsmith"), XRCCTRL(*this, "chkColoursWxSmith", wxCheckBox)->GetValue());
+ 
+         // encoding
+         wxComboBox* cmbEnc = XRCCTRL(*this, "cmbEncoding", wxComboBox);
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 8133)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -1604,6 +1604,7 @@
+         control->SetProperty(_T("fold"), _T("0"));
+         control->SetMarginWidth(C_FOLDING_MARGIN, 0);
+     }
++    control->SetProperty(_T("highlight.wxsmith"), mgr->ReadBool(_T("/colour_sets/highlight_wxsmith"), true) ? _T("1") : _T("0"));
+ 
+     // line numbering
+     control->SetMarginType(C_LINE_MARGIN, wxSCI_MARGIN_NUMBER);
+Index: src/sdk/wxscintilla/include/wx/wxscintilla.h
+===================================================================
+--- src/sdk/wxscintilla/include/wx/wxscintilla.h	(revision 8133)
++++ src/sdk/wxscintilla/include/wx/wxscintilla.h	(working copy)
+@@ -577,7 +577,7 @@
+ /* C::B begin */
+ // Keep in sync with SciLexer.h      -> SCE_C_WXSMITH
+ // Keep in sync with Scintilla.iface -> SCE_C_WXSMITH
+-#define wxSCI_C_WXSMITH 99
++#define wxSCI_C_WXSMITH 50
+ /* C::B end */
+ 
+ // Lexical states for SCLEX_D
+Index: src/sdk/wxscintilla/src/scintilla/include/Scintilla.iface
+===================================================================
+--- src/sdk/wxscintilla/src/scintilla/include/Scintilla.iface	(revision 8133)
++++ src/sdk/wxscintilla/src/scintilla/include/Scintilla.iface	(working copy)
+@@ -273,9 +273,9 @@
+ 
+ enu MarkerOutline=SC_MARKNUM_
+ # CHANGEBAR begin #
+-# Markers used for outlining and changed column. 
+-val SC_MARKNUM_CHANGEUNSAVED=23 
+-val SC_MARKNUM_CHANGESAVED=24 
++# Markers used for outlining and changed column.
++val SC_MARKNUM_CHANGEUNSAVED=23
++val SC_MARKNUM_CHANGESAVED=24
+ # CHANGEBAR end #
+ val SC_MARKNUM_FOLDEREND=25
+ val SC_MARKNUM_FOLDEROPENMID=26
+@@ -2565,7 +2565,7 @@
+ # WXSMITH begin #
+ # Keep in sync with wxscinilla.h -> wxSCI_C_WXSMITH
+ # Keep in sync with SciLexer.h   -> SCE_C_WXSMITH
+-val SCE_C_WXSMITH=99
++val SCE_C_WXSMITH=50
+ # WXSMITH end #
+ # Lexical states for SCLEX_D
+ lex D=SCLEX_D SCE_D_
+Index: src/sdk/wxscintilla/src/scintilla/include/SciLexer.h
+===================================================================
+--- src/sdk/wxscintilla/src/scintilla/include/SciLexer.h	(revision 8133)
++++ src/sdk/wxscintilla/src/scintilla/include/SciLexer.h	(working copy)
+@@ -164,7 +164,7 @@
+ /* C::B begin */
+ // Keep in sync with wxscinilla.h    -> wxSCI_C_WXSMITH
+ // Keep in sync with Scintilla.iface -> SCE_C_WXSMITH
+-#define SCE_C_WXSMITH 99
++#define SCE_C_WXSMITH 50
+ /* C::B end */
+ #define SCE_D_DEFAULT 0
+ #define SCE_D_COMMENT 1
+Index: src/sdk/wxscintilla/src/scintilla/lexers/LexCPP.cxx
+===================================================================
+--- src/sdk/wxscintilla/src/scintilla/lexers/LexCPP.cxx	(revision 8133)
++++ src/sdk/wxscintilla/src/scintilla/lexers/LexCPP.cxx	(working copy)
+@@ -218,7 +218,7 @@
+ 	bool foldCompact;
+ 	bool foldAtElse;
+ /* C::B begin */
+-	bool foldWxSmith;
++	bool highlightWxSmith;
+ /* C::B end */
+ 	OptionsCPP() {
+ 		stylingWithinPreprocessor = false;
+@@ -239,7 +239,7 @@
+ 		foldCompact = false;
+ 		foldAtElse = false;
+ /* C::B begin */
+-		foldWxSmith = false;
++		highlightWxSmith = true;
+ /* C::B end */
+ 	}
+ };
+@@ -306,6 +306,10 @@
+ 
+ 		DefineProperty("fold.compact", &OptionsCPP::foldCompact);
+ 
++/* C::B begin */
++		DefineProperty("highlight.wxsmith", &OptionsCPP::highlightWxSmith);
++/* C::B end */
++
+ 		DefineProperty("fold.at.else", &OptionsCPP::foldAtElse,
+ 			"This option enables C++ folding on a \"} else {\" line of an if statement.");
+ 
+@@ -786,8 +790,9 @@
+ 				break;
+ 			case SCE_C_WXSMITH:
+ 				if (sc.Match("//*)")) {
+-					sc.Forward(); sc.Forward(); sc.Forward();
+-					sc.ForwardSetState(SCE_C_DEFAULT|activitySet);
++					sc.Forward(4);
++					sc.SetState(SCE_C_COMMENTLINE|activitySet);
++					continue;
+ 				}
+ /* C::B end */
+ 		}
+@@ -835,9 +840,15 @@
+ 					// Support of Qt/Doxygen doc. style
+ 					sc.SetState(SCE_C_COMMENTLINEDOC|activitySet);
+ /* C::B begin */
+-				else if (sc.Match("(*"))
++				else if (sc.Match("//(*") && options.highlightWxSmith) {
+ 					// Support for wxSmith auto-generated code
+ 					sc.SetState(SCE_C_WXSMITH|activitySet);
++					sc.Forward(4);
++					sc.SetState(SCE_C_COMMENTLINE|activitySet);
++					while (!sc.atLineEnd)
++						sc.Forward();
++					sc.SetState(SCE_C_WXSMITH|activitySet);
++				}
+ /* C::B end */
+ 				else
+ 					sc.SetState(SCE_C_COMMENTLINE|activitySet);
+@@ -1005,7 +1016,9 @@
+ 				levelNext--;
+ 			}
+ 		}
+-		if (options.foldComment && options.foldCommentExplicit && ((style == SCE_C_COMMENTLINE) || options.foldExplicitAnywhere)) {
++/* C::B begin */
++		if (options.foldComment && options.foldCommentExplicit && ((style == SCE_C_COMMENTLINE) || (style == SCE_C_WXSMITH) || options.foldExplicitAnywhere)) {
++/* C::B end */
+ 			if (userDefinedFoldMarkers) {
+ 				if (styler.Match(i, options.foldExplicitStart.c_str())) {
+ 					levelNext++;
+@@ -1032,15 +1045,6 @@
+ 				}
+ 			}
+ 		}
+-/* C::B begin */
+-		if (options.foldWxSmith && (style == SCE_C_WXSMITH)) {
+-			if (stylePrev != SCE_C_WXSMITH) {
+-				levelNext++;
+-			} else if ( styleNext != SCE_C_WXSMITH) {
+-				levelNext--;
+-		    }
+-		}
+-/* C::B end */
+ 		if (options.foldPreprocessor && (style == SCE_C_PREPROCESSOR)) {
+ 			if (ch == '#') {
+ 				unsigned int j = i + 1;
+Index: src/sdk/resources/lexers/lexer_cpp.xml
+===================================================================
+--- src/sdk/resources/lexers/lexer_cpp.xml	(revision 8133)
++++ src/sdk/resources/lexers/lexer_cpp.xml	(working copy)
+@@ -12,7 +12,7 @@
+                         italics="0"
+                         underlined="0"/>
+                 <Style name="Comment (normal)"
+-                        index="1"
++                        index="1,23"
+                         fg="160,160,160"/>
+                 <Style name="Comment line (normal)"
+                         index="2"
+@@ -82,7 +82,7 @@
+                         bg="255,0,0"
+                         bold="1"/>
+                 <Style name="wxSmith-generated code"
+-                        index="99"
++                        index="50"
+                         fg="64,64,128"
+                         bg="255,255,255"
+                         italics="1"/>
+Index: src/sdk/resources/editor_configuration.xrc
+===================================================================
+--- src/sdk/resources/editor_configuration.xrc	(revision 8133)
++++ src/sdk/resources/editor_configuration.xrc	(working copy)
+@@ -1105,6 +1105,13 @@
+                                                     </object>
+                                                     <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+                                                 </object>
++                                                <object class="sizeritem">
++                                                    <object class="wxCheckBox" name="chkColoursWxSmith">
++                                                        <label>Highlight wxSmith</label>
++                                                    </object>
++                                                    <flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                                    <border>4</border>
++                                                </object>
+                                                 <object class="spacer">
+                                                     <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+                                                     <option>1</option>

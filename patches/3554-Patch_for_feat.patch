@@ -1,0 +1,44 @@
+Index: src/src/infopane.cpp
+===================================================================
+--- src/src/infopane.cpp	(revision 9660)
++++ src/src/infopane.cpp	(working copy)
+@@ -46,6 +46,8 @@
+     EVT_MENU(idClear,    InfoPane::OnClear)
+     EVT_MENU(wxID_ANY,   InfoPane::OnMenu)
+ 
++    EVT_KEY_UP(InfoPane::OnKeyUp)
++
+     EVT_CONTEXT_MENU(InfoPane::ContextMenu)
+ 
+     EVT_AUINOTEBOOK_TAB_RIGHT_UP(idNB, InfoPane::OnTabContextMenu)
+@@ -335,6 +337,18 @@
+     return;
+ }
+ 
++void InfoPane::OnKeyUp(wxKeyEvent& event)
++{
++    if (event.ControlDown())
++    {
++        if (event.GetUnicodeKey() == 'C')
++        {
++            wxCommandEvent evt(wxEVT_NULL, idCopySelectedToClipboard);
++            OnCopy(evt);
++        }
++    }
++}
++
+ void InfoPane::ContextMenu(cb_unused wxContextMenuEvent& event)
+ {
+     DoShowContextMenu();
+Index: src/src/infopane.h
+===================================================================
+--- src/src/infopane.h	(revision 9660)
++++ src/src/infopane.h	(working copy)
+@@ -51,6 +51,7 @@
+     void Hide(size_t i);
+ 
+     void OnMenu(wxCommandEvent& event);
++    void OnKeyUp(wxKeyEvent& event);
+     void OnCopy(wxCommandEvent& event);
+     void OnWrapMode(wxCommandEvent& event);
+     void OnClear(wxCommandEvent& event);

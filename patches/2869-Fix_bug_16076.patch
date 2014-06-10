@@ -1,0 +1,37 @@
+Index: src/sdk/filemanager.cpp
+===================================================================
+--- src/sdk/filemanager.cpp	(revision 5986)
++++ src/sdk/filemanager.cpp	(working copy)
+@@ -341,14 +341,16 @@
+         default:
+             break;
+         }
++
++        if(f.Write(mark, mark_length) != mark_length)
++            return false;
+     }
+ 
+-    if(f.Write(mark, mark_length) != mark_length)
+-        return false;
+-
+-    if(data.length() == 0)
++    if (data.length() == 0)
+         return true;
+ 
++#if defined(UNICODE) || defined(_UNICODE)
++
+     size_t inlen = data.Len(), outlen = 0;
+     wxCharBuffer mbBuff;
+     if ( encoding == wxFONTENCODING_UTF7 )
+@@ -443,4 +445,11 @@
+     }
+ 
+     return f.Write(buf, size);
++
++#else
++
++    // For ANSI builds, dump the char* to file.
++    return f.Write(data.c_str(), data.Length()) == data.Length();
++    
++#endif    
+ }

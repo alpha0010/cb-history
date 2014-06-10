@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 3146 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #3146 <small>2011-04-16 12:42:10</small></h3>
+          <h4>cbuser132</h4>
+          CB debugger Plugin can handle vectors witch were typdefed
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="3146-CB_debugger_Pl.patch">3146-CB_debugger_Pl.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::FeatureAdd</dd>
+            <dt>Status</dt><dd>Rejected</dd>
+            <dt>Close date</dt><dd>2011-04-17 14:37:41</dd>
+            <dt>Assigned to</dt><dd>tpetrov</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">cbuser132 2011-04-16 12:59:20</div>
+        <div class="panel-body">
+          <p>patch is for the wxpropgrid_debugger branch</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2011-04-17 10:29:20</div>
+        <div class="panel-body">
+          <p>Can you explain why this patch is needed?</p>
+          <p>A test case?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">cbuser132 2011-04-17 11:51:13</div>
+        <div class="panel-body">
+          <p>A lite example:</p>
+          <p>typedef std::vector&lt;int&gt; Is;</p>
+          <p>int main()</p>
+          <p>{</p>
+          <p>Is is;</p>
+          <p>is.push_back(45);</p>
+          <p>}</p>
+          <p>Without that patch the debuger-plugin will not show "is" as a vector because it is the type "Is" and the plugin has no registrated type "Is". So the plugin sends "output is" to the debugger but "pvector is" will show it the right way. So the patch will call "whatis Is" to find out that "Is" is a vector. And now the registrated type will be found and the debugger plugin sends "pvector is" instead of "output is".</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2011-04-17 12:27:14</div>
+        <div class="panel-body">
+          <p>A harder example:</p>
+          <p>typedef std::vector&lt;int&gt; TypeVector;</p>
+          <p>typedef TypeVector TypeTypeVector;</p>
+          <p>TypeTypeVector vector;</p>
+          <p>vector.push_back(10);</p>
+          <p>In this case your patch won't work, because "whatis TypeVector" returns TypeTypeVector. So you get a no go for the patch.</p>
+          <p>Another reason is that you're adding another command needed to update every watch, which will slow the update of al watches.</p>
+          <p>They are pretty slow already, so we can't add features that slow them even more.</p>
+          <p>By the way have you tried a python enabled gdb + stl pretty printers (gdb 4.5+ have them by default)?</p>
+          <p>It works even in this case.</p>
+          <p>Probably there is no reason to improve this patch any further, because I plan to deprecate the scripted pretty printers inside C::B (at least for gdb).</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">cbuser132 2011-04-17 13:04:14</div>
+        <div class="panel-body">
+          <p>okay you can change status to Rejected</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

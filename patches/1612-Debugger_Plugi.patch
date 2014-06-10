@@ -1,0 +1,89 @@
+Index: src/plugins/debuggergdb/debuggergdb.cpp
+===================================================================
+--- src/plugins/debuggergdb/debuggergdb.cpp	(revision 3157)
++++ src/plugins/debuggergdb/debuggergdb.cpp	(working copy)
+@@ -904,19 +904,6 @@
+         AddSourceDir(project->GetBasePath());
+         AddSourceDir(project->GetCommonTopLevelPath());
+ 
+-        // switch to output dir
+-        wxString path = UnixFilename(target->GetWorkingDir());
+-        if (!path.IsEmpty())
+-        {
+-            Manager::Get()->GetMacrosManager()->ReplaceEnvVars(path); // apply env vars
+-            cmd.Clear();
+-            ConvertToGDBDirectory(path);
+-            if (path != _T(".")) // avoid silly message "changing to ."
+-            {
+-                msgMan->Log(m_PageIndex, _("Changing directory to: %s"), path.c_str());
+-                m_State.GetDriver()->SetWorkingDirectory(path);
+-            }
+-        }
+ 
+         if (target && !target->GetExecutionParameters().IsEmpty())
+             m_State.GetDriver()->SetArguments(target->GetExecutionParameters());
+@@ -926,13 +913,25 @@
+         wxString debuggee = GetDebuggee(target);
+         if (debuggee.IsEmpty())
+             return -3;
++        if (!::wxIsAbsolutePath(debuggee))
++        {
++            debuggee = ::wxGetCwd() + _T("/") + debuggee;
++        }
+         cmdline = m_State.GetDriver()->GetCommandLine(cmdexe, debuggee);
+     }
+     else // m_PidToAttach != 0
+         cmdline = m_State.GetDriver()->GetCommandLine(cmdexe, m_PidToAttach);
+ 
+     // start the gdb process
+-    wxString wdir = project ? project->GetBasePath() : _T(".");
++    wxString wdir = UnixFilename(target->GetWorkingDir());
++    if (wdir.IsEmpty())
++    {
++        wdir = project ? project->GetBasePath() : _T(".");
++    }
++    else
++    {
++        Manager::Get()->GetMacrosManager()->ReplaceEnvVars(wdir); // apply env vars
++    }
+     DebugLog(_T("Command-line: ") + cmdline);
+     DebugLog(_T("Working dir : ") + wdir);
+     int ret = LaunchProcess(cmdline, wdir);
+Index: src/plugins/debuggergdb/cdb_driver.cpp
+===================================================================
+--- src/plugins/debuggergdb/cdb_driver.cpp	(revision 3157)
++++ src/plugins/debuggergdb/cdb_driver.cpp	(working copy)
+@@ -52,9 +52,6 @@
+     // finally, add the program to debug
+     cmd << _T(' ') << debuggee;
+ 
+-    if (!m_WorkingDir.IsEmpty())
+-        wxSetWorkingDirectory(m_WorkingDir);
+-
+     return cmd;
+ }
+ 
+@@ -86,9 +83,6 @@
+     // finally, add the PID
+     cmd << _T(" -p ") << wxString::Format(_T("%d"), pid);
+ 
+-    if (!m_WorkingDir.IsEmpty())
+-        wxSetWorkingDirectory(m_WorkingDir);
+-
+     return cmd;
+ }
+ 
+Index: src/plugins/debuggergdb/gdb_driver.cpp
+===================================================================
+--- src/plugins/debuggergdb/gdb_driver.cpp	(revision 3157)
++++ src/plugins/debuggergdb/gdb_driver.cpp	(working copy)
+@@ -223,9 +223,6 @@
+ //        QueueCommand(new DebuggerCmd(this, initCmds[i]));
+ //    }
+ 
+-    // set working directory
+-    if (!m_WorkingDir.IsEmpty())
+-        QueueCommand(new DebuggerCmd(this, _T("cd ") + m_WorkingDir));
+ 
+     // add search dirs
+     for (unsigned int i = 0; i < m_Dirs.GetCount(); ++i)

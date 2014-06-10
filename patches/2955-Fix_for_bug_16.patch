@@ -1,0 +1,28 @@
+Index: src/src/infopane.cpp
+===================================================================
+--- src/src/infopane.cpp	(revision 6195)
++++ src/src/infopane.cpp	(working copy)
+@@ -44,8 +44,6 @@
+ InfoPane::InfoPane(wxWindow* parent) : cbAuiNotebook(parent, idNB, wxDefaultPosition, wxDefaultSize, infopane_flags), baseID(wxNewId())
+ {
+     defaultBitmap = cbLoadBitmap(ConfigManager::GetDataFolder() + _T("/images/edit_16x16.png"), wxBITMAP_TYPE_PNG);
+-    if (Manager::Get()->GetConfigManager(_T("app"))->ReadBool(_T("/environment/infopane_tabs_bottom"), false))
+-        SetWindowStyleFlag(GetWindowStyleFlag() | wxAUI_NB_BOTTOM);
+ 
+     wxRegisterId(baseID + num_pages);
+     for(int i = 0; i < num_pages; ++i)
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(revision 6195)
++++ src/src/main.cpp	(working copy)
+@@ -1158,6 +1158,10 @@
+     // load manager and messages selected page
+     Manager::Get()->GetProjectManager()->GetNotebook()->SetSelection(Manager::Get()->GetConfigManager(_T("app"))->ReadInt(_T("/main_frame/layout/left_block_selection"), 0));
+     m_pInfoPane->SetSelection(Manager::Get()->GetConfigManager(_T("app"))->ReadInt(_T("/main_frame/layout/bottom_block_selection"), 0));
++	// Cryogen 23/3/10 wxAuiNotebook can't set it's own tab position once instantiated, for some reason. This code fails in InfoPane::InfoPane().
++	// Moved here as this seems like a resonable place to do UI setup. Feel free to move it elsewhere.
++	if (Manager::Get()->GetConfigManager(_T("app"))->ReadBool(_T("/environment/infopane_tabs_bottom"), false))
++		m_pInfoPane->SetWindowStyleFlag(m_pInfoPane->GetWindowStyleFlag() | wxAUI_NB_BOTTOM);
+ 
+ #ifndef __WXMAC__
+     int x = 0;

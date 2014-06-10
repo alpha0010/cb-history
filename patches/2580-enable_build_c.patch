@@ -1,0 +1,203 @@
+########################################
+--- src/plugins/compilergcc/compilergcc.cpp		Mon Oct 06 00:44:38 2008
++++ src/plugins/compilergcc/compilergcc.cpp		Thu Oct 09 07:28:43 2008
+@@ -966,6 +966,8 @@
+ {
+	 if (m_IsWorkspaceOperation)
+		 return;
++    if (IsProcessRunning())
++        return;
+ 
+	 CodeBlocksLogEvent evtSwitch(cbEVT_SWITCH_TO_LOG_WINDOW, m_Log);
+	 Manager::Get()->ProcessEvent(evtSwitch);
+@@ -1475,16 +1477,15 @@
+	 m_LastTempMakefile = _T("");
+ }
+ 
+-bool CompilerGCC::UseMake(ProjectBuildTarget* target)
++bool CompilerGCC::UseMake(cbProject *prj)
+ {
+-    if (!m_Project)
++    if (!prj)
++        prj = m_Project;
++    if (!prj)
+		 return false;
+-    wxString idx = m_Project->GetCompilerID();
++    wxString idx = prj->GetCompilerID();
+	 if (CompilerFactory::GetCompiler(idx))
+-    {
+-        if (m_Project->IsMakefileCustom())
+-            return true;
+-    }
++        return prj->IsMakefileCustom();
+	 return false;
+ }
+ 
+@@ -1962,7 +1963,11 @@
+		 {
+			 wxString cmd = GetMakeCommandFor(mcClean, bjt.project, bt);
+			 m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, bjt.project, bt));
+-            return DoRunQueue();
++            while (m_CommandQueue.GetCount()) {
++                DoRunQueue();
++                Manager::Yield();
++            }
++            LogMessage(cmd);
+		 }
+		 else
+		 {
+@@ -2005,7 +2010,7 @@
+		 wxSetWorkingDirectory(m_Project->GetBasePath());
+	 CompilerFactory::GetCompiler(m_CompilerId)->Init(m_Project);
+ 
+-    if (UseMake(target))
++    if (UseMake())
+	 {
+		 wxString cmd = GetMakeCommandFor(mcDistClean, m_Project, target);
+		 m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, m_Project, target));
+@@ -2241,7 +2246,14 @@
+		 case bsTargetBuild:
+		 {
+			 // run target build
+-            cmds = dc.GetCompileCommands(bt);
++            if (UseMake(m_pBuildingProject)) {
++                wxString cmd = GetMakeCommandFor(mcBuild, m_pBuildingProject, bt);
++                cmds.Add(cmd);
++                LogMessage(cmd);
++            } else {
++                cmds = dc.GetCompileCommands(bt);
++            }
++
+			 bool hasCommands = cmds.GetCount();
+			 m_RunTargetPostBuild = hasCommands;
+			 m_RunProjectPostBuild = hasCommands;
+@@ -2434,16 +2446,7 @@
+	 if (!bt || !CompilerValid(bt))
+		 return -2;
+ 
+-    wxString cmd;
+-    if (UseMake())
+-    {
+-        wxString cmd = GetMakeCommandFor(mcBuild, bj.project, bt);
+-        m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, bj.project, bt));
+-    }
+-    else
+-    {
+-        BuildStateManagement();
+-    }
++    BuildStateManagement();
+	 return 0;
+ }
+ 
+@@ -2533,38 +2536,12 @@
+	 if (!m_IsWorkspaceOperation)
+		 DoPrepareQueue();
+ 
+-    if (UseMake())
+-    {
+-        // make sure all project files are saved
+-        if (m_Project && !m_Project->SaveAllFiles())
+-            Manager::Get()->GetLogManager()->Log(_("Could not save all files..."));
+-
+-        // generate build jobs
+-        PreprocessJob(m_Project, realTarget);
+-        if (m_BuildJobTargetsList.empty())
+-            return -1;
+-
+-        // loop all jobs and add them in the queue
+-        while (!m_BuildJobTargetsList.empty())
+-        {
+-            BuildJobTarget bjt = GetNextJob();
+-            ProjectBuildTarget* bt = bjt.project->GetBuildTarget(bjt.targetName);
+-            if (bt)
+-            {
+-                wxString cmd = GetMakeCommandFor(mcBuild, bjt.project, bt);
+-                m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, bjt.project, bt));
+-            }
+-        }
+-    }
+-    else
+-    {
+-        PreprocessJob(m_Project, realTarget);
+-        if (m_BuildJobTargetsList.empty())
+-            return -1;
+-        InitBuildState(bjProject, realTarget);
+-        if (DoBuild())
+-            return -2;
+-    }
++    PreprocessJob(m_Project, realTarget);
++    if (m_BuildJobTargetsList.empty())
++        return -1;
++    InitBuildState(bjProject, realTarget);
++    if (DoBuild())
++        return -2;
+	 return DoRunQueue();
+ }
+ 
+@@ -2602,39 +2579,8 @@
+	 if (cmp)
+		 cmp->Init(m_Project);
+ 
+-    if (UseMake())
+-    {
+-        CompilerCommand* cc;
+-        wxString cmd;
+-
+-        // generate build jobs
+-        PreprocessJob(m_Project, realTarget);
+-        if (m_BuildJobTargetsList.empty())
+-            return -1;
+-
+-        // loop all jobs and add them in the queue
+-        while (!m_BuildJobTargetsList.empty())
+-        {
+-            BuildJobTarget bjt = GetNextJob();
+-            ProjectBuildTarget* bt = bjt.project->GetBuildTarget(bjt.targetName);
+-            if (bt)
+-            {
+-                cmd = GetMakeCommandFor(mcClean, bjt.project, bt);
+-                cc = new CompilerCommand(cmd, wxEmptyString, bjt.project, bt);
+-                m_CommandQueue.Add(cc);
+-
+-                cmd = GetMakeCommandFor(mcBuild, bjt.project, bt);
+-                cc = new CompilerCommand(cmd, wxEmptyString, bjt.project, bt);
+-                cc->mustWait = true; // wait for clean commands to finish
+-                m_CommandQueue.Add(cc);
+-            }
+-        }
+-    }
+-    else
+-    {
+-        Clean(realTarget);
+-        Build(realTarget);
+-    }
++    Clean(realTarget);
++    Build(realTarget);
+	 return DoRunQueue();
+ }
+ 
+@@ -2811,7 +2757,7 @@
+ 
+	 ProjectFile* pf = m_Project ? m_Project->GetFileByFilename(file, true, false) : 0;
+	 ProjectBuildTarget* bt = GetBuildTargetForFile(pf);
+-    bool useMake = UseMake(bt);
++    bool useMake = UseMake();
+ 
+	 if (!pf)
+	 {
+########################################
+
+########################################
+--- src/plugins/compilergcc/compilergcc.h		Mon Oct 06 00:44:38 2008
++++ src/plugins/compilergcc/compilergcc.h		Wed Oct 08 16:08:38 2008
+@@ -188,7 +188,7 @@
+		 void SaveBuildLog();
+		 void InitBuildLog(bool workspaceBuild);
+		 void PrintBanner(cbProject* prj = 0, ProjectBuildTarget* target = 0);
+-        bool UseMake(ProjectBuildTarget* target = 0);
++        bool UseMake(cbProject *prj = 0);
+		 bool CompilerValid(ProjectBuildTarget* target = 0);
+		 ProjectBuildTarget* GetBuildTargetForFile(ProjectFile* pf);
+		 ProjectBuildTarget* GetBuildTargetForFile(const wxString& file);
+########################################
+

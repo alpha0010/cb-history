@@ -1,0 +1,39 @@
+Index: src/plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- src/plugins/compilergcc/compilergcc.cpp	(Revision 5323)
++++ src/plugins/compilergcc/compilergcc.cpp	(Arbeitskopie)
+@@ -2792,7 +2792,14 @@
+         bt = m_Project->GetBuildTarget(idx);
+     }
+     else // use the currently selected build target
+-        bt = m_Project->GetBuildTarget(m_RealTargetIndex); // pick the selected target
++        if (pf->buildTargets.Index(m_Project->GetBuildTarget(m_RealTargetIndex)->GetTitle()) != wxNOT_FOUND)
++            bt = m_Project->GetBuildTarget(m_RealTargetIndex); // pick the selected target
++        else
++        {
++            cbMessageBox(_("That file isn't assigned to the currently selected build target."),
++                        _("Information"), wxICON_INFORMATION);
++            return 0;
++        }
+ 
+     return bt;
+ }
+@@ -2806,13 +2813,16 @@
+ int CompilerGCC::CompileFile(const wxString& file)
+ {
+     DoPrepareQueue();
+-    if (!CompilerValid())
+-        return -1;
+ 
+     ProjectFile* pf = m_Project ? m_Project->GetFileByFilename(file, true, false) : 0;
+     ProjectBuildTarget* bt = GetBuildTargetForFile(pf);
+     bool useMake = UseMake(bt);
+ 
++    // try to get the compiler for the current build target
++    if (!bt || !CompilerValid(bt))
++        if (!CompilerValid())
++            return -1;
++
+     if (!pf)
+     {
+         // compile single file not belonging to a project

@@ -1,0 +1,21 @@
+Index: src/plugins/todo/todolistview.cpp
+===================================================================
+--- src/plugins/todo/todolistview.cpp	(revision 4978)
++++ src/plugins/todo/todolistview.cpp	(working copy)
+@@ -95,7 +95,8 @@
+         hbs->Add(new wxStaticText(panel, wxID_ANY, _("Scope:")), 0, wxTOP, 4);
+
+         m_pSource = new wxComboBox(panel, idSource, wxEmptyString, wxDefaultPosition, wxDefaultSize, 3, &choices[0], wxCB_READONLY);
+-        m_pSource->SetSelection(0);
++        int source = Manager::Get()->GetConfigManager(_T("todo_list"))->ReadInt(_T("source"), 0);
++        m_pSource->SetSelection(source);
+         hbs->Add(m_pSource, 0, wxLEFT | wxRIGHT, 8);
+
+         hbs->Add(new wxStaticText(panel, wxID_ANY, _("User:")), 0, wxTOP, 4);
+@@ -451,6 +452,7 @@
+
+ void ToDoListView::OnComboChange(wxCommandEvent& event)
+ {
++    Manager::Get()->GetConfigManager(_T("todo_list"))->Write(_T("source"), m_pSource->GetSelection() );
+     Parse();
+ }

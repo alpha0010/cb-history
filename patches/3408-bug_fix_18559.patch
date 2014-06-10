@@ -1,0 +1,32 @@
+Index: src/plugins/codecompletion/parser/parserthread.cpp
+===================================================================
+--- src/plugins/codecompletion/parser/parserthread.cpp	(wersja 8785)
++++ src/plugins/codecompletion/parser/parserthread.cpp	(kopia robocza)
+@@ -1294,7 +1298,12 @@
+         if (localParent)
+             newToken = TokenExists(newname, baseArgs, localParent, kind);
+         if (newToken)
+-        {   TRACE(_T("DoAddToken() : Found token (member function).")); }
++        {   TRACE(_T("DoAddToken() : Found token (member function)."));
++            if(isImpl && (kind & tkAnyFunction))
++            {
++                newToken->m_Args = args;
++            }
++        }
+     }
+ 
+     // none of the above; check for token under parent
+@@ -1302,7 +1311,12 @@
+     {
+         newToken = TokenExists(newname, baseArgs, m_LastParent, kind);
+         if (newToken)
+-        {   TRACE(_T("DoAddToken() : Found token (parent).")); }
++        {   TRACE(_T("DoAddToken() : Found token (parent)."));
++            if(isImpl && (kind & tkAnyFunction))
++            {
++                newToken->m_Args = args;
++            }
++        }
+     }
+ 
+     // need to check if the current token already exists in the tokenTree

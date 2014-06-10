@@ -1,0 +1,260 @@
+Index: src/plugins/contrib/DoxyBlocks/ChangeLog.txt
+===================================================================
+--- src/plugins/contrib/DoxyBlocks/ChangeLog.txt	(revision 6951)
++++ src/plugins/contrib/DoxyBlocks/ChangeLog.txt	(working copy)
+@@ -1,3 +1,9 @@
++02 February 2011
++   released version 1.6.613 of DoxyBlocks
++
++     Change log:
++        -Updated: doxygen support to v1.7.3.
++
+ 12 July 2010
+    released version 1.6.606 of DoxyBlocks
+ 
+Index: src/plugins/contrib/DoxyBlocks/Config.cpp
+===================================================================
+--- src/plugins/contrib/DoxyBlocks/Config.cpp	(revision 6951)
++++ src/plugins/contrib/DoxyBlocks/Config.cpp	(working copy)
+@@ -134,40 +134,40 @@
+     wxFileConfig *cfgFile = new wxFileConfig(wxEmptyString, wxEmptyString, GetCBConfigDir() + sCfgIni, wxEmptyString, wxCONFIG_USE_GLOBAL_FILE);
+ 
+ 	// Comment style.
+-	cfgFile->Write(sSectionCommentStyle + sCommentBlock, m_iBlockComment);
+-	cfgFile->Write(sSectionCommentStyle + sCommentLine, m_iLineComment);
++	cfgFile->Write(sSectionCommentStyle + sCommentBlock, int(m_iBlockComment));
++	cfgFile->Write(sSectionCommentStyle + sCommentLine, int(m_iLineComment));
+ 	// Project.
+-	cfgFile->Write(sSectionProject + sUseAutoVersion, m_bUseAutoVersion);
++	cfgFile->Write(sSectionProject + sUseAutoVersion, int(m_bUseAutoVersion));
+ 	cfgFile->Write(sSectionProject + sOutputLanguage, m_sOutputLanguage);
+ 	// Build.
+-	cfgFile->Write(sSectionBuild + sExtractAll, m_bExtractAll);
+-	cfgFile->Write(sSectionBuild + sExtractPrivate, m_bExtractPrivate);
+-	cfgFile->Write(sSectionBuild + sExtractStatic, m_bExtractStatic);
++	cfgFile->Write(sSectionBuild + sExtractAll, int(m_bExtractAll));
++	cfgFile->Write(sSectionBuild + sExtractPrivate, int(m_bExtractPrivate));
++	cfgFile->Write(sSectionBuild + sExtractStatic, int(m_bExtractStatic));
+ 	// Warnings.
+-	cfgFile->Write(sSectionWarnings + sWarnings, m_bWarnings);
+-	cfgFile->Write(sSectionWarnings + sWarnIfDocError, m_bWarnIfDocError);
+-	cfgFile->Write(sSectionWarnings + sWarnIfUndocumented, m_bWarnIfUndocumented);
+-	cfgFile->Write(sSectionWarnings + sWarnNoParamDoc, m_bWarnNoParamdoc);
++	cfgFile->Write(sSectionWarnings + sWarnings, int(m_bWarnings));
++	cfgFile->Write(sSectionWarnings + sWarnIfDocError, int(m_bWarnIfDocError));
++	cfgFile->Write(sSectionWarnings + sWarnIfUndocumented, int(m_bWarnIfUndocumented));
++	cfgFile->Write(sSectionWarnings + sWarnNoParamDoc, int(m_bWarnNoParamdoc));
+ 	// Alphabetical class index.
+-	cfgFile->Write(sSectionAlphabeticalClassIndex + sAlphabeticalIndex, m_bAlphabeticalIndex);
++	cfgFile->Write(sSectionAlphabeticalClassIndex + sAlphabeticalIndex, int(m_bAlphabeticalIndex));
+ 	// Output.
+-	cfgFile->Write(sSectionOutput + sGenerateHTML, m_bGenerateHTML);
+-	cfgFile->Write(sSectionOutput + sGenerateHTMLHelp, m_bGenerateHTMLHelp);
+-	cfgFile->Write(sSectionOutput + sGenerateCHI, m_bGenerateCHI);
+-	cfgFile->Write(sSectionOutput + sBinaryTOC, m_bBinaryTOC);
+-	cfgFile->Write(sSectionOutput + sGenerateLatex, m_bGenerateLatex);
+-	cfgFile->Write(sSectionOutput + sGenerateRTF, m_bGenerateRTF);
+-	cfgFile->Write(sSectionOutput + sGenerateMan, m_bGenerateMan);
+-	cfgFile->Write(sSectionOutput + sGenerateXML, m_bGenerateXML);
+-	cfgFile->Write(sSectionOutput + sGenerateAutogenDef, m_bGenerateAutogenDef);
+-	cfgFile->Write(sSectionOutput + sGeneratePerlMod, m_bGeneratePerlMod);
++	cfgFile->Write(sSectionOutput + sGenerateHTML, int(m_bGenerateHTML));
++	cfgFile->Write(sSectionOutput + sGenerateHTMLHelp, int(m_bGenerateHTMLHelp));
++	cfgFile->Write(sSectionOutput + sGenerateCHI, int(m_bGenerateCHI));
++	cfgFile->Write(sSectionOutput + sBinaryTOC, int(m_bBinaryTOC));
++	cfgFile->Write(sSectionOutput + sGenerateLatex, int(m_bGenerateLatex));
++	cfgFile->Write(sSectionOutput + sGenerateRTF, int(m_bGenerateRTF));
++	cfgFile->Write(sSectionOutput + sGenerateMan, int(m_bGenerateMan));
++	cfgFile->Write(sSectionOutput + sGenerateXML, int(m_bGenerateXML));
++	cfgFile->Write(sSectionOutput + sGenerateAutogenDef, int(m_bGenerateAutogenDef));
++	cfgFile->Write(sSectionOutput + sGeneratePerlMod, int(m_bGeneratePerlMod));
+ 	// Pre-processor.
+-	cfgFile->Write(sSectionPreProcessor + sEnablePreProcessing, m_bEnablePreprocessing);
++	cfgFile->Write(sSectionPreProcessor + sEnablePreProcessing, int(m_bEnablePreprocessing));
+ 	// Dot.
+-	cfgFile->Write(sSectionDot + sClassDiagrams, m_bClassDiagrams);
+-	cfgFile->Write(sSectionDot + sHaveDot, m_bHaveDot);
++	cfgFile->Write(sSectionDot + sClassDiagrams, int(m_bClassDiagrams));
++	cfgFile->Write(sSectionDot + sHaveDot, int(m_bHaveDot));
+ 	// General.
+-	cfgFile->Write(sSectionGeneral + sUseAtInTags, m_bUseAtInTags);
++	cfgFile->Write(sSectionGeneral + sUseAtInTags, int(m_bUseAtInTags));
+ 
+     bool bOK = cfgFile->Flush();
+ 
+Index: src/plugins/contrib/DoxyBlocks/DoxyBlocks.cbp
+===================================================================
+--- src/plugins/contrib/DoxyBlocks/DoxyBlocks.cbp	(revision 6951)
++++ src/plugins/contrib/DoxyBlocks/DoxyBlocks.cbp	(working copy)
+@@ -106,7 +106,7 @@
+ 			</AutoVersioning>
+ 			<DoxyBlocks>
+ 				<comment_style block="3" line="1" />
+-				<doxyfile_project project_number="1.6.596" use_auto_version="1" />
++				<doxyfile_project project_number="1.6.614" use_auto_version="1" />
+ 				<doxyfile_build extract_private="1" extract_static="1" />
+ 				<doxyfile_warnings warn_if_undocumented="1" />
+ 				<doxyfile_output html_help="1" />
+@@ -115,7 +115,7 @@
+ 			</DoxyBlocks>
+ 			<wxsmith version="1">
+ 				<resources>
+-					<wxPanel wxs="wxsmith/ConfigPanel.wxs" src="ConfigPanel.cpp" hdr="ConfigPanel.h" name="ConfigPanel" language="CPP" />
++					<wxPanel wxs="wxsmith/ConfigPanel.wxs" src="ConfigPanel.cpp" hdr="ConfigPanel.h" fwddecl="0" i18n="1" name="ConfigPanel" language="CPP" />
+ 				</resources>
+ 			</wxsmith>
+ 		</Extensions>
+Index: src/plugins/contrib/DoxyBlocks/DoxyBlocks.h
+===================================================================
+--- src/plugins/contrib/DoxyBlocks/DoxyBlocks.h	(revision 6951)
++++ src/plugins/contrib/DoxyBlocks/DoxyBlocks.h	(working copy)
+@@ -234,7 +234,7 @@
+  *
+  *
+  * \author 	Gary Harris.
+- * \date    	12 July, 2010
++ * \date    	2 February, 2011
+  *
+  * \section intro Introduction
+  * DoxyBlocks is a plugin for Code::Blocks that integrates doxygen into the IDE. It allows you to create documentation, insert comment blocks and run HTML or CHM documents.
+@@ -248,7 +248,7 @@
+  *	DoxyBlocks is intended to be an example of good practice using doxygen in Code::Blocks. If you make changes to DoxyBlocks, please respect the work that has gone into making it what it is
+  * and do the following:
+  * \li Please document your changes using doxygen!
+- * \li Run doxygen over the code with all warnings enabled and make sure that you correct all errors and warnings that your documentation generates before subission.
++ * \li Run doxygen over the code with all warnings enabled and make sure that you correct all errors and warnings that your documentation generates before submission.
+  * \li Update the main page changes and history at the bottom of DoxyBlocks.h.
+  * \li Document any warnings that can't be removed. See the three warnings generated by regular expressions in Expressions.h for an example of what this means.
+  * \li Update the change log using the Autoversion plug-in.
+@@ -258,10 +258,13 @@
+  * Your input is welcomed. Please direct all comments, suggestions and feedback to the Code::Blocks forum thread at: http://forums.codeblocks.org/index.php/topic,12052.
+  *
+  * \section changes Changes
+- * \li Fixed:	Fixed some additional inclusions and other minor factors for contrib inclusion.
++ * \li Updated:	doxygen support to v1.7.3.
+  *
+  *
+  * \section history History
++ * Version 1.6.606 - 12 July 2010.
++ * \li Fixed:	Fixed some additional inclusions and other minor factors for contrib inclusion.
++ *
+  * Version 1.5.596 - 5 July 2010.
+  * \li	A range of changes were made by Killerbot to prepare DoxyBlocks for inclusion as a contrib plugin, including fixing bugs with path detection and running the HTML docs.
+  * \li	Fixed:			Bugs that caused DoxyBlocks to crash when importing a Visual Studio solution.
+Index: src/plugins/contrib/DoxyBlocks/ExtractDocs.cpp
+===================================================================
+--- src/plugins/contrib/DoxyBlocks/ExtractDocs.cpp	(revision 6951)
++++ src/plugins/contrib/DoxyBlocks/ExtractDocs.cpp	(working copy)
+@@ -184,7 +184,7 @@
+         sText +=  wxString(wxT("# ")) + _("You may change these defaults to suit your purposes") + wxT(".\n");
+         sText +=  wxT("#******************************************************************************\n\n");
+ 
+-		sText +=  wxT("# Doxyfile 1.7.1\n");
++		sText +=  wxT("# Doxyfile 1.7.3\n");
+ 		sText +=  wxT("\n");
+ 		sText +=  wxT("#---------------------------------------------------------------------------\n");
+ 		sText +=  wxT("# Project related configuration options\n");
+@@ -192,6 +192,8 @@
+ 		sText +=  wxT("DOXYFILE_ENCODING      = UTF-8\n");
+         sText +=  wxT("PROJECT_NAME           = ") + sPrjName + nl;
+ 		sText +=  wxT("PROJECT_NUMBER         = ") + sPrjNum + nl;
++		sText +=  wxT("PROJECT_BRIEF          =\n");
++		sText +=  wxT("PROJECT_LOGO           =\n");
+         sText +=  wxT("OUTPUT_DIRECTORY       =\n");
+ 		sText +=  wxT("CREATE_SUBDIRS         = NO\n");
+ 		sText +=  wxT("OUTPUT_LANGUAGE        = ") + sLanguage + nl;
+@@ -249,6 +251,7 @@
+ 		sText +=  wxT("SORT_MEMBERS_CTORS_1ST = NO\n");
+ 		sText +=  wxT("SORT_GROUP_NAMES       = NO\n");
+ 		sText +=  wxT("SORT_BY_SCOPE_NAME     = NO\n");
++		sText +=  wxT("STRICT_PROTO_MATCHING  = NO\n");
+ 		sText +=  wxT("GENERATE_TODOLIST      = YES\n");
+ 		sText +=  wxT("GENERATE_TESTLIST      = YES\n");
+ 		sText +=  wxT("GENERATE_BUGLIST       = YES\n");
+@@ -291,6 +294,7 @@
+ 		sText +=  wxT("INPUT_FILTER           =\n");
+ 		sText +=  wxT("FILTER_PATTERNS        =\n");
+ 		sText +=  wxT("FILTER_SOURCE_FILES    = NO\n");
++		sText +=  wxT("FILTER_SOURCE_PATTERNS =\n");
+ 
+ 		sText +=  wxT("#---------------------------------------------------------------------------\n");
+ 		sText +=  wxT("# configuration options related to source browsing\n");
+@@ -361,6 +365,8 @@
+ 		sText +=  wxT("EXT_LINKS_IN_WINDOW    = NO\n");
+ 		sText +=  wxT("FORMULA_FONTSIZE       = 10\n");
+ 		sText +=  wxT("FORMULA_TRANSPARENT    = YES\n");
++		sText +=  wxT("USE_MATHJAX            = NO\n");
++		sText +=  wxT("MATHJAX_RELPATH        = http://www.mathjax.org/mathjax\n");
+ 		sText +=  wxT("SEARCHENGINE           = YES\n");
+ 		sText +=  wxT("SERVER_BASED_SEARCH    = NO\n");
+ 
+@@ -372,7 +378,7 @@
+ 		sText +=  wxT("LATEX_CMD_NAME         = latex\n");
+ 		sText +=  wxT("MAKEINDEX_CMD_NAME     = makeindex\n");
+ 		sText +=  wxT("COMPACT_LATEX          = NO\n");
+-		sText +=  wxT("PAPER_TYPE             = a4wide\n");
++		sText +=  wxT("PAPER_TYPE             = a4\n");
+ 		sText +=  wxT("EXTRA_PACKAGES         =\n");
+ 		sText +=  wxT("LATEX_HEADER           =\n");
+ 		sText +=  wxT("PDF_HYPERLINKS         = YES\n");
+@@ -451,7 +457,7 @@
+ 		sText +=  wxT("HIDE_UNDOC_RELATIONS   = YES\n");
+ 		sText +=  wxT("HAVE_DOT               = ") + sHaveDot + nl;
+ 		sText +=  wxT("DOT_NUM_THREADS        = 0\n");
+-		sText +=  wxT("DOT_FONTNAME           = FreeSans.ttf\n");
++		sText +=  wxT("DOT_FONTNAME           = Helvetica\n");
+ 		sText +=  wxT("DOT_FONTSIZE           = 10\n");
+ 		sText +=  wxT("DOT_FONTPATH           =\n");
+ 		sText +=  wxT("CLASS_GRAPH            = YES\n");
+@@ -473,6 +479,7 @@
+ 			sText +=  wxT("DOT_PATH               =\n");
+ 		}
+ 		sText +=  wxT("DOTFILE_DIRS           =\n");
++		sText +=  wxT("MSCFILE_DIRS           =\n");
+ 		sText +=  wxT("DOT_GRAPH_MAX_NODES    = 50\n");
+ 		sText +=  wxT("MAX_DOT_GRAPH_DEPTH    = 0\n");
+ 		sText +=  wxT("DOT_TRANSPARENT        = NO\n");
+Index: src/plugins/contrib/DoxyBlocks/version.h
+===================================================================
+--- src/plugins/contrib/DoxyBlocks/version.h	(revision 6951)
++++ src/plugins/contrib/DoxyBlocks/version.h	(working copy)
+@@ -4,10 +4,10 @@
+ namespace AutoVersion{
+ 	
+ 	//Date Version Types
+-	static const char DATE[] = "12";
+-	static const char MONTH[] = "07";
+-	static const char YEAR[] = "2010";
+-	static const char UBUNTU_VERSION_STYLE[] = "10.07";
++	static const char DATE[] = "02";
++	static const char MONTH[] = "02";
++	static const char YEAR[] = "2011";
++	static const char UBUNTU_VERSION_STYLE[] = "11.02";
+ 	
+ 	//Software Status
+ 	static const char STATUS[] = "Beta";
+@@ -16,17 +16,17 @@
+ 	//Standard Version Type
+ 	static const long MAJOR = 1;
+ 	static const long MINOR = 6;
+-	static const long BUILD = 606;
+-	static const long REVISION = 8089;
++	static const long BUILD = 614;
++	static const long REVISION = 8144;
+ 	
+ 	//Miscellaneous Version Types
+-	static const long BUILDS_COUNT = 1237;
+-	#define RC_FILEVERSION 1,6,606,8089
+-	#define RC_FILEVERSION_STRING "1, 6, 606, 8089\0"
+-	static const char FULLVERSION_STRING[] = "1.6.606.8089";
++	static const long BUILDS_COUNT = 1246;
++	#define RC_FILEVERSION 1,6,614,8144
++	#define RC_FILEVERSION_STRING "1, 6, 614, 8144\0"
++	static const char FULLVERSION_STRING[] = "1.6.614.8144";
+ 	
+ 	//These values are to keep track of your versioning state, don't modify them.
+-	static const long BUILD_HISTORY = 79;
++	static const long BUILD_HISTORY = 87;
+ 	
+ 
+ }

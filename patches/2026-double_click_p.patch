@@ -1,0 +1,45 @@
+Index: src/sdk/projectmanager.cpp
+===================================================================
+--- src/sdk/projectmanager.cpp	(revision 4010)
++++ src/sdk/projectmanager.cpp	(working copy)
+@@ -166,7 +166,7 @@
+     EVT_TREE_ITEM_ACTIVATED(ID_ProjectManager, ProjectManager::OnProjectFileActivated)
+     EVT_TREE_ITEM_RIGHT_CLICK(ID_ProjectManager, ProjectManager::OnTreeItemRightClick)
+     EVT_COMMAND_RIGHT_CLICK(ID_ProjectManager, ProjectManager::OnRightClick)
+-
++    EVT_COMMAND_LEFT_DCLICK(ID_ProjectManager, ProjectManager::OnLeftDClick)
+     EVT_MENU_RANGE(idOpenWith[0], idOpenWith[MAX_OPEN_WITH_ITEMS - 1], ProjectManager::OnOpenWith)
+     EVT_MENU(idOpenWithInternal, ProjectManager::OnOpenWith)
+     EVT_MENU(idNB_TabTop, ProjectManager::OnTabPosition)
+@@ -1809,6 +1809,23 @@
+     m_pTree->PopupMenu(&menu, pt);
+ }
+ 
++void ProjectManager::OnLeftDClick(wxCommandEvent& event)
++{
++    wxTreeItemId sel = m_pTree->GetSelection();
++    FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(sel);
++    if (!ftd)
++        return;
++    if(GetActiveProject()==ftd->GetProject())
++         m_pTree->Toggle(sel);
++    else
++        SetProject(ftd->GetProject(), false);
++}
++
++
+ void ProjectManager::OnTreeItemRightClick(wxTreeEvent& event)
+ {
+     #ifdef USE_OPENFILES_TREE
+Index: src/include/projectmanager.h
+===================================================================
+--- src/include/projectmanager.h	(revision 4010)
++++ src/include/projectmanager.h	(working copy)
+@@ -383,6 +383,7 @@
+         void OnTreeBeginDrag(wxTreeEvent& event);
+         void OnTreeEndDrag(wxTreeEvent& event);
+         void OnRightClick(wxCommandEvent& event);
++        void OnLeftDClick(wxCommandEvent& event);
+         void OnRenameWorkspace(wxCommandEvent& event);
+         void OnSaveWorkspace(wxCommandEvent& event);
+         void OnSaveAsWorkspace(wxCommandEvent& event);

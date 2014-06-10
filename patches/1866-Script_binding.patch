@@ -1,0 +1,497 @@
+Index: src/sdk/scripting/bindings/scriptbindings.cpp
+===================================================================
+--- src/sdk/scripting/bindings/scriptbindings.cpp	(revision 3557)
++++ src/sdk/scripting/bindings/scriptbindings.cpp	(arbetskopia)
+@@ -557,6 +557,56 @@
+                 func(&cbEditor::AutoComplete, "AutoComplete").
+                 func(&cbEditor::AddBreakpoint, "AddBreakpoint").
+                 func(&cbEditor::RemoveBreakpoint, "RemoveBreakpoint").
++
++                // Exposing the wxScintilla API below
++				func(&cbEditor::BeginUndoAct, "BeginUndoAct").
++                func(&cbEditor::EndUndoAct, "EndUndoAct").
++                func(&cbEditor::Insert, "Insert").
++                func(&cbEditor::GetSelText, "GetSelText").
++                func(&cbEditor::GetLineText, "GetLineText").
++                func(&cbEditor::GetChar, "GetChar").
++                func(&cbEditor::GetCharRel, "GetCharRel").
++                
++                func(&cbEditor::MatchBrace, "MatchBrace").
++                func(&cbEditor::GotoMatchBrace, "GotoMatchBrace").
++                func(&cbEditor::GetStyle, "GetStyle").
++
++                func(&cbEditor::GetCurLine, "GetCurLine").
++                func(&cbEditor::GetCurCol, "GetCurCol").
++                func(&cbEditor::GetCurPos, "GetCurPos").
++                func(&cbEditor::SetCurLine, "SetCurLine").
++                func(&cbEditor::SetCurCol, "SetCurCol").
++                func(&cbEditor::SetCurPos, "SetCurPos").
++
++                func(&cbEditor::SetSearchFlags, "SetSearchFlags").
++                func(&cbEditor::GetSearchFlags, "GetSearchFlags").
++                func(&cbEditor::SetTargetStart, "SetTargetStart").
++                func(&cbEditor::GetTargetStart, "GetTargetStart").
++                func(&cbEditor::SetTargetEnd, "SetTargetEnd").
++                func(&cbEditor::GetTargetEnd, "GetTargetEnd").
++                func(&cbEditor::ReplaceTarget, "ReplaceTarget").
++                func(&cbEditor::ReplaceTargetRE, "ReplaceTargetRE").
++                func(&cbEditor::SearchInTarget, "SearchInTarget").
++
++                func(&cbEditor::Find, "Find").
++                func(&cbEditor::GetLastFindLen, "GetLastFindLen").
++                func(&cbEditor::SearchAnchor, "SearchAnchor").
++                func(&cbEditor::SearchNext, "SearchNext").
++                func(&cbEditor::SearchPrev, "SearchPrev").
++
++                func(&cbEditor::GetLine, "GetLine").
++                func(&cbEditor::InsertText, "InsertText").
++                func(&cbEditor::GetCharAtPos, "GetCharAtPos").
++                func(&cbEditor::GotoPos, "GotoPos").
++                func(&cbEditor::SetAnchor, "SetAnchor").
++                func(&cbEditor::GetAnchor, "GetAnchor").
++                func(&cbEditor::GetStyleAt, "GetStyleAt").
++                func(&cbEditor::GetLength, "GetLength").
++                func(&cbEditor::PosFromLine, "PosFromLine").
++                func(&cbEditor::LineFromPos, "LineFromPos").
++                func(&cbEditor::ScrollToLine, "ScrollToLine").
++                func(&cbEditor::SendMsg, "SendMsg").
++
+                 // these are not present in cbEditor; included to help scripts edit text
+                 staticFuncVarArgs(&cbEditor_SetText, "SetText", "*").
+                 staticFuncVarArgs(&cbEditor_GetText, "GetText", "*");
+Index: src/sdk/cbeditor.h
+===================================================================
+--- src/sdk/cbeditor.h	(revision 3557)
++++ src/sdk/cbeditor.h	(arbetskopia)
+@@ -296,6 +296,69 @@
+ 
+         /// Apply the editor defaults to any (possibly foreign) cbStyledTextCtrl.
+         static void ApplyStyles(cbStyledTextCtrl* control);
++
++
++        // Additional wxScintilla API, expose to Squirrel, Arne Steinarson, 2007-01-15
++		
++		// This collection of functions are 'relative', they don't take position arguments
++		// but work mostly like the keyboard.
++		void BeginUndoAct();
++		void EndUndoAct();
++
++        void Insert(const wxString& text);
++
++        wxString GetSelText();
++        wxString GetLineText();
++
++		int GetChar();
++		int GetCharRel( int dcol );	// dcol is offset from current column
++		
++		int MatchBrace();
++		int GotoMatchBrace();
++		
++        int GetStyle();
++		
++		// Functions that are not relative
++		int GetCurLine();
++		int GetCurCol();
++		int GetCurPos();
++		void SetCurLine( int line );
++		void SetCurCol( int col );
++		void SetCurPos( int pos );
++
++		// Functions for search/replace
++	    void SetSearchFlags(int flags);
++	    int GetSearchFlags();
++		void SetTargetStart(int pos);
++		int GetTargetStart();
++		void SetTargetEnd(int pos);
++		int GetTargetEnd();
++	    int ReplaceTarget(const wxString &text);
++	    int ReplaceTargetRE(const wxString &text);
++		int SearchInTarget(const wxString &text);
++		
++		// Returns only position. Retrieve length separately.
++		int Find( int fr, int to, const wxString &text );	 
++		int GetLastFindLen( );  // A separate call to retrieve length of last found item
++		int m_last_find_len;
++		void SearchAnchor();
++	    int SearchNext(const wxString &text);
++	    int SearchPrev(const wxString &text);
++
++		// Functions that modify text using absolute positions
++        wxString  GetLine(int line);
++        void InsertText(int pos, const wxString& text);
++        int GetCharAtPos(int pos);
++        void GotoPos(int pos);
++        void SetAnchor(int posAnchor);  // Opposite end of the caret in the selection, use -1 for no selection
++        int GetAnchor();
++        int GetStyleAt(int pos);
++        int GetLength();
++        int PosFromLine( int line );
++        int LineFromPos( int line );
++        void ScrollToLine( int line );
++        long SendMsg( int msg, long wparam, long lparam );
++        
+     private:
+         // functions
+         bool LineHasMarker(int marker, int line = -1) const;
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 3557)
++++ src/sdk/cbeditor.cpp	(arbetskopia)
+@@ -2465,3 +2465,326 @@
+         EditorHooks::CallHooks(this, event);
+     }
+ }
++
++
++
++void cbEditor::BeginUndoAct(){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		control->BeginUndoAction( );
++}
++
++void cbEditor::EndUndoAct(){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		control->EndUndoAction( );
++}
++
++
++void cbEditor::Insert(const wxString& text){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		control->AddText( text );
++}
++
++wxString cbEditor::GetSelText(){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		return control->GetSelectedText( );
++    else
++        return wxEmptyString;
++}
++
++wxString cbEditor::GetLineText(){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		return control->GetLine (control->GetCurrentLine());
++    else
++        return wxEmptyString;
++}
++
++int cbEditor::GetChar(){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		return control->GetCharAt( control->GetCurrentPos() );
++    else
++        return -1;
++}
++
++int cbEditor::GetCharRel(int dpos){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		return control->GetCharAt( control->GetCurrentPos()+dpos );
++    else
++        return -1;
++}
++
++int cbEditor::MatchBrace(){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		return control->BraceMatch( control->GetCurrentPos() );
++	return -1;
++}
++
++int cbEditor::GotoMatchBrace(){
++    cbStyledTextCtrl* control = GetControl();
++    if (control){
++		int npos = control->BraceMatch( control->GetCurrentPos() );
++		if( npos!=wxSCI_INVALID_POSITION )
++			control->SetCurrentPos( npos );
++		return npos;
++	}
++	return -1;
++}
++
++int cbEditor::GetStyle(){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		return control->GetStyleAt(control->GetCurrentPos() );
++    else
++        return -1;
++}
++
++
++int cbEditor::GetCurLine(){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		return control->GetCurrentLine( );
++    else
++        return -1;
++}
++
++int cbEditor::GetCurCol(){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		return control->GetColumn(control->GetCurrentPos());
++    else
++        return -1;
++}
++
++int cbEditor::GetCurPos(){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		return control->GetCurrentPos( );
++    else
++        return -1;
++}
++
++void cbEditor::SetCurLine(int line){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		control->SetCurrentPos( control->FindColumn(line,GetCurCol()) );
++}
++
++void cbEditor::SetCurCol(int col){
++    cbStyledTextCtrl* control = GetControl();
++    if (control){
++		int pos = control->GetCurrentPos();
++		int ocol = GetCurCol();
++		control->SetCurrentPos( pos + col-ocol );
++	}
++}
++
++void cbEditor::SetCurPos(int pos){
++    cbStyledTextCtrl* control = GetControl();
++    if(control)
++		control->SetCurrentPos( pos );
++}
++
++void cbEditor::SetSearchFlags(int flags){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		control->SetSearchFlags( flags );
++}
++
++int cbEditor::GetSearchFlags( ){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		return control->GetSearchFlags( );
++    else
++        return -1;
++}
++
++void cbEditor::SetTargetStart(int pos){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		control->SetTargetStart( pos );
++}
++
++int cbEditor::GetTargetStart( ){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		return control->GetTargetStart(  );
++    else
++        return -1;
++}
++
++void cbEditor::SetTargetEnd(int pos){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		control->SetTargetEnd( pos );
++}
++
++int cbEditor::GetTargetEnd( ){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		return control->GetTargetEnd(  );
++    else
++        return -1;
++}
++
++int cbEditor::ReplaceTarget( const wxString &text ){
++    cbStyledTextCtrl* control = GetControl();
++    if(control)
++		return control->ReplaceTarget( text );
++    else
++        return -1;
++}
++
++int cbEditor::ReplaceTargetRE( const wxString &text ){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		return control->ReplaceTargetRE( text );
++    else
++        return -1;
++}
++
++
++int cbEditor::Find( int fr, int to, const wxString &text ){
++    cbStyledTextCtrl* control = GetControl();
++    if (control){
++		int pos = control->FindText( fr, to, text, control->GetSearchFlags(), &m_last_find_len );
++		if( pos!=wxSCI_INVALID_POSITION )
++            return pos; 
++	}
++    return -1;
++}
++
++int cbEditor::GetLastFindLen( ){
++    return m_last_find_len;
++}
++
++int cbEditor::SearchInTarget( const wxString &text ){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		return control->SearchInTarget( text );
++    else   
++        return -1;
++}
++
++void cbEditor::SearchAnchor(  ){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		control->SearchAnchor(  );
++}
++
++int cbEditor::SearchNext( const wxString &text ){
++    cbStyledTextCtrl* control = GetControl();
++    if(control)
++		return control->SearchNext( control->GetSearchFlags(), text );
++    else
++        return -1;
++}
++
++int cbEditor::SearchPrev( const wxString &text ){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		return control->SearchPrev( control->GetSearchFlags(), text );
++    else
++        return -1;
++}
++
++
++wxString  cbEditor::GetLine(int line){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		return control->GetLine( line );
++    else
++        return wxEmptyString;
++}
++
++void cbEditor::InsertText(int pos, const wxString& text){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		control->InsertText( pos, text );
++}
++
++int cbEditor::GetCharAtPos(int pos){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		return control->GetCharAt( pos );
++    else
++        return -1;
++}
++
++void cbEditor::GotoPos(int pos){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		control->GotoPos( pos );
++}
++
++void cbEditor::SetAnchor(int posAnchor){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		control->SetAnchor( posAnchor==-1?control->GetCurrentPos():posAnchor );
++}
++
++int cbEditor::GetAnchor(){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		return control->GetAnchor();
++    else
++        return -1;
++}
++
++int cbEditor::GetStyleAt(int pos){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		return control->GetStyleAt( pos );
++    else
++        return -1;
++}
++
++int cbEditor::GetLength(){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		return control->GetLength( );
++    else
++        return -1;
++}
++
++#ifndef wxSCI_CMD_POSITIONFROMLINE
++#define wxSCI_CMD_POSITIONFROMLINE 2167
++#endif 
++int cbEditor::PosFromLine( int line ){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++        return control->SendMsg( wxSCI_CMD_POSITIONFROMLINE, line, 0 );
++    else
++        return -1;
++}
++
++#ifndef wxSCI_CMD_LINEFROMPOSITION
++#define wxSCI_CMD_LINEFROMPOSITION 2166
++#endif 
++int cbEditor::LineFromPos( int line ){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++        return control->SendMsg( wxSCI_CMD_LINEFROMPOSITION, line, 0 );
++    else
++        return -1;
++}
++
++void cbEditor::ScrollToLine( int line ){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		control->ScrollToLine( line );
++}
++
++long cbEditor::SendMsg( int msg, long wparam, long lparam ){
++    cbStyledTextCtrl* control = GetControl();
++    if (control)
++		return control->SendMsg( msg, wparam, lparam );
++    else
++        return -1;
++}
+Index: readme.cbEditor.txt
+===================================================================
+--- readme.cbEditor.txt	(revision 0)
++++ readme.cbEditor.txt	(revision 0)
+@@ -0,0 +1,26 @@
++
++Modifications to cbEditor.cpp/.h:
++---------------------------------
++
++The purpose is to expose part of wxScintillas API to scripts. 
++This enables doing searches, text updates, navigation with
++the help of Squirrel scripts, like:
++
++  local ed = GetEditorManager().GetActiveEditor()
++  ed.InsertText(_T("Testing here")
++  if( ed.GetStyle()==2 )   // 2 is a comment line in Scintilla
++    ed.InsertText(_T("Inside a comment"))
++
++The wxScintilla component has a lot of functionality which
++one can use from scripts, including the syntax parsing. 
++Otherwise, people who wants tro write some text editing 
++macro have to start from scratch with parsing, lexing
++and searching inside the file. 
++
++To know where the user has the cursor is quite important.
++Without it, interactive editor scripts are difficult to do. 
++You get this through cbEditor.GetCurPos()
++
++I'm working at implementing wxWidgets programming macros
++with the help of this (inserting events editor).
++

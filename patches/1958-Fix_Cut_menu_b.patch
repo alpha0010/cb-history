@@ -1,0 +1,51 @@
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 3851)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -1960,7 +1960,7 @@
+ 
+         menu->Enable(idUndo, control->CanUndo());
+         menu->Enable(idRedo, control->CanRedo());
+-        menu->Enable(idCut, !control->GetReadOnly());
++        menu->Enable(idCut, !control->GetReadOnly() && hasSel);
+         menu->Enable(idCopy, hasSel);
+ 
+         if(platform::gtk) // a wxGTK bug causes the triggering of unexpected events
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(revision 3851)
++++ src/src/main.cpp	(working copy)
+@@ -3306,11 +3306,11 @@
+         canCut = !eb->IsReadOnly();
+     }
+ 
+-    mbar->Enable(idEditUndo, eb && canUndo);
+-    mbar->Enable(idEditRedo, eb && canRedo);
+-    mbar->Enable(idEditCut, eb && canCut);
+-    mbar->Enable(idEditCopy, eb && hasSel);
+-    mbar->Enable(idEditPaste, eb && canPaste);
++    mbar->Enable(idEditUndo, canUndo);
++    mbar->Enable(idEditRedo, canRedo);
++    mbar->Enable(idEditCut, canCut && hasSel);
++    mbar->Enable(idEditCopy, hasSel);
++    mbar->Enable(idEditPaste, canPaste);
+     mbar->Enable(idEditSwapHeaderSource, ed);
+     mbar->Enable(idEditGotoMatchingBrace, ed);
+     mbar->Enable(idEditHighlightMode, ed);
+@@ -3355,11 +3355,11 @@
+ 
+     if (m_pToolbar)
+     {
+-        m_pToolbar->EnableTool(idEditUndo, eb && canUndo);
+-        m_pToolbar->EnableTool(idEditRedo, eb && canRedo);
+-        m_pToolbar->EnableTool(idEditCut, eb && canCut);
+-        m_pToolbar->EnableTool(idEditCopy, eb && hasSel);
+-        m_pToolbar->EnableTool(idEditPaste, eb && canPaste);
++        m_pToolbar->EnableTool(idEditUndo, canUndo);
++        m_pToolbar->EnableTool(idEditRedo, canRedo);
++        m_pToolbar->EnableTool(idEditCut, canCut && hasSel);
++        m_pToolbar->EnableTool(idEditCopy, hasSel);
++        m_pToolbar->EnableTool(idEditPaste, canPaste);
+     }
+ 
+     event.Skip();

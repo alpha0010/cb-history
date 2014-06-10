@@ -1,0 +1,173 @@
+Index: src/plugins/codecompletion/ccoptionsdlg.cpp
+===================================================================
+--- src/plugins/codecompletion/ccoptionsdlg.cpp	(revision 6194)
++++ src/plugins/codecompletion/ccoptionsdlg.cpp	(working copy)
+@@ -119,8 +119,8 @@
+     XRCCTRL(*this, "sliderDelay", wxSlider)->SetValue(timerDelay / 100);
+     UpdateSliderLabel();
+ 
+-    const ConfigManagerContainer::StringToStringMap& repl = Tokenizer::GetTokenReplacementsMap();
+-    ConfigManagerContainer::StringToStringMap::const_iterator it = repl.begin();
++    const wxStringHashMap& repl = Tokenizer::GetTokenReplacementsMap();
++    wxStringHashMap::const_iterator it = repl.begin();
+     while (it != repl.end())
+     {
+         XRCCTRL(*this, "lstRepl", wxListBox)->Append(it->first + _T(" -> ") + it->second);
+Index: src/plugins/codecompletion/codecompletion.cpp
+===================================================================
+--- src/plugins/codecompletion/codecompletion.cpp	(revision 6194)
++++ src/plugins/codecompletion/codecompletion.cpp	(working copy)
+@@ -188,10 +188,8 @@
+ void CodeCompletion::LoadTokenReplacements()
+ {
+     ConfigManager* cfg = Manager::Get()->GetConfigManager(_T("code_completion"));
++    ConfigManagerContainer::StringToStringMap repl;
+ 
+-    ConfigManagerContainer::StringToStringMap& repl = Tokenizer::GetTokenReplacementsMap();
+-    repl.clear();
+-
+     if (!cfg->Exists(_T("token_replacements")))
+     {
+         // first run; add default replacements string
+@@ -208,13 +206,21 @@
+     }
+     else
+         cfg->Read(_T("token_replacements"), &repl);
++    
++    Tokenizer::ConvertToHashReplacementMap(repl);
+ }
+ 
+ void CodeCompletion::SaveTokenReplacements()
+ {
+     ConfigManager* cfg = Manager::Get()->GetConfigManager(_T("code_completion"));
+ 
+-    const ConfigManagerContainer::StringToStringMap& repl = Tokenizer::GetTokenReplacementsMap();
++    const wxStringHashMap& hashRepl = Tokenizer::GetTokenReplacementsMap();
++    ConfigManagerContainer::StringToStringMap repl;
++    wxStringHashMap::const_iterator it = hashRepl.begin();
++    for (; it != hashRepl.end(); it++)
++    {
++        repl[it->first] = it->second;
++    }
+     cfg->Write(_T("token_replacements"), repl);
+ }
+ 
+Index: src/plugins/codecompletion/parser/tokenizer.cpp
+===================================================================
+--- src/plugins/codecompletion/parser/tokenizer.cpp	(revision 6194)
++++ src/plugins/codecompletion/parser/tokenizer.cpp	(working copy)
+@@ -37,7 +37,7 @@
+ };
+ 
+ // static
+-ConfigManagerContainer::StringToStringMap Tokenizer::s_Replacements;
++wxStringHashMap Tokenizer::s_Replacements;
+ 
+ Tokenizer::Tokenizer(const wxString& filename)
+     : m_Filename(filename),
+@@ -789,7 +789,7 @@
+ 
+ wxString Tokenizer::MacroReplace(const wxString str)
+ {
+-    ConfigManagerContainer::StringToStringMap::const_iterator it = s_Replacements.find(str);
++    wxStringHashMap::const_iterator it = s_Replacements.find(str);
+ 
+     if (it != s_Replacements.end())
+     {
+Index: src/plugins/codecompletion/parser/tokenizer.h
+===================================================================
+--- src/plugins/codecompletion/parser/tokenizer.h	(revision 6194)
++++ src/plugins/codecompletion/parser/tokenizer.h	(working copy)
+@@ -7,10 +7,39 @@
+ #define TOKENIZER_H
+ 
+ #include <wx/string.h>
++#include <wx/hashmap.h>
+ #include <configmanager.h>
+ #include <filemanager.h>
+ 
++class HashForWxStringMap
++{
++public:
++    HashForWxStringMap() {}
++    unsigned long operator()(const wxString& x) const
++    {
++        const size_t len = x.length();
++        const size_t intWxChar = sizeof(unsigned int) / sizeof(wxChar);
++        const size_t shortWxChar = sizeof(unsigned short) / sizeof(wxChar);
++        if (len >= intWxChar)
++            return size_t((128 ^ len) + *((unsigned int*)(x.c_str() + len - intWxChar)));
++        else if (len >= shortWxChar)
++            return size_t((256 ^ len) + *((unsigned short*)(x.c_str() + len - shortWxChar)));
++        else
++            return size_t((512 ^ len) + *(x.c_str() + len - 1));
++    }
++    HashForWxStringMap& operator=(const HashForWxStringMap&) { return *this; }
++};
+ 
++class EqualForWxStringMap
++{
++public:
++    EqualForWxStringMap() { }
++    bool operator()(const wxString& a, const wxString& b) const { return a == b; }
++    EqualForWxStringMap& operator=(const EqualForWxStringMap&) { return *this; }
++};
++
++WX_DECLARE_HASH_MAP(wxString, wxString, HashForWxStringMap, EqualForWxStringMap, wxStringHashMap);
++
+ enum TokenizerState
+ {
+     tsSkipEqual        = 0x0001,
+@@ -100,20 +129,29 @@
+ 
+     static void SetReplacementString(const wxString& from, const wxString& to)
+     {
+-        s_Replacements.insert(s_Replacements.end(), std::make_pair(from, to));
++        s_Replacements[from] = to;
+     };
+ 
+     static void RemoveReplacementString(const wxString& from)
+     {
+-        ConfigManagerContainer::StringToStringMap::iterator it = s_Replacements.find(from);
++        wxStringHashMap::iterator it = s_Replacements.find(from);
+         if (it != s_Replacements.end())
+             s_Replacements.erase(it);
+     };
+-
+-    static ConfigManagerContainer::StringToStringMap& GetTokenReplacementsMap()
++    
++    static wxStringHashMap& GetTokenReplacementsMap()
+     {
+         return s_Replacements;
+-    };
++    }
++    
++    static void ConvertToHashReplacementMap(const ConfigManagerContainer::StringToStringMap& map)
++    {
++        ConfigManagerContainer::StringToStringMap::const_iterator it = map.begin();
++        for (; it != map.end(); it++)
++        {
++            s_Replacements[it->first] = it->second;
++        }
++    }
+ 
+     bool IsEOF() const
+     {
+@@ -240,7 +278,7 @@
+ 
+     inline const wxString& ThisOrReplacement(const wxString& str) const
+     {
+-        ConfigManagerContainer::StringToStringMap::const_iterator it = s_Replacements.find(str);
++        wxStringHashMap::const_iterator it = s_Replacements.find(str);
+         if (it != s_Replacements.end())
+             return it->second;
+         return str;
+@@ -276,7 +314,7 @@
+ 
+     LoaderBase*      m_pLoader;
+ 
+-    static ConfigManagerContainer::StringToStringMap s_Replacements;
++    static wxStringHashMap s_Replacements;
+ };
+ 
+ #endif // TOKENIZER_H

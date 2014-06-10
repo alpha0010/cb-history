@@ -1,0 +1,25 @@
+Index: src/plugins/contrib/regex_testbed/regexdlg.cpp
+===================================================================
+--- src/plugins/contrib/regex_testbed/regexdlg.cpp	(revision 7950)
++++ src/plugins/contrib/regex_testbed/regexdlg.cpp	(working copy)
+@@ -197,8 +197,19 @@
+     flags |= m_newlines->IsChecked() ? wxRE_NEWLINE : 0;
+     flags |= m_nocase->IsChecked() ? wxRE_ICASE : 0;
+ 
+-    if(!m_wxre.Compile(m_regex->GetValue(), flags) || !m_wxre.Matches(text))
++    if(m_wxre.Compile(m_regex->GetValue(), flags))
++    {
++        m_regex->SetBackgroundColour(m_text->GetBackgroundColour());
++        m_regex->GetParent()->Refresh();
++        if(!m_wxre.Matches(text))
++            return ret;
++    }
++    else
++    {
++        m_regex->SetBackgroundColour(*wxRED);
++        m_regex->GetParent()->Refresh();
+         return ret;
++    }
+ 
+     for(size_t i = 0; i < m_wxre.GetMatchCount(); ++i)
+         if(m_wxre.GetMatch(text, i))

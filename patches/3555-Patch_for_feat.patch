@@ -1,0 +1,72 @@
+Index: src/sdk/findreplacedlg.cpp
+===================================================================
+--- src/sdk/findreplacedlg.cpp	(revision 9660)
++++ src/sdk/findreplacedlg.cpp	(working copy)
+@@ -141,8 +141,20 @@
+     cbProject *active_project = Manager::Get()->GetProjectManager()->GetActiveProject();
+ 
+     // load search path options
+-    XRCCTRL(*this, "txtSearchPath", wxTextCtrl)->SetValue(cfg->Read(CONF_GROUP _T("/search_path"),
+-                                                                    (active_project ? active_project->GetBasePath() : wxT(""))));
++    if(cfg->Exists(CONF_GROUP _T("/search_path")))
++    {
++        // Migrate from previous config setting of "search_path" string (since it used to be a textbox)
++        // to new config setting of "search_paths" array for the combobox
++        XRCCTRL(*this, "cmbSearchPath", wxComboBox)->Append(cfg->Read(CONF_GROUP _T("/search_path"),
++                                                                      (active_project ? active_project->GetBasePath() : wxT(""))));
++        cfg->UnSet(CONF_GROUP _T("/search_path"));
++    }
++    else
++    {
++        FillComboWithLastValues(XRCCTRL(*this, "cmbSearchPath", wxComboBox), CONF_GROUP _T("/search_paths"));
++    }
++    XRCCTRL(*this, "cmbSearchPath", wxComboBox)->SetSelection(0);
++
+ 	if(cfg->Exists(CONF_GROUP _T("/search_mask")))
+ 	{
+ 		// Migrate from previous config setting of "search_mask" string (since it used to be a textbox)
+@@ -323,7 +335,7 @@
+     cfg->Write(CONF_GROUP _T("/scope2"),               XRCCTRL(*this, "rbScope2",            wxRadioBox)->GetSelection());
+     cfg->Write(CONF_GROUP _T("/delete_old_searches2"), XRCCTRL(*this, "chkDelOldSearchRes2", wxCheckBox)->GetValue());
+ 
+-    cfg->Write(CONF_GROUP _T("/search_path"),      XRCCTRL(*this, "txtSearchPath",        wxTextCtrl)->GetValue());
++    SaveComboValues(XRCCTRL(*this, "cmbSearchPath", wxComboBox), CONF_GROUP _T("/search_paths"));
+     SaveComboValues(XRCCTRL(*this, "cmbSearchMask", wxComboBox), CONF_GROUP _T("/search_masks"));
+     cfg->Write(CONF_GROUP _T("/search_recursive"), XRCCTRL(*this, "chkSearchRecursively", wxCheckBox)->GetValue());
+     cfg->Write(CONF_GROUP _T("/search_hidden"),    XRCCTRL(*this, "chkSearchHidden",      wxCheckBox)->GetValue());
+@@ -486,7 +498,7 @@
+ 
+ wxString FindReplaceDlg::GetSearchPath() const
+ {
+-    return XRCCTRL(*this, "txtSearchPath", wxTextCtrl)->GetValue();
++    return XRCCTRL(*this, "cmbSearchPath", wxComboBox)->GetValue();
+ }
+ 
+ wxString FindReplaceDlg::GetSearchMask() const
+@@ -542,10 +554,10 @@
+ 
+ void FindReplaceDlg::OnBrowsePath(cb_unused wxCommandEvent& event)
+ {
+-    wxString txtSearchPath = XRCCTRL(*this, "txtSearchPath", wxTextCtrl)->GetValue();
+-    wxString dir = ChooseDirectory(nullptr, _("Select search path"), txtSearchPath);
++    wxString searchPath = XRCCTRL(*this, "cmbSearchPath", wxComboBox)->GetValue();
++    wxString dir = ChooseDirectory(nullptr, _("Select search path"), searchPath);
+     if (!dir.IsEmpty())
+-        XRCCTRL(*this, "txtSearchPath", wxTextCtrl)->SetValue(dir);
++        XRCCTRL(*this, "cmbSearchPath", wxComboBox)->SetValue(dir);
+ }
+ 
+ void FindReplaceDlg::OnSearchProject(cb_unused wxCommandEvent& event)
+Index: src/sdk/resources/findreplacedlg.xrc
+===================================================================
+--- src/sdk/resources/findreplacedlg.xrc	(revision 9660)
++++ src/sdk/resources/findreplacedlg.xrc	(working copy)
+@@ -511,7 +511,7 @@
+ 																<border>4</border>
+ 															</object>
+ 															<object class="sizeritem">
+-																<object class="wxTextCtrl" name="txtSearchPath" />
++																<object class="wxComboBox" name="cmbSearchPath" />
+ 																<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+ 																<option>1</option>
+ 															</object>

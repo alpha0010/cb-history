@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 3440 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #3440 <small>2013-03-12 16:37:15</small></h3>
+          <h4>p2rkw</h4>
+          allow CC to recognize function call inside parentheses
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="3440-allow_CC_to_re.patch">3440-allow_CC_to_re.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::Bugfix</dd>
+            <dt>Status</dt><dd>Accepted</dd>
+            <dt>Close date</dt><dd>2013-04-23 21:22:37</dd>
+            <dt>Assigned to</dt><dd>alpha0010</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">p2rkw 2013-03-12 16:52:05</div>
+        <div class="panel-body">
+          <p>test case:</p>
+          <p>struct C</p>
+          <p>{</p>
+          <p>int c;</p>
+          <p>};</p>
+          <p>C* getC() {/*...*/}</p>
+          <p>(*getC()).|</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">alpha0010 2013-04-14 00:13:23</div>
+        <div class="panel-body">
+          <p>Does not work with compound resolution:</p>
+          <p>struct C</p>
+          <p>{</p>
+          <p>int c;</p>
+          <p>};</p>
+          <p>class A</p>
+          <p>{</p>
+          <p>public: static C* getC() {/*...*/}</p>
+          <p>};</p>
+          <p>(A::getC()).|</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-04-22 14:03:29</div>
+        <div class="panel-body">
+          <p>Sometimes, I think such things are a bit hard the handle, we can have proposed ways: 1, use a parser generator, like bison, and parse the statement, and build a symbol tree of the statement, then do some symbol lookup. This is the way currently used in GDB. GDB can handle "print (A::getC()).", also GDB can give completion list when you hit the TAB key.</p>
+          <p>2, we use a hand written parser by ourselves, like a operator precedence parser, then build a symbol tree, did the same thing as the first way.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">alpha0010 2013-04-23 21:22:37</div>
+        <div class="panel-body">
+          <p>Committed.</p>
+          <p>Simple resolution works (with no noticeable side effects); compound resolution is a project for the future.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

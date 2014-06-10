@@ -1,0 +1,417 @@
+diff -r b79c5d3ddb2d .hgtags
+--- a/.hgtags	Wed Apr 29 01:03:39 2009 -0400
++++ b/.hgtags	Wed Apr 29 11:01:44 2009 -0400
+@@ -1,3 +1,5 @@
+ 0389ce88fc3525b8d308d522505d939760b32905 svn-5550
+ 84d1ba9c5aca7dc5f46c3dc1df47c5f837b9e1dd baseline
+ 51788dfbc72159481063e7315beede4e7d119a4e baseline
++b79c5d3ddb2dc39048b5eda39f3ae63e5eddcbfc baseline
++f10e24fc4d48f4a11261a6e7f159e8e0089942f7 workspace-patch-2
+diff -r b79c5d3ddb2d src/include/cbworkspace.h
+--- a/src/include/cbworkspace.h	Wed Apr 29 01:03:39 2009 -0400
++++ b/src/include/cbworkspace.h	Wed Apr 29 11:01:44 2009 -0400
+@@ -107,14 +107,26 @@
+           * false, the workspace will be marked as unmodified.
+           */
+         virtual void SetModified(bool modified);
++
++        /** @brief Set the preferred target for this workspace
++          */
++        virtual void SetPreferredTarget(const wxString &target);
++
++        /** @brief Get the preferred target for this workspace
++          */
++        virtual wxString GetPreferredTarget() const { return m_PreferredTargetName; }
++
+     private:
+         bool m_IsOK; // succeeded loading?
+         bool m_IsDefault; // is this the Code::Blocks default workspace?
+         bool m_Modified; // is it modified?
+         wxFileName m_Filename; // filename
+         wxString m_Title; // title
++        wxString m_PreferredTargetName;
+ 
+         void Load(); // utility function
++        bool SaveLayout();
++        bool LoadLayout();
+ };
+ 
+ #endif // CBWORKSPACE_H
+diff -r b79c5d3ddb2d src/include/workspaceloader.h
+--- a/src/include/workspaceloader.h	Wed Apr 29 01:03:39 2009 -0400
++++ b/src/include/workspaceloader.h	Wed Apr 29 11:01:44 2009 -0400
+@@ -16,6 +16,9 @@
+ 
+         bool Open(const wxString& filename, wxString& Title);
+         bool Save(const wxString& title, const wxString& filename);
++
++        bool SaveLayout(const wxString& filename);
++        bool LoadLayout(const wxString& filename);
+ };
+ 
+ #endif // WORKSPACELOADER_H
+diff -r b79c5d3ddb2d src/plugins/compilergcc/compilergcc.cpp
+--- a/src/plugins/compilergcc/compilergcc.cpp	Wed Apr 29 01:03:39 2009 -0400
++++ b/src/plugins/compilergcc/compilergcc.cpp	Wed Apr 29 11:01:44 2009 -0400
+@@ -1314,6 +1314,18 @@
+     }
+ }
+ 
++bool CompilerGCC::IsValidTarget(const wxString &target) const
++{
++    if ( target.IsEmpty() )
++        return false;
++    if ( m_Targets.Index(target) == -1 )
++        return false;
++    ProjectBuildTarget *tgt = Manager::Get()->GetProjectManager()->GetActiveProject()->GetBuildTarget(target);
++    if ( tgt && ! tgt->SupportsCurrentPlatform() )
++        return false;
++    return true;
++}
++
+ void CompilerGCC::DoRecreateTargetMenu()
+ {
+     if (!IsAttached())
+@@ -1341,9 +1353,14 @@
+             break;
+ 
+         // find out the should-be-selected target
+-        wxString tgtStr = m_Project->GetActiveBuildTarget();
+-        if (tgtStr.IsEmpty())
+-            tgtStr = m_Project->GetFirstValidBuildTargetName(); // a default value
++        wxString preferredTarget = Manager::Get()->GetProjectManager()->GetWorkspace()->GetPreferredTarget();
++        wxString tgtStr = preferredTarget;
++        if ( ! IsValidTarget(tgtStr) )
++            tgtStr = m_Project->GetActiveBuildTarget();
++        if ( ! IsValidTarget(tgtStr) )
++            tgtStr = m_Project->GetFirstValidBuildTargetName(); // last-chance default
++        if ( preferredTarget.IsEmpty() )
++            Manager::Get()->GetProjectManager()->GetWorkspace()->SetPreferredTarget(tgtStr);
+ 
+         // fill the menu and combo
+         for (size_t x = 0; x < m_Targets.GetCount(); ++x)
+@@ -1434,7 +1451,9 @@
+     }
+     for (int i = 0; i < project->GetBuildTargetsCount(); ++i)
+     {
+-        m_Targets.Add(project->GetBuildTarget(i)->GetTitle());
++        ProjectBuildTarget *tgt = project->GetBuildTarget(i);
++        if ( tgt->SupportsCurrentPlatform() )
++            m_Targets.Add( tgt->GetTitle() );
+     }
+ 
+     // keep the index for the first real target
+@@ -3158,15 +3177,18 @@
+ 
+ void CompilerGCC::OnSelectTarget(wxCommandEvent& event)
+ {
+-    int sel = event.GetSelection();
+     if (event.GetId() == idToolTarget)
+     {   // through the toolbar
++        int sel = event.GetSelection();
++        Manager::Get()->GetProjectManager()->GetWorkspace()->SetPreferredTarget( GetTargetString(sel) );
+         DoUpdateTargetMenu(sel);
+     }
+     else
+     {   // through Build->SelectTarget
+-        DoUpdateTargetMenu(event.GetId() - idMenuSelectTargetOther[0]);
+-        m_ToolTarget->SetSelection(event.GetId() - idMenuSelectTargetOther[0]);
++        int i = event.GetId() - idMenuSelectTargetOther[0];
++        Manager::Get()->GetProjectManager()->GetWorkspace()->SetPreferredTarget( GetTargetString(i) );
++        DoUpdateTargetMenu(i);
++        m_ToolTarget->SetSelection(i);
+     }
+ } // end of OnSelectTarget
+ 
+diff -r b79c5d3ddb2d src/plugins/compilergcc/compilergcc.h
+--- a/src/plugins/compilergcc/compilergcc.h	Wed Apr 29 01:03:39 2009 -0400
++++ b/src/plugins/compilergcc/compilergcc.h	Wed Apr 29 11:01:44 2009 -0400
+@@ -117,6 +117,8 @@
+         int GetConfigurationGroup() const { return cgCompiler; }
+         cbConfigurationPanel* GetConfigurationPanel(wxWindow* parent);
+ 
++        bool IsValidTarget(const wxString &target) const;
++
+         void SwitchCompiler(const wxString& id);
+         const wxString& GetCurrentCompilerID();
+ 
+diff -r b79c5d3ddb2d src/sdk/cbworkspace.cpp
+--- a/src/sdk/cbworkspace.cpp	Wed Apr 29 01:03:39 2009 -0400
++++ b/src/sdk/cbworkspace.cpp	Wed Apr 29 11:01:44 2009 -0400
+@@ -91,6 +91,9 @@
+         delete pWsp;
+     }
+ 
++    // load workspace layout file
++    LoadLayout();
++
+     m_Filename.SetExt(FileFilters::WORKSPACE_EXT);
+     SetModified(false);
+ }
+@@ -100,6 +103,10 @@
+     if (m_Filename.GetFullPath().IsEmpty())
+         return SaveAs(_T(""));
+ 
++    // always save the layout file
++    SaveLayout();
++
++    // don't save workspace unless modified or forced
+     if (!force && !m_Modified)
+         return true;
+ 
+@@ -147,3 +154,43 @@
+     m_Modified = modified;
+     // Manager::Get()->GetLogManager()->DebugLog(F(_T("Setting workspace to modified = \"%s\""), modified ? _T("true") : _T("false")));
+ }
++
++void cbWorkspace::SetPreferredTarget(const wxString &target)
++{
++    if ( ! target.IsEmpty() )
++        m_PreferredTargetName = target;
++}
++
++/*private*/ bool cbWorkspace::SaveLayout()
++{
++    LogManager *log = Manager::Get()->GetLogManager();
++    WorkspaceLoader wsl;
++    wxFileName fn(m_Filename);
++    fn.SetExt( _T("workspace.layout") );
++    log->DebugLog(F(_T("Saving workspace layout \"%s\""), fn.GetFullPath().c_str()));
++    bool rc = wsl.SaveLayout( fn.GetFullPath() );
++    if (!rc)
++        log->DebugLog(F(_T("couldn't save workspace layout \"%s\""), fn.GetFullPath().c_str()));
++    return rc;
++}
++
++/*private*/ bool cbWorkspace::LoadLayout()
++{
++    LogManager *log = Manager::Get()->GetLogManager();
++    WorkspaceLoader wsl;
++    wxFileName fn(m_Filename);
++    fn.SetExt( _T("workspace.layout") );
++    bool rc = false;
++    if ( fn.FileExists() )
++    {
++        log->DebugLog(F(_T("Loading workspace layout \"%s\""), fn.GetFullPath().c_str()));
++        rc = wsl.LoadLayout( fn.GetFullPath() );
++        if (!rc)
++            log->DebugLog(F(_T("couldn't load workspace layout \"%s\""), fn.GetFullPath().c_str()));
++    }
++    else
++{
++        log->DebugLog(F(_T("workspace layout file doesn't exist \"%s\""), fn.GetFullPath().c_str()));
++    }
++    return rc;
++}
+diff -r b79c5d3ddb2d src/sdk/projectmanager.cpp
+--- a/src/sdk/projectmanager.cpp	Wed Apr 29 01:03:39 2009 -0400
++++ b/src/sdk/projectmanager.cpp	Wed Apr 29 11:01:44 2009 -0400
+@@ -459,8 +459,8 @@
+ {
+     if (project != m_pActiveProject)
+     {
+-        if (m_pWorkspace)
+-            m_pWorkspace->SetModified(true);
++//        if (m_pWorkspace)
++//            m_pWorkspace->SetModified(true);
+     }
+     else
+         return; // already active
+@@ -1081,6 +1081,9 @@
+     m_pWorkspace = new cbWorkspace(filename);
+     EndLoadingWorkspace();
+ 
++    if (m_pProjects->GetCount() > 0 && !m_pActiveProject)
++        SetProject(m_pProjects->Item(0), false);
++
+     return m_pWorkspace && m_pWorkspace->IsOK();
+ }
+ 
+@@ -1134,6 +1137,7 @@
+             m_IsClosingWorkspace = false;
+             return false;
+         }
++        m_pWorkspace->Save(); // force the workspace layout to be saved
+         if (!CloseAllProjects(false))
+         {
+             m_IsClosingWorkspace = false;
+diff -r b79c5d3ddb2d src/sdk/workspaceloader.cpp
+--- a/src/sdk/workspaceloader.cpp	Wed Apr 29 01:03:39 2009 -0400
++++ b/src/sdk/workspaceloader.cpp	Wed Apr 29 11:01:44 2009 -0400
+@@ -41,6 +41,8 @@
+ inline ProjectManager* GetpMan() { return Manager::Get()->GetProjectManager(); }
+ inline LogManager* GetpMsg() { return Manager::Get()->GetLogManager(); }
+ 
++#include <wx/intl.h>
++
+ bool WorkspaceLoader::Open(const wxString& filename, wxString& Title)
+ {
+     TiXmlDocument doc;
+@@ -174,6 +176,13 @@
+     return true;
+ }
+ 
++static wxString ExportFilename(const wxFileName &filename)
++{
++    wxString fn = filename.GetFullPath();
++    fn.Replace(_T("\\"), _T("/"), true);
++    return fn;
++}
++
+ bool WorkspaceLoader::Save(const wxString& title, const wxString& filename)
+ {
+     const char* ROOT_TAG = "CodeBlocks_workspace_file";
+@@ -198,9 +207,10 @@
+         fname.MakeRelativeTo(wfname.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR));
+ 
+         TiXmlElement* node = static_cast<TiXmlElement*>(wksp->InsertEndChild(TiXmlElement("Project")));
+-        node->SetAttribute("filename", cbU2C(fname.GetFullPath()));
+-        if (prj == Manager::Get()->GetProjectManager()->GetActiveProject())
+-            node->SetAttribute("active", 1);
++
++        node->SetAttribute("filename", cbU2C( ExportFilename(fname) ) );
++//        if (prj == Manager::Get()->GetProjectManager()->GetActiveProject())
++//            node->SetAttribute("active", 1);
+ 
+         const ProjectsArray* deps = Manager::Get()->GetProjectManager()->GetDependenciesForProject(prj);
+         if (deps && deps->GetCount())
+@@ -211,9 +221,138 @@
+                 fname.Assign(prj->GetFilename());
+                 fname.MakeRelativeTo(wfname.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR));
+                 TiXmlElement* dnode = static_cast<TiXmlElement*>(node->InsertEndChild(TiXmlElement("Depends")));
+-                dnode->SetAttribute("filename", cbU2C(fname.GetFullPath()));
++                dnode->SetAttribute("filename", cbU2C( ExportFilename(fname) ) );
+             }
+         }
+     }
+     return cbSaveTinyXMLDocument(&doc, filename);
+ }
++
++#if 0
++#define DBG(x) x
++#else
++#define DBG(x)
++#endif
++
++bool WorkspaceLoader::SaveLayout(const wxString& filename)
++{
++    const char* ROOT_TAG = "CodeBlocks_workspace_layout_file";
++
++    TiXmlDocument doc;
++    doc.SetCondenseWhiteSpace(false);
++    doc.InsertEndChild(TiXmlDeclaration("1.0", "UTF-8", "yes"));
++    TiXmlElement* rootnode = static_cast<TiXmlElement*>(doc.InsertEndChild(TiXmlElement(ROOT_TAG)));
++    if (!rootnode)
++    {
++        DBG( GetpMsg()->DebugLog( _T("failed creating root node!") ); )
++        return false;
++    }
++
++    // active project
++    ProjectManager *pm = Manager::Get()->GetProjectManager();
++    if (!pm)
++    {
++        DBG( GetpMsg()->DebugLog(_T("! pman!")); )
++        return false;
++    }
++    cbProject *project = pm->GetActiveProject();
++    if (project)
++    {
++        TiXmlElement *el =
++            static_cast<TiXmlElement*>(
++                rootnode->InsertEndChild( TiXmlElement("ActiveProject") ) );
++        wxFileName wfname(filename);
++        wxFileName fname( project->GetFilename() );
++        fname.MakeRelativeTo(wfname.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR));
++        el->SetAttribute("path", cbU2C( ExportFilename(fname) ) );
++    }
++    else
++    {
++        DBG( GetpMsg()->DebugLog( _T("no active project!") ); )
++    }
++
++    // preferred build target
++    if ( cbWorkspace *wsp = pm->GetWorkspace() )
++    {
++        wxString preferredTarget = wsp->GetPreferredTarget();
++        if ( ! preferredTarget.IsEmpty() )
++        {
++            TiXmlElement* el =
++                static_cast<TiXmlElement*>(
++                    rootnode->InsertEndChild( TiXmlElement("PreferredTarget") ) );
++            el->SetAttribute("name", cbU2C(preferredTarget) );
++        }
++        else
++        {
++            DBG( GetpMsg()->DebugLog( _T("no preferred target to save!") ); )
++        }
++    }
++    else
++    {
++        DBG( GetpMsg()->DebugLog( _T("no workspace!") ); )
++    }
++
++    return cbSaveTinyXMLDocument(&doc, filename);
++}
++
++bool WorkspaceLoader::LoadLayout(const wxString& filename)
++{
++    TiXmlDocument doc;
++    if ( ! TinyXML::LoadDocument(filename, &doc) )
++    {
++        DBG( GetpMsg()->DebugLog(F(_T("can't load xml file: %s"), filename.c_str())); )
++        return false;
++    }
++
++    if ( ! GetpMan() || ! GetpMsg() )
++    {
++        DBG( GetpMsg()->DebugLog(_T("! pman or mpsg!")); )
++        return false;
++    }
++
++    TiXmlElement* root = doc.FirstChildElement("CodeBlocks_workspace_layout_file");
++    if (!root)
++    {
++        GetpMsg()->DebugLog(_T("Not a valid Code::Blocks workspace layout file..."));
++        return false;
++    }
++
++    // active project
++    TiXmlElement *el = root->FirstChildElement("ActiveProject");
++    if (el)
++    {
++        wxFileName fname = cbC2U( el->Attribute("path") );
++        wxFileName wfname(filename);
++        fname.MakeAbsolute( wfname.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR) );
++        cbProject *project = GetpMan()->IsOpen( fname.GetFullPath() );
++        if (project)
++        {
++            GetpMan()->SetProject(project);
++            Manager::Get()->GetLogManager()->DebugLog(F(_T("set active project to: %s"), fname.GetFullPath().c_str()));
++        }
++        else
++        {
++            Manager::Get()->GetLogManager()->DebugLog(F(_T("could not set active project to: %s"), fname.GetFullPath().c_str()));
++        }
++    }
++    else
++    {
++        DBG( GetpMsg()->DebugLog( _T("ActiveProject element not found") ) );
++    }
++
++    // preferred build target
++    el = root->FirstChildElement("PreferredTarget");
++    if (el)
++    {
++        wxString name = cbC2U(el->Attribute("name"));
++        cbWorkspace *wsp = GetpMan()->GetWorkspace();
++        if (wsp)
++            wsp->SetPreferredTarget(name);
++    }
++    else
++    {
++        DBG( GetpMsg()->DebugLog( _T("PreferredTarget element not found") ) );
++    }
++
++    return true;
++}

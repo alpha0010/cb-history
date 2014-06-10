@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 913 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #913 <small>2006-03-10 21:34:41</small></h3>
+          <h4>yop</h4>
+          Building rev 2171 without precompiled headers
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="913-Building_rev_21.patch">913-Building_rev_21.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>None</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2006-03-14 08:01:31</dd>
+            <dt>Assigned to</dt><dd></dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">yop 2006-03-10 21:36:26</div>
+        <div class="panel-body">
+          <p>A missing inclusion and some suffle in the order two headers are included.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">killerbot 2006-03-12 18:42:16</div>
+        <div class="panel-body">
+          <p>Could you tell on what (missing types) you got errors ?</p>
+          <p>I have a little feeling that this patch might be more of a work around then an absolute fix. The fact that moving up the globals header include, seems to indicate that it might be needed by another header (and maybe also the cpp file). If this would be the case, then the header that need stuff from it should include it. Just to have an idea on which (missing) types we should focus.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">killerbot 2006-03-12 18:54:05</div>
+        <div class="panel-body">
+          <p>I think I have fixed the include for filefilters.cpp.</p>
+          <p>One type that was not included was the wxArrayString, so I added include &lt;wx/arrstr.h&gt;.</p>
+          <p>And this was provided through the include of your suggestion of globals.h like this :</p>
+          <p>#if wxCHECK_VERSION(2, 5, 0)</p>
+          <p>#include &lt;wx/arrstr.h&gt;</p>
+          <p>#endif</p>
+          <p>No idea if that wxCHECK_VERSION is still needed ??</p>
+          <p>I think we want wx 2.6.x</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">killerbot 2006-03-12 18:58:11</div>
+        <div class="panel-body">
+          <p>and I also think I have found the other problem, or some part of it :</p>
+          <p>cbWorkSpace.h needs DEFAULT_WORKSPACE, which is declared (extern) in globals.h</p>
+          <p>So it it the header file that needs it, committed this change.</p>
+          <p>Could you try it out by updating your revisions, if it works ??</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">yop 2006-03-13 21:39:49</div>
+        <div class="panel-body">
+          <p>killerbot I'm really sorry I haven't replied, I used to get an email if any changes happened to what I've uploaded to the tracker and for this one I got no mail, it was just by coinsidence that I opened it up again. I'm updating right now to see your changes.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">yop 2006-03-13 22:03:54</div>
+        <div class="panel-body">
+          <p>Version 1.0 revision 2189 (gcc 3.3.5 Linux/unicode, build: Mar 13 2006 22:26:38)</p>
+          <p>GetArrayFromString udeclared in sdk/filefilters.cpp, including globals.h fixes it.</p>
+          <p>Manager and GetProjectManager undeclared in plugins/debuggergdb/debuggerstate.cpp, including manager.h and projectmanager.h fixes the problem (hmm this is a new one).</p>
+          <p>That's all :)</p>
+          <p>You pinpointed the exact problems I was having in your comments. As you say they are more of workarounds but I will change a core header file only if I absolutely have to. I prefer the "safe" way. You certainly have a better overview of the project so my patch could serve as a guide to catch the errors I'm getting, hope it helped.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">killerbot 2006-03-14 08:01:31</div>
+        <div class="panel-body">
+          <p>Yes, you are correct, I overlooked the "GetArrayFromString" in filefilters.cpp, that one comes grom globals.h .</p>
+          <p>Also added the 2 includes in debuggerstate.cpp, which are needed there.</p>
+          <p>Revision 2190.</p>
+          <p>Closing the patch, reopen if needed.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

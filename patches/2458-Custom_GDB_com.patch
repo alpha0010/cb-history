@@ -1,0 +1,418 @@
+Index: plugins/debuggergdb/debuggergdb.cpp
+===================================================================
+--- plugins/debuggergdb/debuggergdb.cpp	(revision 5035)
++++ plugins/debuggergdb/debuggergdb.cpp	(working copy)
+@@ -697,6 +697,17 @@
+                     if (rdOpt->Attribute("skip_ld_path"))
+                         rd.skipLDpath = cbC2U(rdOpt->Attribute("skip_ld_path")) != _T("0");
+ 
++                    if (rdOpt->Attribute("runCmd"))
++                        rd.runCmd = cbC2U(rdOpt->Attribute("runCmd"));
++                    if (rdOpt->Attribute("continueCmd"))
++                        rd.continueCmd = cbC2U(rdOpt->Attribute("continueCmd"));
++                    if (rdOpt->Attribute("stopCmd"))
++                        rd.stopCmd = cbC2U(rdOpt->Attribute("stopCmd"));
++                    if (rdOpt->Attribute("listThreadCmd"))
++                        rd.listThreadCmd = cbC2U(rdOpt->Attribute("listThreadCmd"));
++                    if (rdOpt->Attribute("switchThreadCmd"))
++                        rd.switchThreadCmd = cbC2U(rdOpt->Attribute("switchThreadCmd"));
++
+                     rdprj.insert(rdprj.end(), std::make_pair(bt, rd));
+                 }
+                 else
+@@ -766,6 +777,17 @@
+                     tgtnode->SetAttribute("additional_cmds_before", cbU2C(rd.additionalCmdsBefore));
+                 if (rd.skipLDpath)
+                     tgtnode->SetAttribute("skip_ld_path", "1");
++
++                if (!rd.runCmd.IsEmpty())
++                    tgtnode->SetAttribute("runCmd", cbU2C(rd.runCmd));
++                if (!rd.continueCmd.IsEmpty())
++                    tgtnode->SetAttribute("continueCmd", cbU2C(rd.continueCmd));
++                if (!rd.stopCmd.IsEmpty())
++                    tgtnode->SetAttribute("stopCmd", cbU2C(rd.stopCmd));
++                if (!rd.listThreadCmd.IsEmpty())
++                    tgtnode->SetAttribute("listThreadCmd", cbU2C(rd.listThreadCmd));
++                if (!rd.switchThreadCmd.IsEmpty())
++                    tgtnode->SetAttribute("switchThreadCmd", cbU2C(rd.switchThreadCmd));
+             }
+         }
+     }
+Index: plugins/debuggergdb/debuggeroptionsprjdlg.cpp
+===================================================================
+--- plugins/debuggergdb/debuggeroptionsprjdlg.cpp	(revision 5035)
++++ plugins/debuggergdb/debuggeroptionsprjdlg.cpp	(working copy)
+@@ -78,6 +78,12 @@
+ 		XRCCTRL(*this, "txtCmds", wxTextCtrl)->SetValue(rd.additionalCmds);
+ 		XRCCTRL(*this, "txtCmdsBefore", wxTextCtrl)->SetValue(rd.additionalCmdsBefore);
+ 		XRCCTRL(*this, "chkSkipLDpath", wxCheckBox)->SetValue(rd.skipLDpath);
++
++		XRCCTRL(*this, "txtDebugCmd", wxTextCtrl)->SetValue(rd.runCmd);
++		XRCCTRL(*this, "txtContinueCmd", wxTextCtrl)->SetValue(rd.continueCmd);
++		XRCCTRL(*this, "txtStopCmd", wxTextCtrl)->SetValue(rd.stopCmd);
++		XRCCTRL(*this, "txtListThreadsCmd", wxTextCtrl)->SetValue(rd.listThreadCmd);
++		XRCCTRL(*this, "txtSwitchThreadCmd", wxTextCtrl)->SetValue(rd.switchThreadCmd);
+ 	}
+ 	else
+ 	{
+@@ -89,6 +95,12 @@
+ 		XRCCTRL(*this, "txtCmds", wxTextCtrl)->SetValue(wxEmptyString);
+ 		XRCCTRL(*this, "txtCmdsBefore", wxTextCtrl)->SetValue(wxEmptyString);
+ 		XRCCTRL(*this, "chkSkipLDpath", wxCheckBox)->SetValue(false);
++
++        XRCCTRL(*this, "txtDebugCmd", wxTextCtrl)->SetValue(wxEmptyString);
++		XRCCTRL(*this, "txtContinueCmd", wxTextCtrl)->SetValue(wxEmptyString);
++		XRCCTRL(*this, "txtStopCmd", wxTextCtrl)->SetValue(wxEmptyString);
++		XRCCTRL(*this, "txtListThreadsCmd", wxTextCtrl)->SetValue(wxEmptyString);
++		XRCCTRL(*this, "txtSwitchThreadCmd", wxTextCtrl)->SetValue(wxEmptyString);
+ 	}
+ }
+ 
+@@ -115,6 +127,12 @@
+ 	rd.additionalCmds = XRCCTRL(*this, "txtCmds", wxTextCtrl)->GetValue();
+ 	rd.additionalCmdsBefore = XRCCTRL(*this, "txtCmdsBefore", wxTextCtrl)->GetValue();
+ 	rd.skipLDpath = XRCCTRL(*this, "chkSkipLDpath", wxCheckBox)->GetValue();
++
++    rd.runCmd = XRCCTRL(*this, "txtDebugCmd", wxTextCtrl)->GetValue();
++    rd.continueCmd = XRCCTRL(*this, "txtContinueCmd", wxTextCtrl)->GetValue();
++    rd.stopCmd = XRCCTRL(*this, "txtStopCmd", wxTextCtrl)->GetValue();
++    rd.listThreadCmd = XRCCTRL(*this, "txtListThreadsCmd", wxTextCtrl)->GetValue();
++    rd.switchThreadCmd = XRCCTRL(*this, "txtSwitchThreadCmd", wxTextCtrl)->GetValue();
+ }
+ 
+ void DebuggerOptionsProjectDlg::OnTargetSel(wxCommandEvent& event)
+@@ -189,6 +207,12 @@
+     XRCCTRL(*this, "txtCmds", wxTextCtrl)->Enable(en);
+     XRCCTRL(*this, "txtCmdsBefore", wxTextCtrl)->Enable(en);
+ 	XRCCTRL(*this, "chkSkipLDpath", wxCheckBox)->Enable(en);
++
++	XRCCTRL(*this, "txtDebugCmd", wxTextCtrl)->Enable(en);
++    XRCCTRL(*this, "txtContinueCmd", wxTextCtrl)->Enable(en);
++	XRCCTRL(*this, "txtStopCmd", wxTextCtrl)->Enable(en);
++	XRCCTRL(*this, "txtListThreadsCmd", wxTextCtrl)->Enable(en);
++	XRCCTRL(*this, "txtSwitchThreadCmd", wxTextCtrl)->Enable(en);
+ }
+ 
+ void DebuggerOptionsProjectDlg::OnApply()
+Index: plugins/debuggergdb/gdb_commands.h
+===================================================================
+--- plugins/debuggergdb/gdb_commands.h	(revision 5035)
++++ plugins/debuggergdb/gdb_commands.h	(working copy)
+@@ -614,11 +614,12 @@
+         ThreadsDlg* m_pList;
+     public:
+         /** @param tree The tree to display the args. */
+-        GdbCmd_Threads(DebuggerDriver* driver, ThreadsDlg* list)
++        GdbCmd_Threads(DebuggerDriver* driver, RemoteDebugging* rd, ThreadsDlg* list)
+             : DebuggerCmd(driver),
+             m_pList(list)
+         {
+-            m_Cmd << _T("info threads");
++            wxString listcmd = rd == NULL || rd->switchThreadCmd.IsEmpty() ? _T("info threads") : rd->listThreadCmd;
++            m_Cmd << listcmd;
+         }
+         void ParseOutput(const wxString& output)
+         {
+Index: plugins/debuggergdb/gdb_driver.cpp
+===================================================================
+--- plugins/debuggergdb/gdb_driver.cpp	(revision 5035)
++++ plugins/debuggergdb/gdb_driver.cpp	(working copy)
+@@ -526,7 +526,14 @@
+ void GDB_driver::Stop()
+ {
+     ResetCursor();
+-    QueueCommand(new DebuggerCmd(this, _T("quit")));
++    //Manager::Get()->GetConfigManager(_T("debugger"))->Read(_T("stop_commands"), _T("quit"));
++    RemoteDebugging * rd = GetRemoteDebuggingInfo();
++    wxString stop = rd == NULL || rd->stopCmd.IsEmpty() ? _T("quit") : rd->stopCmd;
++    wxArrayString stopCmds = GetArrayFromString(stop, _T('\n'));
++    for (unsigned int i = 0; i < stopCmds.GetCount(); ++i)
++    {
++        QueueCommand(new DebuggerCmd(this, stopCmds[i]));
++    }
+     m_IsStarted = false;
+ }
+ 
+@@ -534,10 +541,26 @@
+ {
+     ResetCursor();
+     if (m_IsStarted)
+-        QueueCommand(new DebuggerCmd(this, _T("cont")));
++    {
++        //wxString cont = Manager::Get()->GetConfigManager(_T("debugger"))->Read(_T("continue_commands"), _T("continue"));
++        RemoteDebugging * rd = GetRemoteDebuggingInfo();
++        wxString cont = rd == NULL || rd->continueCmd.IsEmpty() ? _T("cont") : rd->continueCmd;
++        wxArrayString contCmds = GetArrayFromString(cont, _T('\n'));
++        for (unsigned int i = 0; i < contCmds.GetCount(); ++i)
++        {
++            QueueCommand(new DebuggerCmd(this, contCmds[i]));
++        }
++    }
+     else
+     {
+-        QueueCommand(new DebuggerCmd(this, m_ManualBreakOnEntry ? _T("start") : _T("run")));
++        //wxString debug = Manager::Get()->GetConfigManager(_T("debugger"))->Read(_T("debug_commands"), m_ManualBreakOnEntry ? _T("start") : _T("run"));
++        RemoteDebugging * rd = GetRemoteDebuggingInfo();
++        wxString debug = rd == NULL || rd->runCmd.IsEmpty() ? wxString(m_ManualBreakOnEntry ? _T("start") : _T("run")) : rd->runCmd;
++        wxArrayString dbgCmds = GetArrayFromString(debug, _T('\n'));
++        for (unsigned int i = 0; i < dbgCmds.GetCount(); ++i)
++        {
++            QueueCommand(new DebuggerCmd(this, dbgCmds[i]));
++        }
+         m_IsStarted = true;
+     }
+ }
+@@ -615,7 +638,7 @@
+ 
+ void GDB_driver::RunningThreads()
+ {
+-    QueueCommand(new GdbCmd_Threads(this, m_pThreads));
++    QueueCommand(new GdbCmd_Threads(this, GetRemoteDebuggingInfo(), m_pThreads));
+ }
+ 
+ void GDB_driver::InfoFrame()
+@@ -646,7 +669,11 @@
+ void GDB_driver::SwitchThread(size_t threadIndex)
+ {
+     ResetCursor();
+-    QueueCommand(new DebuggerCmd(this, wxString::Format(_T("thread %d"), threadIndex)));
++    RemoteDebugging * rd = GetRemoteDebuggingInfo();
++    wxString switchcmd = wxString::Format(rd == NULL || rd->switchThreadCmd.IsEmpty() ? _T("thread %d") : rd->switchThreadCmd, threadIndex);
++    wxArrayString switchCmds = GetArrayFromString(switchcmd, _T('\n'));
++    for (unsigned int i = 0; i < switchCmds.GetCount(); ++i)
++        QueueCommand(new DebuggerCmd(this, switchCmds[i]));
+ }
+ 
+ void GDB_driver::AddBreakpoint(DebuggerBreakpoint* bp)
+@@ -747,7 +774,7 @@
+ 		{
+ 			re = &reChildPid;
+ 		}
+-		
++
+ 		if (re)
+ 		{
+ 			// got the line with the PID, parse it out:
+Index: plugins/debuggergdb/remotedebugging.h
+===================================================================
+--- plugins/debuggergdb/remotedebugging.h	(revision 5035)
++++ plugins/debuggergdb/remotedebugging.h	(working copy)
+@@ -1,46 +1,52 @@
+-/*
+- * This file is part of the Code::Blocks IDE and licensed under the GNU General Public License, version 3
+- * http://www.gnu.org/licenses/gpl-3.0.html
+- */
+-
+-#ifndef REMOTEDEBUGGING_H
+-#define REMOTEDEBUGGING_H
+-
+-#include <map>
+-#include <wx/string.h>
+-
+-class ProjectBuildTarget;
+-
+-// per-target remote debugging support
+-struct RemoteDebugging
+-{
+-	enum ConnectionType
+-	{
+-		TCP = 0,
+-		UDP,
+-		Serial
+-	};
+-
+-	RemoteDebugging() : skipLDpath(false) {}
+-	
+-	bool IsOk()
+-	{
+-		return connType == Serial
+-				? (!serialPort.IsEmpty() && !serialBaud.IsEmpty())
+-				: (!ip.IsEmpty() && !ipPort.IsEmpty());
+-	}
+-	
+-	ConnectionType connType;
+-	wxString serialPort;
+-	wxString serialBaud;
+-	wxString ip;
+-	wxString ipPort;
+-	wxString additionalCmds; ///< commands after remote connection established
+-	wxString additionalCmdsBefore; ///< commands before establishing remote connection
+-	bool skipLDpath; ///< skip adjusting LD_LIBRARY_PATH before launching debugger
+-};
+-
+-typedef std::map<ProjectBuildTarget*, RemoteDebugging> RemoteDebuggingMap;
+-
+-
+-#endif // REMOTEDEBUGGING_H
++/*
++ * This file is part of the Code::Blocks IDE and licensed under the GNU General Public License, version 3
++ * http://www.gnu.org/licenses/gpl-3.0.html
++ */
++
++#ifndef REMOTEDEBUGGING_H
++#define REMOTEDEBUGGING_H
++
++#include <map>
++#include <wx/string.h>
++
++class ProjectBuildTarget;
++
++// per-target remote debugging support
++struct RemoteDebugging
++{
++	enum ConnectionType
++	{
++		TCP = 0,
++		UDP,
++		Serial
++	};
++
++	RemoteDebugging() : skipLDpath(false) {}
++
++	bool IsOk()
++	{
++		return connType == Serial
++				? (!serialPort.IsEmpty() && !serialBaud.IsEmpty())
++				: (!ip.IsEmpty() && !ipPort.IsEmpty());
++	}
++
++	ConnectionType connType;
++	wxString serialPort;
++	wxString serialBaud;
++	wxString ip;
++	wxString ipPort;
++	wxString additionalCmds; ///< commands after remote connection established
++	wxString additionalCmdsBefore; ///< commands before establishing remote connection
++	bool skipLDpath; ///< skip adjusting LD_LIBRARY_PATH before launching debugger
++
++	wxString runCmd;
++	wxString continueCmd;
++	wxString stopCmd;
++	wxString listThreadCmd;
++	wxString switchThreadCmd;
++};
++
++typedef std::map<ProjectBuildTarget*, RemoteDebugging> RemoteDebuggingMap;
++
++
++#endif // REMOTEDEBUGGING_H
+Index: plugins/debuggergdb/resources/debugger_project_options_dlg.xrc
+===================================================================
+--- plugins/debuggergdb/resources/debugger_project_options_dlg.xrc	(revision 5035)
++++ plugins/debuggergdb/resources/debugger_project_options_dlg.xrc	(working copy)
+@@ -259,10 +259,114 @@
+ 								</object>
+ 								<label>Additional commands</label>
+ 							</object>
++							<object class="notebookpage">
++								<object class="wxPanel" name="ID_PANEL3">
++									<size>-1,400</size>
++									<object class="wxFlexGridSizer">
++										<cols>2</cols>
++										<vgap>4</vgap>
++										<hgap>4</hgap>
++										<growablecols>1</growablecols>
++										<growablerows>0,1,2,3,4</growablerows>
++										<object class="sizeritem">
++											<object class="wxStaticText" name="ID_STATICTEXT10">
++												<label>Debug:</label>
++												<size>-1,-1</size>
++											</object>
++											<flag>wxBOTTOM|wxLEFT|wxALIGN_RIGHT|wxALIGN_CENTER_VERTICAL</flag>
++											<border>5</border>
++											<option>1</option>
++										</object>
++										<object class="sizeritem">
++											<object class="wxTextCtrl" name="txtDebugCmd">
++												<value>Text</value>
++												<size>-1,10</size>
++												<style>wxTE_PROCESS_ENTER|wxTE_MULTILINE</style>
++											</object>
++											<flag>wxTOP|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++											<border>5</border>
++											<option>1</option>
++										</object>
++										<object class="sizeritem">
++											<object class="wxStaticText" name="ID_STATICTEXT11">
++												<label>Continue:</label>
++											</object>
++											<flag>wxBOTTOM|wxLEFT|wxALIGN_RIGHT|wxALIGN_CENTER_VERTICAL</flag>
++											<border>5</border>
++											<option>1</option>
++										</object>
++										<object class="sizeritem">
++											<object class="wxTextCtrl" name="txtContinueCmd">
++												<value>Text</value>
++												<size>-1,10</size>
++												<style>wxTE_PROCESS_ENTER|wxTE_MULTILINE</style>
++											</object>
++											<flag>wxTOP|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++											<border>5</border>
++											<option>1</option>
++										</object>
++										<object class="sizeritem">
++											<object class="wxStaticText" name="ID_STATICTEXT12">
++												<label>Stop:</label>
++											</object>
++											<flag>wxBOTTOM|wxLEFT|wxALIGN_RIGHT|wxALIGN_CENTER_VERTICAL</flag>
++											<border>5</border>
++											<option>1</option>
++										</object>
++										<object class="sizeritem">
++											<object class="wxTextCtrl" name="txtStopCmd">
++												<value>Text</value>
++												<size>-1,10</size>
++												<style>wxTE_PROCESS_ENTER|wxTE_MULTILINE</style>
++											</object>
++											<flag>wxTOP|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++											<border>5</border>
++											<option>1</option>
++										</object>
++										<object class="sizeritem">
++											<object class="wxStaticText" name="ID_STATICTEXT14">
++												<label>Switch thread:</label>
++											</object>
++											<flag>wxBOTTOM|wxLEFT|wxALIGN_RIGHT|wxALIGN_CENTER_VERTICAL</flag>
++											<border>5</border>
++											<option>1</option>
++										</object>
++										<object class="sizeritem">
++											<object class="wxTextCtrl" name="txtSwitchThreadCmd">
++												<value>Text</value>
++												<size>-1,10</size>
++												<style>wxTE_PROCESS_ENTER|wxTE_MULTILINE</style>
++											</object>
++											<flag>wxTOP|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++											<border>5</border>
++											<option>1</option>
++										</object>
++										<object class="sizeritem">
++											<object class="wxStaticText" name="ID_STATICTEXT13">
++												<label>List threads:</label>
++											</object>
++											<flag>wxBOTTOM|wxLEFT|wxALIGN_RIGHT|wxALIGN_CENTER_VERTICAL</flag>
++											<border>5</border>
++											<option>1</option>
++										</object>
++										<object class="sizeritem">
++											<object class="wxTextCtrl" name="txtListThreadsCmd">
++												<value>Text</value>
++												<size>-1,10</size>
++												<style>wxTE_PROCESS_ENTER|wxTE_MULTILINE</style>
++											</object>
++											<flag>wxTOP|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++											<border>5</border>
++											<option>1</option>
++										</object>
++									</object>
++								</object>
++								<label>Custom commands</label>
++							</object>
+ 						</object>
+ 						<flag>wxTOP|wxBOTTOM|wxEXPAND|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+ 						<border>5</border>
+-						<option>1</option>
++						<option>2</option>
+ 					</object>
+ 				</object>
+ 				<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>

@@ -1,0 +1,376 @@
+diff -uNrp trunk/src/sdk/cbeditor.cpp trunk.new/src/sdk/cbeditor.cpp
+--- trunk/src/sdk/cbeditor.cpp	2011-07-01 10:20:10.413777450 +0600
++++ trunk.new/src/sdk/cbeditor.cpp	2011-07-01 10:21:05.995740557 +0600
+@@ -295,98 +295,305 @@ struct cbEditorInternalData
+         return -1;
+     }
+ 
+-    void DoBraceCompletion(const wxChar& ch)
++    // checks whether 'position' is in a C-style string
++    bool IsInString( int position )
+     {
+         cbStyledTextCtrl* control = m_pOwner->GetControl();
+-        int pos = control->GetCurrentPos();
+-        int style = control->GetStyleAt(pos);
+-        if ( control->IsComment(style) || control->IsPreprocessor(style) )
+-            return;
+-        if (ch == _T('\'') || ch == _T('"'))
++
++        bool inChar = false;
++        bool inString = false;
++
++        // we check if previous line has \ at the end, thus carrying a string to the current line
++        if (control->LineFromPosition(position) > 0)
+         {
+-            if (   (control->GetCharAt(pos) == ch)
+-                && (control->GetCharAt(pos - 2) != _T('\\')) )
+-            {
+-                control->DeleteBack();
+-                control->GotoPos(pos);
+-            }
+-            else
++            wxString prevLine = control->GetLine(control->LineFromPosition(position) - 1);
++
++            prevLine.Trim(true);
++
++            if (prevLine.Length() > 0 && prevLine[prevLine.Length() - 1] == _T('\\') &&
++                IsInString(control->GetLineEndPosition(control->LineFromPosition(position) - 1)))
++
++                inString = true;
++        }
++
++        int lineStartPos = control->PositionFromLine(control->LineFromPosition(position));
++
++        for (int curPos = lineStartPos; curPos <= position; curPos++ )
++        {
++            if (!inString && control->GetCharAt(curPos) == _T('\'') && control->GetCharAt(curPos - 1) != _T('\\'))
++                inChar = !inChar;
++            else if (!inChar && control->GetCharAt(curPos) == _T('"') && control->GetCharAt(curPos - 1) != _T('\\'))
++                inString = !inString;
++        }
++
++        return inString;
++    }
++
++    // checks whether 'position' is in a C-style character
++    bool IsInCharacter( int position )
++    {
++        cbStyledTextCtrl* control = m_pOwner->GetControl();
++
++        if (IsInString(position))
++            return false;
++
++        bool inChar = false;
++
++        int lineStartPos = control->PositionFromLine(control->LineFromPosition(position));
++
++        for (int curPos = lineStartPos; curPos <= position; curPos++)
++        {
++            if (control->GetCharAt(curPos) == _T('\'') && control->GetCharAt(curPos - 1) != _T('\\'))
++                inChar = !inChar;
++        }
++
++        return inChar;
++    }
++
++    void DoSingleQuoteCompletion(const wxChar& ch, cbStyledTextCtrl* control, int pos, int style)
++    {
++        if ( (control->GetCharAt(pos) == ch) && (pos > 1) && (control->GetCharAt(pos-2) != _T('\\')) )
++        {
++            control->DeleteBack();
++            control->GotoPos(pos);
++        }
++        else
++        {
++            if ( (control->GetCharAt(pos-2) == _T('\\')) || control->IsCharacter(style) )
++                return;
++                            
++            // if ' is entered inside a character, we check if this character has closing '
++            // if so, then we should add another closing ', otherwise do nothing
++
++            bool needToClose = !IsInCharacter(pos - 2);
++
++            for (int nextPos = control->GetCurrentPos() ;
++                 nextPos < control->GetLineEndPosition(control->GetCurrentLine());
++                 nextPos++)
+             {
+-                const wxChar left = control->GetCharAt(pos - 2);
+-                const wxChar right = control->GetCharAt(pos);
+-                if (   control->IsCharacter(style)
+-                    || control->IsString(style)
+-                    || left == _T('\\')
+-                    || (   (left > _T(' '))
+-                        && (left != _T('('))
+-                        && (left != _T('=')) )
+-                    || (   (right > _T(' '))
+-                        && (right != _T(')')) ) )
++                if (control->GetCharAt(nextPos) == _T('\'') && control->GetCharAt(nextPos - 1) != _T('\\'))
+                 {
+-                    return;
++                    needToClose = !needToClose;
++                    break;
+                 }
++            }
++
++            if (needToClose)
++            {
+                 control->AddText(ch);
+                 control->GotoPos(pos);
+             }
+-            return;
+         }
+-        if ( control->IsCharacter(style) || control->IsString(style) )
+-            return;
+-        const wxString leftBrace(_T("([{"));
+-        const wxString rightBrace(_T(")]}"));
+-        int index = leftBrace.Find(ch);
+-        const wxString unWant(_T(");\n\r\t\b "));
+-        const wxChar nextChar = control->GetCharAt(pos);
+-        #if wxCHECK_VERSION(2, 9, 0)
+-        if ((index != wxNOT_FOUND) && ((unWant.Find(wxUniChar(nextChar)) != wxNOT_FOUND) || (pos == control->GetLength())))
+-        #else
+-        if ((index != wxNOT_FOUND) && ((unWant.Find(nextChar) != wxNOT_FOUND) || (pos == control->GetLength())))
+-        #endif
++    }
++
++    void DoDoubleQuoteCompletion(const wxChar& ch, cbStyledTextCtrl* control, int pos, int style)
++    {
++        if ( (control->GetCharAt(pos) == ch) && (pos > 1) && (control->GetCharAt(pos-2) != _T('\\')) )
+         {
+-            control->AddText(rightBrace.GetChar(index));
++            control->DeleteBack();
+             control->GotoPos(pos);
+-            if (ch == _T('{'))
++        }
++        else
++        {
++            if ( (control->GetCharAt(pos-2) == _T('\\')) || control->IsCharacter(style) )
++                return;
++
++            // if " is entered inside a string, we check if this string has closing "
++            // if so, then we should add another closing ", otherwise do nothing
++
++            bool needToClose = !IsInString(pos - 2);
++
++            int lineEndPos = control->GetLineEndPosition(control->GetCurrentLine());
++
++            for (int nextPos = control->GetCurrentPos();
++                 nextPos < lineEndPos;
++                 nextPos++)
+             {
+-                const int curLine = control->GetCurrentLine();
+-                int keyLine = curLine;
+-                wxString text;
+-                do
++                if (control->GetCharAt(nextPos) == _T('"') && control->GetCharAt(nextPos - 1) != _T('\\'))
+                 {
+-                    int keyPos = control->GetLineIndentPosition(keyLine);
+-                    int start = control->WordStartPosition(keyPos, true);
+-                    int end = control->WordEndPosition(keyPos, true);
+-                    text = control->GetTextRange(start, end);
++                    needToClose = !needToClose;
++                    break;
+                 }
+-                while (   (text.IsEmpty() || text == _T("public") || text == _T("protected") || text == _T("private"))
+-                       && (text != _T("namespace"))
+-                       && (--keyLine >= 0) );
++                else if (nextPos == lineEndPos - 1 && control->GetCharAt(nextPos) == '\\')
++                    lineEndPos = control->GetLineEndPosition(control->LineFromPosition(nextPos) + 1);
++            }
+ 
+-                if (text == _T("class") || text == _T("struct") || text == _T("enum") || text == _T("union"))
+-                    control->InsertText(control->GetLineEndPosition(curLine), _T(";"));
++            if (needToClose)
++            {
++                control->AddText(ch);
++                control->GotoPos(pos);
++            }
++        }
++    }
+ 
+-                const wxRegEx reg(_T("^[ \t]*{}[ \t]*"));
+-                if (reg.Matches(control->GetCurLine()))
++    void DoBraceCompletion(const wxChar& ch)
++    {
++        cbStyledTextCtrl* control = m_pOwner->GetControl();
++        int pos = control->GetCurrentPos();
++        int style = control->GetStyleAt(pos);
++        if ( control->IsComment(style) || control->IsPreprocessor(style) )
++            return;
++            
++        control->BeginUndoAction();
++            
++        if (ch == _T('\''))
++            DoSingleQuoteCompletion(ch, control, pos, style);
++        else if (ch == _T('"'))
++            DoDoubleQuoteCompletion(ch, control, pos, style);
++        else if (! (control->IsCharacter(style) || control->IsString(style) ))
++        {
++            const wxString leftBrace(_T("([{"));
++            const wxString rightBrace(_T(")]}"));
++            int index = leftBrace.Find(ch);
++            const wxString unWant(_T(");\n\r\t\b "));
++            const wxChar nextChar = control->GetCharAt(pos);
++            #if wxCHECK_VERSION(2, 9, 0)
++            if ((index != wxNOT_FOUND) && ((unWant.Find(wxUniChar(nextChar)) != wxNOT_FOUND) || (pos == control->GetLength())))
++            #else
++            if ((index != wxNOT_FOUND) && ((unWant.Find(nextChar) != wxNOT_FOUND) || (pos == control->GetLength())))
++            #endif
++            {
++                control->AddText(rightBrace.GetChar(index));
++                control->GotoPos(pos);
++                if (ch == _T('{'))
+                 {
+-                    control->NewLine();
+-                    control->GotoPos(pos);
+-                    control->NewLine();
+-                    return;
++                    const int curLine = control->GetCurrentLine();
++                    int keyLine = curLine;
++                    wxString text;
++                    do
++                    {
++                        int keyPos = control->GetLineIndentPosition(keyLine);
++                        int start = control->WordStartPosition(keyPos, true);
++                        int end = control->WordEndPosition(keyPos, true);
++                        text = control->GetTextRange(start, end);
++                    }
++                    while (   (text.IsEmpty() || text == _T("public") || text == _T("protected") || text == _T("private"))
++                           && (text != _T("namespace"))
++                           && (--keyLine >= 0) );
++
++                    if (text == _T("class") || text == _T("struct") || text == _T("enum") || text == _T("union"))
++                        control->InsertText(control->GetLineEndPosition(curLine), _T(";"));
++
++                    const wxRegEx reg(_T("^[ \t]*{}[ \t]*"));
++                    if (reg.Matches(control->GetCurLine()))
++                    {
++                        // check whether next line is not empty.
++                        if (!control->GetLine(control->GetCurrentLine() + 1).Strip(wxString::both).IsEmpty())
++                        {
++                            int curLineIndentation = control->GetLineIndentation(control->GetCurrentLine());
++                            int nextLineIndentation = control->GetLineIndentation(control->GetCurrentLine() + 1);
++
++                            // we are going to check if there is an intended block right after the current line
++                            // if so, we put closing brace after the indented block
++                            if (nextLineIndentation > curLineIndentation)
++                            {
++                                // first find the end of indented block.
++                                // the indented block ends, when line's indentation is less that the current one's.
++                                // we skip empty lines, remembering the last indented line that contains useful text.
++                                // if the next line after indented block starts with closing brace indented just
++                                // as the current line, then we do nothing, as it is most possibly a closing brace for
++                                // the entered opening one
++
++                                int lastSignificantLine = control->GetCurrentLine() + 1;
++
++                                wxString nextLine;
++
++                                bool endsWithClosingBrace = false;
++
++                                for (int nextLineNumber = control->GetCurrentLine() + 1;
++                                     nextLineNumber < control->GetLineCount() &&
++                                     (nextLineIndentation > curLineIndentation || nextLine.IsEmpty());
++                                     nextLineNumber++)
++                                {
++                                    nextLine = control->GetLine(nextLineNumber).Strip(wxString::both);
++                                    nextLineIndentation = control->GetLineIndentation(nextLineNumber);
++
++                                    if (!nextLine.IsEmpty())
++                                    {
++                                        if (nextLineIndentation > curLineIndentation)
++                                            lastSignificantLine = nextLineNumber;
++                                        else if (nextLineIndentation == curLineIndentation &&
++                                                 nextLine.Strip(wxString::leading).StartsWith(_T("}")))
++                                            endsWithClosingBrace = true;
++                                    }
++                                }
++
++                                // delete previously added closing brace
++                                control->GotoPos(pos + 1);
++                                control->DeleteBack();
++
++                                if (!endsWithClosingBrace)
++                                {
++                                    // now we remember a line after the indented block, delete it,
++                                    // put the closing brace with correct indentation and
++                                    // restore the remembered line with its position
++
++                                    nextLine = control->GetLine(lastSignificantLine + 1);
++                                    control->GotoPos(control->GetLineEndPosition(lastSignificantLine + 1));
++
++                                    // delete current indentatino and insert indentation of the line where
++                                    // opening brace was entered
++                                    control->DelLineLeft();
++
++                                    wxString indent;
++                                    if(control->GetUseTabs())
++                                    {
++                                        curLineIndentation /= control->GetTabWidth();
++                                        indent = wxString(_T('\t'), curLineIndentation);
++                                    }
++                                    else
++                                        indent = wxString(_T(' '), curLineIndentation);
++
++                                    control->AddText(indent);
++
++                                    // now add closing brace
++                                    control->AddText(rightBrace.GetChar(index));
++
++                                    // put a new line after closing brace, delete indentation and restore text
++                                    // after indented block
++                                    control->NewLine();
++                                    control->DelLineLeft();
++
++                                    control->AddText(nextLine);
++                                    control->DeleteBack();
++                                }
++                            }
++                            else if (nextLineIndentation == curLineIndentation)
++                            {
++                                control->GotoPos(pos + 1);
++                                control->DeleteBack();
++                            }
++                            else if (nextLineIndentation < curLineIndentation)
++                            {
++                                control->NewLine();
++                                control->GotoPos(pos);
++                                control->NewLine();
++                            }
++                        }
++                        else
++                        {
++                            control->NewLine();
++                            control->GotoPos(pos);
++                            control->NewLine();
++                        }
++                    }
+                 }
+             }
+-        }
+-        else
+-        {
+-            index = rightBrace.Find(ch);
+-            if (index != wxNOT_FOUND)
++            else
+             {
+-                if (control->GetCharAt(pos) == ch)
++                index = rightBrace.Find(ch);
++                if (index != wxNOT_FOUND)
+                 {
+-                    control->DeleteBack();
+-                    control->GotoPos(pos);
+-                    return;
++                    if (control->GetCharAt(pos) == ch)
++                    {
++                        control->DeleteBack();
++                        control->GotoPos(pos);
++                    }
+                 }
+             }
+         }
++                
++        control->EndUndoAction();
+     }
+ 
+     /** Strip trailing blanks before saving */

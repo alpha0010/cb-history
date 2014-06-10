@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 1077 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #1077 <small>2006-05-24 21:21:16</small></h3>
+          <h4>danielcj</h4>
+          Simple fix for a compile error on GCC &gt;= 4.0
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="1077-Simple_fix_for.patch">1077-Simple_fix_for.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Bugfix</dd>
+            <dt>Status</dt><dd>Accepted</dd>
+            <dt>Close date</dt><dd>2006-06-09 13:45:05</dd>
+            <dt>Assigned to</dt><dd></dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">danielcj 2006-05-24 21:58:24</div>
+        <div class="panel-body">
+          <p>The error is from an unsigned int implicity being cast to a void*.  It is spawned from line 497 in gdb_commands.h.</p>
+          <p>The error is as follows:</p>
+          <p>----------------------------------------</p>
+          <p>../../../src/sdk/scriptingcall.h: In function 'void ExecuteSetArg(asIScriptContext*, int, OP) [with OP = unsigned int]':</p>
+          <p>../../../src/sdk/scriptingcall.h:205:   instantiated from 'void VoidExecutor&lt;OP1, OP2, OP3, OP4, OP5, OP6, OP7, OP8, OP9, OP10&gt;::SetArguments(OP1, OP2, OP3, OP4, OP5, OP6, OP7, OP8, OP9, OP10) [with OP1 = const wxString&amp;, OP2 = const wxString&amp;, OP3 = unsigned int, OP4 = unsigned int, OP5 = wxString&amp;, OP6 = DummyOperand, OP7 = DummyOperand, OP8 = DummyOperand, OP9 = DummyOperand, OP10 = DummyOperand]'</p>
+          <p>../../../src/sdk/scriptingcall.h:227:   instantiated from 'void VoidExecutor&lt;OP1, OP2, OP3, OP4, OP5, OP6, OP7, OP8, OP9, OP10&gt;::Call(OP1, OP2, OP3, OP4, OP5, OP6, OP7, OP8, OP9, OP10) [with OP1 = const wxString&amp;, OP2 = const wxString&amp;, OP3 = unsigned int, OP4 = unsigned int, OP5 = wxString&amp;, OP6 = DummyOperand, OP7 = DummyOperand, OP8 = DummyOperand, OP9 = DummyOperand, OP10 = DummyOperand]'</p>
+          <p>gdb_commands.h:497:   instantiated from here</p>
+          <p>../../../src/sdk/scriptingcall.h:33: error: invalid conversion from 'unsigned int' to 'void*'</p>
+          <p>../../../src/sdk/scriptingcall.h:33: error:   initializing argument 2 of 'virtual int asIScriptContext::SetArgObject(asUINT, void*)'</p>
+          <p>----------------------------------------</p>
+          <p>The patch just adds an explicity cast, but I'm not sure wheter this is the right thing to do.</p>
+          <p>Is the unsigned int supposed to be forced into the void*, and its just semantics,  or is this something more serious?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">killerbot 2006-06-06 20:53:26</div>
+        <div class="panel-body">
+          <p>will apply it tomorrow : but I will use reinterpret _cast ;-)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

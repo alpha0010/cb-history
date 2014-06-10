@@ -1,0 +1,115 @@
+Index: src/plugins/astyle/astyleconfigdlg.cpp
+===================================================================
+--- src/plugins/astyle/astyleconfigdlg.cpp	(revision 9225)
++++ src/plugins/astyle/astyleconfigdlg.cpp	(working copy)
+@@ -41,6 +41,7 @@
+   EVT_RADIOBUTTON(XRCID("rbLisp"),       AstyleConfigDlg::OnStyleChange)
+   EVT_RADIOBUTTON(XRCID("rbCustom"),     AstyleConfigDlg::OnStyleChange)
+   EVT_BUTTON(XRCID("Preview"),           AstyleConfigDlg::OnPreview    )
++  EVT_CHECKBOX(XRCID("chkBreakeLines"),  AstyleConfigDlg::OnBreakLineChange)
+ END_EVENT_TABLE()
+ 
+ AstyleConfigDlg::AstyleConfigDlg(wxWindow* parent)
+@@ -274,6 +275,14 @@
+     SetStyle(aspsCustom);
+ }
+ 
++void AstyleConfigDlg::OnBreakLineChange(wxCommandEvent& event)
++{
++    if(event.IsChecked())
++        XRCCTRL(*this, "txtMaxLineLegth", wxTextCtrl)->Enable();
++    else
++        XRCCTRL(*this, "txtMaxLineLegth", wxTextCtrl)->Disable();
++}
++
+ void AstyleConfigDlg::OnPreview(wxCommandEvent& WXUNUSED(event))
+ {
+   wxString text(XRCCTRL(*this, "txtSample", wxTextCtrl)->GetValue());
+@@ -333,7 +342,14 @@
+   XRCCTRL(*this, "chkConvertTabs",        wxCheckBox)->SetValue(cfg->ReadBool(_T("/convert_tabs"),         false));
+   XRCCTRL(*this, "chkFillEmptyLines",     wxCheckBox)->SetValue(cfg->ReadBool(_T("/fill_empty_lines"),     false));
+   XRCCTRL(*this, "chkAddBrackets",        wxCheckBox)->SetValue(cfg->ReadBool(_T("/add_brackets"),         false));
++  XRCCTRL(*this, "chkBreakeLines",        wxCheckBox)->SetValue(cfg->ReadBool(_T("/break_lines"),          false));
++  XRCCTRL(*this, "txtMaxLineLegth",       wxTextCtrl)->SetValue(cfg->Read(_T("/max_line_length"), _T("200")));
+ 
++  if(XRCCTRL(*this, "chkBreakeLines",wxCheckBox)->GetValue())
++    XRCCTRL(*this, "txtMaxLineLegth", wxTextCtrl)->Enable();
++  else
++    XRCCTRL(*this, "txtMaxLineLegth", wxTextCtrl)->Disable();
++
+   SetStyle((AStylePredefinedStyle)style);
+ }
+ 
+@@ -397,4 +413,6 @@
+   cfg->Write(_T("/convert_tabs"),         XRCCTRL(*this, "chkConvertTabs",        wxCheckBox)->GetValue());
+   cfg->Write(_T("/fill_empty_lines"),     XRCCTRL(*this, "chkFillEmptyLines",     wxCheckBox)->GetValue());
+   cfg->Write(_T("/add_brackets"),         XRCCTRL(*this, "chkAddBrackets",        wxCheckBox)->GetValue());
++  cfg->Write(_T("/break_lines"),          XRCCTRL(*this, "chkBreakeLines",        wxCheckBox)->GetValue());
++  cfg->Write(_T("/max_line_length"),      XRCCTRL(*this, "txtMaxLineLegth",       wxTextCtrl)->GetValue());
+ }
+Index: src/plugins/astyle/astyleconfigdlg.h
+===================================================================
+--- src/plugins/astyle/astyleconfigdlg.h	(revision 9225)
++++ src/plugins/astyle/astyleconfigdlg.h	(working copy)
+@@ -19,6 +19,7 @@
+ 	protected:
+         void OnStyleChange(wxCommandEvent& event);
+         void OnPreview(wxCommandEvent& event);
++        void OnBreakLineChange(wxCommandEvent& event);
+ 
+         virtual wxString GetTitle() const { return _("Source formatter"); }
+         virtual wxString GetBitmapBaseName() const { return _T("astyle-plugin"); }
+Index: src/plugins/astyle/formattersettings.cpp
+===================================================================
+--- src/plugins/astyle/formattersettings.cpp	(revision 9225)
++++ src/plugins/astyle/formattersettings.cpp	(working copy)
+@@ -126,4 +126,9 @@
+   formatter.setTabSpaceConversionMode(cfg->ReadBool(_T("/convert_tabs")));
+   formatter.setEmptyLineFill(cfg->ReadBool(_T("/fill_empty_lines")));
+   formatter.setAddBracketsMode(cfg->ReadBool(_T("/add_brackets")));
++
++  if(cfg->ReadBool(_T("/break_lines")))
++    formatter.setMaxCodeLength( wxAtoi(cfg->Read(_T("/max_line_length"))));
++  else
++    formatter.setMaxCodeLength(string::npos);
+ }
+Index: src/plugins/astyle/resources/configuration.xrc
+===================================================================
+--- src/plugins/astyle/resources/configuration.xrc	(revision 9225)
++++ src/plugins/astyle/resources/configuration.xrc	(working copy)
+@@ -381,6 +381,35 @@
+ 											<flag>wxTOP|wxALIGN_LEFT|wxALIGN_TOP</flag>
+ 											<border>8</border>
+ 										</object>
++										<object class="sizeritem">
++											<object class="wxCheckBox" name="chkBreakeLines">
++												<label>Enable Line breaking</label>
++											</object>
++											<flag>wxTOP|wxALIGN_LEFT|wxALIGN_TOP</flag>
++											<border>8</border>
++										</object>
++										<object class="sizeritem">
++											<object class="wxBoxSizer">
++												<object class="sizeritem">
++													<object class="wxStaticText" name="ID_STATICTEXT1">
++														<label>Break lines after (50-200)</label>
++													</object>
++													<flag>wxTOP|wxALIGN_LEFT|wxALIGN_TOP</flag>
++													<border>4</border>
++												</object>
++												<object class="sizeritem">
++													<object class="wxTextCtrl" name="txtMaxLineLegth">
++														<value>200</value>
++													</object>
++													<flag>wxALIGN_RIGHT|wxALIGN_CENTER_VERTICAL</flag>
++													<border>8</border>
++													<option>1</option>
++												</object>
++											</object>
++											<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++											<border>8</border>
++											<option>1</option>
++										</object>
+ 									</object>
+ 									<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+ 									<border>8</border>

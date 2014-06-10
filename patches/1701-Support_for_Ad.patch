@@ -1,0 +1,267 @@
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 3315)
++++ src/sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -123,6 +123,7 @@
+    	XRCCTRL(*this, "chkBackspaceUnindents", wxCheckBox)->SetValue(cfg->ReadBool(_T("/backspace_unindents"), true));
+    	XRCCTRL(*this, "chkWordWrap", wxCheckBox)->SetValue(cfg->ReadBool(_T("/word_wrap"), false));
+    	XRCCTRL(*this, "chkPosixRegex", wxCheckBox)->SetValue(cfg->ReadBool(_T("/use_posix_style_regexes"), false));
++   	XRCCTRL(*this, "chkAdvancedRegex", wxCheckBox)->SetValue(cfg->ReadBool(_T("/use_advanced_regexes"), false));
+    	XRCCTRL(*this, "chkShowLineNumbers", wxCheckBox)->SetValue(cfg->ReadBool(_T("/show_line_numbers"), true));
+    	XRCCTRL(*this, "chkHighlightCaretLine", wxCheckBox)->SetValue(cfg->ReadBool(_T("/highlight_caret_line"), false));
+    	XRCCTRL(*this, "spnTabSize", wxSpinCtrl)->SetValue(cfg->ReadInt(_T("/tab_size"), 4));
+@@ -837,6 +838,7 @@
+         cfg->Write(_T("/backspace_unindents"), 	XRCCTRL(*this, "chkBackspaceUnindents", wxCheckBox)->GetValue());
+         cfg->Write(_T("/word_wrap"), 			XRCCTRL(*this, "chkWordWrap", wxCheckBox)->GetValue());
+         cfg->Write(_T("/use_posix_style_regexes"),XRCCTRL(*this, "chkPosixRegex", wxCheckBox)->GetValue());
++        cfg->Write(_T("/use_advanced_regexes"), XRCCTRL(*this, "chkAdvancedRegex", wxCheckBox)->GetValue());
+
+         cfg->Write(_T("/show_line_numbers"), 	XRCCTRL(*this, "chkShowLineNumbers", wxCheckBox)->GetValue());
+         cfg->Write(_T("/highlight_caret_line"), XRCCTRL(*this, "chkHighlightCaretLine", wxCheckBox)->GetValue());
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(revision 3315)
++++ src/sdk/editormanager.cpp	(working copy)
+@@ -1415,6 +1415,7 @@
+     if (!control || !data)
+         return -1;
+
++    bool AdvRegex=false;
+     int flags = 0;
+     CalculateFindReplaceStartEnd(control, data);
+
+@@ -1429,8 +1430,18 @@
+         flags |= wxSCI_FIND_REGEXP;
+         if (Manager::Get()->GetConfigManager(_T("editor"))->ReadBool(_T("/use_posix_style_regexes"), false))
+             flags |= wxSCI_FIND_POSIX;
++        AdvRegex=Manager::Get()->GetConfigManager(_T("editor"))->ReadBool(_T("/use_advanced_regexes"), false);
+     }
+
++    wxRegEx re;
++    if(AdvRegex)
++    {
++        if(data->matchCase)
++            re.Compile(data->findText,wxRE_ADVANCED|wxRE_NEWLINE);
++        else
++            re.Compile(data->findText,wxRE_ADVANCED|wxRE_NEWLINE|wxRE_ICASE);
++    }
++
+     control->BeginUndoAction();
+     int pos = -1;
+     bool replace = false;
+@@ -1444,7 +1455,32 @@
+     while (!stop)
+     {
+         int lengthFound = 0;
+-        pos = control->FindText(data->start, data->end, data->findText, flags, &lengthFound);
++        if(!AdvRegex)
++            pos = control->FindText(data->start, data->end, data->findText, flags, &lengthFound);
++        else
++        {
++            wxString text=control->GetTextRange(data->start, data->end);
++            if(re.Matches(text))
++            {
++                size_t start,len;
++                re.GetMatch(&start,&len,0);
++                pos=start+data->start;
++                lengthFound=len;
++                if(start==0&&len==0) //For searches for "^" or "$" (and null returning variants on this) need to make sure we have forward progress and not simply matching on a previous BOL/EOL find
++                {
++                    text=text.Mid(1);
++                    if(re.Matches(text))
++                    {
++                        size_t start,len;
++                        re.GetMatch(&start,&len,0);
++                        pos=start+data->start+1;
++                        lengthFound=len;
++                    } else
++                        pos=-1;
++                }
++            } else
++                pos=-1;
++        }
+         if (pos != -1)
+         {
+             control->GotoPos(pos);
+@@ -1534,8 +1570,17 @@
+                     // set target same as selection
+                     control->SetTargetStart(control->GetSelectionStart());
+                     control->SetTargetEnd(control->GetSelectionEnd());
+-                    // replace with regEx support
+-                    lengthReplace = control->ReplaceTargetRE(data->replaceText);
++                    if(AdvRegex)
++                    {
++                        wxString text=control->GetSelectedText();
++                        re.Replace(&text,data->replaceText,1);
++                        lengthReplace=text.Len();
++                        control->ReplaceSelection(text);
++                    } else
++                    {
++                        // replace with regEx support
++                        lengthReplace = control->ReplaceTargetRE(data->replaceText);
++                    }
+                     // reset target
+                     control->SetTargetStart(0);
+                     control->SetTargetEnd(0);
+@@ -1656,6 +1701,7 @@
+         return 0;
+     }
+
++    bool AdvRegex=false;
+     int flags = 0;
+     if (data->matchWord)
+         flags |= wxSCI_FIND_WHOLEWORD;
+@@ -1668,8 +1714,19 @@
+         flags |= wxSCI_FIND_REGEXP;
+         if (Manager::Get()->GetConfigManager(_T("editor"))->ReadBool(_T("/use_posix_style_regexes"), false))
+             flags |= wxSCI_FIND_POSIX;
++        AdvRegex=Manager::Get()->GetConfigManager(_T("editor"))->ReadBool(_T("/use_advanced_regexes"), false);
+     }
+
++    wxRegEx re;
++    if(AdvRegex)
++    {
++        if(data->matchCase)
++            re.Compile(data->findText,wxRE_ADVANCED|wxRE_NEWLINE);
++        else
++            re.Compile(data->findText,wxRE_ADVANCED|wxRE_NEWLINE|wxRE_ICASE);
++    }
++
++
+     bool replace = false;
+     bool confirm = true;
+     bool stop = false;
+@@ -1750,8 +1807,32 @@
+         while(!stop || wholeFile)
+         {
+             int lengthFound = 0;
+-            pos = control->FindText(data->start, data->end, data->findText,
+-                flags, &lengthFound);
++            if(!AdvRegex)
++                pos = control->FindText(data->start, data->end, data->findText, flags, &lengthFound);
++            else
++            {
++                wxString text=control->GetTextRange(data->start, data->end);
++                if(re.Matches(text))
++                {
++                    size_t start,len;
++                    re.GetMatch(&start,&len,0);
++                    pos=start+data->start;
++                    lengthFound=len;
++                    if(start==0&&len==0) //For searches for "^" or "$" (and null returning variants on this) need to make sure we have forward progress and not simply matching on a previous BOL/EOL find
++                    {
++                        text=text.Mid(1);
++                        if(re.Matches(text))
++                        {
++                            size_t start,len;
++                            re.GetMatch(&start,&len,0);
++                            pos=start+data->start+1;
++                            lengthFound=len;
++                        } else
++                            pos=-1;
++                    }
++                } else
++                    pos=-1;
++            }
+
+             if (pos == -1)
+                 break;
+@@ -1834,8 +1915,17 @@
+                         // set target same as selection
+                         control->SetTargetStart(control->GetSelectionStart());
+                         control->SetTargetEnd(control->GetSelectionEnd());
+-                        // replace with regEx support
+-                        lengthReplace = control->ReplaceTargetRE(data->replaceText);
++                        if(AdvRegex)
++                        {
++                            wxString text=control->GetSelectedText();
++                            re.Replace(&text,data->replaceText,1);
++                            lengthReplace=text.Len();
++                            control->ReplaceSelection(text);
++                        } else
++                        {
++                            // replace with regEx support
++                            lengthReplace = control->ReplaceTargetRE(data->replaceText);
++                        }
+                         // reset target
+                         control->SetTargetStart(0);
+                         control->SetTargetEnd(0);
+@@ -1884,6 +1974,7 @@
+     if (!control || !data)
+         return -1;
+
++    bool AdvRegex=false;
+     int flags = 0;
+     CalculateFindReplaceStartEnd(control, data);
+
+@@ -1898,8 +1989,18 @@
+         flags |= wxSCI_FIND_REGEXP;
+         if (Manager::Get()->GetConfigManager(_T("editor"))->ReadBool(_T("/use_posix_style_regexes"), false))
+             flags |= wxSCI_FIND_POSIX;
++        AdvRegex=Manager::Get()->GetConfigManager(_T("editor"))->ReadBool(_T("/use_advanced_regexes"), false);
+     }
+
++    wxRegEx re;
++    if(AdvRegex)
++    {
++        if(data->matchCase)
++            re.Compile(data->findText,wxRE_ADVANCED|wxRE_NEWLINE);
++        else
++            re.Compile(data->findText,wxRE_ADVANCED|wxRE_NEWLINE|wxRE_ICASE);
++    }
++
+     int pos = -1;
+     // avoid infinite loop when wrapping search around, eventually crashing WinLogon O.O
+     bool wrapAround = false;
+@@ -1913,7 +2014,32 @@
+     while (true) // loop while not found and user selects to start again from the top
+     {
+         int lengthFound = 0;
+-        pos = control->FindText(data->start, data->end, data->findText, flags, &lengthFound);
++        if(!AdvRegex)
++            pos = control->FindText(data->start, data->end, data->findText, flags, &lengthFound);
++        else
++        {
++            wxString text=control->GetTextRange(data->start, data->end);
++            if(re.Matches(text))
++            {
++                size_t start,len;
++                re.GetMatch(&start,&len,0);
++                pos=start+data->start;
++                lengthFound=len;
++                if(start==0&&len==0) //For searches for "^" or "$" (and null returning variants on this) need to make sure we have forward progress and not simply matching on a previous BOL/EOL find
++                {
++                    text=text.Mid(1);
++                    if(re.Matches(text))
++                    {
++                        size_t start,len;
++                        re.GetMatch(&start,&len,0);
++                        pos=start+data->start+1;
++                        lengthFound=len;
++                    } else
++                        pos=-1;
++                }
++            } else
++                pos=-1;
++        }
+         if (pos != -1)
+         {
+             control->GotoPos(pos);
+Index: src/sdk/resources/editor_configuration.xrc
+===================================================================
+--- src/sdk/resources/editor_configuration.xrc	(revision 3315)
++++ src/sdk/resources/editor_configuration.xrc	(working copy)
+@@ -314,6 +314,12 @@
+                             </object>
+                             <object class="sizeritem">
+                               <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                              <object class="wxCheckBox" name="chkAdvancedRegex">
++                                <label>Use Advanced RegEx searches</label>
++                              </object>
++                            </object>
++                            <object class="sizeritem">
++                              <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+                               <object class="wxCheckBox" name="chkShowLineNumbers">
+                                 <label>Show line numbers</label>
+                               </object>
+

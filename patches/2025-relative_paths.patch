@@ -1,0 +1,35 @@
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(revision 4010)
++++ src/sdk/editormanager.cpp	(working copy)
+@@ -2304,11 +2304,11 @@
+ 
+         // make the filename relative
+         wxString filename = filesList[i];
+-        if (filename.StartsWith(data->searchPath))
++        if(data->scope==2) //for "search path" produce relative paths
+         {
+             wxFileName fname(filename);
+-            fname.MakeRelativeTo(data->searchPath);
+-            filename = fname.GetFullPath();
++            if(fname.MakeRelativeTo(data->searchPath))
++                filename=fname.GetFullPath();
+         }
+ 
+         // log it
+Index: src/sdk/searchresultslog.cpp
+===================================================================
+--- src/sdk/searchresultslog.cpp	(revision 4010)
++++ src/sdk/searchresultslog.cpp	(working copy)
+@@ -57,9 +57,8 @@
+     wxFileName filename(m_pList->GetItemText(selIndex));
+     wxString file;
+     if (!filename.IsAbsolute())
+-        file = m_Base + wxFILE_SEP_PATH + filename.GetFullPath();
+-    else
+-        file = filename.GetFullPath();
++        filename.MakeRelativeTo(m_Base);
++    file = filename.GetFullPath();
+ 
+     wxListItem li;
+     li.m_itemId = selIndex;

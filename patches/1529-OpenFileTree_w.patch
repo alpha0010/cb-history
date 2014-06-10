@@ -1,0 +1,41 @@
+Index: src/sdk/editormanager.h
+===================================================================
+--- src/sdk/editormanager.h     (revision 2995)
++++ src/sdk/editormanager.h     (working copy)
+@@ -135,6 +135,7 @@
+         void BuildOpenedFilesTree(wxWindow* parent);
+         void RebuildOpenedFilesTree(wxTreeCtrl *tree = 0L);
+         void RefreshOpenedFilesTree(bool force = false);
++        bool RenameTreeFile(const wxString& oldname, const wxString& newname);
+ 
+         void OnGenericContextMenuHandler(wxCommandEvent& event);
+         void OnPageChanged(wxFlatNotebookEvent& event);
+@@ -173,7 +174,6 @@
+         void DeleteItemfromTree(wxTreeItemId item);
+         void DeleteFilefromTree(const wxString& filename);
+         void AddFiletoTree(EditorBase* ed);
+-        bool RenameTreeFile(const wxString& oldname, const wxString& newname);
+         void InitPane();
+ 
+         AutoCompleteMap m_AutoCompleteMap;
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp    (revision 2995)
++++ src/src/main.cpp    (working copy)
+@@ -1888,11 +1888,16 @@
+     if (!ed || !project)
+         return;
+ 
++       wxString oldname = ed->GetFilename();
+     if (cbMessageBox(_("Do you want to add this new file in the active project (has to be saved first)?"),
+                     _("Add file to project"),
+                     wxYES_NO | wxICON_QUESTION) == wxID_YES &&
+         ed->SaveAs() && ed->IsOK())
+     {
++        wxString newname = ed->GetFilename();
++        if (oldname != newname)
++            Manager::Get()->GetEditorManager()->RenameTreeFile(oldname, newname);
++
+         wxArrayInt targets;
+         if (Manager::Get()->GetProjectManager()->AddFileToProject(ed->GetFilename(), project, targets) != 0)
+         {

@@ -1,0 +1,320 @@
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 2227)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -89,7 +89,7 @@
+ 	     */
+ 	    const bool is_right_click = event.GetPosition()!=wxDefaultPosition;
+ 	    const wxPoint mp(is_right_click ? event.GetPosition() : wxDefaultPosition);
+-		reinterpret_cast<cbEditor*>(m_pParent)->DisplayContextMenu(mp);
++		reinterpret_cast<cbEditor*>(m_pParent)->DisplayContextMenu(mp,mtEditorManager); //pecan 2006/03/22
+ 	}
+ }
+ 
+@@ -1441,8 +1441,9 @@
+ }
+ 
+ // Adds menu items to context menu (both before and after loading plugins' items)
+-void cbEditor::AddToContextMenu(wxMenu* popup,bool noeditor,bool pluginsdone)
++void cbEditor::AddToContextMenu(wxMenu* popup,ModuleType type,bool pluginsdone) //pecan 2006/03/22
+ {
++    bool noeditor = (type != mtEditorManager);                              //pecan 2006/03/22
+     if(!pluginsdone)
+     {
+         wxMenu *bookmarks = 0, *folding = 0, *editsubmenu = 0, *insert = 0;
+@@ -1488,8 +1489,9 @@
+     }
+ }
+ 
+-bool cbEditor::OnBeforeBuildContextMenu(const wxPoint& position, bool noeditor)
++bool cbEditor::OnBeforeBuildContextMenu(const wxPoint& position, ModuleType type)   //pecan 2006/03/22
+ {
++    bool noeditor = (type != mtEditorManager);                              //pecan 2006/03/22
+     if (!noeditor && position!=wxDefaultPosition)
+     {
+         // right mouse click inside the editor
+@@ -1550,10 +1552,10 @@
+     }
+ 
+     // follow default strategy
+-    return EditorBase::OnBeforeBuildContextMenu(position, noeditor);
++    return EditorBase::OnBeforeBuildContextMenu(position, type);        //pecan 2006/03/22
+ }
+ 
+-void cbEditor::OnAfterBuildContextMenu(bool noeditor)
++void cbEditor::OnAfterBuildContextMenu(ModuleType type)                //pecan 2006/03/22
+ {
+     // we don't care
+ }
+Index: src/sdk/cbeditor.h
+===================================================================
+--- src/sdk/cbeditor.h	(revision 2227)
++++ src/sdk/cbeditor.h	(working copy)
+@@ -194,7 +194,7 @@
+ 
+         // misc. functions
+         virtual wxMenu* CreateContextSubMenu(long id);
+-        virtual void AddToContextMenu(wxMenu* popup,bool noeditor,bool pluginsdone);
++        virtual void AddToContextMenu(wxMenu* popup,ModuleType type,bool pluginsdone);  //pecan 2006/03/22
+ 
+         HighlightLanguage GetLanguage( ) { return m_lang; }
+         void SetLanguage( HighlightLanguage lang = HL_AUTO );
+@@ -237,8 +237,8 @@
+ 
+ 		// one event handler for all popup menu entries
+ 		void OnContextMenuEntry(wxCommandEvent& event);
+-        bool OnBeforeBuildContextMenu(const wxPoint& position, bool noeditor);
+-        void OnAfterBuildContextMenu(bool noeditor);
++        bool OnBeforeBuildContextMenu(const wxPoint& position, ModuleType type);    //pecan 2006/03/22
++        void OnAfterBuildContextMenu(ModuleType type);                              //pecan 2006/03/22
+ 
+         // variables
+         bool m_IsOK;
+Index: src/sdk/editorbase.cpp
+===================================================================
+--- src/sdk/editorbase.cpp	(revision 2227)
++++ src/sdk/editorbase.cpp	(working copy)
+@@ -38,22 +38,22 @@
+ const int idSwitchFile1 = wxNewId();
+ const int idSwitchFileMax = editorbase_RegisterId(idSwitchFile1 + EditorMaxSwitchTo -1);
+ 
+-//const int idCloseMe = wxNewId();
+-//const int idCloseAll = wxNewId();
+-//const int idCloseAllOthers = wxNewId();
+-//const int idSaveMe = wxNewId();
+-//const int idSaveAll = wxNewId();
++const int idCloseMe = wxNewId();
++const int idCloseAll = wxNewId();
++const int idCloseAllOthers = wxNewId();
++const int idSaveMe = wxNewId();
++const int idSaveAll = wxNewId();
+ const int idSwitchTo = wxNewId();
+ const int idGoogle = wxNewId();
+ const int idMsdn = wxNewId();
+ 
+ BEGIN_EVENT_TABLE(EditorBase, wxPanel)
+     EVT_MENU_RANGE(idSwitchFile1, idSwitchFileMax,EditorBase::OnContextMenuEntry)
+-//    EVT_MENU(idCloseMe, EditorBase::OnContextMenuEntry)
+-//    EVT_MENU(idCloseAll, EditorBase::OnContextMenuEntry)
+-//    EVT_MENU(idCloseAllOthers, EditorBase::OnContextMenuEntry)
+-//    EVT_MENU(idSaveMe, EditorBase::OnContextMenuEntry)
+-//    EVT_MENU(idSaveAll, EditorBase::OnContextMenuEntry)
++    EVT_MENU(idCloseMe, EditorBase::OnContextMenuEntry)
++    EVT_MENU(idCloseAll, EditorBase::OnContextMenuEntry)
++    EVT_MENU(idCloseAllOthers, EditorBase::OnContextMenuEntry)
++    EVT_MENU(idSaveMe, EditorBase::OnContextMenuEntry)
++    EVT_MENU(idSaveAll, EditorBase::OnContextMenuEntry)
+     EVT_MENU(idGoogle, EditorBase::OnContextMenuEntry)
+     EVT_MENU(idMsdn, EditorBase::OnContextMenuEntry)
+ END_EVENT_TABLE()
+@@ -178,24 +178,25 @@
+     return menu;
+ }
+ 
+-void EditorBase::BasicAddToContextMenu(wxMenu* popup,bool noeditor)
++void EditorBase::BasicAddToContextMenu(wxMenu* popup,ModuleType type)   //pecan 2006/03/22
+ {
+-    //NOTE: removed these, since they 've been added in eidtor tabs context menu
++    bool noeditor = (type != mtEditorManager);                          //pecan 2006/03/22
++    if (type == mtOpenFilesList)                                        //pecan 2006/03/22
++    {
++      popup->Append(idCloseMe, _("Close"));
++      popup->Append(idCloseAll, _("Close all"));
++      popup->Append(idCloseAllOthers, _("Close all others"));
++      popup->AppendSeparator();
++      popup->Append(idSaveMe, _("Save"));
++      popup->Append(idSaveAll, _("Save all"));
++      popup->AppendSeparator();
++      // enable/disable some items, based on state
++      popup->Enable(idSaveMe, GetModified());
+ 
+-//  popup->Append(idCloseMe, _("Close"));
+-//  popup->Append(idCloseAll, _("Close all"));
+-//  popup->Append(idCloseAllOthers, _("Close all others"));
+-//  popup->AppendSeparator();
+-//  popup->Append(idSaveMe, _("Save"));
+-//  popup->Append(idSaveAll, _("Save all"));
+-//  popup->AppendSeparator();
+-  // enable/disable some items, based on state
+-//  popup->Enable(idSaveMe, GetModified());
+-//
+-//  bool hasOthers = ThereAreOthers();
+-//  popup->Enable(idCloseAll, hasOthers);
+-//  popup->Enable(idCloseAllOthers, hasOthers);
+-
++      bool hasOthers = ThereAreOthers();
++      popup->Enable(idCloseAll, hasOthers);
++      popup->Enable(idCloseAllOthers, hasOthers);
++    }
+     if(!noeditor)
+     {
+         wxMenu* switchto = CreateContextSubMenu(idSwitchTo);
+@@ -204,14 +205,15 @@
+     }
+ }
+ 
+-void EditorBase::DisplayContextMenu(const wxPoint& position, bool noeditor)
++void EditorBase::DisplayContextMenu(const wxPoint& position, ModuleType type)   //pecan 2006/03/22
+ {
++    bool noeditor = (type != mtEditorManager);                                  //pecan 2006/03/22
+     // noeditor:
+     // True if context menu belongs to open files tree;
+     // False if belongs to cbEditor
+ 
+     // inform the editors we 're just about to create a context menu
+-    if (!OnBeforeBuildContextMenu(position, noeditor))
++    if (!OnBeforeBuildContextMenu(position, type))              //pecan 2006/03/22
+         return;
+ 
+     wxMenu* popup = new wxMenu;
+@@ -243,23 +245,23 @@
+     else
+     {
+         // Basic functions
+-        BasicAddToContextMenu(popup,noeditor);
++        BasicAddToContextMenu(popup, type);         //pecan 2006/03/22
+ 
+         // Extended functions, part 1 (virtual)
+-        AddToContextMenu(popup,noeditor,false);
++        AddToContextMenu(popup, type, false);       //pecan 2006/03/22
+ 
+         // ask other editors / plugins if they need to add any entries in this menu...
+         FileTreeData* ftd = new FileTreeData(0, FileTreeData::ftdkUndefined);
+         ftd->SetFolder(m_Filename);
+-        Manager::Get()->GetPluginManager()->AskPluginsForModuleMenu(mtEditorManager, popup, ftd);
++        Manager::Get()->GetPluginManager()->AskPluginsForModuleMenu(type, popup, ftd);              //pecan 2006/03/22
+         delete ftd;
+ 
+         popup->AppendSeparator();
+         // Extended functions, part 2 (virtual)
+-        AddToContextMenu(popup,noeditor,true);
++        AddToContextMenu(popup, type, true);            //pecan 2006/03/22
+     }
+     // inform the editors we 're done creating a context menu (just about to show it)
+-    OnAfterBuildContextMenu(noeditor);
++    OnAfterBuildContextMenu(type);              //pecan 2006/03/22
+ 
+     // display menu
+     wxPoint clientpos;
+@@ -287,26 +289,27 @@
+ 
+     const int id = event.GetId();
+ 
+-//    if (id == idCloseMe)
+-//    {
+-//        Manager::Get()->GetEditorManager()->Close(this);
+-//    }
+-//    else if (id == idCloseAll)
+-//    {
+-//        Manager::Get()->GetEditorManager()->CloseAll();
+-//    }
+-//    else if (id == idCloseAllOthers)
+-//    {
+-//        Manager::Get()->GetEditorManager()->CloseAllExcept(this);
+-//    }
+-//    else if (id == idSaveMe)
+-//    {
+-//        Save();
+-//    }
+-//    else if (id == idSaveAll)
+-//    {
+-//        Manager::Get()->GetEditorManager()->SaveAll();
+-//    }
++    if (id == idCloseMe)
++    {
++        Manager::Get()->GetEditorManager()->Close(this);
++    }
++    else if (id == idCloseAll)
++    {
++        Manager::Get()->GetEditorManager()->CloseAll();
++    }
++    else if (id == idCloseAllOthers)
++    {
++        Manager::Get()->GetEditorManager()->CloseAllExcept(this);
++    }
++    else if (id == idSaveMe)
++    {
++        Save();
++    }
++    else if (id == idSaveAll)
++    {
++        Manager::Get()->GetEditorManager()->SaveAll();
++    }
++    else //pecan 2006/03/22
+     if (id >= idSwitchFile1 && id <= idSwitchFileMax)
+     {
+         // "Switch to..." item
+Index: src/sdk/editorbase.h
+===================================================================
+--- src/sdk/editorbase.h	(revision 2227)
++++ src/sdk/editorbase.h	(working copy)
+@@ -53,7 +53,8 @@
+         virtual bool ThereAreOthers();
+ 
+ 		/** Displays the editor's context menu (usually invoked by the user right-clicking in the editor) */
+-		virtual void DisplayContextMenu(const wxPoint& position,bool noeditor = false);
++		//virtual void DisplayContextMenu(const wxPoint& position,bool noeditor = false);
++		virtual void DisplayContextMenu(const wxPoint& position,ModuleType type = mtUnknown);
+ 
+         /** Should this kind of editor be visible from the open files tree? */
+         virtual bool VisibleToTree() { return true; }
+@@ -118,20 +119,20 @@
+         virtual wxMenu* CreateContextSubMenu(int id); // For context menus
+ 
+         /** Creates context menu items, both before and after creating plugins menu items */
+-        virtual void AddToContextMenu(wxMenu* popup,bool noeditor,bool pluginsdone) {}
++        virtual void AddToContextMenu(wxMenu* popup, ModuleType type,bool pluginsdone) {}   //pecan 2006/03/22
+         /** Creates unique filename when asking to save the file */
+         virtual wxString CreateUniqueFilename();
+         /** Informs the editor we 're just about to create a context menu.
+           * Default implementation, just returns true.
+-          * @param noeditor If true, this is an "OpenFilesList" popup menu.
++          * @param type specifies the "ModuleType" popup menu.
+           * @return If the editor returns false, the context menu creation is aborted.
+           */
+-        virtual bool OnBeforeBuildContextMenu(const wxPoint& position, bool noeditor){ return true; }
++        virtual bool OnBeforeBuildContextMenu(const wxPoint& position, ModuleType type){ return true; } //pecan 2006/03/22
+         /** Informs the editor we 're done creating the context menu (just about to display it).
+           * Default implementation does nothing.
+-          * @param noeditor If true, this is an "OpenFilesList" popup menu.
++          * @param type specifies the "ModuleType" context popup menu.
+           */
+-        virtual void OnAfterBuildContextMenu(bool noeditor){}
++        virtual void OnAfterBuildContextMenu(ModuleType type){}     //pecan 2006/03/22
+ 
+         bool m_IsBuiltinEditor; // do not mess with it!
+ 		wxString m_Shortname;
+@@ -140,7 +141,7 @@
+ 
+         /** one event handler for all popup menu entries */
+         void OnContextMenuEntry(wxCommandEvent& event);
+-        void BasicAddToContextMenu(wxMenu* popup,bool noeditor);
++        void BasicAddToContextMenu(wxMenu* popup, ModuleType type); //pecan 2006/03/22
+         SwitchToMap m_SwitchTo;
+         wxString m_WinTitle;
+         wxString lastWord;
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(revision 2227)
++++ src/sdk/editormanager.cpp	(working copy)
+@@ -2227,7 +2227,7 @@
+     if(ed)
+     {
+         wxPoint pt = m_pTree->ClientToScreen(event.GetPoint());
+-        ed->DisplayContextMenu(pt,true);
++        ed->DisplayContextMenu(pt,mtOpenFilesList); //pecan 2006/03/22
+     }
+ }
+ 
+Index: src/sdk/globals.h
+===================================================================
+--- src/sdk/globals.h	(revision 2227)
++++ src/sdk/globals.h	(working copy)
+@@ -30,6 +30,7 @@
+ 	mtProjectManager = 1,
+ 	mtEditorManager,
+ 	mtMessageManager,
++	mtOpenFilesList,                //pecan 2006/03/22
+ 	mtUnknown
+ };
+ 

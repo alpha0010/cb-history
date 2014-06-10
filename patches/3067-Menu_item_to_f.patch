@@ -1,0 +1,165 @@
+Index: src/plugins/contrib/ThreadSearch/ThreadSearch-unix.cbp
+===================================================================
+--- src/plugins/contrib/ThreadSearch/ThreadSearch-unix.cbp	(revision 6578)
++++ src/plugins/contrib/ThreadSearch/ThreadSearch-unix.cbp	(working copy)
+@@ -14,6 +14,7 @@
+ 				<Option compiler="gcc" />
+ 				<Option parameters="--debug-log -ns -ni" />
+ 				<Option host_application="../../../devel/codeblocks" />
++				<Option run_host_application_in_terminal="0" />
+ 			</Target>
+ 		</Build>
+ 		<VirtualTargets>
+@@ -38,6 +39,7 @@
+ 		</Compiler>
+ 		<Linker>
+ 			<Add option="`wx-config --libs`" />
++			<Add option="-z defs" />
+ 			<Add library="codeblocks" />
+ 			<Add library="wxscintilla" />
+ 			<Add library="wxcustombutton" />
+Index: src/plugins/contrib/ThreadSearch/ThreadSearch.h
+===================================================================
+--- src/plugins/contrib/ThreadSearch/ThreadSearch.h	(revision 6578)
++++ src/plugins/contrib/ThreadSearch/ThreadSearch.h	(working copy)
+@@ -235,6 +235,8 @@
+       */
+     void OnMnuSearchThreadSearch(wxCommandEvent& event);
+ 
++    void OnMnuViewFocusThreadSearch(wxCommandEvent& event);
++
+     /** Event handler called when user clicks on the 'Find occurrences of'
+       * item of the contextual menu.
+       */
+@@ -251,6 +253,8 @@
+       */
+     void OnMnuSearchThreadSearchUpdateUI(wxUpdateUIEvent& event);
+ 
++    void OnMnuViewFocusThreadSearchUpdateUI(wxUpdateUIEvent& event);
++
+     // Toolbar controls events management
+     void OnBtnOptionsClick(wxCommandEvent& event);
+     void OnBtnSearchClick (wxCommandEvent& event);
+Index: src/plugins/contrib/ThreadSearch/ThreadSearchView.cpp
+===================================================================
+--- src/plugins/contrib/ThreadSearch/ThreadSearchView.cpp	(revision 6578)
++++ src/plugins/contrib/ThreadSearch/ThreadSearchView.cpp	(working copy)
+@@ -603,6 +603,14 @@
+ }
+ 
+ 
++void ThreadSearchView::FocusSearchCombo(const wxString &searchWord)
++{
++    if (!searchWord.empty())
++        m_pCboSearchExpr->SetValue(searchWord);
++    m_pCboSearchExpr->SetFocus();
++}
++
++
+ void ThreadSearchView::Update()
+ {
+     ThreadSearchFindData findData;
+Index: src/plugins/contrib/ThreadSearch/ThreadSearch.cpp
+===================================================================
+--- src/plugins/contrib/ThreadSearch/ThreadSearch.cpp	(revision 6578)
++++ src/plugins/contrib/ThreadSearch/ThreadSearch.cpp	(working copy)
+@@ -70,6 +70,8 @@
+     // add any events you want to handle here
+     EVT_UPDATE_UI (idMenuViewThreadSearch,   ThreadSearch::OnMnuViewThreadSearchUpdateUI)
+     EVT_MENU      (idMenuViewThreadSearch,   ThreadSearch::OnMnuViewThreadSearch)
++    EVT_UPDATE_UI (idMenuViewFocusThreadSearch,   ThreadSearch::OnMnuViewFocusThreadSearchUpdateUI)
++    EVT_MENU      (idMenuViewFocusThreadSearch,   ThreadSearch::OnMnuViewFocusThreadSearch)
+     EVT_UPDATE_UI (idMenuSearchThreadSearch, ThreadSearch::OnMnuSearchThreadSearchUpdateUI)
+     EVT_MENU      (idMenuSearchThreadSearch, ThreadSearch::OnMnuSearchThreadSearch)
+     EVT_MENU      (idMenuCtxThreadSearch,    ThreadSearch::OnCtxThreadSearch)
+@@ -297,6 +299,9 @@
+             menu->AppendCheckItem(idMenuViewThreadSearch, _("Thread search"),
+                                   _("Toggle displaying the 'Thread search' panel"));
+         }
++
++        menu->Append(idMenuViewFocusThreadSearch, _("Focus Thread Search"),
++                     _("Makes the search box of the Thread search panel the focused control"));
+     }
+ 
+     idx = menuBar->FindMenu(_("Sea&rch"));
+@@ -380,6 +385,17 @@
+     }
+ }
+ 
++void ThreadSearch::OnMnuViewFocusThreadSearch(wxCommandEvent& event)
++{
++    if ( !IsAttached() )
++        return;
++
++    GetCursorWord(m_SearchedWord);
++
++    m_pViewManager->ShowView(true);
++    m_pThreadSearchView->FocusSearchCombo(m_SearchedWord);
++}
++
+ 
+ void ThreadSearch::OnCtxThreadSearch(wxCommandEvent& event)
+ {
+@@ -408,6 +424,14 @@
+     event.Enable(m_pThreadSearchView->IsSearchRunning() == false);
+ }
+ 
++void ThreadSearch::OnMnuViewFocusThreadSearchUpdateUI(wxUpdateUIEvent& event)
++{
++    if ( !IsAttached() )
++        return;
++
++    event.Enable(m_pThreadSearchView->IsSearchRunning() == false);
++}
++
+ 
+ void ThreadSearch::BuildModuleMenu(const ModuleType type, wxMenu* pMenu, const FileTreeData* data)
+ {
+@@ -735,6 +759,23 @@
+     if ( ed != NULL )
+     {
+         cbStyledTextCtrl* control = ed->GetControl();
++
++        sWord = control->GetSelectedText();
++        if (sWord != wxEmptyString)
++        {
++            sWord.Trim(true);
++            sWord.Trim(false);
++
++            wxString::size_type pos = sWord.find(wxT('\n'));
++            if (pos != wxString::npos)
++            {
++                sWord.Remove(pos, sWord.length() - pos);
++                sWord.Trim(true);
++                sWord.Trim(false);
++            }
++
++            return sWord;
++        }
+ 
+         // Gets word under cursor
+         int pos = control->GetCurrentPos();
+Index: src/plugins/contrib/ThreadSearch/ThreadSearchControlIds.h
+===================================================================
+--- src/plugins/contrib/ThreadSearch/ThreadSearchControlIds.h	(revision 6578)
++++ src/plugins/contrib/ThreadSearch/ThreadSearchControlIds.h	(working copy)
+@@ -21,6 +21,7 @@
+     idBtnSearch,
+     idBtnOptions,
+     idMenuViewThreadSearch,
++    idMenuViewFocusThreadSearch,
+     idMenuSearchThreadSearch,
+     idMenuCtxThreadSearch,
+     idMenuCtxDeleteItem,
+Index: src/plugins/contrib/ThreadSearch/ThreadSearchView.h
+===================================================================
+--- src/plugins/contrib/ThreadSearch/ThreadSearchView.h	(revision 6578)
++++ src/plugins/contrib/ThreadSearch/ThreadSearchView.h	(working copy)
+@@ -134,6 +134,7 @@
+       */
+     void ApplySplitterSettings(bool showCodePreview, long splitterMode);
+ 
++    void FocusSearchCombo(const wxString &searchWord);
+ private:
+     // begin wxGlade: ThreadSearchView::methods
+     void set_properties();

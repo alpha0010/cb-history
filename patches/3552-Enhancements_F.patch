@@ -1,0 +1,83 @@
+Index: src/plugins/debuggergdb/cdb_driver.cpp
+===================================================================
+--- src/plugins/debuggergdb/cdb_driver.cpp	(revision 9652)
++++ src/plugins/debuggergdb/cdb_driver.cpp	(working copy)
+@@ -27,7 +27,9 @@
+ 
+ #include <cbdebugger_interfaces.h>
+ 
+-static wxRegEx rePrompt(_T("([0-9]+:){1,2}[0-9]+>"));
++// ElCaBoom: Slightly different prompt when using 64-bit CDB to debug a 32-bit binary
++// static wxRegEx rePrompt(_T("([0-9]+:){1,2}[0-9]+>"));
++static wxRegEx rePrompt(_T("([0-9]+:){1,2}[xX0-9]+>"));
+ static wxRegEx reBP(_T("Breakpoint ([0-9]+) hit"));
+ // one stack frame (to access current file; is there another way???)
+ //  # ChildEBP RetAddr
+@@ -58,28 +60,31 @@
+     if (m_Target->GetTargetType() == ttConsoleOnly)
+         cmd << wxT(" -2"); // tell the debugger to launch a console for us
+ 
+-    if (m_Dirs.GetCount() > 0)
+-    {
+-        // add symbols dirs
+-        cmd << _T(" -y ");
+-        for (unsigned int i = 0; i < m_Dirs.GetCount(); ++i)
+-            cmd << m_Dirs[i] << wxPATH_SEP;
++	if (m_Dirs.GetCount() > 0)
++	{
++		// add symbols dirs
++		// ElCaBoom: Not necessary, CDB will find the PDB through the binary image
++		//cmd << _T(" -y ");
++		//for (unsigned int i = 0; i < m_Dirs.GetCount(); ++i)
++		//    cmd << m_Dirs[i] << wxPATH_SEP;
+ 
+-        // add source dirs
+-        cmd << _T(" -srcpath ");
+-        for (unsigned int i = 0; i < m_Dirs.GetCount(); ++i)
+-            cmd << m_Dirs[i] << wxPATH_SEP;
++		// add source dirs
++		cmd << _T(" -srcpath ");
++		for (unsigned int i = 0; i < m_Dirs.GetCount(); ++i)
++			cmd << m_Dirs[i] << wxPATH_SEP;
+     }
+     return cmd;
+ }
+ 
+ // FIXME (obfuscated#): Implement user arguments
+-wxString CDB_driver::GetCommandLine(const wxString& debugger, const wxString& debuggee, cb_unused const wxString &userArguments)
++// Fixed by ElCaBoom
++wxString CDB_driver::GetCommandLine(const wxString& debugger, const wxString& debuggee, const wxString &userArguments)
+ {
+     wxString cmd = GetCommonCommandLine(debugger);
++    // ElCaBoom: Add the user arguments
++    cmd << _T(' ') << userArguments;
++    // finally, add the program to debug
+     cmd << _T(' ');
+-
+-    // finally, add the program to debug
+     wxFileName debuggeeFileName(debuggee);
+     if (debuggeeFileName.IsAbsolute())
+         cmd << debuggee;
+@@ -90,9 +95,12 @@
+ }
+ 
+ // FIXME (obfuscated#): Implement user arguments
+-wxString CDB_driver::GetCommandLine(const wxString& debugger, int pid, cb_unused const wxString &userArguments)
++// Fixed by ElCaBoom
++wxString CDB_driver::GetCommandLine(const wxString& debugger, int pid, const wxString &userArguments)
+ {
+     wxString cmd = GetCommonCommandLine(debugger);
++    // ElCaBoom: Add the user arguments
++    cmd << _T(' ') << userArguments;
+     // finally, add the PID
+     cmd << _T(" -p ") << wxString::Format(_T("%d"), pid);
+     return cmd;
+@@ -119,6 +127,8 @@
+     QueueCommand(new DebuggerCmd(this, _T("l+t"))); // source mode
+     QueueCommand(new DebuggerCmd(this, _T("l+s"))); // show source lines
+     QueueCommand(new DebuggerCmd(this, _T("l+o"))); // only source lines
++    // ElCaBoom: Added command not to break on WOW64 breakpoint, just report the event (64-bit CDB)
++    QueueCommand(new DebuggerCmd(this, _T("sxn 4000001f")));
+ 
+     if (!m_pDBG->GetActiveConfigEx().GetFlag(DebuggerConfiguration::DoNotRun))
+     {

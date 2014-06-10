@@ -1,0 +1,45 @@
+Index: src/sdk/configmanager.h
+===================================================================
+--- src/sdk/configmanager.h	(revision 3444)
++++ src/sdk/configmanager.h	(working copy)
+@@ -151,7 +151,7 @@
+     * NEVER harcode a path like "C:\CodeBlocks\share\data". Always use one of the following functions to compose a path.
+     */
+     static wxString GetHomeFolder() { return home_folder; }
+-    static wxString GetConfigFolder(){ return config_folder; }
++    static wxString GetConfigFolder(){ return relo ? app_path : config_folder; }
+     static wxString GetPluginsFolder(bool global = true){ return GetFolder(global ? sdPluginsGlobal : sdPluginsUser); }
+     static wxString GetScriptsFolder(bool global = true){ return GetFolder(global ? sdScriptsGlobal : sdScriptsUser); }
+     static wxString GetDataFolder(bool global = true){ return global ? data_path_global : data_path_user; }
+Index: src/sdk/configmanager.cpp
+===================================================================
+--- src/sdk/configmanager.cpp	(revision 3450)
++++ src/sdk/configmanager.cpp	(working copy)
+@@ -168,12 +168,17 @@
+         SwitchToR(personality);
+         return;
+     }
++    if (personality == _T("portable"))
++        ConfigManager::relo = true;    
+ 
+     cfg = FindConfigFile(personality + _T(".conf"));
+ 
+     if(cfg.IsEmpty())
+     {
+-        cfg = wxStandardPathsBase::Get().GetUserDataDir() + wxFILE_SEP_PATH + personality + _T(".conf");
++        if (ConfigManager::relo == true)
++            cfg = ::DetermineExecutablePath() + wxFILE_SEP_PATH + personality + _T(".conf");
++        else    
++            cfg = wxStandardPathsBase::Get().GetUserDataDir() + wxFILE_SEP_PATH + personality + _T(".conf");
+         doc = new TiXmlDocument();
+         doc->InsertEndChild(TiXmlDeclaration("1.0", "UTF-8", "yes"));
+         doc->InsertEndChild(TiXmlElement("CodeBlocksConfig"));
+@@ -192,7 +197,7 @@
+     wxString u(wxStandardPathsBase::Get().GetUserDataDir() + wxFILE_SEP_PATH + filename);
+     wxString e(::DetermineExecutablePath() + wxFILE_SEP_PATH +filename);
+ 
+-    if(::wxFileExists(u))
++    if((::wxFileExists(u)) && (ConfigManager::relo == false))
+     {
+         return u;
+     }

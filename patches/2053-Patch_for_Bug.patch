@@ -1,0 +1,91 @@
+Index: src/include/projectbuildtarget.h
+===================================================================
+--- src/include/projectbuildtarget.h	(revision 4095)
++++ src/include/projectbuildtarget.h	(working copy)
+@@ -88,7 +88,7 @@
+           * ConsoleRunner is an external utility program that waits for a keypress
+           * after the target is executed.
+           * @return True if ConsoleRunner should be used, false if not. */
+-        virtual bool GetUseConsoleRunner() const;
++        virtual bool GetUseConsoleRunner(bool force = false) const;
+ 
+         /** Set if ConsoleRunner should be used.
+           * Valid only for targets generating a console executable.
+Index: src/sdk/projectbuildtarget.cpp
+===================================================================
+--- src/sdk/projectbuildtarget.cpp	(revision 4095)
++++ src/sdk/projectbuildtarget.cpp	(working copy)
+@@ -131,9 +131,9 @@
+     }
+ }
+ 
+-bool ProjectBuildTarget::GetUseConsoleRunner() const
++bool ProjectBuildTarget::GetUseConsoleRunner(bool force) const
+ {
+-    return GetTargetType() == ttConsoleOnly ? m_UseConsoleRunner : false;
++    return (GetTargetType() == ttConsoleOnly || force) ? m_UseConsoleRunner : false;
+ }
+ 
+ void ProjectBuildTarget::SetUseConsoleRunner(bool useIt)
+@@ -147,10 +147,7 @@
+ 
+ void ProjectBuildTarget::SetTargetType(const TargetType& pt)
+ {
+-	TargetType ttold = GetTargetType();
+ 	CompileTargetBase::SetTargetType(pt);
+-	if (ttold != GetTargetType() && GetTargetType() == ttConsoleOnly)
+-        SetUseConsoleRunner(true); // by default, use console runner
+ }
+ 
+ // target dependencies: targets to be compiled (if necessary) before this one
+Index: src/sdk/projectoptionsdlg.cpp
+===================================================================
+--- src/sdk/projectoptionsdlg.cpp	(revision 4095)
++++ src/sdk/projectoptionsdlg.cpp	(working copy)
+@@ -337,10 +337,6 @@
+ 		int p = GetPlatformsFromString(platforms);
+ 		target->SetPlatforms(p);
+ 
+-        target->SetUseConsoleRunner(XRCCTRL(*this, "chkUseConsoleRunner", wxCheckBox)->GetValue());
+-        target->SetCreateDefFile(XRCCTRL(*this, "chkCreateDefFile", wxCheckBox)->GetValue());
+-        target->SetCreateStaticLib(XRCCTRL(*this, "chkCreateStaticLib", wxCheckBox)->GetValue());
+-
+         target->SetTargetFilenameGenerationPolicy(
+             XRCCTRL(*this, "chkAutoGenPrefix", wxCheckBox)->GetValue() ? tgfpPlatformDefault : tgfpNone,
+             XRCCTRL(*this, "chkAutoGenExt", wxCheckBox)->GetValue() ? tgfpPlatformDefault : tgfpNone);
+@@ -362,6 +358,10 @@
+ //		fname.MakeRelativeTo(m_Project->GetBasePath());
+ 		target->SetObjectOutput(fname.GetFullPath());
+ 
++        target->SetUseConsoleRunner(XRCCTRL(*this, "chkUseConsoleRunner", wxCheckBox)->GetValue());
++        target->SetCreateDefFile(XRCCTRL(*this, "chkCreateDefFile", wxCheckBox)->GetValue());
++        target->SetCreateStaticLib(XRCCTRL(*this, "chkCreateStaticLib", wxCheckBox)->GetValue());
++
+ 		// files options
+ 		wxCheckListBox* list = XRCCTRL(*this, "lstFiles", wxCheckListBox);
+ 		int count = list->GetCount();
+@@ -387,6 +387,7 @@
+     if (!target)
+         return;
+ 	wxComboBox* cmb = XRCCTRL(*this, "cmbProjectType", wxComboBox);
++	wxCheckBox* chkCR = XRCCTRL(*this, "chkUseConsoleRunner", wxCheckBox);
+     wxTextCtrl* txt = XRCCTRL(*this, "txtOutputFilename", wxTextCtrl);
+     wxTextCtrl* txtW = XRCCTRL(*this, "txtWorkingDir", wxTextCtrl);
+     wxTextCtrl* txtO = XRCCTRL(*this, "txtObjectDir", wxTextCtrl);
+@@ -396,7 +397,7 @@
+     if (!cmb || !txt || !browse)
+         return;
+ 
+-    XRCCTRL(*this, "chkUseConsoleRunner", wxCheckBox)->Enable(cmb->GetSelection() == ttConsoleOnly);
++    chkCR->Enable(cmb->GetSelection() == ttConsoleOnly);
+     XRCCTRL(*this, "chkCreateDefFile", wxCheckBox)->Enable(cmb->GetSelection() == ttDynamicLib);
+     XRCCTRL(*this, "chkCreateStaticLib", wxCheckBox)->Enable(cmb->GetSelection() == ttDynamicLib);
+ 
+@@ -424,6 +425,7 @@
+     switch ((TargetType)cmb->GetSelection())
+     {
+         case ttConsoleOnly:
++            chkCR->SetValue(target->GetUseConsoleRunner(true));
+         case ttExecutable:
+             if (ext != FileFilters::EXECUTABLE_EXT)
+                 fname.SetExt(FileFilters::EXECUTABLE_EXT);

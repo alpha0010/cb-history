@@ -1,0 +1,380 @@
+Index: src/sdk/cbproject.cpp
+===================================================================
+--- src/sdk/cbproject.cpp	(revision 5201)
++++ src/sdk/cbproject.cpp	(working copy)
+@@ -1550,6 +1550,25 @@
+     return m_Makefile;
+ }
+ 
++void cbProject::SetMakefileExecutionDir(const wxString& dir)
++{
++    if (m_MakefileExecutionDir != dir)
++    {
++        m_MakefileExecutionDir = dir;
++        SetModified(true);
++    }
++}
++
++const wxString& cbProject::GetMakefileExecutionDir() const
++{
++    if (!m_MakefileExecutionDir.IsEmpty())
++        return m_MakefileExecutionDir;
++
++    wxFileName makefile_execution_dir(GetBasePath());
++    m_MakefileExecutionDir = makefile_execution_dir.GetFullPath();
++    return m_MakefileExecutionDir;
++}
++
+ ProjectFile* cbProject::GetFile(int index)
+ {
+     FilesList::Node* node = m_Files.Item(index);
+Index: src/sdk/projectoptionsdlg.cpp
+===================================================================
+--- src/sdk/projectoptionsdlg.cpp	(revision 5201)
++++ src/sdk/projectoptionsdlg.cpp	(working copy)
+@@ -68,6 +68,7 @@
+     EVT_BUTTON(    XRCID("btnBrowseOutputFilename"),   ProjectOptionsDlg::OnBrowseOutputFilenameClick)
+     EVT_BUTTON(    XRCID("btnBrowseWorkingDir"),       ProjectOptionsDlg::OnBrowseDirClick)
+     EVT_BUTTON(    XRCID("btnBrowseObjectDir"),        ProjectOptionsDlg::OnBrowseDirClick)
++    EVT_BUTTON(    XRCID("btnMakefileExecutionDir"),   ProjectOptionsDlg::OnBrowseDirClick)
+     EVT_BUTTON(    XRCID("btnVirtualBuildTargets"),    ProjectOptionsDlg::OnVirtualTargets)
+     EVT_BUTTON(    XRCID("btnExternalDeps"),           ProjectOptionsDlg::OnEditDepsClick)
+     EVT_BUTTON(    XRCID("btnExportTarget"),           ProjectOptionsDlg::OnExportTargetClick)
+@@ -110,6 +111,7 @@
+     XRCCTRL(*this, "txtPlatformProj", wxTextCtrl)->SetValue(GetStringFromPlatforms(m_Project->GetPlatforms()));
+     XRCCTRL(*this, "txtProjectMakefile", wxTextCtrl)->SetValue(m_Project->GetMakefile());
+     XRCCTRL(*this, "chkCustomMakefile", wxCheckBox)->SetValue(m_Project->IsMakefileCustom());
++    XRCCTRL(*this, "txtMakefileExecutionDir", wxTextCtrl)->SetValue(m_Project->GetMakefileExecutionDir());
+     XRCCTRL(*this, "rbPCHStrategy", wxRadioBox)->SetSelection((int)m_Project->GetModeForPCH());
+ 
+     Compiler* compiler = CompilerFactory::GetCompiler(project->GetCompilerID());
+@@ -687,6 +689,8 @@
+         targettext = XRCCTRL(*this, "txtWorkingDir", wxTextCtrl);
+     else if (event.GetId() == XRCID("btnBrowseObjectDir"))
+         targettext = XRCCTRL(*this, "txtObjectDir", wxTextCtrl);
++    else if (event.GetId() == XRCID("btnMakefileExecutionDir"))
++        targettext = XRCCTRL(*this, "txtMakefileExecutionDir", wxTextCtrl);
+     else
+         return;
+ 
+@@ -1021,6 +1025,10 @@
+     XRCCTRL(*this, "btnToggleCheckmarks", wxButton)->Enable(!customMake && en);
+     list->Enable(!customMake);
+ 
++    // enable some stuff if using a custom makefile
++    XRCCTRL(*this, "txtMakefileExecutionDir", wxTextCtrl)->Enable(customMake);
++    XRCCTRL(*this, "btnMakefileExecutionDir", wxTextCtrl)->Enable(customMake);
++
+     // scripts page
+     wxTreeCtrl* tc = XRCCTRL(*this, "tcOverview", wxTreeCtrl);
+     tc->Enable(!customMake);
+@@ -1055,6 +1063,7 @@
+         m_Project->RenameInTree(m_Project->GetTitle());
+         m_Project->SetMakefile(XRCCTRL(*this, "txtProjectMakefile", wxTextCtrl)->GetValue());
+         m_Project->SetMakefileCustom(XRCCTRL(*this, "chkCustomMakefile", wxCheckBox)->GetValue());
++        m_Project->SetMakefileExecutionDir(XRCCTRL(*this, "txtMakefileExecutionDir", wxTextCtrl)->GetValue());
+         m_Project->SetTargetType(TargetType(XRCCTRL(*this, "cmbProjectType", wxComboBox)->GetSelection()));
+         m_Project->SetModeForPCH((PCHMode)XRCCTRL(*this, "rbPCHStrategy", wxRadioBox)->GetSelection());
+         m_Project->SetExtendedObjectNamesGeneration(XRCCTRL(*this, "chkExtendedObjNames", wxCheckBox)->GetValue());
+Index: src/sdk/projectloader.cpp
+===================================================================
+--- src/sdk/projectloader.cpp	(revision 5201)
++++ src/sdk/projectloader.cpp	(working copy)
+@@ -377,6 +377,7 @@
+     wxString title;
+     wxString makefile;
+     bool makefile_custom = false;
++    wxString makefile_execution_dir;
+     wxString defaultTarget;
+     wxString compilerId = _T("gcc");
+     bool extendedObjectNames = false;
+@@ -405,6 +406,9 @@
+         else if (node->Attribute("makefile_is_custom"))
+             makefile_custom = strncmp(node->Attribute("makefile_is_custom"), "1", 1) == 0;
+ 
++        else if (node->Attribute("makefile_execution_dir"))
++            makefile_execution_dir = cbC2U(node->Attribute("makefile_execution_dir"));
++
+         // old default_target (int) node
+         else if (node->QueryIntAttribute("default_target", &m_1_4_to_1_5_deftarget) == TIXML_SUCCESS)
+         {
+@@ -442,6 +446,7 @@
+     m_pProject->SetPlatforms(platformsFinal);
+     m_pProject->SetMakefile(makefile);
+     m_pProject->SetMakefileCustom(makefile_custom);
++    m_pProject->SetMakefileExecutionDir(makefile_execution_dir);
+     m_pProject->SetDefaultExecuteTarget(defaultTarget);
+     m_pProject->SetCompilerID(compilerId);
+     m_pProject->SetExtendedObjectNamesGeneration(extendedObjectNames);
+@@ -1070,6 +1075,8 @@
+         AddElement(prjnode, "Option", "makefile", m_pProject->GetMakefile());
+     if (m_pProject->IsMakefileCustom())
+         AddElement(prjnode, "Option", "makefile_is_custom", 1);
++    if (m_pProject->GetMakefileExecutionDir() != m_pProject->GetBasePath())
++        AddElement(prjnode, "Option", "makefile_execution_dir", m_pProject->GetMakefileExecutionDir());
+     if (m_pProject->GetModeForPCH() != pchObjectDir)
+         AddElement(prjnode, "Option", "pch_mode", (int)m_pProject->GetModeForPCH());
+     if (!m_pProject->GetDefaultExecuteTarget().IsEmpty() && m_pProject->GetDefaultExecuteTarget() != m_pProject->GetFirstValidBuildTargetName())
+Index: src/sdk/resources/project_options.xrc
+===================================================================
+--- src/sdk/resources/project_options.xrc	(revision 5201)
++++ src/sdk/resources/project_options.xrc	(working copy)
+@@ -100,9 +100,40 @@
+ 													<flag>wxLEFT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+ 													<border>4</border>
+ 												</object>
++												<object class="sizeritem">
++													<object class="wxBoxSizer">
++														<object class="sizeritem">
++															<object class="wxStaticText" name="ID_STATICTEXT19">
++																<label>Execution directory:</label>
++															</object>
++															<flag>wxLEFT|wxRIGHT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++															<border>2</border>
++														</object>
++														<object class="sizeritem">
++															<object class="wxTextCtrl" name="txtMakefileExecutionDir">
++																<size>402,25</size>
++																<enabled>0</enabled>
++															</object>
++															<flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++															<border>2</border>
++															<option>1</option>
++														</object>
++														<object class="sizeritem">
++															<object class="wxButton" name="btnMakefileExecutionDir">
++																<label>...</label>
++																<size>24,24</size>
++																<enabled>0</enabled>
++															</object>
++															<flag>wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++														</object>
++													</object>
++													<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++													<border>5</border>
++													<option>1</option>
++												</object>
+ 											</object>
+-											<flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+-											<border>5</border>
++											<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++											<border>2</border>
+ 											<option>1</option>
+ 										</object>
+ 										<object class="sizeritem">
+Index: src/plugins/compilergcc/compiler_defs.h
+===================================================================
+--- src/plugins/compilergcc/compiler_defs.h	(revision 5201)
++++ src/plugins/compilergcc/compiler_defs.h	(working copy)
+@@ -14,11 +14,11 @@
+ 
+ struct CompilerCommand
+ {
+-    CompilerCommand(const wxString& cmd, const wxString& msg, cbProject* prj, ProjectBuildTarget* tgt, bool is_run = false)
+-        : command(cmd), message(msg), project(prj), target(tgt), isRun(is_run), mustWait(false), isLink(false)
++    CompilerCommand(const wxString& cmd, const wxString& msg, const wxString& directory, cbProject* prj, ProjectBuildTarget* tgt, bool is_run = false)
++        : command(cmd), message(msg), dir(directory), project(prj), target(tgt), isRun(is_run), mustWait(false), isLink(false)
+     {}
+     CompilerCommand(const CompilerCommand& rhs)
+-        : command(rhs.command), message(rhs.message), project(rhs.project), target(rhs.target), isRun(rhs.isRun), mustWait(rhs.mustWait), isLink(rhs.isLink)
++        : command(rhs.command), message(rhs.message), dir(rhs.dir), project(rhs.project), target(rhs.target), isRun(rhs.isRun), mustWait(rhs.mustWait), isLink(rhs.isLink)
+     {}
+     wxString command;
+     wxString message;
+Index: src/plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- src/plugins/compilergcc/compilergcc.cpp	(revision 5201)
++++ src/plugins/compilergcc/compilergcc.cpp	(working copy)
+@@ -1013,7 +1013,7 @@
+         if (cmd.StartsWith(mySimpleLog))
+         {
+             cmd.Remove(0, mySimpleLog.Length());
+-            m_CommandQueue.Add(new CompilerCommand(wxEmptyString, cmd, m_pBuildingProject, bt));
++            m_CommandQueue.Add(new CompilerCommand(wxEmptyString, cmd, wxEmptyString, m_pBuildingProject, bt));
+         }
+         // compiler change
+         else if (cmd.StartsWith(myTargetChange))
+@@ -1030,7 +1030,7 @@
+         else
+         {
+             // compiler command
+-            CompilerCommand* p = new CompilerCommand(cmd, wxEmptyString, m_pBuildingProject, bt);
++            CompilerCommand* p = new CompilerCommand(cmd, wxEmptyString, wxEmptyString, m_pBuildingProject, bt);
+             p->mustWait = mustWait;
+             p->isLink = isLink;
+             m_CommandQueue.Add(p);
+@@ -1669,7 +1669,7 @@
+ 
+     Manager::Get()->GetMacrosManager()->ReplaceEnvVars(m_CdRun);
+     Manager::Get()->GetLogManager()->Log(F(_("Executing: %s (in %s)"), cmd.c_str(), m_CdRun.c_str()), m_PageIndex);
+-    m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, 0, 0, true));
++    m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, wxEmptyString, 0, 0, true));
+     return 0;
+ }
+ 
+@@ -1862,7 +1862,7 @@
+     }
+ 
+     Manager::Get()->GetLogManager()->Log(F(_("Executing: %s (in %s)"), cmd.c_str(), m_CdRun.c_str()), m_PageIndex);
+-    m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, m_Project, target, true));
++    m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, wxEmptyString, m_Project, target, true));
+ 
+     m_Project->SetCurrentlyCompilingTarget(0);
+     return 0;
+@@ -1897,11 +1897,14 @@
+     wxString compilerId = target ? target->GetCompilerID() : project->GetCompilerID();
+     if (!CompilerFactory::IsValidCompilerID(compilerId))
+         compilerId = CompilerFactory::GetDefaultCompilerID();
+-    wxString command = target ? target->GetMakeCommandFor(cmd) : project->GetMakeCommandFor(cmd);
++    wxString command = target && !target->GetMakeCommandFor(cmd).empty() ?
++                       target->GetMakeCommandFor(cmd) : project->GetMakeCommandFor(cmd);
+ 
+     command.Replace(_T("$makefile"), project->GetMakefile());
+     command.Replace(_T("$make"), CompilerFactory::GetCompiler(compilerId)->GetPrograms().MAKE);
+     command.Replace(_T("$target"), target ? target->GetTitle() : _T(""));
++    Manager::Get()->GetMacrosManager()->ReplaceMacros(command);
++
+ //    Manager::Get()->GetMessageManager()->Log(m_PageIndex, _T("Make: %s"), command.c_str()));
+     return command;
+ }
+@@ -1954,14 +1957,13 @@
+     while (!m_BuildJobTargetsList.empty())
+     {
+         BuildJobTarget bjt = GetNextJob();
+-        wxSetWorkingDirectory(bjt.project->GetBasePath());
+         ProjectBuildTarget* bt = bjt.project->GetBuildTarget(bjt.targetName);
+         CompilerFactory::GetCompiler(bt->GetCompilerID())->Init(bjt.project);
+ 
+         if (UseMake())
+         {
+             wxString cmd = GetMakeCommandFor(mcClean, bjt.project, bt);
+-            m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, bjt.project, bt));
++            m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, bjt.project->GetMakefileExecutionDir(), bjt.project, bt));
+             return DoRunQueue();
+         }
+         else
+@@ -2008,7 +2010,7 @@
+     if (UseMake(target))
+     {
+         wxString cmd = GetMakeCommandFor(mcDistClean, m_Project, target);
+-        m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, m_Project, target));
++        m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, m_Project->GetMakefileExecutionDir(), m_Project, target));
+         return DoRunQueue();
+     }
+     else
+@@ -2438,7 +2440,7 @@
+     if (UseMake())
+     {
+         wxString cmd = GetMakeCommandFor(mcBuild, bj.project, bt);
+-        m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, bj.project, bt));
++        m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, bj.project->GetMakefileExecutionDir(), bj.project, bt));
+     }
+     else
+     {
+@@ -2552,7 +2554,7 @@
+             if (bt)
+             {
+                 wxString cmd = GetMakeCommandFor(mcBuild, bjt.project, bt);
+-                m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, bjt.project, bt));
++                m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, bjt.project->GetMakefileExecutionDir(), bjt.project, bt));
+             }
+         }
+     }
+@@ -2620,11 +2622,11 @@
+             if (bt)
+             {
+                 cmd = GetMakeCommandFor(mcClean, bjt.project, bt);
+-                cc = new CompilerCommand(cmd, wxEmptyString, bjt.project, bt);
++                cc = new CompilerCommand(cmd, wxEmptyString, bjt.project->GetMakefileExecutionDir(), bjt.project, bt);
+                 m_CommandQueue.Add(cc);
+ 
+                 cmd = GetMakeCommandFor(mcBuild, bjt.project, bt);
+-                cc = new CompilerCommand(cmd, wxEmptyString, bjt.project, bt);
++                cc = new CompilerCommand(cmd, wxEmptyString, bjt.project->GetMakefileExecutionDir(), bjt.project, bt);
+                 cc->mustWait = true; // wait for clean commands to finish
+                 m_CommandQueue.Add(cc);
+             }
+@@ -2849,7 +2851,7 @@
+ 
+         wxString cmd = GetMakeCommandFor(mcCompileFile, m_Project, bt);
+         cmd.Replace(_T("$file"), fname);
+-        m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, m_Project, bt));
++        m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, m_Project->GetMakefileExecutionDir(), m_Project, bt));
+     }
+     else
+     {
+@@ -3296,7 +3298,28 @@
+             }
+         }
+         // actually log message
+-        LogWarningOrError(clt, m_pBuildingProject, compiler->GetLastErrorFilename(), compiler->GetLastErrorLine(), compiler->GetLastError());
++        wxString last_error_filename = compiler->GetLastErrorFilename();
++        if (UseMake())
++        {
++            wxFileName last_error_file(last_error_filename);
++            if (!last_error_file.IsAbsolute())
++            {
++                cbProject* project = m_Project;
++                if (m_pLastBuildingTarget)
++                {
++                    project = m_pLastBuildingTarget->GetParentProject();
++                }
++                else
++                {
++                    AskForActiveProject();
++                    project = m_Project;
++                }
++                last_error_file.PrependDir(project->GetMakefileExecutionDir());
++                last_error_file.MakeRelativeTo(project->GetBasePath());
++                last_error_filename = last_error_file.GetFullPath();
++            }
++        }
++        LogWarningOrError(clt, m_pBuildingProject, last_error_filename, compiler->GetLastErrorLine(), compiler->GetLastError());
+     }
+ 
+     // add to log
+Index: src/include/cbproject.h
+===================================================================
+--- src/include/cbproject.h	(revision 5201)
++++ src/include/cbproject.h	(working copy)
+@@ -165,6 +165,14 @@
+         /** @return True if the project is using a custom Makefile for compilation, false if not. */
+         bool IsMakefileCustom(){ return m_CustomMakefile; }
+ 
++        /** Allow the specification of specific execution directory if the project use a custom Makefile.
++          * @param dir The directory the custom Makefile should be executed from.
++          */
++        void SetMakefileExecutionDir(const wxString& dir);
++
++        /** @return The execution directory for the custom Makefile. */
++        const wxString& GetMakefileExecutionDir() const;
++
+         /** Is there a build target (virtual or real) by @c name?
+           * @param name The build target's name.
+           * @param virtuals_too Include virtual build targets in query.
+@@ -340,7 +348,7 @@
+           * @return True if succesfull, false otherwise.
+           */
+         bool LoadLayout();
+-        
++
+         /** Notify that file(s) will be added shortly.
+           * This function should be called before calling AddFile().
+           * When done calling AddFile() as many times as needed, call
+@@ -660,7 +668,7 @@
+           * instead of re-using the existing one (if any).
+           */
+         virtual void AddToExtensions(const wxString& stringDesc);
+-        
++
+         /** Internal use only.
+           * Updates the internal hashmap of project files.
+           */
+@@ -686,6 +694,7 @@
+         wxString m_DefaultExecuteTarget;
+         wxString m_Makefile;
+         bool m_CustomMakefile;
++        mutable wxString m_MakefileExecutionDir;
+ 
+         FilesList m_Files;
+         wxArrayString m_ExpandedNodes;

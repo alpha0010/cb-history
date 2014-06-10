@@ -1,0 +1,344 @@
+Index: debuggergdb.cpp
+===================================================================
+--- debuggergdb.cpp	(revision 7632)
++++ debuggergdb.cpp	(working copy)
+@@ -2110,21 +2110,33 @@
+         else
+             wxKill(pid, wxSIGINT);
+     #else
+-        // windows gdb can interrupt the running process too. yay!
+-        bool done = false;
+-        if (DebugBreakProcessFunc && pid > 0)
+-        {
+-            Log(_("Trying to pause the running process..."));
+-            HANDLE proc = OpenProcess(PROCESS_ALL_ACCESS, FALSE, (DWORD)pid);
+-            if (proc)
+-            {
+-                DebugBreakProcessFunc(proc); // yay!
+-                CloseHandle(proc);
+-                done = true;
+-            }
+-            else
+-                Log(_("Failed."));
+-        }
++
++		wxString run_tool_on_break = Manager::Get()->GetConfigManager(_T("debugger"))->Read(_T("run_tool_on_break"), wxEmptyString);
++
++		// Sometimes with embedded systems you need to run some other tool to trigger an asynchronous break
++		if (run_tool_on_break != wxEmptyString)
++		{
++			Log(wxString::Format(_T("Starting external tool to break execution (%s)..."), run_tool_on_break.c_str()));
++			system(run_tool_on_break.ToAscii());
++		}
++		else
++		{
++			// windows gdb can interrupt the running process too. yay!
++			bool done = false;
++			if (DebugBreakProcessFunc && pid > 0)
++			{
++				Log(_("Trying to pause the running process..."));
++				HANDLE proc = OpenProcess(PROCESS_ALL_ACCESS, FALSE, (DWORD)pid);
++				if (proc)
++				{
++					DebugBreakProcessFunc(proc); // yay!
++					CloseHandle(proc);
++					done = true;
++				}
++				else
++					Log(_("Failed."));
++			}
++		}
+     #endif
+         // Notify debugger plugins for end of debug session
+         PluginManager *plm = Manager::Get()->GetPluginManager();
+Index: debuggeroptionsdlg.cpp
+===================================================================
+--- debuggeroptionsdlg.cpp	(revision 7632)
++++ debuggeroptionsdlg.cpp	(working copy)
+@@ -39,6 +39,7 @@
+     XRCCTRL(*this, "choDisassemblyFlavor", wxChoice)->SetSelection(cfg->ReadInt(_T("disassembly_flavor"), 0));
+     XRCCTRL(*this, "txtInstructionSet", wxTextCtrl)->SetValue(cfg->Read(_T("instruction_set"), wxEmptyString));
+     XRCCTRL(*this, "spnArrayElems",     wxSpinCtrl)->SetValue(cfg->ReadInt(_T("single_line_array_elem_count"), 8));
++	XRCCTRL(*this, "txtRunExtToolOnBreak", wxTextCtrl)->SetValue(cfg->Read(_T("run_tool_on_break"), wxEmptyString));
+ }
+ 
+ DebuggerOptionsDlg::~DebuggerOptionsDlg()
+@@ -62,6 +63,7 @@
+     cfg->Write(_T("disassembly_flavor"),    XRCCTRL(*this, "choDisassemblyFlavor", wxChoice)->GetSelection());
+     cfg->Write(_T("instruction_set"),       XRCCTRL(*this, "txtInstructionSet", wxTextCtrl)->GetValue());
+     cfg->Write(_T("single_line_array_elem_count"), XRCCTRL(*this, "spnArrayElems", wxSpinCtrl)->GetValue());
++	cfg->Write(_T("run_tool_on_break"),     XRCCTRL(*this, "txtRunExtToolOnBreak", wxTextCtrl)->GetValue());
+ 
+     m_pPlugin->RefreshConfiguration();
+ }
+Index: gdb_commands.h
+===================================================================
+--- gdb_commands.h	(revision 7632)
++++ gdb_commands.h	(working copy)
+@@ -150,13 +150,13 @@
+ //  ebx at 0x22ff6c, ebp at 0x22ff78, esi at 0x22ff70, edi at 0x22ff74, eip at 0x22ff7c
+ static wxRegEx reDisassemblyInit(_T("^Stack level [0-9]+, frame at (0x[A-Fa-f0-9]+):"));
+ static wxRegEx reDisassemblyInitFunc(_T("eip = (0x[A-Fa-f0-9]+) in ([^;]*)"));
+-// or32 variant
++// or32/mips variant
+ #ifdef __WXMSW__
+-static wxRegEx reDisassemblyInitFuncOR32(_T("PC = (0x[A-Fa-f0-9]+) in ([^;]*)"));
++static wxRegEx reDisassemblyInitFuncOR32_MIPS(_T("PC = (0x[A-Fa-f0-9]+) in ([^;]*)"));
+ #else
+ // not used on linux, but make sure it exists otherwise compilation fails on linux
+ // if(platform::windows && m_disassemblyFlavor == _T("set disassembly-flavor or32")) blabla
+-static wxRegEx reDisassemblyInitFuncOR32(_T("PC = (0x[A-Fa-f0-9]+) in ([^;]*)"));
++static wxRegEx reDisassemblyInitFuncOR32_MIPS(_T("PC = (0x[A-Fa-f0-9]+) in ([^;]*)"));
+ #endif
+ //    Using the running image of child Thread 46912568064384 (LWP 7051).
+ static wxRegEx reInfoProgramThread(_T("\\(LWP[ \t]([0-9]+)\\)"));
+@@ -1135,6 +1135,11 @@
+             {
+                 ParseOutputFromOR32gdbPort(output);
+             }
++            // MIPS register string parser
++            if(m_disassemblyFlavor == _T("set disassembly-flavor mips"))
++            {
++                ParseOutputFromMIPSgdbPort(output);
++            }
+             else
+             // use generic parser - this may work for other platforms or you may have to write your own
+             {
+@@ -1153,6 +1158,77 @@
+ //            m_pDriver->DebugLog(output);
+         }
+ 
++        void ParseOutputFromMIPSgdbPort(const wxString& output)
++        {
++// (gdb) info reg
++//          zero       at       v0       v1       a0       a1       a2       a3
++// R0   00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
++//            t0       t1       t2       t3       t4       t5       t6       t7
++// R8   00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
++//            s0       s1       s2       s3       s4       s5       s6       s7
++// R16  00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
++//            t8       t9       k0       k1       gp       sp       s8       ra
++// R24  00000000 00000000 00000000 00000000 00010000 00000000 00000000 00000000
++//            sr       lo       hi      bad    cause       pc
++//      00000000 00000000 00000000 00000000 00000000 00000008
++//           fsr      fir
++//      00000000 00000000
++
++            // produce an array of alternate register/value string lines, each entry
++            // is started on detecting a '\n'
++            wxArrayString lines = GetArrayFromString(output, _T("\n"));
++
++            // check for empty or short string
++            if((output == _T("")) || (lines.GetCount()<2))
++            {
++                return;
++            }
++
++            for (unsigned int i = 0; i < lines.GetCount(); i+=2)
++            {
++                wxArrayString regMnemonics;
++                wxArrayString regValues;
++                wxString RegisterMnemonicString;
++                wxString RegisterValueString;
++
++                // filter register values
++                RegisterValueString =lines.Item(i+1);
++
++                wxStringTokenizer RegisterValueStringTokenizer((RegisterValueString), wxT(" "), wxTOKEN_STRTOK);
++                while ( RegisterValueStringTokenizer.HasMoreTokens() )
++                {
++                    wxString RegisterValueStringToken = RegisterValueStringTokenizer.GetNextToken();
++                    // add register value to array
++					if (!RegisterValueStringToken.Contains(wxT("R")))
++						regValues.Add(RegisterValueStringToken);
++                }
++                // register mnemonics on even (and zero) lines
++                RegisterMnemonicString =lines.Item(i);
++
++                wxStringTokenizer RegisterMnemonicStringTokenizer((RegisterMnemonicString), wxT(" "), wxTOKEN_STRTOK);
++                while ( RegisterMnemonicStringTokenizer.HasMoreTokens() )
++                {
++                    wxString RegisterMnemonicStringToken = RegisterMnemonicStringTokenizer.GetNextToken();
++                    // add register mnemonic to arrau
++                    regMnemonics.Add(RegisterMnemonicStringToken);
++                }
++
++                // loop around the values and mnemonics arrays and add them to the dialog boxes
++                for (unsigned int j = 0; j < regMnemonics.GetCount(); j++)
++                {
++                    wxString reg = regMnemonics.Item(j);
++                    wxString addr = regValues.Item(j);
++
++                    if (!reg.IsEmpty() && !addr.IsEmpty())
++                    {
++                        unsigned long int addrL;
++                        addr.ToULong(&addrL, 16);
++                        m_pDlg->SetRegisterValue(reg, addrL);
++                    }
++                }
++            }
++        }
++
+         void ParseOutputFromOR32gdbPort(const wxString& output)
+         {
+ // (gdb) info reg
+@@ -1190,7 +1266,7 @@
+                 {
+                     wxString RegisterValueStringToken = RegisterValueStringTokenizer.GetNextToken();
+                     // add register value to array
+-                    regValues.Add(RegisterValueStringToken);
++					regValues.Add(RegisterValueStringToken);
+                 }
+                 // register mnemonics on even (and zero) lines
+                 RegisterMnemonicString =lines.Item(i);
+@@ -1300,9 +1376,9 @@
+                     sf.function = reDisassemblyInitFunc.GetMatch(output, 2);
+                     long int active;
+ 
+-                    if(platform::windows && m_disassemblyFlavor == _T("set disassembly-flavor or32"))
++                    if(platform::windows && (m_disassemblyFlavor == _T("set disassembly-flavor or32") || m_disassemblyFlavor == _T("set disassembly-flavor mips")))
+                     {
+-                        reDisassemblyInitFuncOR32.GetMatch(output, 1).ToLong(&active, 16);
++                        reDisassemblyInitFuncOR32_MIPS.GetMatch(output, 1).ToLong(&active, 16);
+                     }
+                     else
+                     {
+Index: gdb_driver.cpp
+===================================================================
+--- gdb_driver.cpp	(revision 7632)
++++ gdb_driver.cpp	(working copy)
+@@ -42,10 +42,10 @@
+ static wxRegEx reThreadSwitch2(_T("^\\[Switching to thread .*\\]#0[ \t]+(0x[A-Fa-f0-9]+) in (.*) from (.*):([0-9]+)"));
+ #ifdef __WXMSW__
+     static wxRegEx reBreak(_T("([A-Za-z]*[:]*)([^:]+):([0-9]+):[0-9]+:[begmidl]+:(0x[0-9A-Fa-f]+)"));
+-    static wxRegEx reBreak_or32(_T("\032\032([A-Za-z]:)([^:]+):([0-9]+):[0-9]+:[begmidl]+:(0x[0-9A-z]+)"));
++    static wxRegEx reBreak_or32_mips(_T("\032\032([A-Za-z]:)([^:]+):([0-9]+):[0-9]+:[begmidl]+:(0x[0-9A-z]+)"));
+ #else
+     static wxRegEx reBreak(_T("\032\032([^:]+):([0-9]+):[0-9]+:[begmidl]+:(0x[0-9A-Fa-f]+)"));
+-    static wxRegEx reBreak_or32(_T("")); // not used on linux, but make sure it exists otherwise compilation fails on linux (if (platform::windows) blabla)
++    static wxRegEx reBreak_or32_mips(_T("")); // not used on linux, but make sure it exists otherwise compilation fails on linux (if (platform::windows) blabla)
+ #endif
+ static wxRegEx reBreak2(_T("^(0x[A-Fa-f0-9]+) in (.*) from (.*)"));
+ static wxRegEx reBreak3(_T("^(0x[A-Fa-f0-9]+) in (.*)"));
+@@ -88,6 +88,7 @@
+     //ctor
+     m_needsUpdate = false;
+     m_forceUpdate = false;
++	m_remoteDebugging = false;
+ }
+ 
+ GDB_driver::~GDB_driver()
+@@ -494,8 +495,8 @@
+ 
+     // if performing remote debugging, use "continue" command
+     RemoteDebugging* rd = GetRemoteDebuggingInfo();
+-    bool remoteDebugging = rd && rd->IsOk();
+-//    m_pDBG->Log(wxString::Format(_T("RD: %s"), remoteDebugging ? _T("yes") : _T("no")));
++    m_remoteDebugging = rd && rd->IsOk();
++//    m_pDBG->Log(wxString::Format(_T("RD: %s"), m_remoteDebugging ? _T("yes") : _T("no")));
+ 
+     // under windows, 'start' segfaults with wx projects...
+     if(platform::windows || platform::macosx)
+@@ -506,27 +507,27 @@
+         if (!Manager::Get()->GetConfigManager(_T("debugger"))->ReadBool(_T("do_not_run"), false))
+         {
+             // start the process
+-            QueueCommand(new DebuggerCmd(this, remoteDebugging ? _T("continue") : _T("run")));
++            QueueCommand(new DebuggerCmd(this, m_remoteDebugging ? _T("continue") : _T("run")));
+             m_IsStarted = true;
+         }
+     }
+     else
+     {
+-        m_BreakOnEntry = breakOnEntry && !remoteDebugging;
+-        m_ManualBreakOnEntry = !remoteDebugging;
++        m_BreakOnEntry = breakOnEntry && !m_remoteDebugging;
++        m_ManualBreakOnEntry = !m_remoteDebugging;
+ 
+         if (!Manager::Get()->GetConfigManager(_T("debugger"))->ReadBool(_T("do_not_run"), false))
+         {
+             // start the process
+             if(breakOnEntry)
+             {
+-                QueueCommand(new DebuggerCmd(this, remoteDebugging ? _T("continue") : _T("start")));
++                QueueCommand(new DebuggerCmd(this, m_remoteDebugging ? _T("continue") : _T("start")));
+             }
+             else
+             {
+                 // if breakOnEntry is not set, we need to use 'run' to make gdb stop at a breakpoint at first instruction
+                 m_ManualBreakOnEntry=false;  // must be reset or gdb does not stop at first breakpoint
+-                QueueCommand(new DebuggerCmd(this, remoteDebugging ? _T("continue") : _T("run")));
++                QueueCommand(new DebuggerCmd(this, m_remoteDebugging ? _T("continue") : _T("run")));
+             }
+             m_IsStarted = true;
+         }
+@@ -543,7 +544,7 @@
+ void GDB_driver::Continue()
+ {
+     ResetCursor();
+-    if (m_IsStarted)
++    if (m_IsStarted || m_remoteDebugging)
+         QueueCommand(new DebuggerCmd(this, _T("cont")));
+     else
+     {
+@@ -1036,9 +1037,9 @@
+             // the same code with different regular expressions - depending on
+             // the platform.
+ 
+-            if(platform::windows && flavour == _T("set disassembly-flavor or32"))
++            if(platform::windows && (flavour == _T("set disassembly-flavor or32") || flavour == _T("set disassembly-flavor mips")))
+             {
+-                HandleMainBreakPoint(reBreak_or32, lines[i]);
++                HandleMainBreakPoint(reBreak_or32_mips, lines[i]);
+             }
+             else
+             {
+Index: gdb_driver.h
+===================================================================
+--- gdb_driver.h	(revision 7632)
++++ gdb_driver.h	(working copy)
+@@ -104,6 +104,9 @@
+         // Program is "running": after a "run" or a "start", and before "kill" or a "quit"
+         bool m_IsStarted;
+ 
++		// Remote debugging?
++		bool m_remoteDebugging;
++
+         // cursor update flags
+         bool m_needsUpdate;
+         bool m_forceUpdate;
+Index: resources/debugger_options_dlg.xrc
+===================================================================
+--- resources/debugger_options_dlg.xrc	(revision 7632)
++++ resources/debugger_options_dlg.xrc	(working copy)
+@@ -97,7 +97,29 @@
+ 				<flag>wxTOP|wxLEFT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+ 				<border>8</border>
+ 			</object>
+-			<object class="sizeritem">
++      <object class="sizeritem">
++        <object class="wxStaticBoxSizer">
++          <label>Run ext tool to request GDB break (GDB Win32):</label>
++          <orient>wxVERTICAL</orient>
++          <object class="sizeritem">
++            <object class="wxBoxSizer">
++              <object class="sizeritem">
++                <object class="wxTextCtrl" name="txtRunExtToolOnBreak">
++                  <label></label>
++                  <tooltip>Run an external app on stopping (break) debugger execution</tooltip>
++                </object>
++                <option>1</option>
++                <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++              </object>
++            </object>
++            <flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++            <border>4</border>
++          </object>
++        </object>
++        <flag>wxTOP|wxLEFT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++        <border>8</border>
++      </object>
++      <object class="sizeritem">
+ 				<object class="wxStaticBoxSizer">
+ 					<label>Choose disassembly flavor (GDB only):</label>
+ 					<orient>wxVERTICAL</orient>

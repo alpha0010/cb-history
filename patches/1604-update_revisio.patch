@@ -1,0 +1,290 @@
+Index: bootstrap
+===================================================================
+--- bootstrap	(revision 3309)
++++ bootstrap	(arbetskopia)
+@@ -10,7 +10,9 @@
+ if [ -f ./update_revision.sh ]; then
+ 	./update_revision.sh;
+ elif [ ! -f ./revision.m4 ]; then
+-	echo "m4_define([SVN_REVISION], trunk-r0)" > ./revision.m4;
++	echo "m4_define([SVN_REV], 0)" > ./revision.m4;
++	echo "m4_define([SVN_REVISION], trunk-r0)" >> ./revision.m4;
++	echo "m4_define([SVN_DATE], )" >> ./revision.m4;
+ fi
+ 
+ # Deal with some gentoo-specific issues
+Index: update_revision.sh
+===================================================================
+--- update_revision.sh	(revision 3309)
++++ update_revision.sh	(arbetskopia)
+@@ -1,15 +1,25 @@
+ #!/bin/sh
+ 
+ REV_FILE=./revision.m4
+-M4_START="m4_define([SVN_REVISION], trunk-r"
+-M4_END=")"
+ 
+-REV=0
++LANG=C
++export LANG
+ 
+-if [ -f /usr/bin/svn ]; then
+-	REV=`svn info | grep Revision: | cut -d" " -f2`;
+-elif [ -f .svn/entries ]; then
+-	REV=`cat ./.svn/entries | grep revision= | cut -d\" -f2 | head -n1`;
++if svn --xml info >/dev/null 2>&1; then
++	REV=`svn --xml info | tr -d '\r\n' | sed -e 's/.*<commit.*revision="\([0-9]*\)".*<\/commit>.*/\1/'`
++	LCD=`svn --xml info | tr -d '\r\n' | sed -e 's/.*<commit.*<date>\([0-9\-]*\)\T\([0-9\:]*\)\..*<\/date>.*<\/commit>.*/\1 \2/'`
++elif svn --version --quiet >/dev/null 2>&1; then
++	REV=`svn info | grep "^Revision:" | cut -d" " -f2`
++	LCD=`svn info | grep "^Last Changed Date:" | cut -d" " -f4,5`
++else
++	REV=0
++	LCD=""
+ fi
+ 
+-echo "m4_define([SVN_REVISION], trunk-r$REV)" > $REV_FILE
++if [ "x$REV" != "x0" -o ! -r $REV_FILE ]; then
++echo "m4_define([SVN_REV], $REV)" > $REV_FILE
++echo "m4_define([SVN_REVISION], trunk-r$REV)" >> $REV_FILE
++echo "m4_define([SVN_DATE], $LCD)" >> $REV_FILE
++fi
++
++exit 0
+Index: configure.in
+===================================================================
+--- configure.in	(revision 3309)
++++ configure.in	(arbetskopia)
+@@ -107,12 +107,16 @@
+ AM_CONDITIONAL([DARWIN], [test `uname` = "Darwin"])
+ 
+ AC_MSG_NOTICE([Configuring Code::Blocks...])
++AC_MSG_NOTICE(SVN revision SVN_REVISION (SVN_DATE))
++AC_SUBST(REVISION, SVN_REV)
++AC_SUBST(DATE, "SVN_DATE")
+ 
+ AC_CONFIG_FILES([Makefile
+ 	src/Makefile
+ 	src/build_tools/Makefile
+ 	src/build_tools/autorevision/Makefile
+ 	src/sdk/Makefile
++	src/sdk/autorevision.h
+ 	src/sdk/scripting/Makefile
+ 	src/sdk/scripting/bindings/Makefile
+ 	src/sdk/scripting/squirrel/Makefile
+@@ -235,6 +239,7 @@
+ 	src/wxsmith/Makefile
+ 	codeblocks.pc
+ 	codeblocks.spec
++	codeblocks.plist
+ ])
+ 
+ AC_OUTPUT
+Index: Makefile.am
+===================================================================
+--- Makefile.am	(revision 3309)
++++ Makefile.am	(arbetskopia)
+@@ -4,6 +4,8 @@
+ pkgconfig_DATA = codeblocks.pc
+ 
+ EXTRA_DIST = $(top_srcdir)/bootstrap \
++		codeblocks.spec \
++		codeblocks.plist \
+ 		$(top_srcdir)/BUGS \
+ 		$(top_srcdir)/BUILD \
+ 		$(top_srcdir)/COMPILERS
+Index: src/sdk/autorevision.h.in
+===================================================================
+--- /dev/null	2006-11-29 20:20:36.000000000 +0100
++++ src/sdk/autorevision.h.in	2006-11-06 10:43:06.000000000 +0100
+@@ -0,0 +1,20 @@
++/*@REVISION@*/
++#ifndef AUTOREVISION_H
++#define AUTOREVISION_H
++
++
++#include <wx/string.h>
++
++#define SVN_REVISION "@REVISION@"
++
++#define SVN_DATE     "@DATE@"
++
++namespace autorevision
++{
++	const unsigned int svn_revision = @REVISION@;
++	const wxString svnRevision(_T("@REVISION@"));
++}
++
++
++
++#endif
+Index: codeblocks.spec.in
+===================================================================
+--- codeblocks.spec.in	(revision 3309)
++++ codeblocks.spec.in	(arbetskopia)
+@@ -1,4 +1,4 @@
+-%define _svnrev		%(echo @VERSION@ | cut -c 8-)
++%define _svnrev		@REVISION@
+ %define req_wxgtk	2.6.0
+ %define _fedora		%(if [ -f /etc/fedora-release ]; then echo 1; else echo 0; fi)
+ %define _redhat		%(if [ -f /etc/redhat-release ]; then echo 1; else echo 0; fi)
+Index: codeblocks.plist.in
+===================================================================
+--- /dev/null	2006-11-29 20:20:36.000000000 +0100
++++ codeblocks.plist.in	2006-11-14 00:10:20.000000000 +0100
+@@ -0,0 +1,155 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<!DOCTYPE plist SYSTEM "file://localhost/System/Library/DTDs/PropertyList.dtd">
++<plist version="0.9">
++<dict>
++	<key>CFBundleInfoDictionaryVersion</key>
++	<string>6.0</string>
++	<key>CFBundleIdentifier</key>
++	<string>org.codeblocks.app</string>
++	<key>CFBundleDevelopmentRegion</key>
++	<string>English</string>
++	<key>CFBundleDocumentTypes</key>
++	<array>
++		<dict>
++			<key>CFBundleTypeExtensions</key>
++			<array>
++				<string>cbp</string>
++			</array>
++			<key>CFBundleTypeIconFile</key>
++			<string>cbp.icns</string>
++			<key>CFBundleTypeName</key>
++			<string>CodeBlocks Project File</string>
++			<key>CFBundleTypeRole</key>
++			<string>Editor</string>
++		</dict>
++		<dict>
++			<key>CFBundleTypeExtensions</key>
++			<array>
++				<string>workspace</string>
++			</array>
++			<key>CFBundleTypeIconFile</key>
++			<string>csd.icns</string>
++			<key>CFBundleTypeName</key>
++			<string>CodeBlocks Workspace File</string>
++			<key>CFBundleTypeRole</key>
++			<string>Editor</string>
++		</dict>
++		<dict>
++			<key>CFBundleTypeExtensions</key>
++			<array>
++				<string>h</string>
++				<string>pch</string>
++			</array>
++			<key>CFBundleTypeIconFile</key>
++			<string>h.icns</string>
++			<key>CFBundleTypeName</key>
++			<string>C Header Source File</string>
++			<key>CFBundleTypeRole</key>
++			<string>Editor</string>
++		</dict>
++		<dict>
++			<key>CFBundleTypeExtensions</key>
++			<array>
++				<string>hp</string>
++				<string>hpp</string>
++				<string>hxx</string>
++				<string>h++</string>
++				<string>pch++</string>
++			</array>
++			<key>CFBundleTypeIconFile</key>
++			<string>h.icns</string>
++			<key>CFBundleTypeName</key>
++			<string>C++ Header Source File</string>
++			<key>CFBundleTypeRole</key>
++			<string>Editor</string>
++		</dict>
++		<dict>
++			<key>CFBundleTypeExtensions</key>
++			<array>
++				<string>c</string>
++			</array>
++			<key>CFBundleTypeIconFile</key>
++			<string>c.icns</string>
++			<key>CFBundleTypeName</key>
++			<string>C Source File</string>
++			<key>CFBundleTypeRole</key>
++			<string>Editor</string>
++		</dict>
++		<dict>
++			<key>CFBundleTypeExtensions</key>
++			<array>
++				<string>cc</string>
++				<string>cp</string>
++				<string>cpp</string>
++				<string>cxx</string>
++				<string>c++</string>
++			</array>
++			<key>CFBundleTypeIconFile</key>
++			<string>cpp.icns</string>
++			<key>CFBundleTypeName</key>
++			<string>C++ Source File</string>
++			<key>CFBundleTypeRole</key>
++			<string>Editor</string>
++		</dict>
++		<dict>
++			<key>CFBundleTypeExtensions</key>
++			<array>
++				<string>d</string>
++			</array>
++			<key>CFBundleTypeIconFile</key>
++			<string>d.icns</string>
++			<key>CFBundleTypeName</key>
++			<string>D Source File</string>
++			<key>CFBundleTypeRole</key>
++			<string>Editor</string>
++		</dict>
++		<dict>
++			<key>CFBundleTypeExtensions</key>
++			<array>
++				<string>s</string>
++				<string>asm</string>
++			</array>
++			<key>CFBundleTypeName</key>
++			<string>Assembly Source File</string>
++			<key>CFBundleTypeRole</key>
++			<string>Editor</string>
++		</dict>
++		<dict>
++			<key>CFBundleTypeExtensions</key>
++			<array>
++				<string>*</string>
++			</array>
++			<key>CFBundleTypeName</key>
++			<string>Plain Text File</string>
++			<key>CFBundleTypeOSTypes</key>
++			<array>
++				<string>****</string>
++			</array>
++			<key>CFBundleTypeRole</key>
++			<string>Editor</string>
++		</dict>
++	</array>
++	<key>CFBundleExecutable</key>
++	<string>CodeBlocks</string>
++	<key>CFBundleIconFile</key>
++	<string>app.icns</string>
++	<key>CFBundleName</key>
++	<string>CodeBlocks</string>
++	<key>CFBundlePackageType</key>
++	<string>APPL</string>
++	<key>CFBundleSignature</key>
++	<string>????</string>
++	<key>CFBundleVersion</key>
++	<string>@REVISION@</string>
++	<key>CFBundleShortVersionString</key>
++	<string>1.0</string>
++	<key>CFBundleGetInfoString</key>
++	<string>CodeBlocks version 1.0 svn @REVISION@, (c) 2006 Code::Blocks</string>
++	<key>CFBundleLongVersionString</key>
++	<string>1.0, (c) 2006 Code::Blocks</string>
++	<key>NSHumanReadableCopyright</key>
++	<string>Copyright 2006 Code::Blocks</string>
++	<key>LSRequiresCarbon</key>
++	<true/>
++</dict>
++</plist>

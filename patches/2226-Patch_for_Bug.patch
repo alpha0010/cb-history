@@ -1,0 +1,40 @@
+Index: src/plugins/contrib/help_plugin/help_plugin.cpp
+===================================================================
+--- src/plugins/contrib/help_plugin/help_plugin.cpp	(revision 4596)
++++ src/plugins/contrib/help_plugin/help_plugin.cpp	(working copy)
+@@ -70,6 +70,7 @@
+ 
+ BEGIN_EVENT_TABLE(HelpPlugin, cbPlugin)
+ 	EVT_MENU(idViewMANViewer, HelpPlugin::OnViewMANViewer)
++	EVT_UPDATE_UI(idViewMANViewer, HelpPlugin::OnUpdateUI)
+ END_EVENT_TABLE()
+ 
+ #ifdef __WXMSW__
+@@ -456,6 +457,15 @@
+     Manager::Get()->GetConfigManager(_T("help_plugin"))->Write(_T("/show_man_viewer"), show);
+ }
+ 
++void HelpPlugin::OnUpdateUI(wxUpdateUIEvent& event)
++{
++    wxMenuBar* pbar = Manager::Get()->GetAppFrame()->GetMenuBar();
++
++    // uncheck checkbox if window was closed
++    if(m_manFrame && !m_manFrame->IsShown())
++        pbar->Check(idViewMANViewer, false);
++}
++
+ void HelpPlugin::LaunchHelp(const wxString &c_helpfile, bool isExecutable, const wxString &keyword)
+ {
+   const static wxString http_prefix(_T("http://"));
+Index: src/plugins/contrib/help_plugin/help_plugin.h
+===================================================================
+--- src/plugins/contrib/help_plugin/help_plugin.h	(revision 4596)
++++ src/plugins/contrib/help_plugin/help_plugin.h	(working copy)
+@@ -26,6 +26,7 @@
+     void OnAttach(); // fires when the plugin is attached to the application
+     void OnRelease(bool appShutDown); // fires when the plugin is released from the application
+     void Reload(); // called after the settings have been applied
++    void OnUpdateUI(wxUpdateUIEvent& event); // called when showing View menu
+ 
+   protected:
+     void OnViewMANViewer(wxCommandEvent &event);

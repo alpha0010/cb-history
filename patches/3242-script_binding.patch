@@ -1,0 +1,134 @@
+Index: src/sdk/scripting/bindings/scriptbindings.cpp
+===================================================================
+--- src/sdk/scripting/bindings/scriptbindings.cpp	(revision 7625)
++++ src/sdk/scripting/bindings/scriptbindings.cpp	(working copy)
+@@ -21,7 +21,6 @@
+     #include <cbeditor.h>
+     #include <globals.h>
+ #endif
+-#include "cbstyledtextctrl.h"
+ 
+ #include "scriptbindings.h"
+ #include <cbexception.h>
+@@ -358,6 +357,22 @@
+             return sa.Return((SQInteger)CompilerFactory::GetCompilerIndex(*SqPlus::GetInstance<wxString,false>(v, 2)));
+         return sa.ThrowError("Invalid arguments to \"CompilerFactory::GetCompilerIndex\"");
+     }
++    SQInteger cbStyledTextCtrl_PositionFromPoint(HSQUIRRELVM v)
++    {
++        StackHandler sa(v);
++        int paramCount = sa.GetParamCount();
++        if (paramCount == 2)
++        {
++            cbStyledTextCtrl* self = SqPlus::GetInstance<cbStyledTextCtrl,false>(v, 1);
++            wxPoint* pt = SqPlus::GetInstance<wxPoint,false>(v, 2);
++            if (self)
++            {
++                return sa.Return(self->PositionFromPoint(*pt));
++            }
++            return sa.ThrowError("'this' is NULL!?! (type of cbStyledTextCtrl*)");
++        }
++        return sa.ThrowError("Invalid arguments to \"cbStyledTextCtrl::PositionFromPoint\"");
++    }
+ 
+     void RegisterBindings()
+     {
+@@ -617,6 +632,26 @@
+                 func(&EditorBase::IsReadOnly, "IsReadOnly").
+                 func(&EditorBase::HasSelection, "HasSelection");
+ 
++        SqPlus::SQClassDef<cbStyledTextCtrl>("cbStyledTextCtrl")
++            .func(&cbStyledTextCtrl::IsCharacter, "IsCharacter")
++            .func(&cbStyledTextCtrl::IsString, "IsString")
++            .func(&cbStyledTextCtrl::IsPreprocessor, "IsPreprocessor")
++            .func(&cbStyledTextCtrl::IsComment, "IsComment")
++            // The following members are inherited from wxScintilla, which isn't a
++            // bound class, so template parameters are explicit to avoid compiler errors.
++            .func<wxString(cbStyledTextCtrl::*)()>(&cbStyledTextCtrl::GetSelectedText, "GetSelectedText")
++            .func<int(cbStyledTextCtrl::*)() const>(&cbStyledTextCtrl::GetSelectionStart, "GetSelectionStart")
++            .func<int(cbStyledTextCtrl::*)() const>(&cbStyledTextCtrl::GetSelectionEnd, "GetSelectionEnd")
++            .func<wxPoint(cbStyledTextCtrl::*)(int)>(&cbStyledTextCtrl::PointFromPosition, "PointFromPosition")
++            .func<int(cbStyledTextCtrl::*)(int) const>(&cbStyledTextCtrl::LineFromPosition, "LineFromPosition")
++            .func<int(cbStyledTextCtrl::*)(int)>(&cbStyledTextCtrl::TextHeight, "TextHeight")
++ // Uses shim function to provide the pass-by-reference semantics required by SqPlus
++            .staticFuncVarArgs(&cbStyledTextCtrl_PositionFromPoint, "PositionFromPoint")
++            .func<int(cbStyledTextCtrl::*)(int,bool)>(&cbStyledTextCtrl::WordStartPosition, "WordStartPosition")
++            .func<int(cbStyledTextCtrl::*)(int,bool)>(&cbStyledTextCtrl::WordEndPosition, "WordEndPosition")
++            .func<wxString(cbStyledTextCtrl::*)(int,int)>(&cbStyledTextCtrl::GetTextRange, "GetTextRange")
++            .func<int(cbStyledTextCtrl::*)() const>(&cbStyledTextCtrl::GetCurrentPos, "GetCurrentPos");
++
+         SqPlus::SQClassDef<cbEditor>("cbEditor", "EditorBase").
+                 func(&cbEditor::SetEditorTitle, "SetEditorTitle").
+                 func(&cbEditor::GetProjectFile, "GetProjectFile").
+@@ -636,6 +671,7 @@
+                 func(&cbEditor::AutoComplete, "AutoComplete").
+                 func(&cbEditor::AddBreakpoint, "AddBreakpoint").
+                 func(&cbEditor::RemoveBreakpoint, "RemoveBreakpoint").
++                func(&cbEditor::GetControl, "GetControl").
+                 // these are not present in cbEditor; included to help scripts edit text
+                 staticFuncVarArgs(&cbEditor_SetText, "SetText", "*").
+                 staticFuncVarArgs(&cbEditor_GetText, "GetText", "*");
+Index: src/sdk/cbstyledtextctrl.cpp
+===================================================================
+--- src/sdk/cbstyledtextctrl.cpp	(revision 7625)
++++ src/sdk/cbstyledtextctrl.cpp	(working copy)
+@@ -17,6 +17,7 @@
+ #include "cbstyledtextctrl.h"
+ #include "editorbase.h" // DisplayContextMenu
+ #include "prep.h" // platform::gtk
++#include <wx/gdicmn.h> // for wxPoint
+ 
+ static const wxString s_leftBrace(_T("([{'\""));
+ static const wxString s_rightBrace(_T(")]}'\""));
+@@ -53,6 +54,9 @@
+     //dtor
+ }
+ 
++// Script binding support
++void cbStyledTextCtrl::operator=(const cbStyledTextCtrl& /*rhs*/){ cbThrow(_T("Can't assign an cbStyledTextCtrl* !!!")); }
++
+ // events
+ 
+ void cbStyledTextCtrl::OnKillFocus(wxFocusEvent& event)
+Index: src/include/scripting/bindings/sc_base_types.h
+===================================================================
+--- src/include/scripting/bindings/sc_base_types.h	(revision 7625)
++++ src/include/scripting/bindings/sc_base_types.h	(working copy)
+@@ -24,6 +24,7 @@
+ #include <cbproject.h>
+ #include <cbeditor.h>
+ #include <sqplus.h>
++#include <cbstyledtextctrl.h>
+ 
+ // wx primitives and types
+ DECLARE_INSTANCE_TYPE(wxArrayString);
+@@ -49,6 +50,7 @@
+ DECLARE_INSTANCE_TYPE(CompilerFactory);
+ DECLARE_INSTANCE_TYPE(PluginInfo);
+ DECLARE_INSTANCE_TYPE(FileTreeData);
++DECLARE_INSTANCE_TYPE(cbStyledTextCtrl);
+ 
+ // make SqPlus aware of enum-type arguments
+ #define DECLARE_ENUM_TYPE(T) \
+Index: src/include/cbstyledtextctrl.h
+===================================================================
+--- src/include/cbstyledtextctrl.h	(revision 7625)
++++ src/include/cbstyledtextctrl.h	(working copy)
+@@ -15,6 +15,7 @@
+ class wxContextMenuEvent;
+ class wxFocusEvent;
+ class wxMouseEvent;
++class wxPoint;
+ 
+ class cbStyledTextCtrl : public wxScintilla
+ {
+@@ -35,6 +36,9 @@
+         static std::map<int, std::set<int> > &GetPreprocessorLexerStyles();
+         static std::map<int, std::set<int> > &GetCommentLexerStyles();
+ 
++        /** Don't use this. It throws an exception if you do. */
++        void operator=(const cbStyledTextCtrl& /*rhs*/);
++
+     private:
+         void OnContextMenu(wxContextMenuEvent& event);
+         void OnKillFocus(wxFocusEvent& event);

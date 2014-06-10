@@ -1,0 +1,240 @@
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 7618)
++++ src/sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -118,6 +118,7 @@
+     XRCCTRL(*this, "chkUseChangebar", wxCheckBox)->SetValue(m_EnableChangebar);
+     XRCCTRL(*this, "chkShowIndentGuides", wxCheckBox)->SetValue(cfg->ReadBool(_T("/show_indent_guides"), false));
+     XRCCTRL(*this, "chkBraceSmartIndent", wxCheckBox)->SetValue(cfg->ReadBool(_T("/brace_smart_indent"), true));
++    XRCCTRL(*this, "chkSelectionBraceCompletion", wxCheckBox)->SetValue(cfg->ReadBool(_T("/selection_brace_completion"), false));
+     XRCCTRL(*this, "chkTabIndents", wxCheckBox)->SetValue(cfg->ReadBool(_T("/tab_indents"), true));
+     XRCCTRL(*this, "chkBackspaceUnindents", wxCheckBox)->SetValue(cfg->ReadBool(_T("/backspace_unindents"), true));
+     XRCCTRL(*this, "chkWordWrap", wxCheckBox)->SetValue(cfg->ReadBool(_T("/word_wrap"), false));
+@@ -795,6 +796,7 @@
+         cfg->Write(_T("/use_tab"),                             XRCCTRL(*this, "chkUseTab", wxCheckBox)->GetValue());
+         cfg->Write(_T("/show_indent_guides"),                  XRCCTRL(*this, "chkShowIndentGuides", wxCheckBox)->GetValue());
+         cfg->Write(_T("/brace_smart_indent"),                  XRCCTRL(*this, "chkBraceSmartIndent", wxCheckBox)->GetValue());
++        cfg->Write(_T("/selection_brace_completion"),          XRCCTRL(*this, "chkSelectionBraceCompletion", wxCheckBox)->GetValue());
+         cfg->Write(_T("/tab_indents"),                         XRCCTRL(*this, "chkTabIndents", wxCheckBox)->GetValue());
+         cfg->Write(_T("/backspace_unindents"),                 XRCCTRL(*this, "chkBackspaceUnindents", wxCheckBox)->GetValue());
+         cfg->Write(_T("/word_wrap"),                           XRCCTRL(*this, "chkWordWrap", wxCheckBox)->GetValue());
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 7618)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -2986,6 +2986,122 @@
+     static int autoUnIndentValue = -1;
+     static int autoUnIndentLine = -1;
+ 
++    bool SelectionBraceCompletion = Manager::Get()->GetConfigManager(_T("editor"))->ReadBool(_T("/selection_brace_completion"), false);
++    if ((SelectionBraceCompletion || control->IsBraceShortcutActive()) && !control->GetLastSelectedText().IsEmpty())
++    {
++        wxString selectedText = control->GetLastSelectedText();
++        switch (ch)
++        {
++            case _T('\''):
++            {
++                control->BeginUndoAction();
++                control->DeleteBack();
++                selectedText.Replace(wxT("\\'"), wxT("'"));
++                selectedText.Replace(wxT("'"), wxT("\\'"));
++                control->AddText(wxT("'") + selectedText + wxT("'"));
++                control->EndUndoAction();
++                return;
++            }
++            case _T('"'):
++            {
++                control->BeginUndoAction();
++                control->DeleteBack();
++                selectedText.Replace(wxT("\\\""), wxT("\""));
++                selectedText.Replace(wxT("\""), wxT("\\\""));
++                control->AddText(wxT("\"") + selectedText + wxT("\""));
++                control->SetSelectionVoid(pos - 1, pos + selectedText.Length() + 1);
++                int startLine = control->LineFromPosition(control->GetSelectionStart());
++                int endLine = control->LineFromPosition(control->GetSelectionEnd());
++                if(startLine != endLine)
++                {
++                    int selectionEnd = pos + selectedText.Length() + 1;
++                    for(int i = endLine; i > startLine; i--)
++                    {
++                        control->Home();
++                        for(int j = control->GetCurrentPos(); control->GetCharAt(j) == _T(' ') || control->GetCharAt(j) == _T('\t'); j++)
++                        {
++                            control->CharRight();
++                        }
++                        control->AddText(wxT("\""));
++                        control->SetEmptySelection(control->GetLineEndPosition(i - 1));
++                        control->AddText(wxT("\""));
++                        selectionEnd += control->GetIndent() + 2;
++                    }
++                    control->SetSelectionVoid(pos - 1, selectionEnd);
++                }
++                control->EndUndoAction();
++                return;
++            }
++            case _T('('):
++            case _T(')'):
++            {
++                control->BeginUndoAction();
++                control->DeleteBack();
++                control->InsertText(pos - 1, wxT("(") + selectedText + wxT(")"));
++                if(ch == _T(')'))
++                {
++                    control->SetEmptySelection(pos + selectedText.Length() + 1);
++                }
++                control->EndUndoAction();
++                return;
++            }
++            case _T('['):
++            case _T(']'):
++            {
++                control->BeginUndoAction();
++                control->DeleteBack();
++                control->InsertText(pos - 1, wxT("[") + selectedText + wxT("]"));
++                if(ch == _T(']'))
++                {
++                    control->SetEmptySelection(pos + selectedText.Length() + 1);
++                }
++                control->EndUndoAction();
++                return;
++            }
++            case _T('<'):
++            case _T('>'):
++            {
++                control->BeginUndoAction();
++                control->DeleteBack();
++                control->InsertText(pos - 1, wxT("<") + selectedText + wxT(">"));
++                if(ch == _T('>'))
++                {
++                    control->SetEmptySelection(pos + selectedText.Length() + 1);
++                }
++                control->EndUndoAction();
++                return;
++            }
++            case _T('{'):
++            case _T('}'):
++            {
++                control->BeginUndoAction();
++                control->DeleteBack();
++                control->AddText(selectedText);
++                control->SetSelectionVoid(pos - 1, pos + selectedText.Length() - 1);
++                int startLine = control->LineFromPosition(control->GetSelectionStart());
++                int endLine = control->LineFromPosition(control->GetSelectionEnd());
++                if(startLine == endLine)
++                {
++                    control->Home();
++                }
++                control->Tab();
++                control->SetEmptySelection(control->GetLineEndPosition(endLine));
++                control->NewLine();
++                control->BackTab();
++                control->AddText(wxT("}"));
++                control->SetEmptySelection(control->GetLineEndPosition(startLine - 1));
++                control->NewLine();
++                control->InsertText(control->GetCurrentPos(), wxT("{"));
++                if(ch == _T('}'))
++                {
++                    control->SetEmptySelection(control->GetLineEndPosition(endLine + 2));
++                }
++                control->EndUndoAction();
++                return;
++            }
++        }
++    } // SelectionBraceCompletion
++
+     // indent
+     if (ch == _T('\n'))
+     {
+Index: src/sdk/cbstyledtextctrl.cpp
+===================================================================
+--- src/sdk/cbstyledtextctrl.cpp	(revision 7618)
++++ src/sdk/cbstyledtextctrl.cpp	(working copy)
+@@ -46,6 +46,7 @@
+     m_tabSmartJump(false)
+ {
+     //ctor
++    m_braceShortcutState = false;
+ }
+ 
+ cbStyledTextCtrl::~cbStyledTextCtrl()
+@@ -117,8 +118,19 @@
+ 
+ void cbStyledTextCtrl::OnKeyDown(wxKeyEvent& event)
+ {
++    m_lastSelectedText = GetSelectedText();
++
+     switch (event.GetKeyCode())
+     {
++        case _T('I'):
++        {
++            if(event.GetModifiers() == wxMOD_ALT)
++            {
++                m_braceShortcutState = true;
++            }
++            break;
++        }
++
+         case WXK_TAB:
+         {
+             if (m_tabSmartJump && !(event.ControlDown() || event.ShiftDown() || event.AltDown()))
+@@ -268,6 +280,13 @@
+         wxScintilla::CallTipCancel();
+ }
+ 
++bool cbStyledTextCtrl::IsBraceShortcutActive()
++{
++    bool state = m_braceShortcutState;
++    m_braceShortcutState = false;
++    return state;
++}
++
+ bool cbStyledTextCtrl::AllowTabSmartJump()
+ {
+     const int pos = GetCurrentPos();
+Index: src/sdk/resources/editor_configuration.xrc
+===================================================================
+--- src/sdk/resources/editor_configuration.xrc	(revision 7618)
++++ src/sdk/resources/editor_configuration.xrc	(working copy)
+@@ -271,7 +271,13 @@
+                                                                                 </object>
+                                                                                 <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+                                                                             </object>
++																			<object class="sizeritem">
++																				<object class="wxCheckBox" name="chkSelectionBraceCompletion">
++																					<label>Selection brace completion</label>
+                                                                         </object>
++																				<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++																			</object>
++																		</object>
+                                                                         <flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+                                                                         <border>4</border>
+                                                                     </object>
+Index: src/include/cbstyledtextctrl.h
+===================================================================
+--- src/include/cbstyledtextctrl.h	(revision 7618)
++++ src/include/cbstyledtextctrl.h	(working copy)
+@@ -22,6 +22,7 @@
+         cbStyledTextCtrl(wxWindow* pParent, int id, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = 0);
+         virtual ~cbStyledTextCtrl();
+         wxDateTime GetLastFocusTime() const {return m_lastFocusTime;}
++        wxString GetLastSelectedText() const {return m_lastSelectedText;}
+ 
+         void EnableTabSmartJump(bool enable = true);
+         bool IsCharacter(int style);
+@@ -29,6 +30,7 @@
+         bool IsPreprocessor(int style);
+         bool IsComment(int style);
+         void CallTipCancel();
++        bool IsBraceShortcutActive();
+ 
+         static std::map<int, std::set<int> > &GetCharacterLexerStyles();
+         static std::map<int, std::set<int> > &GetStringLexerStyles();
+@@ -52,6 +54,8 @@
+         int m_bracePosition;
+         int m_lastPosition;
+         bool m_tabSmartJump;
++        wxString m_lastSelectedText;
++        bool m_braceShortcutState;
+ 
+         static std::map<int, std::set<int> > CharacterLexerStyles, StringLexerStyles, PreprocessorLexerStyles, CommentLexerStyles;
+ 

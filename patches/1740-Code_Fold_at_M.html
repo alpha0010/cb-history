@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 1740 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #1740 <small>2006-12-19 08:01:41</small></h3>
+          <h4>mcdave</h4>
+          Code Fold at Marked Line Bug Fix
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="1740-Code_Fold_at_M.patch">1740-Code_Fold_at_M.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Bugfix</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2007-04-06 14:25:46</dd>
+            <dt>Assigned to</dt><dd>killerbot</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mcdave 2006-12-19 11:47:13</div>
+        <div class="panel-body">
+          <p>A nasty search and goto bug occured, this new patch fixes that issue. This patch also fixes the issue mentioned in that forum post killerbot. The issue was regarding the fold and unfold of blocks. This currently works correctly.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mcdave 2006-12-19 09:36:36</div>
+        <div class="panel-body">
+          <p>This patch ensures the when the compiler marks a line as error/warning, or when it searches for something, that it will first unfold all of the parent fold then mark the line.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mcdave 2006-12-19 11:57:24</div>
+        <div class="panel-body">
+          <p>Hey killerbot... what do you think about that request that a user should be able to select which levels should be folded and which ones not (The depth part of it)</p>
+          <p>Makes sense... but hell... will you ever satisfy everybody?</p>
+          <p>We all have different coding styles...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kkez 2006-12-30 16:32:21</div>
+        <div class="panel-body">
+          <p>MMM. Better this way: <a href="http://www.winapizone.net/recursive_unfold_on_error.patch">http://www.winapizone.net/recursive_unfold_on_error.patch</a></p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kkez 2006-12-30 16:30:31</div>
+        <div class="panel-body">
+          <p>Here's the patch before astyle was used.</p>
+          <p>Index: cbeditor.cpp</p>
+          <p>===================================================================</p>
+          <p>--- cbeditor.cpp	(revision 3434)</p>
+          <p>+++ cbeditor.cpp	(working copy)</p>
+          <p>@@ -1467,13 +1467,37 @@</p>
+          <p>void cbEditor::DoFoldBlockFromLine(int line, int fold)</p>
+          <p>{</p>
+          <p>-    m_pControl-&gt;Colourise(0, -1); // the *most* important part!</p>
+          <p>+    /*m_pControl-&gt;Colourise(0, -1); // the *most* important part!</p>
+          <p>int i = line;</p>
+          <p>while (i != 0)</p>
+          <p>{</p>
+          <p>if (DoFoldLine(i, fold))</p>
+          <p>return;</p>
+          <p>--i;</p>
+          <p>+    }*/</p>
+          <p>+</p>
+          <p>+    ConfigManager* mgr = Manager::Get()-&gt;GetConfigManager(_T("editor"));</p>
+          <p>+    if (mgr-&gt;ReadBool(_T("/folding/show_folds"), true)) //Only unfold the marked line if the folds are enabled ... duh</p>
+          <p>+    {</p>
+          <p>+        m_pControl-&gt;Colourise(0, -1); // the *most* important part!</p>
+          <p>+        int level = m_pControl-&gt;GetFoldLevel(line);</p>
+          <p>+        int parent = m_pControl-&gt;GetFoldParent(line);</p>
+          <p>+</p>
+          <p>+        //Check for fold headers</p>
+          <p>+        if ((level &amp; wxSCI_FOLDLEVELHEADERFLAG) &amp;&amp; (wxSCI_FOLDLEVELBASE &lt;= (level &amp; wxSCI_FOLDLEVELNUMBERMASK)))</p>
+          <p>+           parent = line;</p>
+          <p>+        if (parent != -1)</p>
+          <p>+        {</p>
+          <p>+            if (m_pControl-&gt;GetFoldExpanded(parent) == false &amp;&amp; fold == 0)</p>
+          <p>+                m_pControl-&gt;ToggleFold(parent);</p>
+          <p>+            else</p>
+          <p>+            {</p>
+          <p>+                if (m_pControl-&gt;GetFoldExpanded(parent) == true &amp;&amp; fold == 1)</p>
+          <p>+                    m_pControl-&gt;ToggleFold(parent);</p>
+          <p>+                else if (fold == 2)</p>
+          <p>+                    m_pControl-&gt;ToggleFold(parent);</p>
+          <p>+            }</p>
+          <p>+        }</p>
+          <p>}</p>
+          <p>}</p>
+          <p>@@ -1569,8 +1593,23 @@</p>
+          <p>control-&gt;GotoLine(line - onScreen);</p>
+          <p>control-&gt;GotoLine(line + onScreen);</p>
+          <p>}</p>
+          <p>+</p>
+          <p>+    ConfigManager* mgr = Manager::Get()-&gt;GetConfigManager(_T("editor"));</p>
+          <p>+    if (mgr-&gt;ReadBool(_T("/folding/show_folds"), true)) //Only unfold the marked line if the folds are enabled ... duh</p>
+          <p>+    {</p>
+          <p>+        m_pControl-&gt;Colourise(0, -1); // the *most* important part!</p>
+          <p>+</p>
+          <p>+        int parent = m_pControl-&gt;GetFoldParent(line);</p>
+          <p>+        while (parent != -1) //Unfold all the parent folds to ensure that the line is visible correctly</p>
+          <p>+        {</p>
+          <p>+            if (m_pControl-&gt;GetFoldExpanded(parent) == false)</p>
+          <p>+                m_pControl-&gt;ToggleFold(parent);</p>
+          <p>+</p>
+          <p>+            parent = m_pControl-&gt;GetFoldParent(parent);</p>
+          <p>+        }</p>
+          <p>+    }</p>
+          <p>+</p>
+          <p>control-&gt;GotoLine(line);</p>
+          <p>-    UnfoldBlockFromLine(line); // make sure it's visible (not folded)</p>
+          <p>}</p>
+          <p>bool cbEditor::AddBreakpoint(int line, bool notifyDebugger)</p>
+          <p>@@ -1804,7 +1843,23 @@</p>
+          <p>if (line == -1)</p>
+          <p>m_pControl-&gt;MarkerDeleteAll(marker);</p>
+          <p>else</p>
+          <p>+    {</p>
+          <p>+        ConfigManager* mgr = Manager::Get()-&gt;GetConfigManager(_T("editor"));</p>
+          <p>+        if (mgr-&gt;ReadBool(_T("/folding/show_folds"), true)) //Only unfold the marked line if the folds are enabled ... duh</p>
+          <p>+        {</p>
+          <p>+            m_pControl-&gt;Colourise(0, -1); // the *most* important part!</p>
+          <p>+            int parent = m_pControl-&gt;GetFoldParent(line);</p>
+          <p>+            while (parent != -1) //Unfold all the parent folds to ensure that the line is visible correctly</p>
+          <p>+            {</p>
+          <p>+                if (m_pControl-&gt;GetFoldExpanded(parent) == false)</p>
+          <p>+                    m_pControl-&gt;ToggleFold(parent);</p>
+          <p>+</p>
+          <p>+                parent = m_pControl-&gt;GetFoldParent(parent);</p>
+          <p>+            }</p>
+          <p>+        }</p>
+          <p>+</p>
+          <p>m_pControl-&gt;MarkerAdd(line, marker);</p>
+          <p>+    }</p>
+          <p>}</p>
+          <p>void cbEditor::GotoMatchingBrace()</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mcdave 2007-01-04 06:41:09</div>
+        <div class="panel-body">
+          <p>kkez's Version uploaded. Thanks</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mcdave 2007-01-15 05:48:01</div>
+        <div class="panel-body">
+          <p>Testing?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2007-03-10 16:57:39</div>
+        <div class="panel-body">
+          <p>First 2/3 of patch has been applied in modified form.</p>
+          <p>I could not understand the third part [bool cbEditor::AddBreakpoint(int line, bool notifyDebugger)]. In which situation it's useful?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2007-04-06 14:25:46</div>
+        <div class="panel-body">
+          <p>@killerbot</p>
+          <p>I wrote previously that this patch has been reworked and applied. Thus I'm closing this patch report.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,123 @@
+Index: src/plugins/codecompletion/nativeparser.cpp
+===================================================================
+--- src/plugins/codecompletion/nativeparser.cpp	(revision 9271)
++++ src/plugins/codecompletion/nativeparser.cpp	(working copy)
+@@ -2166,13 +2166,71 @@
+         static bool reentry = false;
+         if (reentry)
+             return false;
+-
++        
++        // Check if user set language standard version to use
++        wxString standard;
++        
++        // Global compiler settings are first to search in
++        const wxArrayString& globalCompilerOptions = compiler->GetCompilerOptions();
++        for (wxArrayString::size_type i = 0; i < globalCompilerOptions.Count(); ++i )
++        {
++            if (globalCompilerOptions[i].StartsWith(_T("-std=")))
++            {
++                standard = globalCompilerOptions[i];
++                CCLogger::Get()->DebugLog( F(_T("NativeParser::AddCompilerPredefinedMacrosGCC(): Using language standard found in compiler's [%s] global options: %s"), compiler->GetName().wx_str(), standard.wx_str()) );
++                break;
++            }
++        }
++        
++        if (standard.IsEmpty() && project)
++        {
++            if (standard.IsEmpty())
++            {
++                // Project compiler setting are second
++                const wxArrayString& projectCompilerOptions = project->GetCompilerOptions();
++                for (wxArrayString::size_type i = 0; i < projectCompilerOptions.Count(); ++i)
++                {
++                    if (projectCompilerOptions[i].StartsWith(_T("-std=")))
++                    {
++                        standard = projectCompilerOptions[i];
++                        CCLogger::Get()->DebugLog( F(_T("NativeParser::AddCompilerPredefinedMacrosGCC(): Using language standard found in project's [%s] compiler options: %s"), project->GetTitle().wx_str(), standard.wx_str()) );
++                        break;
++                    }
++                }
++            }
++            
++            // And targets are third in row to look for standard
++            // NOTE: If two targets use different standards, only the one we
++            //       encounter first (eg. c++98) will be used, and any other
++            //       disregarded (even if it would be c++1y)
++            if (standard.IsEmpty())
++            {
++                for (int i = 0; i < project->GetBuildTargetsCount(); ++i)
++                {
++                    ProjectBuildTarget* target = project->GetBuildTarget(i);
++                    const wxArrayString& targetOptions = target->GetCompilerOptions();
++                    for (wxArrayString::size_type j = 0; j < targetOptions.Count(); ++j)
++                    {
++                        if (targetOptions[j].StartsWith(_T("-std=")))
++                        {
++                            standard = targetOptions[j];
++                            CCLogger::Get()->DebugLog( F(_T("NativeParser::AddCompilerPredefinedMacrosGCC(): Using language standard found in target's [%s] compiler options: %s"), target->GetTitle().wx_str(), standard.wx_str()) );
++                            break;
++                        }
++                    }
++                    
++                    if (!standard.IsEmpty())
++                        break;
++                }
++            }
++        }
++        
+ #ifdef __WXMSW__
+-        const wxString args(_T(" -E -dM -x c++ nul"));
++        const wxString args( F(_T(" -E -dM -x c++ %s nul"), standard.wx_str()) );
+ #else
+-        const wxString args(_T(" -E -dM -x c++ /dev/null"));
++        const wxString args( F(_T(" -E -dM -x c++ %s /dev/null"), standard.wx_str()) );
+ #endif
+-
++        
+         wxArrayString output;
+         reentry = true;
+         if ( wxExecute(cpp_compiler + args, output, wxEXEC_SYNC | wxEXEC_NODISABLE) == -1 )
+@@ -2191,39 +2249,9 @@
+         for (size_t i = 0; i < output.Count(); ++i)
+             gccDefs += output[i] + _T("\n");
+     }
+-
+-    static const wxString cxx0xOption(_T("-std=c++0x"));
+-    static const wxString gnu0xOption(_T("-std=gnu++0x"));
+-    bool useCxx0x = false;
+-    if (project)
+-    {
+-        const wxArrayString& options = project->GetCompilerOptions();
+-        if (   options.Index(cxx0xOption) != wxNOT_FOUND
+-            || options.Index(gnu0xOption) != wxNOT_FOUND )
+-        {
+-            useCxx0x = true;
+-        }
+-        else
+-        {
+-            for (int i = 0; i < project->GetBuildTargetsCount(); ++i)
+-            {
+-                ProjectBuildTarget* target = project->GetBuildTarget(i);
+-                const wxArrayString& targetOptions = target->GetCompilerOptions();
+-                if (   targetOptions.Index(cxx0xOption) != wxNOT_FOUND
+-                    || targetOptions.Index(gnu0xOption) != wxNOT_FOUND )
+-                {
+-                    useCxx0x = true;
+-                    break;
+-                }
+-            }
+-        }
+-    }
+-
+-    if (useCxx0x)
+-        defs = gccDefsMap[cpp_compiler] + _T("#define __GXX_EXPERIMENTAL_CXX0X__ 1\n");
+-    else
+-        defs = gccDefsMap[cpp_compiler];
+-
++    
++    defs = gccDefsMap[cpp_compiler];
++    
+     return true;
+ }
+ 

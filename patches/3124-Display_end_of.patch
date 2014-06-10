@@ -1,0 +1,70 @@
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(Revision 6943)
++++ src/src/main.cpp	(Arbeitskopie)
+@@ -1715,11 +1715,12 @@
+ 
+     width[num++] = -1; // main field
+ //    width[num++] = 128; // progress bar
++    dc.GetTextExtent(_(" Windows (CR & LF) "),      &width[num++], &h);
+     dc.GetTextExtent(_(" WINDOWS-1252 "),           &width[num++], &h);
+     dc.GetTextExtent(_(" Line 12345, Column 123 "), &width[num++], &h);
+     dc.GetTextExtent(_(" Overwrite "),              &width[num++], &h);
+     dc.GetTextExtent(_(" Modified "),               &width[num++], &h);
+-    dc.GetTextExtent(_(" Read/Write....."),         &width[num++], &h);
++    dc.GetTextExtent(_(" Read/Write "),             &width[num++], &h);
+     dc.GetTextExtent(_(" name_of_profile "),        &width[num++], &h);
+ 
+     CreateStatusBar(num);
+@@ -1742,9 +1743,17 @@
+         int panel = 0;
+         int pos = ed->GetControl()->GetCurrentPos();
+         wxString msg;
+-        msg.Printf(_("Line %d, Column %d"), ed->GetControl()->GetCurrentLine() + 1, ed->GetControl()->GetColumn(pos) + 1);
+         SetStatusText(ed->GetFilename(), panel++);
++        switch (ed->GetControl()->GetEOLMode())
++        {
++            case wxSCI_EOL_CRLF: msg = _T("Windows (CR & LF)"); break;
++            case wxSCI_EOL_CR: msg = _T("Unix (CR)"); break;
++            case wxSCI_EOL_LF: msg = _T("Mac (LF)"); break;
++            default: break;
++        }
++        SetStatusText(msg, panel++);
+         SetStatusText(ed->GetEncodingName(), panel++);
++        msg.Printf(_("Line %d, Column %d"), ed->GetControl()->GetCurrentLine() + 1, ed->GetControl()->GetColumn(pos) + 1);
+         SetStatusText(msg, panel++);
+         SetStatusText(ed->GetControl()->GetOvertype() ? _("Overwrite") : _("Insert"), panel++);
+         #if wxCHECK_VERSION(2, 9, 0)
+@@ -1768,6 +1777,7 @@
+         SetStatusText(wxEmptyString, panel++);
+         SetStatusText(wxEmptyString, panel++);
+         SetStatusText(wxEmptyString, panel++);
++        SetStatusText(wxEmptyString, panel++);
+         SetStatusText(personality, panel++);
+     }
+ #endif // wxUSE_STATUSBAR
+Index: src/src/resources/main_menu.xrc
+===================================================================
+--- src/src/resources/main_menu.xrc	(Revision 6943)
++++ src/src/resources/main_menu.xrc	(Arbeitskopie)
+@@ -257,17 +257,17 @@
+       <object class="wxMenu" name="idEditEOLMode">
+         <label>&amp;End-of-line mode</label>
+         <object class="wxMenuItem" name="idEditEOLCRLF">
+-          <label>CR &amp;&amp; LF</label>
++          <label>Windows (CR &amp;&amp; LF)</label>
+           <help>End-of-line mode uses carriage return and line feed</help>
+           <radio>1</radio>
+         </object>
+         <object class="wxMenuItem" name="idEditEOLCR">
+-          <label>CR</label>
++          <label>Unix (CR)</label>
+           <help>End-of-line mode uses carriage return only</help>
+           <radio>1</radio>
+         </object>
+         <object class="wxMenuItem" name="idEditEOLLF">
+-          <label>LF</label>
++          <label>Mac (LF)</label>
+           <help>End-of-line mode uses line feed only</help>
+           <radio>1</radio>
+         </object>

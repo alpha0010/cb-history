@@ -1,0 +1,21 @@
+Index: src/plugins/contrib/rndgen/rndgen.cpp
+===================================================================
+--- src/plugins/contrib/rndgen/rndgen.cpp	(revision 9752)
++++ src/plugins/contrib/rndgen/rndgen.cpp	(working copy)
+@@ -12,7 +12,15 @@
+ 
+ #define SCI_SETUNDOCOLLECTION 2012
+ 
+-#if defined(__GNUC__) && defined(__GXX_EXPERIMENTAL_CXX0X__)
++#if defined(__GNUC__) && (__cplusplus >= 201103L)
++  #include <random>
++  inline void ini_random() { };
++	inline unsigned int random()
++	{
++		static std::mt19937 randgen(time(0));
++		return randgen();
++	};
++#elif defined(__GNUC__) && defined(__GXX_EXPERIMENTAL_CXX0X__)
+ 	#include <random>
+     inline void ini_random() { };
+ 	inline unsigned int random()

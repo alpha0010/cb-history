@@ -1,0 +1,133 @@
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 4827)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -296,6 +296,9 @@
+     int m_LastMarginMenuLine;
+     int m_LastDebugLine;
+ 
++    bool mFoldingLimit;
++    int mFoldingLimitLevel;
++
+     wxFontEncoding m_encoding;
+     bool m_useByteOrderMark;
+     int m_byteOrderMarkLength;
+@@ -854,6 +857,10 @@
+         SetEditorTitle(m_Shortname);
+     }
+ 
++    // Folding properties.
++	m_pData->mFoldingLimit = mgr->ReadBool(_T("/folding/limit"), false);
++    m_pData->mFoldingLimitLevel = mgr->ReadInt(_T("/folding/limit_level"), 1);
++
+     // EOL properties
+     m_pData->m_strip_trailing_spaces = mgr->ReadBool(_T("/eol/strip_trailing_spaces"), true);
+     m_pData->m_ensure_final_line_end = mgr->ReadBool(_T("/eol/ensure_final_line_end"), true);
+@@ -1549,27 +1556,31 @@
+         cbAssert(m_pControl2);
+     cbStyledTextCtrl* ctrl = GetControl();
+     int level = ctrl->GetFoldLevel(line);
++
++	// The fold parameter is the type of folding action requested
++	// 0 = Unfold; 1 = Fold; 2 = Toggle folding.
++
++	// Check if the line is a header (fold point).
+     if (level & wxSCI_FOLDLEVELHEADERFLAG)
+     {
+-        bool expand = false;
+-        if (fold == 2) // toggle
+-        {
+-            ctrl->ToggleFold(line);
+-            return true;
+-        }
+-        else
+-            expand = fold == 0;
+-        bool IsCurLineFolded = ctrl->GetFoldExpanded(line);
+-        /* -------------------------------------------------------
+-        *  fold = 0 (Unfold), 1 (fold), 2 (toggle)
+-        *  So check if fold = 0 then GetFoldExpanded(line) = false
+-        *  before toggling it and vice-versa
+-        *  -----------------------------------------------------*/
+-        if ((!IsCurLineFolded && expand) || (IsCurLineFolded && !expand))
+-        {
+-            ctrl->ToggleFold(line);
+-            return true;
+-        }
++    	bool IsExpanded = ctrl->GetFoldExpanded(line);
++
++		// If a fold/unfold request is issued when the block is already
++		// folded/unfolded, ignore the request.
++    	if (fold == 0 && IsExpanded) return true;
++    	if (fold == 1 && !IsExpanded) return true;
++
++    	// Apply the folding level limit only if the current block will be
++    	// folded (that means it's currently expanded), folding level limiter
++    	// must be enabled of course. Unfolding will not be affected.
++    	if (m_pData->mFoldingLimit && IsExpanded)
++    	{
++    		if ((level & wxSCI_FOLDLEVELNUMBERMASK) > (wxSCI_FOLDLEVELBASE + m_pData->mFoldingLimitLevel-1))
++				return false;
++    	}
++
++    	ctrl->ToggleFold(line);
++    	return true;
+     }
+     return false;
+ }
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 4827)
++++ src/sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -162,7 +162,9 @@
+    	XRCCTRL(*this, "chkFoldXml", wxCheckBox)->SetValue(cfg->ReadBool(_T("/folding/fold_xml"), true));
+    	XRCCTRL(*this, "chkUnderlineFoldedLine", wxCheckBox)->SetValue(cfg->ReadBool(_T("/folding/underline_folded_line"), true));
+     XRCCTRL(*this, "lstIndicators", wxChoice)->SetSelection(cfg->ReadInt(_T("/folding/indicator"), 2));
+-
++    XRCCTRL(*this, "chkFoldLimit", wxCheckBox)->SetValue(cfg->ReadBool(_T("/folding/limit"), false));
++    XRCCTRL(*this, "spnFoldLimitLevel", wxSpinCtrl)->SetValue(cfg->ReadInt(_T("/folding/limit_level"), 1));
++    
+ 	//gutter
+     wxColour gutterColour = cfg->ReadColour(_T("/gutter/colour"), *wxLIGHT_GREY);
+     XRCCTRL(*this, "lstGutterMode", wxChoice)->SetSelection(cfg->ReadInt(_T("/gutter/mode"), 0));
+@@ -902,6 +904,8 @@
+         cfg->Write(_T("/folding/fold_xml"), 		    XRCCTRL(*this, "chkFoldXml", wxCheckBox)->GetValue());
+         cfg->Write(_T("/folding/underline_folded_line"), XRCCTRL(*this, "chkUnderlineFoldedLine", wxCheckBox)->GetValue());
+         cfg->Write(_T("/folding/indicator"), 		    XRCCTRL(*this, "lstIndicators", wxChoice)->GetSelection());
++        cfg->Write(_T("/folding/limit"), 				XRCCTRL(*this, "chkFoldLimit", wxCheckBox)->GetValue());
++        cfg->Write(_T("/folding/limit_level"), 		    XRCCTRL(*this, "spnFoldLimitLevel", wxSpinCtrl)->GetValue());
+ 
+         //eol
+         cfg->Write(_T("/show_eol"), 			        XRCCTRL(*this, "chkShowEOL", wxCheckBox)->GetValue());
+Index: src/sdk/resources/editor_configuration.xrc
+===================================================================
+--- src/sdk/resources/editor_configuration.xrc	(revision 4827)
++++ src/sdk/resources/editor_configuration.xrc	(working copy)
+@@ -445,6 +445,28 @@
+ 									<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+ 									<border>5</border>
+ 								</object>
++                                <object class="sizeritem">
++                                    <object class="wxBoxSizer">
++                                        <object class="sizeritem">
++                                            <object class="wxCheckBox" name="chkFoldLimit">
++                                                <label>Folding depth limit:</label>
++                                            </object>
++                                            <flag>wxALL|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++                                            <border>4</border>
++                                        </object>
++                                        <object class="sizeritem">
++                                            <object class="wxSpinCtrl" name="spnFoldLimitLevel">
++                                                <value>0</value>
++                                                <min>1</min>
++                                                <max>20</max>
++                                                <size>50,-1</size>
++                                            </object>
++                                            <flag>wxLEFT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++                                            <border>10</border>
++                                        </object>
++                                    </object>
++                                    <flag>wxTOP|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                </object>
+ 							</object>
+ 						</object>
+ 						<label>Folding</label>

@@ -1,0 +1,53 @@
+Index: AutoVersioning.cpp
+===================================================================
+--- AutoVersioning.cpp	(revision 7386)
++++ AutoVersioning.cpp	(working copy)
+@@ -759,18 +759,32 @@
+             {
+                 ++GetVersionState().Values.Build;
+             }
+-            else if(GetVersionState().Values.Build >= GetConfig().Scheme.BuildMax)
++            else if(!GetConfig().Settings.Autoincrement && (GetVersionState().Values.Build >= GetConfig().Scheme.BuildMax))
+             {
+                 GetVersionState().Values.Build = 0;
+             }
+-            else
++            else if(!GetConfig().Settings.Autoincrement)
+             {
+                 ++GetVersionState().Values.Build;
+             }
++
+             if(GetConfig().Settings.Autoincrement)
+             {
++                if((GetConfig().Scheme.BuildMax != 0) && (GetVersionState().Values.Build >= GetConfig().Scheme.BuildMax))
++                {
++                    GetVersionState().Values.Build = 0;
++                    if(GetConfig().Scheme.BuildTimesToIncrementMinor == 0)
++                    {
++                        ++GetVersionState().Values.Minor;
++                    }
++                }
++                else if(GetConfig().Scheme.BuildMax!=0)
++                {
++                    ++GetVersionState().Values.Build;
++                }
++
+                 ++GetVersionState().BuildHistory;
+-                if(GetVersionState().BuildHistory >= GetConfig().Scheme.BuildTimesToIncrementMinor)
++                if((GetConfig().Scheme.BuildTimesToIncrementMinor != 0) && (GetVersionState().BuildHistory >= GetConfig().Scheme.BuildTimesToIncrementMinor))
+                 {
+                     GetVersionState().BuildHistory = 0;
+                     ++GetVersionState().Values.Minor;
+Index: avVersionEditorDlg.cpp
+===================================================================
+--- avVersionEditorDlg.cpp	(revision 7386)
++++ avVersionEditorDlg.cpp	(working copy)
+@@ -756,7 +756,7 @@
+             else if(l_FocusedControl->GetName() == _T("ID_BUILDTIMES_TEXT"))
+             {
+                 ifBlank = _T("100");
+-                ifZero = _T("1");
++                ifZero = _T("0");
+             }
+             else if(l_FocusedControl->GetName() == _T("ID_REVISIONRANDOM_TEXT"))
+             {

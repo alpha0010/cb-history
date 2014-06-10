@@ -1,0 +1,42 @@
+Index: wxwidgets/properties/wxscolourproperty.cpp
+===================================================================
+--- wxwidgets/properties/wxscolourproperty.cpp	(revision 3435)
++++ wxwidgets/properties/wxscolourproperty.cpp	(working copy)
+@@ -128,7 +128,11 @@
+         wxSYS_COLOUR_MENUBAR
+     };
+ 
++#if defined(wxPG_VERSION) && wxPG_VERSION > 1099
++    WX_PG_IMPLEMENT_PROPERTY_CLASS(wxsMyColourProperty,wxEnumProperty,wxColourPropertyValue,const wxColourPropertyValue&,Choice)
++#else
+     WX_PG_IMPLEMENT_PROPERTY_CLASS(wxsMyColourProperty,wxColourPropertyValue,const wxColourPropertyValue&,Choice)
++#endif
+ 
+     wxsMyColourPropertyClass::wxsMyColourPropertyClass( const wxString& label, const wxString& name,
+         const wxColourPropertyValue& value )
+@@ -181,7 +185,12 @@
+                 (int)m_value.m_colour.Red(),(int)m_value.m_colour.Green(),(int)m_value.m_colour.Blue());
+             return temp;
+         }
++
++#if defined(wxPG_VERSION) && wxPG_VERSION > 1099
++        return m_choices.GetLabel(m_index);
++#else
+         return m_constants->GetLabel(m_index);
++#endif
+     }
+ 
+     wxSize wxsMyColourPropertyClass::GetImageSize() const
+Index: wxSmith.cbp
+===================================================================
+--- wxSmith.cbp	(revision 3435)
++++ wxSmith.cbp	(working copy)
+@@ -47,6 +47,8 @@
+ 			<Add option="-DWX_PRECOMP" />
+ 			<Add option="-DBUILDING_PLUGIN" />
+ 			<Add option="-DwxUSE_UNICODE" />
++			<Add option="-DWXMAKINGLIB_PROPGRID" />
++			<Add option="-DwxPG_COMPATIBILITY_1_0_0" />
+ 			<Add directory="$(#WX.lib)\gcc_dll$(WX_CFG)\msw$(WX_SUFFIX)" />
+ 			<Add directory="$(#CB)\sdk" />
+ 			<Add directory="$(#CB)\sdk\wxscintilla\include" />

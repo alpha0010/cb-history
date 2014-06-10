@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 1125 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #1125 <small>2006-06-12 18:10:21</small></h3>
+          <h4>kkez</h4>
+          Replace in files
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="1125-Replace_in_fil.patch">1125-Replace_in_fil.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::FeatureAdd</dd>
+            <dt>Status</dt><dd>Accepted</dd>
+            <dt>Close date</dt><dd>2006-06-14 11:11:17</dd>
+            <dt>Assigned to</dt><dd></dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">kkez 2006-06-12 18:26:30</div>
+        <div class="panel-body">
+          <p>It adds and modify:</p>
+          <p>1) search menu item "Replace in files" under "Replace"</p>
+          <p>2) another confirmation dialog with more option ("replace all occurrence in a file" and "skip a file"), so another .xrc and another class under confirmreplacedlg.cpp/.h</p>
+          <p>3) the .xrc of the replace dialog, modified with notebook and "replace in files" panel; modified replacedlg.cpp/.h to handle both panels</p>
+          <p>4) the "replace in files" function</p>
+          <p>5) added the CodeBlocks.cbp file too since i've added a .xrc file.</p>
+          <p>6) fixed a little typo in the confirm_replace.xrc (occurence)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kkez 2006-06-13 08:52:55</div>
+        <div class="panel-body">
+          <p>This patch was breaking the "Find in files" feature, because i was setting the data-&gt;start variable to 0 instead of the return value of GetCurrentPos(). But this shouldn't happen, because the "Find in files" search should search in the entire scope and don't do any wrap around.</p>
+          <p>Both Replace and Find does the wrap around, but FindInFiles shouldn't use the Find function since it wraps around, but use its own algoritm, just like i did in the ReplaceInFiles function.</p>
+          <p>By now i just added a bool to the CalculateFindReplaceStartEnd() function to set data-&gt;start to 0 when ReplaceInFiles, or GetCurrentPos() in any other case.</p>
+          <p>I've also splitted the patch to make it more readable. The CodeBlocks.cbp path now it's in this file:</p>
+          <p>The other part is the one i'm submitting now.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kkez 2006-06-13 08:54:40</div>
+        <div class="panel-body">
+          <p>Uh, forgot to add the patch part 1 link: <a href="http://www.winapizone.net/replaceinfiles.part1.patch">http://www.winapizone.net/replaceinfiles.part1.patch</a></p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kkez 2006-06-13 09:45:58</div>
+        <div class="panel-body">
+          <p>I've now removed the ConfirmReplaceMultipleDlg class and merged the new buttons events with the existing ConfirmReplaceDlg class. Sorry for all these updates :)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kkez 2006-06-13 10:38:09</div>
+        <div class="panel-body">
+          <p>Another update :)</p>
+          <p>I forgot to add the new xrc file and the "reload file" dialog now uses the correct "confirm replace" dialog. I don't quite understand the implicit conversion between the wxString "File has changed from the last..." and the bool in the ConfirmReplace constructor. Luckily i've spotted it immediately :)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kkez 2006-06-13 16:08:37</div>
+        <div class="panel-body">
+          <p>Now i close the file when no replacements took place only if i opened the file in the editor (because it wasn't already open), and i replaced the loop to check if the file is already open with IsOpen. Now this patch should really be ok.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2006-06-14 11:11:17</div>
+        <div class="panel-body">
+          <p>Thanks for the patch.</p>
+          <p>I still had to fix/improve some things but it's nice that you provided the base code :)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

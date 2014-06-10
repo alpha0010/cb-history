@@ -1,0 +1,66 @@
+Index: include/projectmanager.h
+===================================================================
+--- include/projectmanager.h	(revision 6404)
++++ include/projectmanager.h	(working copy)
+@@ -250,11 +250,12 @@
+         int AskForBuildTargetIndex(cbProject* project = 0L);
+         /** Utility function. Displays a multiple selection list of a project's
+           * build targets to choose from.
++          * @param filename The name of the file which will be added to targets.
+           * @param project The project to use. If NULL, the active project is used.
+           * @return An integer array containing the selected build targets indices.
+           * This array will be empty if no build targets were selected.
+           */
+-        wxArrayInt AskForMultiBuildTargetIndex(cbProject* project = 0L);
++        wxArrayInt AskForMultiBuildTargetIndex(const wxString &filename, cbProject* project = 0L);
+         /** Load a workspace.
+           * @param filename The workspace to open.
+           * @return True if the workspace loads succefully, false if not.
+Index: sdk/projectmanager.cpp
+===================================================================
+--- sdk/projectmanager.cpp	(revision 6404)
++++ sdk/projectmanager.cpp	(working copy)
+@@ -1272,6 +1272,9 @@
+     if (!project)
+         return 0;
+ 
++    wxFileName fname(filename);
++
++
+     // do we have to ask for target?
+     if (targets.GetCount() == 0)
+     {
+@@ -1281,14 +1284,13 @@
+         // else display multiple target selection dialog
+         else
+         {
+-            targets = AskForMultiBuildTargetIndex(project);
++            targets = AskForMultiBuildTargetIndex(fname.GetFullName(), project);
+             if (targets.GetCount() == 0)
+                 return 0;
+         }
+     }
+ 
+     // make sure filename is relative to project path
+-    wxFileName fname(filename);
+     fname.Normalize(wxPATH_NORM_DOTS | wxPATH_NORM_ABSOLUTE, project->GetBasePath());
+     fname.MakeRelativeTo(project->GetBasePath());
+ 
+@@ -1399,7 +1401,7 @@
+     return target;
+ }
+ 
+-wxArrayInt ProjectManager::AskForMultiBuildTargetIndex(cbProject* project)
++wxArrayInt ProjectManager::AskForMultiBuildTargetIndex(const wxString &filename, cbProject* project)
+ {
+     wxArrayInt indices;
+     cbProject* prj = project;
+@@ -1414,7 +1416,7 @@
+     for (int i = 0; i < count; ++i)
+         array.Add(prj->GetBuildTarget(i)->GetTitle());
+ 
+-    MultiSelectDlg dlg(0, array, true, _("Select the targets this file should belong to:"));
++    MultiSelectDlg dlg(0, array, true, _("Select the targets this file (") + filename + _(") should belong to:"));
+     PlaceWindow(&dlg);
+     if (dlg.ShowModal() == wxID_OK)
+         indices = dlg.GetSelectedIndices();

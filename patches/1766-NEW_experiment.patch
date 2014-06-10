@@ -1,0 +1,128 @@
+Index: src/plugins/contrib/wxSmith/wxwidgets/wxwidgetsguiconfigpanel.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/wxwidgetsguiconfigpanel.cpp	(revision 3526)
++++ src/plugins/contrib/wxSmith/wxwidgets/wxwidgetsguiconfigpanel.cpp	(working copy)
+@@ -128,7 +128,11 @@
+         _("XRC files (*.xrc)|*.xrc|"
+           "Zipped files (*.zip)|*.zip|"
+           "All files (*)|*"),
+-        wxOPEN|wxFILE_MUST_EXIST|wxHIDE_READONLY);
++        wxOPEN|wxFILE_MUST_EXIST
++#if (WXWIN_COMPATIBILITY_2_4)
++        |wxHIDE_READONLY
++#endif
++        );
+ 
+     if ( !FileName.empty() )
+     {
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsnotebook.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsnotebook.cpp	(revision 3526)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsnotebook.cpp	(working copy)
+@@ -21,6 +21,10 @@
+ * $HeadURL$
+ */
+ 
++#ifndef CB_PRECOMP
++    #include <wx/notebook.h>
++#endif
++
+ #include "wxsnotebook.h"
+ #include "../../wxsadvqppchild.h"
+ 
+Index: src/plugins/contrib/wxSmith/wxwidgets/wxsevents.h
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/wxsevents.h	(revision 3526)
++++ src/plugins/contrib/wxSmith/wxwidgets/wxsevents.h	(working copy)
+@@ -1,6 +1,10 @@
+ #ifndef WXSEVENTS_H
+ #define WXSEVENTS_H
+ 
++#ifndef WX_PRECOMP
++    #include <wx/arrstr.h>
++#endif
++
+ #include <tinyxml/tinyxml.h>
+ 
+ #include "../wxscodinglang.h"
+Index: src/plugins/contrib/wxSmith/wxwidgets/wxsstyle.h
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/wxsstyle.h	(revision 3526)
++++ src/plugins/contrib/wxSmith/wxwidgets/wxsstyle.h	(working copy)
+@@ -1,6 +1,10 @@
+ #ifndef __WXSSTYLE_H
+ #define __WXSSTYLE_H
+ 
++#ifndef WX_PRECOMP
++    #include <wx/arrstr.h>
++#endif
++
+ #include "../wxscodinglang.h"
+ #include <wx/dynarray.h>
+ 
+Index: src/plugins/contrib/wxSmith/wxwidgets/properties/wxsfontproperty.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/properties/wxsfontproperty.cpp	(revision 3526)
++++ src/plugins/contrib/wxSmith/wxwidgets/properties/wxsfontproperty.cpp	(working copy)
+@@ -39,10 +39,15 @@
+     wxString Face;
+     wxFontEnumerator Enumer;
+     Enumer.EnumerateFacenames();
++#if wxCHECK_VERSION(2, 8, 0)
++        wxArrayString faceNames = Enumer.GetFacenames();
++#else
++        wxArrayString& faceNames = *Enumer.GetFacenames();
++#endif
+     size_t Count = Faces.Count();
+     for ( size_t i = 0; i<Count; i++ )
+     {
+-        if ( Enumer.GetFacenames()->Index(Faces[i]) != wxNOT_FOUND )
++        if ( faceNames.Index(Faces[i]) != wxNOT_FOUND )
+         {
+             Face = Faces[i];
+             break;
+Index: src/plugins/contrib/wxSmith/wxwidgets/properties/wxsarraystringcheckproperty.h
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/properties/wxsarraystringcheckproperty.h	(revision 3526)
++++ src/plugins/contrib/wxSmith/wxwidgets/properties/wxsarraystringcheckproperty.h	(working copy)
+@@ -3,7 +3,11 @@
+ 
+ #include "../../properties/wxsproperties.h"
+ 
+-WX_DEFINE_ARRAY(bool,wxArrayBool);
++#if wxCHECK_VERSION(2, 8, 0)
++    WX_DEFINE_ARRAY_INT(bool,wxArrayBool);
++#else
++    WX_DEFINE_ARRAY(bool,wxArrayBool);
++#endif
+ 
+ /** \brief Property for editing arrays of strings with checked option
+  *
+Index: src/plugins/contrib/wxSmith/properties/wxsarraystringeditordlg.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/properties/wxsarraystringeditordlg.cpp	(revision 3526)
++++ src/plugins/contrib/wxSmith/properties/wxsarraystringeditordlg.cpp	(working copy)
+@@ -88,3 +88,9 @@
+ 
+     EndModal(wxID_OK);
+ }
++#if wxCHECK_VERSION(2, 8, 0)
++void wxsArrayStringEditorDlg::OnCancel(wxCommandEvent& event)
++{
++    EndModal(wxID_CANCEL);
++}
++#endif
+Index: src/plugins/contrib/wxSmith/properties/wxsarraystringeditordlg.h
+===================================================================
+--- src/plugins/contrib/wxSmith/properties/wxsarraystringeditordlg.h	(revision 3526)
++++ src/plugins/contrib/wxSmith/properties/wxsarraystringeditordlg.h	(working copy)
+@@ -27,6 +27,9 @@
+ 
+ 		//(*Handlers(wxsArrayStringEditorDlg)
+ 		void OnOK(wxCommandEvent& event);
++#if wxCHECK_VERSION(2, 8, 0)
++        void wxsArrayStringEditorDlg::OnCancel(wxCommandEvent& event);
++#endif
+ 		//*)
+ 
+ 		//(*Declarations(wxsArrayStringEditorDlg)

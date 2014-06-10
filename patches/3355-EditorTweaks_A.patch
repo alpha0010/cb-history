@@ -1,0 +1,206 @@
+Index: src/plugins/contrib/EditorTweaks/EditorTweaks.cpp
+===================================================================
+--- src/plugins/contrib/EditorTweaks/EditorTweaks.cpp	(revision 8526)
++++ src/plugins/contrib/EditorTweaks/EditorTweaks.cpp	(working copy)
+@@ -40,34 +40,35 @@
+ 
+ }
+ 
+-int id_et= wxNewId();
+-int id_et_WordWrap= wxNewId();
+-int id_et_ShowLineNumbers= wxNewId();
+-int id_et_TabChar = wxNewId();
+-int id_et_TabIndent = wxNewId();
+-int id_et_TabSize2 = wxNewId();
+-int id_et_TabSize4 = wxNewId();
+-int id_et_TabSize6 = wxNewId();
+-int id_et_TabSize8 = wxNewId();
+-int id_et_ShowEOL = wxNewId();
++int id_et                     = wxNewId();
++int id_et_WordWrap            = wxNewId();
++int id_et_ShowLineNumbers     = wxNewId();
++int id_et_TabChar             = wxNewId();
++int id_et_TabIndent           = wxNewId();
++int id_et_TabSize2            = wxNewId();
++int id_et_TabSize4            = wxNewId();
++int id_et_TabSize6            = wxNewId();
++int id_et_TabSize8            = wxNewId();
++int id_et_ShowEOL             = wxNewId();
+ int id_et_StripTrailingBlanks = wxNewId();
+ int id_et_EnsureConsistentEOL = wxNewId();
+-int id_et_EOLCRLF = wxNewId();
+-int id_et_EOLCR = wxNewId();
+-int id_et_EOLLF = wxNewId();
+-int id_et_Fold1= wxNewId();
+-int id_et_Fold2= wxNewId();
+-int id_et_Fold3= wxNewId();
+-int id_et_Fold4= wxNewId();
+-int id_et_Fold5= wxNewId();
+-int id_et_Unfold1= wxNewId();
+-int id_et_Unfold2= wxNewId();
+-int id_et_Unfold3= wxNewId();
+-int id_et_Unfold4= wxNewId();
+-int id_et_Unfold5= wxNewId();
+-int id_et_align_others= wxNewId();
+-int id_et_SuppressInsertKey= wxNewId();
+-int id_et_ConvertBraces= wxNewId();
++int id_et_EOLCRLF             = wxNewId();
++int id_et_EOLCR               = wxNewId();
++int id_et_EOLLF               = wxNewId();
++int id_et_Fold1               = wxNewId();
++int id_et_Fold2               = wxNewId();
++int id_et_Fold3               = wxNewId();
++int id_et_Fold4               = wxNewId();
++int id_et_Fold5               = wxNewId();
++int id_et_Unfold1             = wxNewId();
++int id_et_Unfold2             = wxNewId();
++int id_et_Unfold3             = wxNewId();
++int id_et_Unfold4             = wxNewId();
++int id_et_Unfold5             = wxNewId();
++int id_et_align_others        = wxNewId();
++int id_et_align_auto          = wxNewId();
++int id_et_SuppressInsertKey   = wxNewId();
++int id_et_ConvertBraces       = wxNewId();
+ 
+ // events handling
+ BEGIN_EVENT_TABLE(EditorTweaks, cbPlugin)
+@@ -114,7 +116,8 @@
+ 
+     EVT_MENU(id_et_SuppressInsertKey, EditorTweaks::OnSuppressInsert)
+     EVT_MENU(id_et_ConvertBraces, EditorTweaks::OnConvertBraces)
+     EVT_MENU(id_et_align_others, EditorTweaks::OnAlignOthers)
++    EVT_MENU(id_et_align_auto, EditorTweaks::OnAlignAuto)
+ END_EVENT_TABLE()
+ 
+ // constructor
+@@ -573,14 +592,15 @@
+     for ( unsigned int i = 0; i < AlignerMenuEntries.size() ; i++ )
+         alignerMenu->Append(AlignerMenuEntries[i].id, AlignerMenuEntries[i].MenuName + _T("\t")  + _T("[") + AlignerMenuEntries[i].ArgumentString + _T("]"));
+     alignerMenu->AppendSeparator();
+-    alignerMenu->Append(id_et_align_others, _T("more ..."));
++    alignerMenu->Append(id_et_align_auto,   _T("Auto"));
++    alignerMenu->Append(id_et_align_others, _T("More ..."));
+ 
+     // attach aligner menu
+     menu->AppendSeparator();
+     menu->Append(wxID_ANY, _T("Aligner"), alignerMenu);
+ 
+     return; // DISABLED ALL OF THE STUFF BELOW (IT IS ALREADY IN THE MAIN MENU BAR)
+-
++#if 0
+     // build "editor tweaks" menu
+     wxMenu *submenu=new wxMenu(); //_("Editor Tweaks")
+ 
+@@ -642,7 +662,7 @@
+     submenu->Append( id_et_EnsureConsistentEOL, _( "Make EOLs Consistent Now" ), _( "Convert End-of-Line Characters to the Active Setting" ) );
+ 
+     menu->Append(wxID_ANY, _T("Editor Tweaks"), submenu);
+-
++#endif
+ }
+ 
+ void EditorTweaks::OnWordWrap(wxCommandEvent &/*event*/)
+@@ -945,6 +965,86 @@
+     }
+ }
+ 
++void EditorTweaks::OnAlignAuto(wxCommandEvent& WXUNUSED(event))
++{
++    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
++    if (!ed)
++        return;
++    cbStyledTextCtrl* stc = ed->GetControl();
++    if (!stc)
++        return;
++    int line_start = wxSCI_INVALID_POSITION;
++    int line_end   = wxSCI_INVALID_POSITION;
++    if (!GetSelectionLines(line_start, line_end))
++        return;
++    wxArrayString lines;
++    for (int i = line_start; i <= line_end; ++i)
++        lines.Add(stc->GetLine(i));
++    if (lines.GetCount() < 2)
++        return;
++    int lexer = stc->GetLexer();
++    wxArrayString out;
++    for (size_t i = 0; i < lines.GetCount(); ++i)
++    {
++        lines[i].Replace(wxT("\t"), wxT(" "));
++        // buffer assignment operators and commas in C++
++        if (lexer == wxSCI_LEX_CPP)
++        {
++            const wxString op = wxT("=<>!+-*/%&^| "); // do not split compound operators
++            for (int j = lines[i].Length() - 2; j >= 0; --j)
++            {
++                if (   lines[i][j] == wxT(',')
++                    || (lines[i][j] == wxT('=') && lines[i][j + 1] != wxT('='))
++                    || (lines[i][j + 1] == wxT('=') && op.Find(lines[i][j]) == wxNOT_FOUND) )
++                {
++                    lines[i].insert(j + 1, wxT(' '));
++                }
++            }
++        }
++        // initialize output strings with their current indentation
++        out.Add(ed->GetLineIndentString(line_start + i));
++    }
++    // loop through number of columns
++    size_t numCols = 1;
++    for (size_t i = 0; i < numCols; ++i)
++    {
++        // add the next token
++        for (size_t j = 0; j < lines.GetCount(); ++j)
++        {
++            wxArrayString lnParts = GetArrayFromString(lines[j], wxT(" "));
++            if (i < lnParts.GetCount())
++                out[j].Append(lnParts[i]);
++            // set actual number of columns
++            if (lnParts.GetCount() > numCols)
++                numCols = lnParts.GetCount();
++        }
++        // find the column size
++        size_t colPos = 0;
++        for (size_t j = 0; j < out.GetCount(); ++j)
++        {
++            if (out[j].Length() > colPos)
++                colPos = out[j].Length();
++        }
++        // buffer output lines to column size + 1
++        for (size_t j = 0; j < out.GetCount(); ++j)
++        {
++            while (out[j].Length() <= colPos)
++                out[j].Append(wxT(' '));
++        }
++    }
++    // replace only the lines that have been modified
++    stc->BeginUndoAction();
++    for (size_t i = 0; i < out.GetCount(); ++i)
++    {
++        stc->SetSelectionVoid(stc->PositionFromLine(line_start + i),
++                              stc->GetLineEndPosition(line_start + i));
++        if (stc->GetSelectedText() != out[i].Trim())
++            stc->ReplaceSelection(out[i]);
++    }
++    stc->LineEnd(); // remove selection (if last line was not replaced)
++    stc->EndUndoAction();
++}
++
+ void EditorTweaks::AlignToString(const wxString AlignmentString)
+ {
+     cbStyledTextCtrl* control = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor()->GetControl();
+Index: src/plugins/contrib/EditorTweaks/EditorTweaks.h
+===================================================================
+--- src/plugins/contrib/EditorTweaks/EditorTweaks.h	(revision 8526)
++++ src/plugins/contrib/EditorTweaks/EditorTweaks.h	(working copy)
+@@ -130,11 +130,12 @@
+     private:
+ 		void OnAlign(wxCommandEvent& event);
+ 		void OnAlignOthers(wxCommandEvent& event);
++        void OnAlignAuto(wxCommandEvent& event);
+ 		void OnSuppressInsert(wxCommandEvent& event);
+ 		void OnConvertBraces(wxCommandEvent& event);
+ 		void AlignToString(const wxString AlignmentString);
+ 		wxString GetPadding(const wxString& Padding, const int Count);
+ 		bool GetSelectionLines(int& LineStart, int& LineEnd);
+ 
+ 		std::vector<AlignerMenuEntry> AlignerMenuEntries;
+ 

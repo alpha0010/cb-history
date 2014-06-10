@@ -1,0 +1,288 @@
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 3103)
++++ src/sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -127,7 +127,6 @@
+    	XRCCTRL(*this, "spnTabSize", wxSpinCtrl)->SetValue(cfg->ReadInt(_T("/tab_size"), 4));
+    	XRCCTRL(*this, "cmbViewWS", wxComboBox)->SetSelection(cfg->ReadInt(_T("/view_whitespace"), 0));
+    	XRCCTRL(*this, "rbTabText", wxRadioBox)->SetSelection(cfg->ReadBool(_T("/tab_text_relative"), true) ? 1 : 0);
+-   	XRCCTRL(*this, "chkAutoWrapSearch", wxCheckBox)->SetValue(cfg->ReadBool(_T("/auto_wrap_search"), true));
+ 
+    	// end-of-line
+ // NOTE: a same block of code is in cbeditor.cpp (CreateEditor)
+@@ -841,7 +840,6 @@
+         cfg->Write(_T("/tab_size"),             XRCCTRL(*this, "spnTabSize", wxSpinCtrl)->GetValue());
+         cfg->Write(_T("/view_whitespace"),      XRCCTRL(*this, "cmbViewWS", wxComboBox)->GetSelection());
+         cfg->Write(_T("/tab_text_relative"),    XRCCTRL(*this, "rbTabText", wxRadioBox)->GetSelection() ? true : false);
+-        cfg->Write(_T("/auto_wrap_search"),     XRCCTRL(*this, "chkAutoWrapSearch", wxCheckBox)->GetValue());
+ 
+         //caret
+         cfg->Write(_T("/caret/width"), XRCCTRL(*this, "spnCaretWidth", wxSpinCtrl)->GetValue());
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(revision 3103)
++++ src/sdk/editormanager.cpp	(working copy)
+@@ -97,6 +97,8 @@
+     bool NewSearch;     //!< only true when a new search has been started
+     int SearchInSelectionStart; //!< keep track of the start of a 'search' selection
+     int SearchInSelectionEnd;  //!< keep track of the end of a 'search' selection
++    bool autoWrapSearch;
++    bool findUsesSelectedText;
+ };
+ 
+ static const int idNBTabSplitHorz = wxNewId();
+@@ -1252,6 +1254,8 @@
+     m_LastFindReplaceData->startWord = dlg->GetStartWord();
+     m_LastFindReplaceData->matchCase = dlg->GetMatchCase();
+     m_LastFindReplaceData->regEx = dlg->GetRegEx();
++    m_LastFindReplaceData->autoWrapSearch = dlg->GetAutoWrapSearch();
++    m_LastFindReplaceData->findUsesSelectedText = dlg->GetFindUsesSelectedText();
+     m_LastFindReplaceData->directionDown = dlg->GetDirection() == 1;
+     m_LastFindReplaceData->originEntireScope = dlg->GetOrigin() == 1;
+     m_LastFindReplaceData->scope = dlg->GetScope();
+@@ -1421,7 +1425,7 @@
+                 else
+                     msg = _("Text not found.\nSearch from the end of the document?");
+ 
+-                bool auto_wrap_around = Manager::Get()->GetConfigManager(_T("editor"))->ReadBool(_T("/auto_wrap_search"), true);
++                bool auto_wrap_around = data->autoWrapSearch;
+                 if (auto_wrap_around)
+                     wxBell();
+                 if (auto_wrap_around || cbMessageBox(msg, _("Result"), wxOK | wxCANCEL | wxICON_QUESTION) == wxID_OK)
+@@ -1892,7 +1896,7 @@
+                         msg = _("Text not found.\nSearch from the end of the selection?");
+                 }
+ 
+-                bool auto_wrap_around = Manager::Get()->GetConfigManager(_T("editor"))->ReadBool(_T("/auto_wrap_search"), true);
++                bool auto_wrap_around = data->autoWrapSearch;
+                 if (auto_wrap_around)
+                     wxBell();
+                 if (auto_wrap_around || cbMessageBox(msg, _("Result"), wxOK | wxCANCEL | wxICON_QUESTION) == wxID_OK)
+@@ -2175,11 +2179,23 @@
+     if(!data->findInFiles)
+     {
+         wxString phraseAtCursor = control->GetSelectedText();
+-        // NOTE (mandrav): it is not intuitive to change the search text
+-        //                  just because there's a selection present...
+-        // change findText to selected text (if any text is selected and no search text was set before)
+-        if (!phraseAtCursor.IsEmpty() && data->findText.IsEmpty())
+-            data->findText = phraseAtCursor;
++
++        if ( not data->findUsesSelectedText )
++        {   // The mandrav find behavior
++            // change findText to selected text (if any text is selected and no search text was set before)
++            if (!phraseAtCursor.IsEmpty() && data->findText.IsEmpty())
++                data->findText = phraseAtCursor;
++        }
++        else
++        {   // The tiwag find behavior
++            // change findText to selected text (if any text is selected)
++            if (!phraseAtCursor.IsEmpty())
++            {
++                data->findText = phraseAtCursor;
++                data->originEntireScope = false;  //search from cursor
++                data->scope = 0; // global ("selected text" is useful only from Find Dialog)
++            }
++        }
+     }
+ 
+     data->directionDown = goingDown;
+Index: src/sdk/finddlg.cpp
+===================================================================
+--- src/sdk/finddlg.cpp	(revision 3103)
++++ src/sdk/finddlg.cpp	(working copy)
+@@ -82,6 +82,9 @@
+ 	XRCCTRL(*this, "chkStartWord1", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/start_word1"), false));
+ 	XRCCTRL(*this, "chkMatchCase1", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/match_case1"), false));
+ 	XRCCTRL(*this, "chkRegEx1", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/regex1"), false));
++	XRCCTRL(*this, "chkAutoWrapSearch", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/auto_wrap_search"), true));
++	XRCCTRL(*this, "chkFindUsesSelectedText", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/findUsesSelectedText"), false));
++
+ 	XRCCTRL(*this, "rbDirection", wxRadioBox)->SetSelection(cfg->ReadInt(CONF_GROUP _T("/direction"), 1));
+ 	XRCCTRL(*this, "rbDirection", wxRadioBox)->Enable(!XRCCTRL(*this, "chkRegEx1", wxCheckBox)->GetValue()); // if regex, only forward searches
+ 	XRCCTRL(*this, "rbOrigin", wxRadioBox)->SetSelection(cfg->ReadInt(CONF_GROUP _T("/origin"), 0));
+@@ -162,6 +165,9 @@
+         cfg->Write(CONF_GROUP _T("/start_word1"), XRCCTRL(*this, "chkStartWord1", wxCheckBox)->GetValue());
+         cfg->Write(CONF_GROUP _T("/match_case1"), XRCCTRL(*this, "chkMatchCase1", wxCheckBox)->GetValue());
+         cfg->Write(CONF_GROUP _T("/regex1"), XRCCTRL(*this, "chkRegEx1", wxCheckBox)->GetValue());
++        cfg->Write(CONF_GROUP _T("/auto_wrap_search"), XRCCTRL(*this, "chkAutoWrapSearch", wxCheckBox)->GetValue());
++        cfg->Write(CONF_GROUP _T("/findUsesSelectedText"), XRCCTRL(*this, "chkFindUsesSelectedText", wxCheckBox)->GetValue());
++
+         cfg->Write(CONF_GROUP _T("/direction"), XRCCTRL(*this, "rbDirection", wxRadioBox)->GetSelection());
+         cfg->Write(CONF_GROUP _T("/origin"), XRCCTRL(*this, "rbOrigin", wxRadioBox)->GetSelection());
+ 	}
+@@ -227,7 +233,22 @@
+ 	else
+ 		return XRCCTRL(*this, "chkRegEx1", wxCheckBox)->GetValue();
+ }
++bool FindDlg::GetAutoWrapSearch() const
++{
++	if (IsFindInFiles())
++		return XRCCTRL(*this, "chkAutoWrapSearch", wxCheckBox)->GetValue();
++	else
++		return XRCCTRL(*this, "chkAutoWrapSearch", wxCheckBox)->GetValue();
++}
+ 
++bool FindDlg::GetFindUsesSelectedText() const
++{
++	if (IsFindInFiles())
++		return XRCCTRL(*this, "chkFindUsesSelectedText", wxCheckBox)->GetValue();
++	else
++		return XRCCTRL(*this, "chkFindUsesSelectedText", wxCheckBox)->GetValue();
++}
++
+ int FindDlg::GetDirection() const
+ {
+ 	if (IsFindInFiles())
+Index: src/sdk/finddlg.h
+===================================================================
+--- src/sdk/finddlg.h	(revision 3103)
++++ src/sdk/finddlg.h	(working copy)
+@@ -20,6 +20,8 @@
+ 		bool GetStartWord() const;
+ 		bool GetMatchCase() const;
+ 		bool GetRegEx() const;
++		bool GetAutoWrapSearch() const;
++		bool GetFindUsesSelectedText() const;
+ 		int GetDirection() const;
+ 		int GetOrigin() const;
+ 		int GetScope() const;
+Index: src/sdk/findreplacebase.h
+===================================================================
+--- src/sdk/findreplacebase.h	(revision 3103)
++++ src/sdk/findreplacebase.h	(working copy)
+@@ -19,6 +19,8 @@
+ 		virtual bool GetStartWord() const = 0;
+ 		virtual bool GetMatchCase() const = 0;
+ 		virtual bool GetRegEx() const = 0;
++		virtual bool GetAutoWrapSearch() const = 0;
++		virtual bool GetFindUsesSelectedText() const = 0;
+ 		virtual int GetDirection() const = 0;
+ 		virtual int GetOrigin() const = 0;
+ 		virtual int GetScope() const = 0;
+Index: src/sdk/replacedlg.cpp
+===================================================================
+--- src/sdk/replacedlg.cpp	(revision 3103)
++++ src/sdk/replacedlg.cpp	(working copy)
+@@ -212,6 +212,22 @@
+ 		return XRCCTRL(*this, "chkRegEx1", wxCheckBox)->GetValue();
+ }
+ 
++bool ReplaceDlg::GetAutoWrapSearch() const
++{
++    if (IsFindInFiles())
++		return XRCCTRL(*this, "chkAutoWrapSearch", wxCheckBox)->GetValue();
++	else
++		return XRCCTRL(*this, "chkAutoSrapSearch", wxCheckBox)->GetValue();
++}
++
++bool ReplaceDlg::GetFindUsesSelectedText() const
++{
++    if (IsFindInFiles())
++		return XRCCTRL(*this, "chkFindUsesSelectedText", wxCheckBox)->GetValue();
++	else
++		return XRCCTRL(*this, "chkFindUsesSelectedText", wxCheckBox)->GetValue();
++}
++
+ int ReplaceDlg::GetDirection() const
+ {
+     if (IsFindInFiles())
+Index: src/sdk/replacedlg.h
+===================================================================
+--- src/sdk/replacedlg.h	(revision 3103)
++++ src/sdk/replacedlg.h	(working copy)
+@@ -8,7 +8,7 @@
+ class ReplaceDlg : public FindReplaceBase
+ {
+ 	public:
+-		ReplaceDlg(wxWindow* parent, const wxString& initial = wxEmptyString, bool hasSelection = false, 
++		ReplaceDlg(wxWindow* parent, const wxString& initial = wxEmptyString, bool hasSelection = false,
+             bool findInFilesOnly = false, bool replaceInFilesActive = false);
+ 		~ReplaceDlg();
+ 		wxString GetFindString() const;
+@@ -19,6 +19,8 @@
+ 		bool GetStartWord() const;
+ 		bool GetMatchCase() const;
+ 		bool GetRegEx() const;
++		bool GetAutoWrapSearch() const;
++		bool GetFindUsesSelectedText() const;
+ 		int GetDirection() const;
+ 		int GetOrigin() const;
+ 		int GetScope() const;
+@@ -30,7 +32,7 @@
+ 		void OnFindChange(wxNotebookEvent& event);
+ 		void OnRegEx(wxCommandEvent& event);
+ 		void OnActivate(wxActivateEvent& event);
+-		
++
+ 	private:
+         bool m_Complete;
+ 		void FillComboWithLastValues(wxComboBox* combo, const wxString& configKey);
+Index: src/sdk/resources/editor_configuration.xrc
+===================================================================
+--- src/sdk/resources/editor_configuration.xrc	(revision 3103)
++++ src/sdk/resources/editor_configuration.xrc	(working copy)
+@@ -335,29 +335,6 @@
+                         <style>wxRA_SPECIFY_COLS</style>
+                       </object>
+                     </object>
+-                    <object class="sizeritem">
+-                      <flag>wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
+-                      <object class="wxStaticBoxSizer">
+-                        <orient>wxVERTICAL</orient>
+-                        <label>Find options</label>
+-                        <object class="sizeritem">
+-                          <border>8</border>
+-                          <flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                          <object class="wxFlexGridSizer">
+-                            <rows>4</rows>
+-                            <cols>1</cols>
+-                            <vgap>4</vgap>
+-                            <hgap>4</hgap>
+-                            <object class="sizeritem">
+-                              <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                              <object class="wxCheckBox" name="chkAutoWrapSearch">
+-                                <label>Auto-wrap search when EOF reached</label>
+-                              </object>
+-                            </object>
+-                          </object>
+-                        </object>
+-                      </object>
+-                    </object>
+                   </object>
+                 </object>
+               </object>
+@@ -1004,4 +981,4 @@
+       </object>
+     </object>
+   </object>
+-</resource>
+\ No newline at end of file
++</resource>
+Index: src/sdk/resources/find_dialog.xrc
+===================================================================
+--- src/sdk/resources/find_dialog.xrc	(revision 3103)
++++ src/sdk/resources/find_dialog.xrc	(working copy)
+@@ -77,6 +77,22 @@
+                                                         <checked>0</checked>
+                                                     </object>
+                                                 </object>
++                                                <object class="sizeritem">
++                                                    <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxBOTTOM</flag>
++                                                    <border>4</border>
++                                                    <object class="wxCheckBox" name="chkAutoWrapSearch">
++                                                        <label>Auto-wrap search at EOF</label>
++                                                        <checked>0</checked>
++                                                    </object>
++                                                </object>
++                                                <object class="sizeritem">
++                                                    <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxBOTTOM</flag>
++                                                    <border>4</border>
++                                                    <object class="wxCheckBox" name="chkFindUsesSelectedText">
++                                                        <label>Find uses Selected Text</label>
++                                                        <checked>0</checked>
++                                                    </object>
++                                                </object>
+                                             </object>
+                                         </object>
+                                         <object class="sizeritem">

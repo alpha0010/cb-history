@@ -1,0 +1,421 @@
+/*
+ * This file is part of the Code::Blocks IDE and licensed under the GNU General Public License, version 3
+ * http://www.gnu.org/licenses/gpl-3.0.html
+ *
+ * $Revision: 6201 $
+ * $Id: autorevision.cpp 6201 2010-04-04 08:21:27Z killerbot $
+ * $HeadURL: svn://svn.berlios.de/codeblocks/trunk/src/build_tools/autorevision/autorevision.cpp $
+ */
+ // Be careful with this file, be sure none of it's code is included in anything proprietary, as it's covered by the GPL.
+
+#include <stdio.h>
+#include <string>
+#include <vector>
+#include <fstream>
+
+#include "tinyxml/tinystr.h"
+#include "tinyxml/tinyxml.h"
+
+using namespace std;
+
+#ifdef __WIN32__
+    #define WIN32_LEAN_AND_MEAN 1
+    #define NOGDI
+    #include <windows.h>
+    inline void set_env(const char* k, const char* v) { SetEnvironmentVariable(k, v); };
+#ifdef __MSVC__
+    // Why windows likes to add the underscore but otherwise keep the function I'll never know. 
+#define popen(A,B) _popen(A,B)
+#define pclose(A) _pclose(A)
+#endif
+#else
+    #include <stdlib.h>
+    inline void set_env(const char* k, const char* v) { setenv(k, v, 1); };
+#endif
+
+// Const definitions
+/// This is what the slashes (\) will be converted to.
+const std::string desired_slashes("/");
+//const std::string desired_slashes("\\\\");
+
+// Structure to hold settings rather then use half global, half passed variables.  It's inconsistent.
+struct ProgramSettings
+{
+   bool do_int ;
+   bool do_std ;
+   bool do_wx  ;
+   bool do_translate  ;
+   bool be_verbose  ;
+   bool do_error  ;
+   bool do_mod ;
+   bool do_external ;
+   bool do_updated;
+   bool do_forced;
+   int error_level;
+
+   string outputFile;
+   string workingDir;
+   vector<string> Namespaces; // If empty, use autoversion.
+   string inconsistentFiles;
+   string revision;
+   string date;
+   string externalFiles;
+};
+
+/// Get the subversion revision, and revision date.
+bool QuerySvn(ProgramSettings& set);
+/// Determine if any files are modified.
+bool QuerySvnStatus(ProgramSettings& set);
+bool ParseFile(const string& docFile, ProgramSettings& set);
+bool WriteOutput(ProgramSettings& set);
+string ChangePathInfo(string data);
+int main(int argc, char** argv);
+
+
+
+int main(int argc, char** argv)
+{
+	 ProgramSettings set;
+   set.do_int = false;
+   set.do_std = false;
+   set.do_wx  = false;
+   set.do_translate  = false;
+   set.be_verbose  = false;
+   set.do_error  = false;
+   set.do_mod  = false;
+   set.do_updated  = false;
+   set.do_external = false;
+   set.do_forced = false;
+   set.error_level  = 0;
+
+
+    for(int i = 1; i < argc; ++i)
+    {
+        if(strcmp("+int", argv[i]) == 0)
+            set.do_int = true;
+        else if(strcmp("+std", argv[i]) == 0)
+            set.do_std = true;
+        else if(strcmp("+mod", argv[i]) == 0)
+            set.do_mod = true;
+        else if(strcmp("+ext", argv[i]) == 0)
+            set.do_external = true;
+        else if(strcmp("+mode", argv[i]) == 0)
+          {
+            set.do_mod = true;
+            set.do_error = true;
+          }
+        else if(strcmp("+modu", argv[i]) == 0)
+          {
+            set.do_mod = true;
+            set.do_updated = true;
+          }
+        else if(strcmp("+wx", argv[i]) == 0)
+            set.do_wx = true;
+        else if(strcmp("+t", argv[i]) == 0)
+            set.do_translate = true;
+        else if(strcmp("-v", argv[i]) == 0)
+            set.be_verbose = true;
+        else if(strcmp("-f", argv[i]) == 0)
+            set.do_forced = true;
+        else if(set.workingDir.empty())
+            set.workingDir.assign(argv[i]);
+        else if(set.outputFile.empty())
+            set.outputFile.assign(argv[i]);
+        else
+            set.Namespaces.push_back(string(argv[i]));
+    }
+
+    if (set.workingDir.empty())
+    {
+        puts("Usage: autorevision [options] directory [autorevision.h] [namespaces*]");
+        puts("Options:");
+        puts("         +int assign const unsigned int");
+        puts("         +std assign const std::string");
+        puts("         +wx  assing const wxString");
+        puts("         +mod generate a list of modified files.");
+        puts("         +modu Include non-updated files as modified.");
+        puts("         +ext generate a list of external repositories.");
+        puts("         +mode treat any files other then unversioned in the tree as an error.");
+        puts("         +t   add Unicode translation macros to strings");
+        puts("         -v   be verbose");
+        puts("         -f   force update, even if revisions are the same.");
+        return 1;
+    }
+
+    if(set.outputFile.empty())
+        set.outputFile.assign("autorevision.h");
+
+
+    QuerySvn(set);
+    if ((set.do_mod) ||(set.do_external))
+       QuerySvnStatus(set);
+    WriteOutput(set);
+
+    return set.error_level;
+}
+
+
+
+bool QuerySvn( ProgramSettings& set)
+{
+    set.revision = "0";
+    set.date = "unknown date";
+    string svncmd("svn info --xml --non-interactive ");
+    svncmd.append(set.workingDir);
+
+    FILE *svn = popen(svncmd.c_str(), "r");
+
+    if(svn)
+    {
+        char buf[16384] = {'0'};
+        fread(buf, 16383, 1, svn);
+        pclose(svn);
+
+        TiXmlDocument doc;
+        doc.Parse(buf);
+
+        if(doc.Error())
+            return 0;
+
+        TiXmlHandle hCommit(&doc);
+        hCommit = hCommit.FirstChildElement("info").FirstChildElement("entry").FirstChildElement("commit");
+        if(const TiXmlElement* e = hCommit.ToElement())
+        {
+            set.revision = e->Attribute("revision") ? e->Attribute("revision") : "";
+            const TiXmlElement* d = e->FirstChildElement("date");
+            if(d && d->GetText())
+            {
+                set.date = d->GetText();
+                string::size_type pos = set.date.find('T');
+                if (pos != string::npos)
+                {
+                    set.date[pos] = ' ';
+                }
+                pos = set.date.rfind('.');
+                if (pos != string::npos)
+                {
+                    set.date = set.date.substr(0, pos);
+                }
+            }
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+
+bool QuerySvnStatus(ProgramSettings& set)
+{
+    string svncmd("svn status --xml --non-interactive ");
+    if (set.do_updated)
+      svncmd.append("-u ");
+    svncmd.append(set.workingDir);
+
+    FILE *svn = popen(svncmd.c_str(), "r");
+
+    if(svn)
+    {
+        string data;
+        char buf[16384] = {'0'};
+        //fread(buf, 16383, 1, svn);
+
+        while ( fgets(buf, 16383, svn) != NULL )
+        {
+            data.append(buf);
+        }
+        pclose(svn);
+
+        TiXmlDocument doc;
+        doc.Parse(data.c_str());
+
+        if(doc.Error())
+        {
+            return 0;
+        }
+        TiXmlHandle hCommit(&doc);
+         TiXmlElement* child = hCommit.FirstChild( "status" ).FirstChild( "target" ).FirstChild( "entry" ).ToElement();
+
+        for(  ; child; child = child->NextSiblingElement() )
+        {
+           string path = child->Attribute("path") ? child->Attribute("path") : "";
+           TiXmlElement* entry = child->FirstChildElement("wc-status");
+           if (entry && path.length())
+           {
+              if (entry->Attribute("item"))
+              {
+                 string status = entry->Attribute("item");
+                 if (set.do_mod)
+                 {
+                     if ((status != "unversioned") && (status != "external"))
+                     {
+                        // if flagging errors, mark it.
+                        if (set.do_error)
+                           set.error_level = 1;
+                        if (set.inconsistentFiles.length())
+                            set.inconsistentFiles += ", ";
+                        set.inconsistentFiles += path;
+                        if (set.be_verbose)
+                        {
+                            puts((path + " has status " + status).c_str());
+                        }
+                     }
+                 }
+                 if (set.do_external)
+                 {
+                     if (status == "external")
+                     {
+                        if (set.externalFiles.length())
+                            set.externalFiles += ", ";
+                        set.externalFiles += path;
+                        if (set.be_verbose)
+                        {
+                            puts((path + " is external ").c_str());
+                        }
+                     }
+                 }
+              }
+           }
+        }
+    }
+    return 1;
+}
+
+
+bool WriteOutput(ProgramSettings& set)
+{
+    string old;
+    string comment("/*");
+    comment.append(set.revision);
+    comment.append("*/");
+
+    // ONLY check the old version if we are not forcing an update.
+    if (set.do_forced == false)
+    {
+        ifstream in(set.outputFile.c_str());
+        if (!in.bad() && !in.eof())
+        {
+            in >> old;
+            if(old >= comment)
+            {
+                if(set.be_verbose)
+                    printf("Revision unchanged (%s). Skipping.", set.revision.c_str());
+                in.close();
+                return false;
+            }
+        }
+        in.close();
+    }
+
+
+    FILE *header = fopen(set.outputFile.c_str(), "wb");
+    if(!header)
+    {
+        puts("Error: Could not open output file.");
+        return false;
+    }
+    string additionalNamespace;
+    {
+       // Maybe this should convert to caps.. but... not interested right now.
+       unsigned int loop;
+       for (loop = 0; loop < set.Namespaces.size(); loop++)
+          additionalNamespace += "_" + set.Namespaces[loop];
+    }
+
+    fprintf(header, "%s\n", comment.c_str());
+    fprintf(header, "//This file changes often, do not include it unless you really really mean it.\n");
+    fprintf(header, "#ifndef AUTOREVISION%s_H\n",additionalNamespace.c_str());
+    fprintf(header, "#define AUTOREVISION%s_H\n\n\n",additionalNamespace.c_str());
+
+    if(set.do_std)
+        fprintf(header, "#include <string>\n");
+    if(set.do_wx)
+        fprintf(header, "#include <wx/string.h>\n");
+    if (set.Namespaces.size() == 0)
+    {
+       if(set.do_int || set.do_std || set.do_wx)
+           fprintf(header, "\nnamespace autorevision\n{\n");
+    }
+    else
+    {
+       unsigned int loop;
+       for (loop = 0; loop < set.Namespaces.size(); loop++)
+          fprintf(header, "\nnamespace %s\n{\n",set.Namespaces[loop].c_str());
+    }
+
+    //if (additionalNamespace.length() > 0)
+    //    fprintf(header, "\nnamespace %s\n{\n",additionalNamespace.c_str());
+
+
+    if(set.do_int)
+        fprintf(header, "\tconst unsigned int svn_revision = %s;\n", set.revision.c_str());
+
+    if(set.do_translate)
+    {
+        set.revision = "_T(\"" + set.revision + "\")";
+        set.date = "_T(\"" + set.date + "\")";
+        set.inconsistentFiles = ChangePathInfo("_T(\"" + set.inconsistentFiles + "\")");
+        set.externalFiles = ChangePathInfo("_T(\"" + set.externalFiles + "\")");
+    }
+    else
+    {
+        set.revision = "\"" + set.revision + "\"";
+        set.date = "\"" + set.date + "\"";
+        set.inconsistentFiles = ChangePathInfo("\"" + set.inconsistentFiles + "\"");
+        set.externalFiles = ChangePathInfo("\"" + set.externalFiles + "\"");
+    }
+
+    if(set.do_std)
+        fprintf(header, "\tconst std::string svn_revision_s(%s);\n", set.revision.c_str());
+    if(set.do_wx)
+        fprintf(header, "\tconst wxString svnRevision(%s);\n", set.revision.c_str());
+
+    if(set.do_std)
+        fprintf(header, "\tconst std::string svn_date_s(%s);\n", set.date.c_str());
+    if(set.do_wx)
+        fprintf(header, "\tconst wxString svnDate(%s);\n", set.date.c_str());
+
+    if (set.do_mod)
+    {
+       if(set.do_std)
+          fprintf(header, "\tconst std::string svn_modified(%s);\n", set.inconsistentFiles.c_str());
+       if(set.do_wx)
+          fprintf(header, "\tconst wxString svnModified(%s);\n", set.inconsistentFiles.c_str());
+    }
+    if (set.do_external)
+    {
+       if(set.do_std)
+          fprintf(header, "\tconst std::string svn_external(%s);\n", set.externalFiles.c_str());
+       if(set.do_wx)
+          fprintf(header, "\tconst wxString svnExternal(%s);\n", set.externalFiles.c_str());
+    }
+
+    if (set.Namespaces.size() == 0)
+    {
+    if(set.do_int || set.do_std || set.do_wx)
+        fprintf(header, "}\n\n");
+    }
+    else
+    {
+       unsigned int loop;
+       for (loop = 0; loop < set.Namespaces.size(); loop++)
+          fprintf(header, "}\n\n");
+    }
+
+    fprintf(header, "\n\n#endif\n");
+    fclose(header);
+
+    return true;
+}
+
+string ChangePathInfo(string data)
+{
+    int Location = data.find('\\');
+    while (Location >= 0)
+    {
+       data.replace(Location,1,desired_slashes);
+       Location = data.find('\\');
+    }
+    return data;
+}
+

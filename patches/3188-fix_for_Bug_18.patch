@@ -1,0 +1,33 @@
+Index: todolist.cpp
+===================================================================
+--- todolist.cpp	(revision 7287)
++++ todolist.cpp	(working copy)
+@@ -394,7 +394,7 @@
+             buffer << _T("// ");
+             break;
+         case tdctDoxygenC:
+-            buffer << _T(" * ");
++            buffer << _T("/** ");
+             break;
+         case tdctDoxygenCPP:
+             buffer << _T("/// ");
+@@ -418,7 +418,8 @@
+     buffer << _T("(") << dlg.GetUser() << _T("#") << priority << _T("#): ");
+ 
+     wxString text = dlg.GetText();
+-    if (CmtType != tdctC)
++    if (!( (CmtType == tdctC) ||
++           (CmtType == tdctDoxygenC) ) )
+     {
+         // make sure that multi-line notes, don't break the todo
+         if (text.Replace(_T("\r\n"), _T("\\\r\n")) == 0)
+@@ -434,7 +435,8 @@
+     if (CmtType == tdctWarning || CmtType == tdctError)
+         buffer << _T("");
+ 
+-    else if (CmtType == tdctC)
++    else if ( (CmtType == tdctC) ||
++              (CmtType == tdctDoxygenC) )
+         buffer << _T(" */");
+ 
+     // add newline char(s), only if dlg.GetPosition() != tdpCurrent

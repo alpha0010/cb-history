@@ -1,0 +1,368 @@
+diff -r 6fcf35fb5ad7 src/include/cbeditor.h
+--- a/src/include/cbeditor.h	Wed Apr 29 11:33:50 2009 -0400
++++ b/src/include/cbeditor.h	Thu Apr 30 13:35:54 2009 -0400
+@@ -248,6 +248,12 @@
+         /** Go to previous bookmark. */
+         void GotoPreviousBookmark();
+ 
++        /** Set a bookmark at the specified line. */
++        void SetBookmark(int line = -1);
++
++        /** Get a list of all bookmarks */
++        void GetAllBookmarks(BookmarkList &marks);
++
+         /** Highlight the line the debugger will execute next. */
+         void SetDebugLine(int line);
+ 
+diff -r 6fcf35fb5ad7 src/include/editorbase.h
+--- a/src/include/editorbase.h	Wed Apr 29 11:33:50 2009 -0400
++++ b/src/include/editorbase.h	Thu Apr 30 13:35:54 2009 -0400
+@@ -13,9 +13,12 @@
+ #include "settings.h"
+ #include "cbexception.h"
+ 
++#include <set>
++
+ class wxMenu;
+ class EditorBase;
+ struct EditorBaseInternalData;
++typedef std::set<int> BookmarkList;
+ 
+ WX_DECLARE_HASH_MAP(int, EditorBase*, wxIntegerHash, wxIntegerEqual, SwitchToMap);
+ 
+@@ -196,6 +199,15 @@
+         /** Go to previous bookmark. */
+         virtual void GotoPreviousBookmark(){}
+ 
++        /** Set a bookmark at specified line.
++          * @param line The line to set the bookmark on. If @c line is -1,
++          *             use current line.
++          */
++        virtual void SetBookmark(int line = -1);
++
++        /** Get a list of all bookmarks by line number. */
++        virtual void GetAllBookmarks(BookmarkList &marks) {}
++
+         /** @brief Mark the debugger's active line.
+           *
+           * Highlight the line the debugger will execute next.
+diff -r 6fcf35fb5ad7 src/include/projectfile.h
+--- a/src/include/projectfile.h	Wed Apr 29 11:33:50 2009 -0400
++++ b/src/include/projectfile.h	Thu Apr 30 13:35:54 2009 -0400
+@@ -7,6 +7,7 @@
+ #define PROJECTFILE_H
+ 
+ #include <vector>
++#include <set>
+ 
+ #include "settings.h"
+ #include "globals.h"
+@@ -33,6 +34,7 @@
+ 
+ class ProjectFile;
+ typedef std::vector<ProjectFile*> ProjectFilesVector;
++typedef std::set<int> BookmarkList;
+ 
+ /** Represents a file in a Code::Blocks project. */
+ class ProjectFile  : public BlockAllocated<ProjectFile, 1000>
+@@ -139,7 +141,7 @@
+         unsigned short int weight;
+ 
+         /** If true, the file is open inside an editor. */
+-        bool editorOpen; // layout info
++        enum { eUnattached, eOpenOnLoad, eAttached } editorOpen; // layout info
+ 
+         /** The last known caret position in an editor for this file. */
+         int editorPos; // layout info
+@@ -175,6 +177,11 @@
+ 
+         /** Auto-generated files when compiling this file */
+         ProjectFilesVector generatedFiles;
++
++        void ResetBookmarks()       { m_bookmarks.clear(); }
++        void AddBookmark(int line)  { m_bookmarks.insert(line); }
++        const BookmarkList & GetBookmarks() const;
++
+     protected:
+         friend class cbProject;
+ 
+@@ -184,6 +191,7 @@
+         wxTreeItemId m_TreeItemId; // set by the project when building the tree
+         wxString m_ObjName;
+         PFDMap m_PFDMap;
++        mutable BookmarkList m_bookmarks;
+ };
+ WX_DECLARE_LIST(ProjectFile, FilesList);
+ 
+diff -r 6fcf35fb5ad7 src/plugins/contrib/BrowseTracker/BrowseTrackerLayout.cpp
+--- a/src/plugins/contrib/BrowseTracker/BrowseTrackerLayout.cpp	Wed Apr 29 11:33:50 2009 -0400
++++ b/src/plugins/contrib/BrowseTracker/BrowseTrackerLayout.cpp	Thu Apr 30 13:35:54 2009 -0400
+@@ -239,11 +239,11 @@
+ 	{
+ 		ProjectFile* f = m_pProject->GetFile(i);
+ 
+-		if (f->editorOpen || f->editorPos || f->editorTopLine || f->editorTabPos)
++		if (f->editorOpen == ProjectFile::eAttached || f->editorPos || f->editorTopLine || f->editorTabPos)
+ 		{
+             TiXmlElement* node = static_cast<TiXmlElement*>(rootnode->InsertEndChild(TiXmlElement("File")));
+             node->SetAttribute("name", cbU2C(f->relativeFilename));
+-            node->SetAttribute("open", f->editorOpen);
++            node->SetAttribute("open", f->editorOpen == ProjectFile::eAttached);
+             node->SetAttribute("top", (f == active));
+             node->SetAttribute("tabpos", f->editorTabPos);
+ 
+diff -r 6fcf35fb5ad7 src/plugins/contrib/codesnippets/editor/scbeditor.cpp
+--- a/src/plugins/contrib/codesnippets/editor/scbeditor.cpp	Wed Apr 29 11:33:50 2009 -0400
++++ b/src/plugins/contrib/codesnippets/editor/scbeditor.cpp	Thu Apr 30 13:35:54 2009 -0400
+@@ -434,7 +434,7 @@
+     if (m_pControl)
+     {
+         if (m_pProjectFile)
+-            m_pProjectFile->editorOpen = false;
++            m_pProjectFile->editorOpen = ProjectFile::eAttached;
+         m_pControl->Destroy();
+         m_pControl = 0;
+     }
+@@ -606,7 +606,7 @@
+         m_pControl->ScrollToLine(m_pProjectFile->editorTopLine);
+         m_pControl->ScrollToColumn(0);
+ 
+-        m_pProjectFile->editorOpen = true;
++        m_pProjectFile->editorOpen = ProjectFile::eAttached;
+ 
+         if (Manager::Get()->GetConfigManager(_T("editor"))->ReadBool(_T("/tab_text_relative"), true))
+             m_Shortname = m_pProjectFile->relativeToCommonTopLevelPath;
+@@ -639,7 +639,7 @@
+     {
+         m_pProjectFile->editorPos = m_pControl->GetCurrentPos();
+         m_pProjectFile->editorTopLine = m_pControl->GetFirstVisibleLine();
+-        m_pProjectFile->editorOpen = true;
++        m_pProjectFile->editorOpen = ProjectFile::eAttached;
+     }
+ }
+ 
+diff -r 6fcf35fb5ad7 src/plugins/contrib/codesnippets/editor/seditormanager.cpp
+--- a/src/plugins/contrib/codesnippets/editor/seditormanager.cpp	Wed Apr 29 11:33:50 2009 -0400
++++ b/src/plugins/contrib/codesnippets/editor/seditormanager.cpp	Thu Apr 30 13:35:54 2009 -0400
+@@ -662,7 +662,7 @@
+         pf->editorTopLine = ed->GetControl()->GetFirstVisibleLine();
+         pf->editorPos = ed->GetControl()->GetCurrentPos();
+         pf->editorTabPos = i + 1;
+-        pf->editorOpen = true;
++        pf->editorOpen = ProjectFile::eAttached;
+     }
+     return true;
+ }
+diff -r 6fcf35fb5ad7 src/sdk/cbeditor.cpp
+--- a/src/sdk/cbeditor.cpp	Wed Apr 29 11:33:50 2009 -0400
++++ b/src/sdk/cbeditor.cpp	Thu Apr 30 13:35:54 2009 -0400
+@@ -526,7 +526,10 @@
+     if (m_pControl)
+     {
+         if (m_pProjectFile)
+-            m_pProjectFile->editorOpen = false;
++        {
++            m_pProjectFile->GetBookmarks(); // forces bookmarks to be updated prior to detaching
++            m_pProjectFile->editorOpen = ProjectFile::eUnattached;
++        }
+         m_pControl->Destroy();
+         m_pControl = 0;
+     }
+@@ -695,7 +698,14 @@
+         m_pControl->ScrollToLine(m_pProjectFile->editorTopLine);
+         m_pControl->ScrollToColumn(0);
+ 
+-        m_pProjectFile->editorOpen = true;
++        // restore bookmarks
++        // note: must be done *before* editorOpen is set to eAttached (see ProjectFile::GetBookmarks())
++        const BookmarkList &bookmarks = m_pProjectFile->GetBookmarks();
++        for(BookmarkList::iterator it = bookmarks.begin(); it != bookmarks.end(); ++it)
++            SetBookmark(*it);
++
++        // note: editorOpen must be set to eAttached *after* restoring bookmarks (see ProjectFile::GetBookmarks())
++        m_pProjectFile->editorOpen = ProjectFile::eAttached;
+ 
+         if (Manager::Get()->GetConfigManager(_T("editor"))->ReadBool(_T("/tab_text_relative"), true))
+             m_Shortname = m_pProjectFile->relativeToCommonTopLevelPath;
+@@ -728,7 +738,7 @@
+     {
+         m_pProjectFile->editorPos = m_pControl->GetCurrentPos();
+         m_pProjectFile->editorTopLine = m_pControl->GetFirstVisibleLine();
+-        m_pProjectFile->editorOpen = true;
++        m_pProjectFile->editorOpen = ProjectFile::eAttached;
+     }
+ }
+ 
+@@ -2016,6 +2026,27 @@
+     MarkerPrevious(BOOKMARK_MARKER);
+ }
+ 
++void cbEditor::SetBookmark(int line/*=-1*/)
++{
++    if (line == -1)
++        line = GetControl()->GetCurrentLine();
++    GetControl()->MarkerAdd(line, BOOKMARK_MARKER);
++}
++
++void cbEditor::GetAllBookmarks(BookmarkList &marks)
++{
++    int marker = 1 << BOOKMARK_MARKER;
++    cbStyledTextCtrl *ctrl = GetControl();
++    int line = -1;
++    for(;;)
++    {
++        line = ctrl->MarkerNext(++line, marker);
++        if (line == -1)
++            break;
++        marks.insert(line);
++    }
++}
++
+ void cbEditor::SetDebugLine(int line)
+ {
+     MarkLine(DEBUG_MARKER, line);
+diff -r 6fcf35fb5ad7 src/sdk/cbproject.cpp
+--- a/src/sdk/cbproject.cpp	Wed Apr 29 11:33:50 2009 -0400
++++ b/src/sdk/cbproject.cpp	Thu Apr 30 13:35:54 2009 -0400
+@@ -473,7 +473,7 @@
+                 while(node)
+                 {
+                     ProjectFile* f = node->GetData();
+-                    if (f->editorOpen)
++                    if (f->editorOpen == ProjectFile::eOpenOnLoad)
+                         open_files[f->editorTabPos] = f;
+                     node = node->GetNext();
+                 }
+diff -r 6fcf35fb5ad7 src/sdk/editorbase.cpp
+--- a/src/sdk/editorbase.cpp	Wed Apr 29 11:33:50 2009 -0400
++++ b/src/sdk/editorbase.cpp	Thu Apr 30 13:35:54 2009 -0400
+@@ -388,3 +388,9 @@
+         event.Skip();
+     }
+ }
++
++void EditorBase::SetBookmark(int line/*=-1*/)
++{
++    if ( ! HasBookmark(line) )
++        ToggleBookmark(line);
++}
+diff -r 6fcf35fb5ad7 src/sdk/editormanager.cpp
+--- a/src/sdk/editormanager.cpp	Wed Apr 29 11:33:50 2009 -0400
++++ b/src/sdk/editormanager.cpp	Thu Apr 30 13:35:54 2009 -0400
+@@ -623,7 +623,7 @@
+         pf->editorTopLine = ed->GetControl()->GetFirstVisibleLine();
+         pf->editorPos = ed->GetControl()->GetCurrentPos();
+         pf->editorTabPos = i + 1;
+-        pf->editorOpen = true;
++        pf->editorOpen = ProjectFile::eAttached;
+     }
+     return true;
+ }
+diff -r 6fcf35fb5ad7 src/sdk/projectfile.cpp
+--- a/src/sdk/projectfile.cpp	Wed Apr 29 11:33:50 2009 -0400
++++ b/src/sdk/projectfile.cpp	Thu Apr 30 13:35:54 2009 -0400
+@@ -30,7 +30,7 @@
+     compile(false),
+     link(false),
+     weight(50),
+-    editorOpen(false),
++    editorOpen(eUnattached),
+     editorPos(0),
+     editorTopLine(0),
+     editorTabPos(0),
+@@ -302,6 +302,22 @@
+ {
+     return customBuild[compilerId].buildCommand;
+ }
++
++const BookmarkList & ProjectFile::GetBookmarks() const
++{
++    // when not attached to an editor, m_bookmarks is authoritative;
++    // when attached to an editor, m_bookmarks may not be kept current, so
++    // it has to be refreshed; the project layout loader will initialize the
++    // list if bookmarks were saved
++    if (editorOpen == eAttached)
++    {
++        m_bookmarks.clear();
++        EditorBase *eb = Manager::Get()->GetEditorManager()->IsOpen( file.GetFullPath() );
++        if (eb)
++            eb->GetAllBookmarks(m_bookmarks);
++    }
++    return m_bookmarks;
++}
+ 
+ ////////////////////////////////////////////////////////////////////////////////
+ // pfDetails
+diff -r 6fcf35fb5ad7 src/sdk/projectlayoutloader.cpp
+--- a/src/sdk/projectlayoutloader.cpp	Wed Apr 29 11:33:50 2009 -0400
++++ b/src/sdk/projectlayoutloader.cpp	Thu Apr 30 13:35:54 2009 -0400
+@@ -96,14 +96,14 @@
+ 
+         if (pf)
+         {
+-            pf->editorOpen = false;
++            pf->editorOpen = ProjectFile::eUnattached;
+             pf->editorPos = 0;
+             pf->editorTopLine = 0;
+             int open = 0;
+             int top = 0;
+             int tabpos = 0;
+-            if (elem->QueryIntAttribute("open", &open) == TIXML_SUCCESS)
+-                pf->editorOpen = open != 0;
++            if (elem->QueryIntAttribute("open", &open) == TIXML_SUCCESS and open)
++                pf->editorOpen = ProjectFile::eOpenOnLoad;
+             if (elem->QueryIntAttribute("top", &top) == TIXML_SUCCESS)
+             {
+                 if(top)
+@@ -122,6 +122,21 @@
+                 if (cursor->QueryIntAttribute("topLine", &topline) == TIXML_SUCCESS)
+                     pf->editorTopLine = topline;
+             }
++
++            // bookmarks
++            pf->ResetBookmarks();
++            TiXmlElement *bookmark = elem->FirstChildElement("Bookmark");
++            if (bookmark)
++            {
++                do
++                {
++                    int line = 0;
++                    if ( bookmark->QueryIntAttribute("line", &line) == TIXML_SUCCESS )
++                        pf->AddBookmark(line);
++                    bookmark = bookmark->NextSiblingElement();
++                }
++                while(bookmark);
++            }
+         }
+ 
+         elem = elem->NextSiblingElement();
+@@ -154,17 +169,27 @@
+ 	{
+ 		ProjectFile* f = m_pProject->GetFile(i);
+ 
+-		if (f->editorOpen || f->editorPos || f->editorTopLine || f->editorTabPos)
++		if (f->editorOpen == ProjectFile::eAttached || f->editorPos || f->editorTopLine || f->editorTabPos)
+ 		{
+             TiXmlElement* node = static_cast<TiXmlElement*>(rootnode->InsertEndChild(TiXmlElement("File")));
+             node->SetAttribute("name", cbU2C(f->relativeFilename));
+-            node->SetAttribute("open", f->editorOpen);
++            node->SetAttribute("open", f->editorOpen == ProjectFile::eAttached);
+             node->SetAttribute("top", (f == active));
+             node->SetAttribute("tabpos", f->editorTabPos);
+ 
+             TiXmlElement* cursor = static_cast<TiXmlElement*>(node->InsertEndChild(TiXmlElement("Cursor")));
+             cursor->SetAttribute("position", f->editorPos);
+             cursor->SetAttribute("topLine", f->editorTopLine);
++
++            // bookmarks
++            const BookmarkList &bm = f->GetBookmarks();
++            for(BookmarkList::const_iterator it = bm.begin(); it != bm.end(); ++it)
++            {
++                TiXmlElement *bookmark =
++                    static_cast<TiXmlElement*>(
++                        node->InsertEndChild(TiXmlElement("Bookmark") ) );
++                bookmark->SetAttribute("line", *it);
++            }
+ 		}
+ 	}
+ 	const wxArrayString& en = m_pProject->ExpandedNodes();

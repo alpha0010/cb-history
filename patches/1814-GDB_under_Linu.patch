@@ -1,0 +1,456 @@
+Index: src/plugins/debuggergdb/debuggergdb.cpp
+===================================================================
+--- src/plugins/debuggergdb/debuggergdb.cpp	(revision 3466)
++++ src/plugins/debuggergdb/debuggergdb.cpp	(working copy)
+@@ -336,7 +336,7 @@
+ 
+ void DebuggerGDB::OnRelease(bool appShutDown)
+ {
+-    if (m_State.GetDriver())
++    if (m_State.HasDriver())
+         m_State.GetDriver()->SetDebugWindows(0, 0, 0, 0, 0);
+ 
+     if (m_pThreadsDlg)
+@@ -722,7 +722,7 @@
+ 
+ bool DebuggerGDB::IsStopped()
+ {
+-    return !m_State.GetDriver() || m_State.GetDriver()->IsStopped();
++    return !m_State.HasDriver() || m_State.GetDriver()->IsStopped();
+ }
+ 
+ int DebuggerGDB::Debug()
+@@ -952,14 +952,14 @@
+ 
+     // Don't issue 'run' if attaching to a process (Bug #1391904)
+     if (m_PidToAttach == 0)
+-        m_State.GetDriver()->Start(false);
++        m_State.GetDriver()->Start(m_BreakOnEntry);
+ 
+     return 0;
+-}
++} // Debug
+ 
+ void DebuggerGDB::AddSourceDir(const wxString& dir)
+ {
+-    if (!m_State.GetDriver() || dir.IsEmpty())
++    if (!m_State.HasDriver() || dir.IsEmpty())
+         return;
+     wxString filename = dir;
+     Manager::Get()->GetMacrosManager()->ReplaceEnvVars(filename); // apply env vars
+@@ -1102,7 +1102,7 @@
+     {
+         case CMD_CONTINUE:
+             ClearActiveMarkFromAllEditors();
+-            if (m_State.GetDriver())
++            if (m_State.HasDriver())
+             {
+                 Manager::Get()->GetMessageManager()->Log(m_PageIndex, _("Continuing..."));
+                 m_State.GetDriver()->Continue();
+@@ -1112,7 +1112,7 @@
+ 
+         case CMD_STEP:
+             ClearActiveMarkFromAllEditors();
+-            if (m_State.GetDriver())
++            if (m_State.HasDriver())
+                 m_State.GetDriver()->Step();
+ //            QueueCommand(new DebuggerCmd(this, _T("next")));
+             break;
+@@ -1124,35 +1124,35 @@
+                 // first time users should have some help from us ;)
+                 Disassemble();
+             }
+-            if (m_State.GetDriver())
++            if (m_State.HasDriver())
+                 m_State.GetDriver()->StepInstruction();
+ //            QueueCommand(new DebuggerCmd(this, _T("nexti")));
+             break;
+ 
+         case CMD_STEPIN:
+             ClearActiveMarkFromAllEditors();
+-            if (m_State.GetDriver())
++            if (m_State.HasDriver())
+                 m_State.GetDriver()->StepIn();
+ //            QueueCommand(new DebuggerCmd(this, _T("step")));
+             break;
+ 
+         case CMD_STOP:
+             ClearActiveMarkFromAllEditors();
+-            if (m_State.GetDriver())
++            if (m_State.HasDriver())
+                 m_State.GetDriver()->Stop();
+ //            QueueCommand(new DebuggerCmd(this, _T("quit")));
+             break;
+ 
+         case CMD_BACKTRACE:
+ //            Manager::Get()->GetMessageManager()->Log(m_PageIndex, "Running back-trace...");
+-            if (m_State.GetDriver())
++            if (m_State.HasDriver())
+                 m_State.GetDriver()->Backtrace();
+             break;
+ 
+         case CMD_DISASSEMBLE:
+         {
+ //            Manager::Get()->GetMessageManager()->Log(m_PageIndex, "Disassemblying...");
+-            if (m_State.GetDriver())
++            if (m_State.HasDriver())
+                 m_State.GetDriver()->Disassemble();
+             break;
+         }
+@@ -1160,20 +1160,20 @@
+         case CMD_REGISTERS:
+         {
+ //            Manager::Get()->GetMessageManager()->Log(m_PageIndex, "Displaying registers...");
+-            if (m_State.GetDriver())
++            if (m_State.HasDriver())
+                 m_State.GetDriver()->CPURegisters();
+             break;
+         }
+ 
+         case CMD_MEMORYDUMP:
+         {
+-            if (m_State.GetDriver())
++            if (m_State.HasDriver())
+                 m_State.GetDriver()->MemoryDump();
+         }
+ 
+         case CMD_RUNNINGTHREADS:
+         {
+-            if (m_State.GetDriver())
++            if (m_State.HasDriver())
+                 m_State.GetDriver()->RunningThreads();
+         }
+ 
+@@ -1467,7 +1467,7 @@
+ 
+ void DebuggerGDB::ParseOutput(const wxString& output)
+ {
+-    if (m_State.GetDriver())
++    if (m_State.HasDriver())
+     {
+         m_State.GetDriver()->ParseOutput(output);
+     }
+@@ -1796,7 +1796,7 @@
+ 
+ void DebuggerGDB::OnInfoFrame(wxCommandEvent& event)
+ {
+-    if (m_State.GetDriver())
++    if (m_State.HasDriver())
+     {
+         m_State.GetDriver()->InfoFrame();
+     }
+@@ -1804,7 +1804,7 @@
+ 
+ void DebuggerGDB::OnInfoDLL(wxCommandEvent& event)
+ {
+-    if (m_State.GetDriver())
++    if (m_State.HasDriver())
+     {
+         m_State.GetDriver()->InfoDLL();
+     }
+@@ -1812,7 +1812,7 @@
+ 
+ void DebuggerGDB::OnInfoFiles(wxCommandEvent& event)
+ {
+-    if (m_State.GetDriver())
++    if (m_State.HasDriver())
+     {
+         m_State.GetDriver()->InfoFiles();
+     }
+@@ -1820,7 +1820,7 @@
+ 
+ void DebuggerGDB::OnInfoFPU(wxCommandEvent& event)
+ {
+-    if (m_State.GetDriver())
++    if (m_State.HasDriver())
+     {
+         m_State.GetDriver()->InfoFPU();
+     }
+@@ -1828,7 +1828,7 @@
+ 
+ void DebuggerGDB::OnInfoSignals(wxCommandEvent& event)
+ {
+-    if (m_State.GetDriver())
++    if (m_State.HasDriver())
+     {
+         m_State.GetDriver()->InfoSignals();
+     }
+@@ -1986,7 +1986,7 @@
+     // when a project is activated and it's not the actively debugged project,
+     // ask the user to end debugging or re-activate the debugged project.
+ 
+-    if (!m_State.GetDriver() || !m_pProject)
++    if (!m_State.HasDriver() || !m_pProject)
+         return;
+ 
+     if (event.GetProject() != m_pProject)
+@@ -2018,7 +2018,7 @@
+     // when a project closes, make sure it's not the actively debugged project.
+     // if so, end debugging immediately!
+ 
+-    if (!m_State.GetDriver() || !m_pProject)
++    if (!m_State.HasDriver() || !m_pProject)
+         return;
+ 
+     if (event.GetProject() == m_pProject)
+@@ -2051,7 +2051,7 @@
+ 
+ void DebuggerGDB::OnCursorChanged(wxCommandEvent& event)
+ {
+-    if (m_State.GetDriver())
++    if (m_State.HasDriver())
+     {
+         const Cursor& cursor = m_State.GetDriver()->GetCursor();
+         if (m_State.GetDriver()->IsStopped() && cursor.changed)
+Index: src/plugins/debuggergdb/debuggertree.cpp
+===================================================================
+--- src/plugins/debuggergdb/debuggertree.cpp	(revision 3466)
++++ src/plugins/debuggergdb/debuggertree.cpp	(working copy)
+@@ -792,9 +792,10 @@
+ 
+ void DebuggerTree::OnChangeValue(wxCommandEvent& event)
+ {
++    if (!m_pDebugger->GetState().HasDriver())
++	    return;
++    
+     DebuggerDriver* driver = m_pDebugger->GetState().GetDriver();
+-    if (!driver)
+-        return;
+ 
+     wxString var;
+     wxTreeItemId parent;
+Index: src/plugins/debuggergdb/breakpointsdlg.cpp
+===================================================================
+--- src/plugins/debuggergdb/breakpointsdlg.cpp	(revision 3466)
++++ src/plugins/debuggergdb/breakpointsdlg.cpp	(working copy)
+@@ -82,7 +82,7 @@
+ void BreakpointsDlg::RemoveBreakpoint(int sel)
+ {
+     // if debugger is running and is not paused, return
+-    if (m_State.GetDriver() && !m_State.GetDriver()->IsStopped())
++    if (m_State.HasDriver() && !m_State.GetDriver()->IsStopped())
+         return;
+     // if index is out of range, return
+     if (sel < 0 || sel >= (int)m_State.GetBreakpoints().GetCount())
+@@ -107,7 +107,7 @@
+ void BreakpointsDlg::OnRemoveAll(wxCommandEvent& event)
+ {
+     // if debugger is running and is not paused, return
+-    if (m_State.GetDriver() && !m_State.GetDriver()->IsStopped())
++    if (m_State.HasDriver() && !m_State.GetDriver()->IsStopped())
+         return;
+     while (m_State.GetBreakpoints().GetCount())
+     {
+Index: src/plugins/debuggergdb/gdb_driver.h
+===================================================================
+--- src/plugins/debuggergdb/gdb_driver.h	(revision 3466)
++++ src/plugins/debuggergdb/gdb_driver.h	(working copy)
+@@ -83,16 +83,27 @@
+         wxString m_CygdrivePrefix;
+ #endif
+         TypesArray m_Types;
+-        bool m_BreakOnEntry;
+-        bool m_ManualBreakOnEntry;
+ 
++        // Seems to be intended to allow step before program has started.
++        // Was always false.  HC changed to take value from DebuggerGDB::m_BreakOnEntry.
++        bool m_BreakOnEntry; 
++    
++        // Seems to be used to issue a InfoProgram command, then continue
++        // True after first "Start()", until first break
++        bool m_ManualBreakOnEntry; 
++
++		// Program is "running": after a "run" or a "start", and before "kill" or a "quit"
++		bool m_IsStarted;
++		
+         // cursor update flags
+         bool m_needsUpdate;
+         bool m_forceUpdate;
++	
+         // GDB version
+         long m_GDBVersionMajor;
+         long m_GDBVersionMinor;
+         wxString flavour;
+-};
++		
++}; // GDB_driver
+ 
+ #endif // GDB_DRIVER_H
+Index: src/plugins/debuggergdb/threadsdlg.cpp
+===================================================================
+--- src/plugins/debuggergdb/threadsdlg.cpp	(revision 3466)
++++ src/plugins/debuggergdb/threadsdlg.cpp	(working copy)
+@@ -95,6 +95,6 @@
+ 
+     unsigned long thread_num;
+     if (thread.ToULong(&thread_num, 10))
+-        if (m_pDbg->GetState().GetDriver())
++        if (m_pDbg->GetState().HasDriver())
+             m_pDbg->GetState().GetDriver()->SwitchThread(thread_num);
+ }
+Index: src/plugins/debuggergdb/debuggerstate.h
+===================================================================
+--- src/plugins/debuggergdb/debuggerstate.h	(revision 3466)
++++ src/plugins/debuggergdb/debuggerstate.h	(working copy)
+@@ -18,6 +18,12 @@
+ 
+         bool StartDriver(ProjectBuildTarget* target);
+         void StopDriver();
++
++	/// Check so see if Driver exists before getting it
++	bool HasDriver();
++	
++	/// Will always return a driver, or throw a code assertion error
++	// (to fix multiple bugs in use of GetDriver without checking return value)
+         DebuggerDriver* GetDriver();
+ 
+         void CleanUp();
+Index: src/plugins/debuggergdb/backtracedlg.cpp
+===================================================================
+--- src/plugins/debuggergdb/backtracedlg.cpp	(revision 3466)
++++ src/plugins/debuggergdb/backtracedlg.cpp	(working copy)
+@@ -181,7 +181,7 @@
+     if (lst->GetItemText(index).ToLong(&realFrameNr))
+     {
+         // switch to this frame
+-        if (m_pDbg->GetState().GetDriver())
++        if (m_pDbg->GetState().HasDriver())
+             m_pDbg->GetState().GetDriver()->SwitchToFrame(realFrameNr);
+     }
+     else
+Index: src/plugins/debuggergdb/debuggergdb.h
+===================================================================
+--- src/plugins/debuggergdb/debuggergdb.h	(revision 3466)
++++ src/plugins/debuggergdb/debuggergdb.h	(working copy)
+@@ -168,7 +168,11 @@
+         wxRect m_EvalRect;
+         wxTimer m_TimerPollDebugger;
+         bool m_NoDebugInfo;
+-        bool m_BreakOnEntry;
++
++        // Set, but was never used.  HC changed to pass to "Start()"
++		// Looks like was meant to allow initial step into first instruction of program start
++        bool m_BreakOnEntry; 
++	
+         int m_HaltAtLine;
+         bool m_HasDebugLog;
+         bool m_StoppedOnSignal;
+Index: src/plugins/debuggergdb/gdb_driver.cpp
+===================================================================
+--- src/plugins/debuggergdb/gdb_driver.cpp	(revision 3466)
++++ src/plugins/debuggergdb/gdb_driver.cpp	(working copy)
+@@ -55,6 +55,7 @@
+     : DebuggerDriver(plugin),
+     m_BreakOnEntry(false),
+     m_ManualBreakOnEntry(false),
++	m_IsStarted(false),
+     m_GDBVersionMajor(0),
+     m_GDBVersionMinor(0)
+ {
+@@ -347,6 +348,8 @@
+     return flavour;
+ }
+ 
++// Only called from DebuggerGDB::Debug
++// breakOnEntry was always false.  Changed by HC.
+ void GDB_driver::Start(bool breakOnEntry)
+ {
+     ResetCursor();
+@@ -371,22 +374,30 @@
+     m_BreakOnEntry = breakOnEntry;
+     m_ManualBreakOnEntry = true;
+ 
+-    if (!Manager::Get()->GetConfigManager(_T("debugger"))->ReadBool(_T("do_not_run"), false))
++    if (!Manager::Get()->GetConfigManager(_T("debugger"))->ReadBool(_T("do_not_run"), false)) {
+         // start the process
+         QueueCommand(new DebuggerCmd(this, _T("start")));
++		m_IsStarted = true;
++	}
+ #endif
+-}
++} // Start
+ 
+ void GDB_driver::Stop()
+ {
+     ResetCursor();
+     QueueCommand(new DebuggerCmd(this, _T("quit")));
++	m_IsStarted = false;
+ }
+ 
+ void GDB_driver::Continue()
+ {
+     ResetCursor();
+-    QueueCommand(new DebuggerCmd(this, _T("cont")));
++	if (m_IsStarted)
++		QueueCommand(new DebuggerCmd(this, _T("cont")));
++	else {
++		QueueCommand(new DebuggerCmd(this, m_ManualBreakOnEntry ? _T("start") : _T("run")));
++		m_IsStarted = true;
++	}
+ }
+ 
+ void GDB_driver::Step()
+@@ -600,7 +611,7 @@
+     }
+     else
+     {
+-//      m_ProgramIsStopped = false;
++		m_ProgramIsStopped = false;
+         return; // come back later
+     }
+ 
+@@ -653,6 +664,7 @@
+         {
+             m_pDBG->Log(lines[i]);
+             QueueCommand(new DebuggerCmd(this, _T("quit")));
++			m_IsStarted = false;
+         }
+ 
+         // no debug symbols?
+Index: src/plugins/debuggergdb/debuggerstate.cpp
+===================================================================
+--- src/plugins/debuggergdb/debuggerstate.cpp	(revision 3466)
++++ src/plugins/debuggergdb/debuggerstate.cpp	(working copy)
+@@ -42,9 +42,15 @@
+     m_pDriver = 0;
+ }
+ 
++bool DebuggerState::HasDriver()
++{
++	return m_pDriver != NULL;
++}
++
+ DebuggerDriver* DebuggerState::GetDriver()
+ {
+-    return m_pDriver;
++	ASSERT(m_pDriver != NULL);
++	return m_pDriver;
+ }
+ 
+ void DebuggerState::CleanUp()
+@@ -105,9 +111,9 @@
+         else
+         {
+         	// for foreign files, we still should use a relative path
+-        	wxFileName f(filename);
+-        	f.MakeRelativeTo(prj->GetBasePath());
+-        	fname = f.GetFullPath();
++        	//~ wxFileName f(filename);
++        	//~ f.MakeRelativeTo(prj->GetBasePath());
++        	//~ fname = f.GetFullPath();
+         }
+     }
+     return fname;
+Index: src/plugins/debuggergdb/debugger_defs.h
+===================================================================
+--- src/plugins/debuggergdb/debugger_defs.h	(revision 3466)
++++ src/plugins/debuggergdb/debugger_defs.h	(working copy)
+@@ -9,6 +9,8 @@
+ 
+ extern const int DEBUGGER_CURSOR_CHANGED; ///< wxCommandEvent ID fired when the cursor has changed.
+ 
++#define ASSERT(condition) { if (!(condition)) cbThrow(_T(#condition)); }
++
+ /** Debugger cursor info.
+   *
+   * Contains info about the debugger's cursor, i.e. where it currently is at

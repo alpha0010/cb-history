@@ -1,0 +1,51 @@
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(revision 2272)
++++ src/src/main.cpp	(working copy)
+@@ -521,18 +521,26 @@
+ 	m_pCloseFullScreenBtn = new wxButton(this, idCloseFullScreen, _( "Close Fullscreen" ), wxDefaultPosition );
+ 	m_pCloseFullScreenBtn->Show( false );
+ 
++    Manager::Get(this);
++
+     // project manager
+-	Manager::Get(this);
+-    m_LayoutManager.AddPane(Manager::Get()->GetProjectManager()->GetNotebook(), wxPaneInfo().
+-                              Name(wxT("ManagementPane")).Caption(_("Management")).
+-                              BestSize(wxSize(leftW, clientsize.GetHeight())).MinSize(wxSize(100,100)).
+-                              Left().Layer(1));
++    m_LayoutManager.AddPane(Manager::Get()->GetProjectManager()->GetNotebook(),
++                            wxPaneInfo().Name(wxT("ManagementPane")).Caption(_("Management")).
++                            BestSize(wxSize(leftW, clientsize.GetHeight())).
++                            MinSize(wxSize(100, 100)).
++                            Left().Layer(1));
+ 
++    // editor manager
++    m_LayoutManager.AddPane(Manager::Get()->GetEditorManager()->GetNotebook(),
++                            wxPaneInfo().Name(wxT("MainPane")).
++                            CenterPane());
++
+     // message manager
+-    m_LayoutManager.AddPane(Manager::Get()->GetMessageManager()->GetNotebook(), wxPaneInfo().
+-                              Name(wxT("MessagesPane")).Caption(_("Messages")).
+-                              BestSize(wxSize(clientsize.GetWidth(), bottomH)).//MinSize(wxSize(50,50)).
+-                              Bottom());
++    m_LayoutManager.AddPane(Manager::Get()->GetMessageManager()->GetNotebook(),
++                            wxPaneInfo().Name(wxT("MessagesPane")).Caption(_("Messages")).
++                            BestSize(wxSize(clientsize.GetWidth(), bottomH)).
++                            MinSize(wxSize(50, 50)).
++                            Bottom());
+ 
+ 	CreateMenubar();
+ 
+@@ -543,10 +551,6 @@
+     CreateToolbars();
+     SetToolBar(0);
+ 
+-    // editor manager
+-    m_LayoutManager.AddPane(m_pEdMan->GetNotebook(), wxPaneInfo().Name(wxT("MainPane")).
+-                            CenterPane());
+-
+     DoUpdateLayout();
+     DoUpdateLayoutColors();
+     DoUpdateEditorStyle();

@@ -1,0 +1,103 @@
+Index: src/include/menuitemsmanager.h
+===================================================================
+--- src/include/menuitemsmanager.h	(revision 9158)
++++ src/include/menuitemsmanager.h	(working copy)
+@@ -31,7 +31,8 @@
+         MenuItemsManager(bool autoClearOnDestroy = true);
+         virtual ~MenuItemsManager();
+ 
+-        virtual wxMenuItem* CreateFromString(const wxString& menuPath, int id);
++        //virtual wxMenuItem* CreateFromString(const wxString& menuPath, int id);
++        virtual int CreateFromString(const wxString& menuPath, int id);
+ 
+         virtual wxMenuItem* Add(wxMenu* parent, int id, const wxString& caption, const wxString& helptext);
+         virtual wxMenuItem* Insert(wxMenu* parent, int index, int id, const wxString& caption, const wxString& helptext);
+Index: src/sdk/menuitemsmanager.cpp
+===================================================================
+--- src/sdk/menuitemsmanager.cpp	(revision 9158)
++++ src/sdk/menuitemsmanager.cpp	(working copy)
+@@ -100,9 +100,9 @@
+   *                 starts with a dash (-) (e.g. "-MyItem") then a menu
+   *                 separator is prepended before the actual menu item.
+   * @param id The menu item ID (use wxID_SEPARATOR for adding a separator)
+-  * @return The newly created menu item or NULL for failure.
++  * @return The id of the newly created menu or the id of the old, same menu entry or NULL for failure.
+   */
+-wxMenuItem* MenuItemsManager::CreateFromString(const wxString& menuPath, int id)
++int MenuItemsManager::CreateFromString(const wxString& menuPath, int id)
+ {
+     wxMenuBar* mbar = Manager::Get()->GetAppFrame()->GetMenuBar();
+     wxMenu* menu = 0;
+@@ -165,9 +165,11 @@
+             {
+                 // existing menu
+                 // if it is the final item we want to create, display error and stop
++
+                 if (isLast || existing >= (int)menu->GetMenuItemCount())
+-                    return 0;
++                    return existing;
+ 
++
+                 // else just keep the menu pointer updated
+                 existingMenu = menu->GetMenuItems()[existing]->GetSubMenu();
+                 if (!existingMenu)
+@@ -187,7 +189,10 @@
+                     break;
+ 
+                 if (isLast)
+-                    return Insert(menu, insert ? insertIndex : menu->GetMenuItemCount(), id, current, wxEmptyString);
++                {
++                    Insert(menu, insert ? insertIndex : menu->GetMenuItemCount(), id, current, wxEmptyString);
++                    return id;
++                }
+                 else
+                 {
+                     wxMenu* sub = new wxMenu;
+@@ -202,3 +207,4 @@
+     }
+     return 0;
+ } // end of CreateFromString
++
+Index: src/sdk/scripting/bindings/sc_plugin.cpp
+===================================================================
+--- src/sdk/scripting/bindings/sc_plugin.cpp	(revision 9158)
++++ src/sdk/scripting/bindings/sc_plugin.cpp	(working copy)
+@@ -75,14 +75,22 @@
+         for (size_t i = 0; i < arr.GetCount(); ++i)
+         {
+             int id = wxNewId();
+-            mi.CreateFromString(arr[i], id);
++            id = mi.CreateFromString(arr[i], id);
+ 
+             ret.Add(id);
+ 
+             MenuCallback callback;
+             callback.object = it->second;
+             callback.menuIndex = i;
+-            s_MenuCallbacks.insert(s_MenuCallbacks.end(), std::make_pair(id, callback));
++
++            ModuleMenuCallbacks::iterator it =  s_MenuCallbacks.find(id);
++            if(it == s_MenuCallbacks.end())
++                s_MenuCallbacks.insert(s_MenuCallbacks.end(), std::make_pair(id, callback));
++            else
++            {
++                s_MenuCallbacks.erase(it);
++                s_MenuCallbacks.insert(s_MenuCallbacks.end(), std::make_pair(id, callback));
++            }
+         }
+     }
+ 
+Index: src/sdk/scriptingmanager.cpp
+===================================================================
+--- src/sdk/scriptingmanager.cpp	(revision 9158)
++++ src/sdk/scriptingmanager.cpp	(working copy)
+@@ -280,7 +299,8 @@
+     }
+ 
+     int id = wxNewId();
+-    wxMenuItem* item = m_MenuItemsManager.CreateFromString(menuPath, id);
++    id = m_MenuItemsManager.CreateFromString(menuPath, id);
++    wxMenuItem* item = Manager::Get()->GetAppFrame()->GetMenuBar()->FindItem(id);
+     if (item)
+     {
+         if (!isFunction)

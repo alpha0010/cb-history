@@ -1,0 +1,96 @@
+Index: src/plugins/openfileslist/openfileslistplugin.cpp
+===================================================================
+--- src/plugins/openfileslist/openfileslistplugin.cpp	(revision 5158)
++++ src/plugins/openfileslist/openfileslistplugin.cpp	(working copy)
+@@ -52,11 +52,13 @@
+     EVT_MENU(idViewOpenFilesTree, OpenFilesListPlugin::OnViewOpenFilesTree)
+     EVT_TREE_ITEM_ACTIVATED(idOpenFilesTree, OpenFilesListPlugin::OnTreeItemActivated)
+     EVT_TREE_ITEM_RIGHT_CLICK(idOpenFilesTree, OpenFilesListPlugin::OnTreeItemRightClick)
++    EVT_TREE_SEL_CHANGED(idOpenFilesTree, OpenFilesListPlugin::OnTreeSelChanged)
+ END_EVENT_TABLE()
+ 
+ OpenFilesListPlugin::OpenFilesListPlugin()
+ {
+     //ctor
++     TreeFrozen = false;
+ }
+ 
+ OpenFilesListPlugin::~OpenFilesListPlugin()
+@@ -182,9 +184,11 @@
+     EditorManager* mgr = Manager::Get()->GetEditorManager();
+ 
+     m_pTree->Freeze();
++    TreeFrozen = true;
+     m_pTree->DeleteChildren(m_pTree->GetRootItem());
+     if(!mgr->GetEditorsCount())
+     {
++        TreeFrozen = false;
+         m_pTree->Thaw();
+         return;
+     }
+@@ -204,6 +208,7 @@
+ 
+     m_pTree->SortChildren(m_pTree->GetRootItem());
+     m_pTree->Expand(m_pTree->GetRootItem());
++    TreeFrozen = false;
+     m_pTree->Thaw();
+ }
+ 
+@@ -216,6 +221,7 @@
+     EditorBase* aed = mgr->GetActiveEditor();
+ 
+     m_pTree->Freeze();
++    TreeFrozen = true;
+ 
+     compatibility::tree_cookie_t cookie = 0;
+     wxTreeItemId item = m_pTree->GetFirstChild(m_pTree->GetRootItem(), cookie);
+@@ -260,6 +266,7 @@
+         m_pTree->Expand(m_pTree->GetRootItem());
+     }
+ 
++    TreeFrozen = false;
+     m_pTree->Thaw();
+ }
+ 
+@@ -349,6 +356,7 @@
+     RefreshOpenFilesTree(event.GetEditor());
+ }
+ 
++
+ void OpenFilesListPlugin::OnProjectOpened(CodeBlocksEvent& event)
+ {
+     if (m_EditorArray.IsEmpty())
+@@ -364,3 +372,13 @@
+     }
+     m_EditorArray.Clear();
+ }
++
++// tree item left-clicked
++void OpenFilesListPlugin::OnTreeSelChanged(wxTreeEvent &event)
++{
++    if(Manager::IsAppShuttingDown() || TreeFrozen)
++        return;
++    EditorBase* ed = static_cast<EditorBase*>(static_cast<OpenFilesListData*>(m_pTree->GetItemData(event.GetItem()))->GetEditor());
++    if(ed)
++        Manager::Get()->GetEditorManager()->SetActiveEditor(ed);
++}
+Index: src/plugins/openfileslist/openfileslistplugin.h
+===================================================================
+--- src/plugins/openfileslist/openfileslistplugin.h	(revision 5158)
++++ src/plugins/openfileslist/openfileslistplugin.h	(working copy)
+@@ -41,6 +41,7 @@
+         void OnTreeItemRightClick(wxTreeEvent &event);
+         void OnViewOpenFilesTree(wxCommandEvent& event);
+         void OnUpdateUI(wxUpdateUIEvent& event);
++        void OnTreeSelChanged(wxTreeEvent &event);
+ 
+         void OnEditorActivated(CodeBlocksEvent& event);
+         void OnEditorClosed(CodeBlocksEvent& event);
+@@ -52,6 +53,7 @@
+         void OnProjectOpened(CodeBlocksEvent& event);
+ 
+         wxTreeCtrl* m_pTree;
++        bool TreeFrozen;
+         wxImageList* m_pImages;
+         wxMenu* m_ViewMenu;
+     private:

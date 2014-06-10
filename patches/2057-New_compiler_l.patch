@@ -1,0 +1,126 @@
+Index: src/include/compiler.h
+===================================================================
+--- src/include/compiler.h	(revision 4101)
++++ src/include/compiler.h	(working copy)
+@@ -47,6 +47,7 @@
+ enum CompilerLineType
+ {
+     cltNormal,
++    cltInfo,
+     cltWarning,
+     cltError
+ };
+@@ -321,7 +322,7 @@
+         CompilerCommandGenerator* m_pGenerator;
+         bool m_Valid; // 'valid' flag
+         bool m_NeedValidityCheck; // flag to re-check validity (raised when changing compiler paths)
+-        
++
+         // "mirror" default settings for comparing when saving (to save only those that differ from defaults)
+         struct MirrorSettings
+         {
+@@ -329,7 +330,7 @@
+ 			wxString MasterPath;
+ 			wxArrayString ExtraPaths;
+ 			CompilerPrograms Programs;
+-			
++
+ 			// these are the CompileOptionsBase settings that each compiler keeps on a global level
+ 			wxArrayString CompilerOptions_;
+ 			wxArrayString LinkerOptions;
+@@ -339,7 +340,7 @@
+ 			wxArrayString LinkLibs;
+ 			wxArrayString CmdsBefore;
+ 			wxArrayString CmdsAfter;
+-			
++
+ 			// below are the settings that the user is asked to revert to defaults (if defaults have changed)
+ 			wxString Commands[COMPILER_COMMAND_TYPES_COUNT];
+ 			CompilerSwitches Switches;
+Index: src/plugins/compilergcc/advancedcompileroptionsdlg.cpp
+===================================================================
+--- src/plugins/compilergcc/advancedcompileroptionsdlg.cpp	(revision 4101)
++++ src/plugins/compilergcc/advancedcompileroptionsdlg.cpp	(working copy)
+@@ -319,7 +319,7 @@
+                 "Filename: %s\n"
+                 "Line number: %s\n"
+                 "Message: %s"),
+-                clt == cltNormal ? _("Info") : (clt == cltError ? _("Error") : _("Warning")),
++                clt == cltNormal ? _("Normal") : (clt == cltInfo ? _("Info") : (clt == cltError ? _("Error") : _("Warning"))),
+                 compiler->GetLastErrorFilename().c_str(),
+                 compiler->GetLastErrorLine().c_str(),
+                 compiler->GetLastError().c_str()
+Index: src/plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- src/plugins/compilergcc/compilergcc.cpp	(revision 4101)
++++ src/plugins/compilergcc/compilergcc.cpp	(working copy)
+@@ -2844,6 +2844,7 @@
+ 
+ void CompilerGCC::OnCompileFile(wxCommandEvent& event)
+ {
++    // TODO (Rick#1#): Clean the file so it will always recompile
+     wxFileName file;
+     if (event.GetId() == idMenuCompileFileFromProjectManager)
+     {
+@@ -3202,7 +3203,7 @@
+     }
+ 
+     // log to build messages if warning/error
+-    if (clt != cltNormal)
++    if (clt > cltNormal)
+     {
+         // display current project/target "header" in build messages, if different since last warning/error
+         static ProjectBuildTarget* last_bt = 0;
+@@ -3241,7 +3242,7 @@
+     wxColour c;
+     switch (lt)
+     {
+-        case cltNormal: c = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT); break;
++        case cltNormal: case cltInfo: c = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT); break;
+         case cltWarning: c = COLOUR_NAVY; break;
+         case cltError: c = *wxRED; break;
+     }
+@@ -3271,7 +3272,7 @@
+         if (isTitle)
+             m_BuildLogContents << _T("</b>");
+ 
+-        if (lt != cltNormal)
++        if (lt >= cltWarning)
+             m_BuildLogContents << _T("</font>");
+ 
+         m_BuildLogContents << _T("<br />\n");
+Index: src/plugins/compilergcc/compilerMINGW.cpp
+===================================================================
+--- src/plugins/compilergcc/compilerMINGW.cpp	(revision 4101)
++++ src/plugins/compilergcc/compilerMINGW.cpp	(working copy)
+@@ -185,7 +185,8 @@
+ {
+     m_RegExes.Clear();
+     m_RegExes.Add(RegExStruct(_("Fatal error"), cltError, _T("FATAL:[ \t]*(.*)"), 1));
+-    m_RegExes.Add(RegExStruct(_("'Instantiated from' info"), cltWarning, _T("(") + FilePathWithSpaces + _T("):([0-9]+):[ \t]+([iI]nstantiated from .*)"), 3, 1, 2));
++    m_RegExes.Add(RegExStruct(_("'In function...' info"), cltInfo, _T("(") + FilePathWithSpaces + _T("):[ \t]+") + _T("([iI]n ([cC]lass|[cC]onstructor|[dD]estructor|[fF]unction|[mM]ember [fF]unction).*)"), 2, 1));
++    m_RegExes.Add(RegExStruct(_("'Instantiated from' info"), cltInfo, _T("(") + FilePathWithSpaces + _T("):([0-9]+):[ \t]+([iI]nstantiated from .*)"), 3, 1, 2));
+     m_RegExes.Add(RegExStruct(_("Resource compiler error"), cltError, _T("windres.exe:[ \t](") + FilePathWithSpaces + _T("):([0-9]+):[ \t](.*)"), 3, 1, 2));
+     m_RegExes.Add(RegExStruct(_("Resource compiler error (2)"), cltError, _T("windres.exe:[ \t](.*)"), 1));
+     m_RegExes.Add(RegExStruct(_("Preprocessor warning"), cltWarning, _T("(") + FilePathWithSpaces + _T("):([0-9]+):([0-9]+):[ \t]([Ww]arning:[ \t].*)"), 4, 1, 2));
+@@ -197,7 +198,7 @@
+     m_RegExes.Add(RegExStruct(_("Linker error (lib not found)"), cltError, _T(".*(ld.*):[ \t](cannot find.*)"), 2, 1));
+     m_RegExes.Add(RegExStruct(_("Undefined reference"), cltError, _T("(") + FilePathWithSpaces + _T("):[ \t](undefined reference.*)"), 2, 1));
+     m_RegExes.Add(RegExStruct(_("General warning"), cltWarning, _T("([Ww]arning:[ \t].*)"), 1));
+-    m_RegExes.Add(RegExStruct(_("Auto-import info"), cltWarning, _T("([Ii]nfo:[ \t].*)\\(auto-import\\)"), 1));
++    m_RegExes.Add(RegExStruct(_("Auto-import info"), cltInfo, _T("([Ii]nfo:[ \t].*)\\(auto-import\\)"), 1));
+ }
+ 
+ AutoDetectResult CompilerMINGW::AutoDetectInstallationDir()
+Index: src/plugins/compilergcc/resources/advanced_compiler_options.xrc
+===================================================================
+--- src/plugins/compilergcc/resources/advanced_compiler_options.xrc	(revision 4101)
++++ src/plugins/compilergcc/resources/advanced_compiler_options.xrc	(working copy)
+@@ -229,6 +229,7 @@
+                             <object class="sizeritem">
+                               <object class="wxComboBox" name="cmbRegexType">
+                                 <content>
++                                  <item>Normal</item>
+                                   <item>Info</item>
+                                   <item>Warning</item>
+                                   <item>Error</item>

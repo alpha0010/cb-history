@@ -1,0 +1,93 @@
+Index: src/include/projectbuildtarget.h
+===================================================================
+--- src/include/projectbuildtarget.h	(revision 4084)
++++ src/include/projectbuildtarget.h	(working copy)
+@@ -112,6 +112,14 @@
+         /** Provides an easy way to iterate all the files belonging in this target.
+           * @return A list of files belonging in this target. */
+         virtual FilesList& GetFilesList(){ return m_Files; }
++
++        /** @return True if target linking should be forced, false if not. */
++        virtual bool GetForceLinking(){ return m_ForceLinking; }
++
++        /** Set if target linking should be forced.
++          * Used to force linking when files are added or removed from project.
++          * @param forceIt If true, target linking is forced else it is not. */
++        virtual void SetForceLinking(bool forceIt){ m_ForceLinking = forceIt; };
+     private:
+         friend class ProjectFile; // to allow it to add/remove files in FilesList
+         cbProject* m_Project;
+@@ -123,6 +131,7 @@
+         bool m_CreateStaticLib;
+         bool m_CreateDefFile;
+         bool m_UseConsoleRunner;
++        bool m_ForceLinking;
+ };
+ 
+ #endif // PROJECTBUILDTARGET_H
+Index: src/plugins/compilergcc/directcommands.cpp
+===================================================================
+--- src/plugins/compilergcc/directcommands.cpp	(revision 4084)
++++ src/plugins/compilergcc/directcommands.cpp	(working copy)
+@@ -518,6 +518,11 @@
+         force = true;
+     if (AreExternalDepsOutdated(out.GetFullPath(), target->GetAdditionalOutputFiles(), target->GetExternalDeps()))
+         force = true;
++    if (target->GetForceLinking())
++    {
++        force = true;
++        target->SetForceLinking(false);
++    }
+ 
+     Compiler* compiler = target ? CompilerFactory::GetCompiler(target->GetCompilerID()) : m_pCompiler;
+ 
+Index: src/sdk/cbproject.cpp
+===================================================================
+--- src/sdk/cbproject.cpp	(revision 4084)
++++ src/sdk/cbproject.cpp	(working copy)
+@@ -730,6 +730,7 @@
+         if (target)
+         {
+             target->GetFilesList().DeleteObject(pf);
++            target->SetForceLinking(true);
+         }
+     }
+     delete pf;
+Index: src/sdk/projectbuildtarget.cpp
+===================================================================
+--- src/sdk/projectbuildtarget.cpp	(revision 4084)
++++ src/sdk/projectbuildtarget.cpp	(working copy)
+@@ -44,6 +44,7 @@
+     m_CreateStaticLib = true;
+     m_CreateDefFile = true;
+     m_UseConsoleRunner = true;
++    m_ForceLinking = false;
+ }
+ 
+ // class destructor
+Index: src/sdk/projectfile.cpp
+===================================================================
+--- src/sdk/projectfile.cpp	(revision 4084)
++++ src/sdk/projectfile.cpp	(working copy)
+@@ -62,7 +62,10 @@
+     {
+         ProjectBuildTarget* target = project->GetBuildTarget(targetName);
+         if (target && !target->m_Files.Find(this))
++        {
+             target->m_Files.Append(this);
++            target->SetForceLinking(true);
++        }
+     }
+ }
+ 
+@@ -85,7 +88,10 @@
+         {
+             wxFilesListNode* node = target->m_Files.Find(this);
+             if (node)
++            {
+                 target->m_Files.Erase(node);
++                target->SetForceLinking(true);
++            }
+         }
+     }
+ }

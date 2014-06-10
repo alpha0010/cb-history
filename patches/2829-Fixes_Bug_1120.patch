@@ -1,0 +1,102 @@
+Index: debian/changelog
+===================================================================
+--- debian/changelog	(revisiÃ³n: 5813)
++++ debian/changelog	(copia de trabajo)
+@@ -1,4 +1,4 @@
+-codeblocks (8.02svn5670) unstable; urgency=low
++codeblocks (8.02svn5813) unstable; urgency=low
+ 
+   * more fixes to debian build system, sources and packages are now
+     lintian-clean, except for some words guessed as spelling-errors.
+Index: src/plugins/debuggergdb/debuggergdb.cpp
+===================================================================
+--- src/plugins/debuggergdb/debuggergdb.cpp	(revisiÃ³n: 5813)
++++ src/plugins/debuggergdb/debuggergdb.cpp	(copia de trabajo)
+@@ -2189,22 +2189,39 @@
+     cbProject* project = Manager::Get()->GetProjectManager()->GetActiveProject();
+     ProjectFile* f = project ? project->GetFileByFilename(filename, false, true) : 0;
+     wxFileName fname(filename);
+-    if (project && fname.IsRelative())
+-        fname.MakeAbsolute(project->GetBasePath());
+-    // gdb can't work with spaces in filenames, so we have passed it the shorthand form (C:\MYDOCU~1 etc)
+-    // revert this change now so the file can be located and opened...
+-    // we do this by calling GetLongPath()
+-    cbEditor* ed = Manager::Get()->GetEditorManager()->Open(fname.GetLongPath());
+-    if (ed)
++ //JMP
++    wxArrayString pdirs;
++    if ( project )
++        pdirs = GetSearchDirs( project );
++
++    if ( pdirs.GetCount() == 0 )
++       pdirs.Add( wxEmptyString );
++
++    bool bFound = false;
++
++    for ( size_t i = 0; i < pdirs.GetCount(); i++ )
+     {
+-        ed->Show(true);
+-        if (f && !ed->GetProjectFile())
+-            ed->SetProjectFile(f);
+-        ed->GotoLine(line - 1, false);
+-        if (setMarker)
+-            ed->SetDebugLine(line - 1);
++        wxFileName fname(filename);
++        if (fname.IsRelative())
++            fname.MakeAbsolute(pdirs[i]);
++       // gdb can't work with spaces in filenames, so we have passed it the shorthand form (C:\MYDOCU~1 etc)
++       // revert this change now so the file can be located and opened...
++       // we do this by calling GetLongPath()
++       cbEditor* ed = Manager::Get()->GetEditorManager()->Open(fname.GetLongPath());
++       if (ed)
++       {
++            bFound = true;
++            ed->Show(true);
++            if (f && !ed->GetProjectFile())
++                ed->SetProjectFile(f);
++            ed->GotoLine(line - 1, false);
++            if (setMarker)
++                ed->SetDebugLine(line - 1);
++            break;
++       }
+     }
+-    else
++
++    if ( !bFound )
+         Log(_("Cannot open file: ") + fname.GetLongPath());
+ }
+ 
+Index: src/CodeBlocks-unix.cbp
+===================================================================
+--- src/CodeBlocks-unix.cbp	(revisiÃ³n: 5813)
++++ src/CodeBlocks-unix.cbp	(copia de trabajo)
+@@ -138,7 +138,7 @@
+ 				<Option working_dir="devel" />
+ 				<Option type="0" />
+ 				<Option compiler="gcc" />
+-				<Option parameters="--debug-log -ns -ni" />
++				<Option parameters="--debug-log -ns -ni --prefix=/home/jose/Aplicaciones/codeblocks-SVN/trunk/src/devel" />
+ 				<Option projectLinkerOptionsRelation="2" />
+ 				<Option projectIncludeDirsRelation="2" />
+ 				<Option projectResourceIncludeDirsRelation="0" />
+@@ -380,8 +380,8 @@
+ 			<Add alias="Third-party libs" targets="tinyXML;AutoRevision;ConsoleRunner;Squirrel;Squirrel std library;SqPlus;scintilla;" />
+ 		</VirtualTargets>
+ 		<Compiler>
++			<Add option="-O3" />
+ 			<Add option="-Wall" />
+-			<Add option="-g" />
+ 			<Add option="`wx-config --cflags`" />
+ 			<Add option="-fmessage-length=0" />
+ 			<Add option="-fexceptions" />
+@@ -3440,7 +3440,9 @@
+ 					<wxPanel wxs="wxsmith/EmbeddedHtmlPanel.wxs" src="plugins/defaultmimehandler/EmbeddedHtmlPanel.cpp" hdr="plugins/defaultmimehandler/EmbeddedHtmlPanel.h" fwddecl="1" name="EmbeddedHtmlPanel" language="CPP" />
+ 				</resources>
+ 			</wxsmith>
+-			<debugger />
++			<debugger>
++				<search_path add="/home/jose/Aplicaciones/codeblocks-SVN/trunk/src/" />
++			</debugger>
+ 		</Extensions>
+ 	</Project>
+ </CodeBlocks_project_file>

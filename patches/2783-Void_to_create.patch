@@ -1,0 +1,87 @@
+Hi, C::B devs:
+
+Here is a modified function to retrieve all GCC default compiler directories
+
+wxArrayString NativeParser::GetGCCCompilerDirs(const wxString &cpp_compiler, const wxString &base)
+{
+    wxArrayString gcc_compiler_dirs;
+
+    // for starters , only do this for gnu compiler
+    //Manager::Get()->GetLogManager()->DebugLog(_T("CompilerID ") + CompilerID);
+    //
+    //   windows: mingw32-g++ -v -E -x c++ nul
+    //   linux  : g++ -v -E -x c++ /dev/null
+    // do the trick only for c++, not needed then for C (since this is a subset of C++)
+
+
+    // let's construct the command
+    // use a null file handler
+    // both works fine in Windows and linux
+
+#ifdef __WXMSW__
+    wxString Command = cpp_compiler + _T(" -v -E -x c++ nul");
+#else
+    wxString Command = cpp_compiler + _T(" -v -E -x c++ /dev/null");
+#endif
+
+    // action time  (everything shows up on the error stream
+    wxArrayString Output, Errors;
+    wxExecute(Command, Output, Errors, wxEXEC_NODISABLE);
+    int nCount = Errors.GetCount();
+    // the include dir (1 per line) show up between the lines
+    // #include <...> search starts here:
+    // End of search list
+    //   let's hope this does not change too quickly, otherwise we need
+    // to adjust our search code (for several versions ...)
+    bool bStart = false;
+    for(int idxCount = 0; idxCount < nCount; ++idxCount)
+    {
+        if (!bStart && Errors[idxCount] == _("#include <...> search starts here:"))
+        {
+            bStart = true;
+        }
+        else if (bStart && Errors[idxCount] == _("End of search list."))
+        {
+            bStart = false; // could jump out of for loop if we want
+        }
+        else if (bStart)
+        {
+//                Manager::Get()->GetLogManager()->DebugLog("include dir " + Errors[idxCount]);
+            // get rid of the leading space (more general : any whitespace)in front
+            wxRegEx reg(_T("^[ \t]*(.*)"));
+            if(reg.Matches(Errors[idxCount]))
+            {
+                wxString out = reg.GetMatch(Errors[idxCount], 1);
+                if(!out.IsEmpty())
+                {
+                    wxFileName dir(out);
+                    if (NormalizePath(dir,base))
+                    {
+                        Manager::Get()->GetLogManager()->DebugLog(_T("Caching GCC dir: ") + dir.GetFullPath());
+                        gcc_compiler_dirs.Add(dir.GetFullPath());
+                    }
+                    else
+                    #if wxCHECK_VERSION(2, 9, 0)
+                        Manager::Get()->GetLogManager()->DebugLog(F(_T("Error normalizing path: '%s' from '%s'"),out.wx_str(),base.wx_str()));
+                    #else
+                        Manager::Get()->GetLogManager()->DebugLog(F(_T("Error normalizing path: '%s' from '%s'"),out.c_str(),base.c_str()));
+                    #endif
+                }
+            }
+        }
+    } // end for : idx : idxCount
+
+
+
+    return gcc_compiler_dirs;
+}
+
+
+I have tested them at least works fine under Windows MinGW.
+
+see the discussing in 
+
+http://forums.codeblocks.org/index.php/topic,10598.0.html
+
+
+

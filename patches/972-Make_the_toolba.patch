@@ -1,0 +1,30 @@
+Index: main.cpp
+===================================================================
+--- main.cpp	(revision 2274)
++++ main.cpp	(working copy)
+@@ -696,9 +696,10 @@
+     wxSize size = m_SmallToolBar ? wxSize(16, 16) : wxSize(22, 22);
+     m_pToolbar = new wxToolBar(this, -1, wxDefaultPosition, size, wxTB_FLAT | wxTB_NODIVIDER);
+     m_pToolbar->SetToolBitmapSize(size);
++
+     Manager::Get()->AddonToolBar(m_pToolbar,xrcToolbarName);
+-
+ 	m_pToolbar->Realize();
++    m_pToolbar->SetBestFittingSize();
+ 
+     // add toolbars in docking system
+     m_LayoutManager.AddPane(m_pToolbar, wxPaneInfo().
+@@ -1007,10 +1008,13 @@
+     wxSize size = m_SmallToolBar ? wxSize(16, 16) : wxSize(22, 22);
+     wxToolBar* tb = new wxToolBar(this, -1, wxDefaultPosition, size, wxTB_FLAT | wxTB_NODIVIDER);
+     tb->SetToolBitmapSize(size);
++
+     if (plugin->BuildToolBar(tb))
+     {
+         SetToolBar(0);
+ 
++        tb->SetBestFittingSize();
++
+         // add View->Toolbars menu item for toolbar
+         wxMenu* viewToolbars = 0;
+         GetMenuBar()->FindItem(idViewToolMain, &viewToolbars);

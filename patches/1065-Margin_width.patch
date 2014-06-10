@@ -1,0 +1,61 @@
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 2483)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -579,7 +579,8 @@
+     // line numbering
+     m_pControl->SetMarginType(0, wxSCI_MARGIN_NUMBER);
+    	if (mgr->ReadBool(_T("/show_line_numbers"), true))
+-    	m_pControl->SetMarginWidth(0, 48);
++    	m_pControl->SetMarginWidth(0, mgr->ReadInt(_T("/margin/width"), 48));
++
+ 	else
+ 		m_pControl->SetMarginWidth(0, 0);
+ 
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 2483)
++++ src/sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -161,6 +161,9 @@
+     XRCCTRL(*this, "btnGutterColour", wxButton)->SetBackgroundColour(gutterColour);
+     XRCCTRL(*this, "spnGutterColumn", wxSpinCtrl)->SetValue(cfg->ReadInt(_T("/gutter/column"), 80));
+ 
++    //margin
++    XRCCTRL(*this, "spnMarginWidth", wxSpinCtrl)->SetValue(cfg->ReadInt(_T("/margin/width"), 48));
++
+ 	// colour set
+ 	LoadThemes();
+ 
+@@ -843,6 +846,9 @@
+         cfg->Write(_T("/gutter/colour"),		    XRCCTRL(*this, "btnGutterColour", wxButton)->GetBackgroundColour());
+         cfg->Write(_T("/gutter/column"), 		XRCCTRL(*this, "spnGutterColumn", wxSpinCtrl)->GetValue());
+ 
++        //margin
++        cfg->Write(_T("/margin/width"), XRCCTRL(*this, "spnMarginWidth", wxSpinCtrl)->GetValue());
++
+ 		// default code : first update what's in the current txtCtrl,
+ 		// and then write them all to the config file (even if unmodified)
+ 		int sel = XRCCTRL(*this, "cmbDefCodeFileType", wxComboBox)->GetSelection();
+Index: src/sdk/resources/editor_configuration.xrc
+===================================================================
+--- src/sdk/resources/editor_configuration.xrc	(revision 2483)
++++ src/sdk/resources/editor_configuration.xrc	(working copy)
+@@ -473,6 +473,18 @@
+                             <value>80</value>
+                           </object>
+                         </object>
++                        <object class="sizeritem">
++                          <flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++                          <object class="wxStaticText">
++                            <label>Width:</label>
++                          </object>
++                        </object>
++                        <object class="sizeritem">
++                          <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                          <object class="wxSpinCtrl" name="spnMarginWidth">
++                            <value>48</value>
++                          </object>
++                        </object>
+                       </object>
+                     </object>
+                   </object>

@@ -1,0 +1,144 @@
+Index: src/sdk/wxFlatNotebook/src/wxFlatNotebook/wxFlatNotebook.cpp
+===================================================================
+--- src/sdk/wxFlatNotebook/src/wxFlatNotebook/wxFlatNotebook.cpp	(revision 4032)
++++ src/sdk/wxFlatNotebook/src/wxFlatNotebook/wxFlatNotebook.cpp	(working copy)
+@@ -1017,7 +1017,11 @@
+ 	}
+ 
+ 	rect = wxRect(btnXPos, 8, 16, 16);
++#if wxCHECK_VERSION(2, 8, 0)
++    if(rect.Contains(pt))
++#else
+ 	if(rect.Inside(pt))
++#endif
+ 	{
+ 		return (style & wxFNB_NO_X_BUTTON) ? wxFNB_NOWHERE : wxFNB_X;
+ 	}
+@@ -1026,18 +1030,30 @@
+ 	if( style & wxFNB_DROPDOWN_TABS_LIST )
+ 	{
+ 		rect = wxRect(render->GetDropArrowButtonPos( this ), 8, 16, 16);
++#if wxCHECK_VERSION(2, 8, 0)
++        if( rect.Contains(pt) )
++#else
+ 		if( rect.Inside(pt) )
++#endif
+ 			return wxFNB_DROP_DOWN_ARROW;
+ 	}
+ 
++#if wxCHECK_VERSION(2, 8, 0)
++    if(rect.Contains(pt))
++#else
+ 	if(rect.Inside(pt))
++#endif
+ 	{
+ 		return (style & wxFNB_NO_NAV_BUTTONS) ? wxFNB_NOWHERE : wxFNB_RIGHT_ARROW;
+ 	}
+ 
+ 
+ 	rect = wxRect(btnLeftPos, 8, 16, 16);
++#if wxCHECK_VERSION(2, 8, 0)
++    if(rect.Contains(pt))
++#else
+ 	if(rect.Inside(pt))
++#endif
+ 	{
+ 		return (style & wxFNB_NO_NAV_BUTTONS) ? wxFNB_NOWHERE : wxFNB_LEFT_ARROW;
+ 	}
+@@ -1054,7 +1070,11 @@
+ 		if(style & wxFNB_X_ON_TAB && (int)cur == GetSelection())
+ 		{
+ 			// 'x' button exists on a tab
++#if wxCHECK_VERSION(2, 8, 0)
++            if(m_pagesInfoVec[cur].GetXRect().Contains(pt))
++#else
+ 			if(m_pagesInfoVec[cur].GetXRect().Inside(pt))
++#endif
+ 			{
+ 				pageInfo = pgInfo;
+ 				tabIdx = (int)cur;
+@@ -1082,7 +1102,11 @@
+ 
+ 			wxRect tabRect = wxRect(pgInfo.GetPosition().x, pgInfo.GetPosition().y, 
+ 				pgInfo.GetSize().x, pgInfo.GetSize().y);
++#if wxCHECK_VERSION(2, 8, 0)
++            if(tabRect.Contains(pt))
++#else
+ 			if(tabRect.Inside(pt))
++#endif
+ 			{
+ 				// We have a match
+ 				pageInfo = pgInfo;
+Index: src/sdk/wxscintilla/src/PlatWX.cpp
+===================================================================
+--- src/sdk/wxscintilla/src/PlatWX.cpp	(revision 4032)
++++ src/sdk/wxscintilla/src/PlatWX.cpp	(working copy)
+@@ -1382,11 +1382,28 @@
+ //----------------------------------------------------------------------
+ 
+ ElapsedTime::ElapsedTime() {
++#if !wxCHECK_VERSION(2, 6, 2)
+     wxStartTimer();
++#else
++    wxLongLong localTime = wxGetLocalTimeMillis();
++    littleBit = localTime.GetLo();
++    bigBit = localTime.GetHi();
++#endif
+ }
+ 
+ double ElapsedTime::Duration(bool reset) {
++#if !wxCHECK_VERSION(2, 6, 2)
+     double result = wxGetElapsedTime(reset);
++#else
++    wxLongLong prevTime(bigBit, littleBit);
++    wxLongLong localTime = wxGetLocalTimeMillis();
++    if(reset) {
++        littleBit = localTime.GetLo();
++        bigBit = localTime.GetHi();
++    }
++    wxLongLong duration = localTime - prevTime;
++    double result = duration.ToDouble();
++#endif
+     result /= 1000.0;
+     return result;
+ }
+Index: src/sdk/wxscintilla/src/ScintillaWX.cpp
+===================================================================
+--- src/sdk/wxscintilla/src/ScintillaWX.cpp	(revision 4032)
++++ src/sdk/wxscintilla/src/ScintillaWX.cpp	(working copy)
+@@ -684,7 +684,6 @@
+     PRectangle rcClient = GetClientRectangle();
+     paintingAllText = rcPaint.Contains(rcClient);
+ 
+-    dc->BeginDrawing();
+     ClipChildren(*dc, rcPaint);
+     Paint(surfaceWindow, rcPaint);
+ 
+@@ -695,7 +694,6 @@
+         FullPaint();
+     }
+     paintState = notPainting;
+-    dc->EndDrawing();
+ }
+ 
+ 
+Index: src/include/globals.h
+===================================================================
+--- src/include/globals.h	(revision 4032)
++++ src/include/globals.h	(working copy)
+@@ -309,4 +309,15 @@
+     extern DLLIMPORT windows_version_t WindowsVersion();
+ };
+ 
++#if wxCHECK_VERSION(2, 8, 0) && !(WXWIN_COMPATIBILITY_2_6)
++    // Note the following defines need removed
++    // when CodeBlocks support for wxWidgets 2.6 is dropped
++    #define wxOPEN wxFD_OPEN
++    #define wxFILE_MUST_EXIST wxFD_FILE_MUST_EXIST
++    #define wxMULTIPLE wxFD_MULTIPLE
++    #define wxSAVE wxFD_SAVE
++    #define wxOVERWRITE_PROMPT wxFD_OVERWRITE_PROMPT
++    #define wxCHANGE_DIR wxFD_CHANGE_DIR
++#endif
++
+ #endif // SDK_GLOBALS_H

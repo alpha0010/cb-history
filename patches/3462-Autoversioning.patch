@@ -1,0 +1,290 @@
+Index: AutoVersioning.cpp
+===================================================================
+--- AutoVersioning.cpp	(revision 8648)
++++ AutoVersioning.cpp	(working copy)
+@@ -175,6 +175,10 @@
+                 {
+                     Config.Settings.DateDeclarations = Help?true:false;
+                 }
++                if(pElem->QueryIntAttribute("use_define", &Help) == TIXML_SUCCESS)
++                {
++                    Config.Settings.UseDefine = Help?true:false;
++                }
+                 // GJH 03/03/10 Added manifest updating.
+                 if(pElem->QueryIntAttribute("update_manifest", &Help) == TIXML_SUCCESS)
+                 {
+@@ -264,6 +268,7 @@
+             TiXmlElement Settings("Settings");
+             Settings.SetAttribute("autoincrement", NewConfig.Settings.Autoincrement);
+             Settings.SetAttribute("date_declarations", NewConfig.Settings.DateDeclarations);
++            Settings.SetAttribute("use_define", NewConfig.Settings.UseDefine);
+             // GJH 03/03/10 Added manifest updating.
+             Settings.SetAttribute("update_manifest", NewConfig.Settings.UpdateManifest);
+             Settings.SetAttribute("do_auto_increment", NewConfig.Settings.DoAutoIncrement);
+@@ -489,6 +494,7 @@
+ 
+     VersionEditorDialog.SetAuto(GetConfig().Settings.Autoincrement);
+     VersionEditorDialog.SetDates(GetConfig().Settings.DateDeclarations);
++    VersionEditorDialog.SetDefine(GetConfig().Settings.UseDefine);
+ 	// GJH 03/03/10 Added manifest updating.
+     VersionEditorDialog.SetManifest(GetConfig().Settings.UpdateManifest);
+ 
+@@ -526,6 +532,7 @@
+     GetConfig().Scheme.BuildTimesToIncrementMinor = VersionEditorDialog.GetBuildTimesToMinorIncrement();
+     GetConfig().Settings.Autoincrement = VersionEditorDialog.GetAuto();
+     GetConfig().Settings.DateDeclarations = VersionEditorDialog.GetDates();
++    GetConfig().Settings.UseDefine = VersionEditorDialog.GetDefine();
+ 	// GJH 03/03/10 Added manifest updating.
+     GetConfig().Settings.UpdateManifest = VersionEditorDialog.GetManifest();
+     GetConfig().Settings.AskToIncrement = VersionEditorDialog.GetCommitAsk();
+@@ -592,6 +599,11 @@
+     }
+ 
+     wxString prefix = cbC2U(GetConfig().Code.Prefix.c_str());
++    wxString def_define_char = _T("");
++    wxString def_define_long = _T("");
++    wxString def_equal = _T("");
++    wxString def_array = _T("");
++    wxString def_end = _T("");
+ 
+     if(prefix != _T(""))
+     {
+@@ -608,42 +620,58 @@
+         headerOutput << _T("namespace ") << cbC2U(GetConfig().Code.NameSpace.c_str()) << _T("{") << _T("\n");
+         headerOutput << _T("\t") << _T("\n");
+     }
++    if(GetConfig().Settings.UseDefine)
++    {
++        def_define_char << _T("#define ");
++        def_define_long << def_define_char;
++        def_equal << _T(" ");
++        def_array << _T("");
++        def_end << _T("");
++    }
++    else
++    {
++        def_define_char << _T("static const char ");
++        def_define_long << _T("static const long ");
++        def_equal << _T(" = ");
++        def_array << _T("[]");
++        def_end << _T(";");
++    }
+ 
+     if(GetConfig().Settings.DateDeclarations)
+     {
+         wxDateTime actualDate = wxDateTime::Now();
+         headerOutput << _T("\t") << _T("//Date Version Types") << _T("\n");
+-        headerOutput << _T("\t") << _T("static const char ") << prefix << _T("DATE[] = ") << actualDate.Format(_T("\"%d\"")) << _T(";\n");
+-        headerOutput << _T("\t") << _T("static const char ") << prefix << _T("MONTH[] = ") << actualDate.Format(_T("\"%m\"")) << _T(";\n");
+-        headerOutput << _T("\t") << _T("static const char ") << prefix << _T("YEAR[] = ") << actualDate.Format(_T("\"%Y\"")) << _T(";\n");
++        headerOutput << _T("\t") << def_define_char << prefix << _T("DATE") << def_array << def_equal << actualDate.Format(_T("\"%d\"")) << def_end << _T("\n");
++        headerOutput << _T("\t") << def_define_char << prefix << _T("MONTH") << def_array << def_equal << actualDate.Format(_T("\"%m\"")) << def_end << _T("\n");
++        headerOutput << _T("\t") << def_define_char << prefix << _T("YEAR") << def_array << def_equal << actualDate.Format(_T("\"%Y\"")) << def_end << _T("\n");
+         long ubuntuYearNumber = 0;
+         actualDate.Format(_T("%y")).ToLong(&ubuntuYearNumber);
+         wxString ubuntuYear;
+         ubuntuYear.Printf(_T("%ld"),ubuntuYearNumber);
+-        headerOutput << _T("\t") << _T("static const char ") << prefix << _T("UBUNTU_VERSION_STYLE[] = \"") << ubuntuYear << actualDate.Format(_T(".%m")) << _T("\";\n");
++        headerOutput << _T("\t") << def_define_char << prefix << _T("UBUNTU_VERSION_STYLE") << def_array << def_equal << _T(" \"") << ubuntuYear << actualDate.Format(_T(".%m")) << _T("\"") << def_end << _T("\n");
+         headerOutput << _T("\t") << _T("\n");
+     }
+ 
+     headerOutput << _T("\t") << _T("//Software Status") << _T("\n");
+-    headerOutput << _T("\t") << _T("static const char ") << prefix << _T("STATUS[] = \"") << cbC2U(GetVersionState().Status.SoftwareStatus.c_str()) << _T("\";\n");
+-    headerOutput << _T("\t") << _T("static const char ") << prefix << _T("STATUS_SHORT[] = \"") << cbC2U(GetVersionState().Status.Abbreviation.c_str()) << _T("\";\n");
++    headerOutput << _T("\t") << def_define_char << prefix << _T("STATUS") << def_array << def_equal << _T(" \"") << cbC2U(GetVersionState().Status.SoftwareStatus.c_str()) << _T("\"") << def_end << _T("\n");
++    headerOutput << _T("\t") << def_define_char << prefix << _T("STATUS_SHORT") << def_array << def_equal << _T(" \"") << cbC2U(GetVersionState().Status.Abbreviation.c_str()) << _T("\"") << def_end << _T("\n");
+     headerOutput << _T("\t") << _T("\n");
+ 
+     wxString myPrintf;
+     headerOutput << _T("\t") << _T("//Standard Version Type") << _T("\n");
+     myPrintf.Printf(_T("%ld"), GetVersionState().Values.Major);
+-    headerOutput << _T("\t") << _T("static const long ") << prefix << _T("MAJOR = ") << myPrintf << _T(";\n");
++    headerOutput << _T("\t") << def_define_long << prefix << _T("MAJOR ") << def_equal << myPrintf << def_end << _T("\n");
+     myPrintf.Printf(_T("%ld"), GetVersionState().Values.Minor);
+-    headerOutput << _T("\t") << _T("static const long ") << prefix << _T("MINOR = ") << myPrintf << _T(";\n");
++    headerOutput << _T("\t") << def_define_long << prefix << _T("MINOR ") << def_equal << myPrintf << def_end << _T("\n");
+     myPrintf.Printf(_T("%ld"), GetVersionState().Values.Build);
+-    headerOutput << _T("\t") << _T("static const long ") << prefix << _T("BUILD = ") << myPrintf << _T(";\n");
++    headerOutput << _T("\t") << def_define_long << prefix << _T("BUILD ") << def_equal << myPrintf << def_end << _T("\n");
+     myPrintf.Printf(_T("%ld"), GetVersionState().Values.Revision);
+-    headerOutput << _T("\t") << _T("static const long ") << prefix << _T("REVISION = ") << myPrintf << _T(";\n");
++    headerOutput << _T("\t") << def_define_long << prefix << _T("REVISION ") << def_equal << myPrintf << def_end << _T("\n");
+     headerOutput << _T("\t") << _T("\n");
+ 
+     headerOutput << _T("\t") << _T("//Miscellaneous Version Types") << _T("\n");
+     myPrintf.Printf(_T("%ld"), GetVersionState().Values.BuildCount);
+-    headerOutput << _T("\t") << _T("static const long ") << prefix << _T("BUILDS_COUNT = ") << myPrintf << _T(";\n");
++    headerOutput << _T("\t") << def_define_long << prefix << _T("BUILDS_COUNT ") << def_equal << myPrintf << def_end <<_T("\n");
+ 
+     myPrintf.Printf(_T("%ld,%ld,%ld,%ld"), GetVersionState().Values.Major, GetVersionState().Values.Minor,
+             GetVersionState().Values.Build, GetVersionState().Values.Revision);
+@@ -655,7 +683,7 @@
+ 
+     myPrintf.Printf(_T("\"%ld.%ld.%ld.%ld\""), GetVersionState().Values.Major, GetVersionState().Values.Minor,
+             GetVersionState().Values.Build, GetVersionState().Values.Revision);
+-    headerOutput << _T("\t") << _T("static const char ") << prefix << _T("FULLVERSION_STRING[] = ") << myPrintf << _T(";\n");
++    headerOutput << _T("\t") << def_define_char << prefix << _T("FULLVERSION_STRING ") << def_array << def_equal << myPrintf << def_end << _T("\n");
+ 
+     if(GetConfig().Settings.Svn)
+     {
+@@ -664,14 +692,14 @@
+             wxMessageBox(_("Possible Causes:\n-You don't have SVN installed.\n-Incompatible version of SVN.\n-SVN configuration files not found.\n\nVerify the Autoversioning SVN directory."),_("SVN Error"),wxICON_ERROR);
+         headerOutput << _T("\t") << _T("\n");
+         headerOutput << _T("\t") << _T("//SVN Version") << _T("\n");
+-        headerOutput << _T("\t") << _T("static const char ") << prefix << _T("SVN_REVISION[] = ") << _T("\"") + revision + _T("\"")<< _T(";\n");
+-        headerOutput << _T("\t") << _T("static const char ") << prefix << _T("SVN_DATE[] = ") << _T("\"") + date + _T("\"")<< _T(";\n");
++        headerOutput << _T("\t") << def_define_char << prefix << _T("SVN_REVISION") << def_array << def_equal << _T("\"") + revision + _T("\"")<< def_end << _T("\n");
++        headerOutput << _T("\t") << def_define_char << prefix << _T("SVN_DATE") << def_array << def_equal << _T("\"") + date + _T("\"")<< def_end << _T("\n");
+     }
+ 
+     headerOutput << _T("\t") << _T("\n");
+     headerOutput << _T("\t") << _T("//These values are to keep track of your versioning state, don't modify them.") << _T("\n");
+     myPrintf.Printf(_T("%ld"), GetVersionState().BuildHistory);
+-    headerOutput << _T("\t") << _T("static const long ") << prefix << _T("BUILD_HISTORY = ") << myPrintf << _T(";\n");
++    headerOutput << _T("\t") << def_define_long << prefix << _T("BUILD_HISTORY ") << def_equal << myPrintf << def_end << _T("\n");
+ 
+     headerOutput << _T("\t") << _T("\n\n");
+ 
+Index: avConfig.h
+===================================================================
+--- avConfig.h	(revision 8648)
++++ avConfig.h	(working copy)
+@@ -67,18 +67,19 @@
+ 	// GJH 03/03/10 Added manifest updating.
+ 	bool UpdateManifest;
+ 	bool AskToIncrement;
++	bool UseDefine;
+ 	std::string Language;
+ 	bool Svn;
+ 	std::string SvnDirectory;
+ 	std::string HeaderPath;
+ 	avSettings() : Autoincrement(true), DateDeclarations(true), DoAutoIncrement(false), AskToIncrement(false),
+-        Language("C++"), Svn(false), SvnDirectory(), HeaderPath("version.h") {}
++        UseDefine(false), Language("C++"), Svn(false), SvnDirectory(), HeaderPath("version.h") {}
+ 	bool operator!=(const avSettings& Other) const
+ 	{
+ 	    return (Autoincrement != Other.Autoincrement || UpdateManifest != Other.UpdateManifest ||
+ 		DateDeclarations != Other.DateDeclarations || DoAutoIncrement != Other.DoAutoIncrement ||
+-		AskToIncrement != Other.AskToIncrement || Language != Other.Language || 
+-		Svn != Other.Svn || SvnDirectory != Other.SvnDirectory || 
++		AskToIncrement != Other.AskToIncrement || Language != Other.Language || UseDefine != Other.UseDefine ||
++		Svn != Other.Svn || SvnDirectory != Other.SvnDirectory ||
+ 		HeaderPath != Other.HeaderPath);
+ 	}
+ };
+Index: avVersionEditorDlg.cpp
+===================================================================
+--- avVersionEditorDlg.cpp	(revision 8648)
++++ avVersionEditorDlg.cpp	(working copy)
+@@ -55,6 +55,7 @@
+ const long avVersionEditorDlg::ID_CODE_PANEL = wxNewId();
+ const long avVersionEditorDlg::ID_AUTO_CHECK = wxNewId();
+ const long avVersionEditorDlg::ID_DATES_CHECK = wxNewId();
++const long avVersionEditorDlg::ID_DEFINE_CHECK = wxNewId();
+ const long avVersionEditorDlg::ID_UPDATE_MANIFEST = wxNewId();
+ const long avVersionEditorDlg::ID_COMMIT_CHECK = wxNewId();
+ const long avVersionEditorDlg::ID_ASKCOMMIT_CHECK = wxNewId();
+@@ -102,7 +103,7 @@
+     wxBoxSizer* BoxSizer11;
+     wxBoxSizer* BoxSizer14;
+     wxBoxSizer* codeSizer;
+-    
++
+     Create(parent, wxID_ANY, _("Auto Versioning Editor"), wxDefaultPosition, wxDefaultSize, wxCAPTION|wxRESIZE_BORDER, _T("wxID_ANY"));
+     SetClientSize(wxSize(469,364));
+     wxFont thisFont(10,wxDEFAULT,wxFONTSTYLE_NORMAL,wxNORMAL,false,wxEmptyString,wxFONTENCODING_DEFAULT);
+@@ -248,6 +249,10 @@
+     chkDates->SetValue(true);
+     chkDates->SetToolTip(_("Create variable declarations\nfor date, month and year. And \nalso an ubuntu version style."));
+     BoxSizer13->Add(chkDates, 0, wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
++    chkDefine = new wxCheckBox(pnlSettings, ID_DEFINE_CHECK, _("Use #define"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("ID_DEFINE_CHECK"));
++    chkDefine->SetValue(true);
++    chkDefine->SetToolTip(_("Use #define declaration instead of static variables"));
++    BoxSizer13->Add(chkDefine, 0, wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+     chkUpdateManifest = new wxCheckBox(pnlSettings, ID_UPDATE_MANIFEST, _("Update manifest.xml"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("ID_UPDATE_MANIFEST"));
+     chkUpdateManifest->SetValue(false);
+     chkUpdateManifest->SetToolTip(_("Update manifest.xml\'s version field with AutoVersion\'s\nvalues using the format MAJOR.MINOR.BUILD.\nThis setting is mainly useful for plugin developers."));
+@@ -282,7 +287,7 @@
+     BoxSizer7->Add(BoxSizer15, 1, wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+     BoxSizer5->Add(BoxSizer7, 1, wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+     BoxSizer8 = new wxBoxSizer(wxHORIZONTAL);
+-    wxString __wxRadioBoxChoices_1[2] = 
++    wxString __wxRadioBoxChoices_1[2] =
+     {
+     _("C"),
+     _("C++")
+@@ -363,7 +368,7 @@
+     tmrValidateInput.Start(500, false);
+     mainSizer->SetSizeHints(this);
+     Center();
+-    
++
+     Connect(ID_STATUS_COMBOBOX,wxEVT_COMMAND_COMBOBOX_SELECTED,(wxObjectEventFunction)&avVersionEditorDlg::OnCmbStatusSelect);
+     Connect(ID_COMMIT_CHECK,wxEVT_COMMAND_CHECKBOX_CLICKED,(wxObjectEventFunction)&avVersionEditorDlg::OnChkCommitClick);
+     Connect(ID_HEADERPATH_BUTTON,wxEVT_COMMAND_BUTTON_CLICKED,(wxObjectEventFunction)&avVersionEditorDlg::OnHeaderPathClick);
+@@ -442,6 +447,12 @@
+ 	chkDates->SetValue(value);
+ }
+ 
++void avVersionEditorDlg::SetDefine(bool value)
++{
++	m_useDefine = value;
++	chkDefine->SetValue(value);
++}
++
+ // GJH 03/03/10 Added manifest updating.
+ void avVersionEditorDlg::SetManifest(bool value)
+ {
+@@ -634,6 +645,7 @@
+ 
+     m_autoMajorMinor = chkAutoIncrement->IsChecked();
+     m_dates = chkDates->IsChecked();
++    m_useDefine = chkDefine->IsChecked();
+ 	// GJH 03/03/10 Added manifest updating.
+ 	m_updateManifest = chkUpdateManifest->IsChecked();
+     m_svn = chkSvn->IsChecked();
+Index: avVersionEditorDlg.h
+===================================================================
+--- avVersionEditorDlg.h	(revision 8648)
++++ avVersionEditorDlg.h	(working copy)
+@@ -42,6 +42,7 @@
+     bool m_dates;
+ 	// GJH 03/03/10 Added manifest updating.
+     bool m_updateManifest;
++    bool m_useDefine;
+     bool m_svn;
+     bool m_commit;
+     bool m_askCommit;
+@@ -110,6 +111,7 @@
+ 		static const long ID_CODE_PANEL;
+ 		static const long ID_AUTO_CHECK;
+ 		static const long ID_DATES_CHECK;
++		static const long ID_DEFINE_CHECK;
+ 		static const long ID_UPDATE_MANIFEST;
+ 		static const long ID_COMMIT_CHECK;
+ 		static const long ID_ASKCOMMIT_CHECK;
+@@ -170,6 +172,7 @@
+ 		wxTextCtrl* txtBuildNumber;
+ 		wxCheckBox* chkAutoIncrement;
+ 		wxCheckBox* chkDates;
++		wxCheckBox* chkDefine;
+ 		wxStaticText* lblChangesPath;
+ 		wxRadioBox* rbHeaderLanguage;
+ 		wxBoxSizer* BoxSizer19;
+@@ -274,6 +277,7 @@
+ 	void SetSvnDirectory(const wxString& value);
+ 	void SetAuto(bool value);
+ 	void SetDates(bool value);
++	void SetDefine(bool value);
+ 	// GJH 03/03/10 Added manifest updating.
+ 	void SetManifest(bool value);
+ 	void SetCommit(bool value);
+@@ -295,6 +299,7 @@
+ 	wxString GetSvnDirectory() const {return m_svnDirectory;}
+ 	bool GetAuto() const {return m_autoMajorMinor;}
+ 	bool GetDates() const {return m_dates;}
++	bool GetDefine() const {return m_useDefine;}
+ 	// GJH 03/03/10 Added manifest updating.
+ 	bool GetManifest() const {return m_updateManifest;}
+ 	bool GetCommit() const {return m_commit;}

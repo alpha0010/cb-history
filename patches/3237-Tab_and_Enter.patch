@@ -1,0 +1,490 @@
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 8148)
++++ src/sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -121,6 +121,7 @@
+     XRCCTRL(*this, "chkSelectionBraceCompletion", wxCheckBox)->SetValue(cfg->ReadBool(_T("/selection_brace_completion"), false));
+     XRCCTRL(*this, "chkTabIndents",               wxCheckBox)->SetValue(cfg->ReadBool(_T("/tab_indents"),                true));
+     XRCCTRL(*this, "chkBackspaceUnindents",       wxCheckBox)->SetValue(cfg->ReadBool(_T("/backspace_unindents"),        true));
++    XRCCTRL(*this, "chkAutoEscape",               wxCheckBox)->SetValue(cfg->ReadBool(_T("/auto_escape"),                false));
+     XRCCTRL(*this, "chkWordWrap",                 wxCheckBox)->SetValue(cfg->ReadBool(_T("/word_wrap"),                  false));
+     XRCCTRL(*this, "chkWordWrapStyleHomeEnd",     wxCheckBox)->SetValue(cfg->ReadBool(_T("/word_wrap_style_home_end"),   true));
+     XRCCTRL(*this, "chkPosixRegex",               wxCheckBox)->SetValue(cfg->ReadBool(_T("/use_posix_style_regexes"),    false));
+@@ -801,6 +802,7 @@
+         cfg->Write(_T("/selection_brace_completion"),          XRCCTRL(*this, "chkSelectionBraceCompletion", wxCheckBox)->GetValue());
+         cfg->Write(_T("/tab_indents"),                         XRCCTRL(*this, "chkTabIndents",               wxCheckBox)->GetValue());
+         cfg->Write(_T("/backspace_unindents"),                 XRCCTRL(*this, "chkBackspaceUnindents",       wxCheckBox)->GetValue());
++        cfg->Write(_T("/auto_escape"),                         XRCCTRL(*this, "chkAutoEscape",               wxCheckBox)->GetValue());
+         cfg->Write(_T("/word_wrap"),                           XRCCTRL(*this, "chkWordWrap",                 wxCheckBox)->GetValue());
+         cfg->Write(_T("/word_wrap_style_home_end"),            XRCCTRL(*this, "chkWordWrapStyleHomeEnd",     wxCheckBox)->GetValue());
+         cfg->Write(_T("/use_posix_style_regexes"),             XRCCTRL(*this, "chkPosixRegex",               wxCheckBox)->GetValue());
+Index: src/sdk/resources/editor_configuration.xrc
+===================================================================
+--- src/sdk/resources/editor_configuration.xrc	(revision 8148)
++++ src/sdk/resources/editor_configuration.xrc	(working copy)
+@@ -1,6 +1,9 @@
+-<?xml version="1.0" encoding="utf-8"?>
++<?xml version="1.0" encoding="utf-8" ?>
+ <resource xmlns="http://www.wxwidgets.org/wxxrc">
+   <object class="wxScrollingDialog" name="dlgConfigureEditor">
++    <title>Configure editor</title>
++    <centered>1</centered>
++    <style>wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER</style>
+     <object class="wxBoxSizer">
+       <orient>wxVERTICAL</orient>
+       <object class="sizeritem">
+@@ -37,7 +40,7 @@
+         <border>5</border>
+       </object>
+       <object class="sizeritem">
+-        <object class="wxStaticLine" name="ID_STATICLINE1"/>
++        <object class="wxStaticLine" name="ID_STATICLINE1" />
+         <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+       </object>
+       <object class="sizeritem">
+@@ -50,6 +53,7 @@
+                   <object class="wxNotebook" name="wxID_ANY">
+                     <object class="notebookpage">
+                       <object class="wxPanel" name="wxID_ANY">
++                        <pos>33,178</pos>
+                         <object class="wxBoxSizer">
+                           <orient>wxVERTICAL</orient>
+                           <object class="sizeritem">
+@@ -386,7 +390,6 @@
+                                     </object>
+                                     <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+                                   </object>
+-                                                                    
+                                   <object class="sizeritem">
+                                     <object class="wxCheckBox" name="chkHighlightCaretLine">
+                                       <label>Highlight line under caret</label>
+@@ -420,40 +423,29 @@
+                             <border>5</border>
+                           </object>
+                         </object>
+-                        <pos>33,178</pos>
+                       </object>
+                       <label>Editor settings</label>
+                     </object>
+                     <object class="notebookpage">
+                       <object class="wxPanel" name="wxID_ANY">
+-                        <object class="wxBoxSizer" name="wxID_ANY">
++                        <pos>64,15</pos>
++                        <object class="wxBoxSizer">
+                           <orient>wxVERTICAL</orient>
+-                                                    
+-                                                    
+-                                                    
+-                                                    
+                           <object class="sizeritem">
+                             <object class="wxStaticBoxSizer">
++                              <label>Colouring and highlighting options</label>
++                              <orient>wxVERTICAL</orient>
+                               <object class="sizeritem">
+-                                <object class="wxFlexGridSizer" name="wxID_ANY">
++                                <object class="wxFlexGridSizer">
+                                   <cols>1</cols>
+                                   <vgap>4</vgap>
+                                   <hgap>4</hgap>
+-                                                                    
+-                                                                    
+-                                                                    
+-                                                                    
+-                                                                    
+                                   <object class="sizeritem">
+                                     <object class="wxCheckBox" name="chkTrackPreprocessor">
+                                       <label>Interpret #if, #else, #endif to grey out inactive preprocessor-code</label>
+                                     </object>
+                                     <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+                                   </object>
+-                                                                    
+-                                                                    
+-                                                                    
+-                                                                    
+                                   <object class="sizeritem">
+                                     <object class="wxCheckBox" name="chkColoursWxSmith">
+                                       <label>Highlight wxSmith sections differently</label>
+@@ -465,20 +457,41 @@
+                                 <flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+                                 <border>4</border>
+                               </object>
+-                              <label>Colouring and highlighting options</label>
+-                              <orient>wxVERTICAL</orient>
+                             </object>
+                             <flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+                             <border>5</border>
+                           </object>
++                          <object class="sizeritem">
++                            <object class="wxStaticBoxSizer">
++                              <label>Editing options</label>
++                              <orient>wxVERTICAL</orient>
++                              <object class="sizeritem">
++                                <object class="wxFlexGridSizer">
++                                  <cols>1</cols>
++                                  <vgap>4</vgap>
++                                  <hgap>4</hgap>
++                                  <object class="sizeritem">
++                                    <object class="wxCheckBox" name="chkAutoEscape">
++                                      <label>Auto escape sequences</label>
++                                    </object>
++                                    <flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                  </object>
++                                </object>
++                                <flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                <border>4</border>
++                              </object>
++                            </object>
++                            <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                            <border>5</border>
++                          </object>
+                         </object>
+-                        <pos>64,15</pos>
+                       </object>
+                       <label>C/C++ Editor settings</label>
+                     </object>
+                     <object class="notebookpage">
+                       <object class="wxPanel" name="wxID_ANY">
+-                        <object class="wxBoxSizer" name="tabFolding">
++                        <pos>64,15</pos>
++                        <object class="wxBoxSizer">
+                           <orient>wxVERTICAL</orient>
+                           <object class="sizeritem">
+                             <object class="wxStaticBoxSizer">
+@@ -510,7 +523,7 @@
+                                   <label>Use this encoding</label>
+                                   <content>
+                                     <item>As fallback encoding</item>
+-                                    <item>As default encoding (bypassing C::B's auto-detection)</item>
++                                    <item>As default encoding (bypassing C::B&apos;s auto-detection)</item>
+                                   </content>
+                                   <style>wxRA_SPECIFY_COLS</style>
+                                 </object>
+@@ -544,7 +557,7 @@
+                           </object>
+                           <object class="sizeritem">
+                             <object class="wxRadioBox" name="rbTabText">
+-                              <label>Editor title is the file's</label>
++                              <label>Editor title is the file&apos;s</label>
+                               <content>
+                                 <item>name only (no path information)</item>
+                                 <item>relative filename (to the project file)</item>
+@@ -609,9 +622,7 @@
+                             <flag>wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
+                             <border>5</border>
+                           </object>
+-                        
+-                                                </object>
+-                        <pos>64,15</pos>
++                        </object>
+                       </object>
+                       <label>Other settings</label>
+                     </object>
+@@ -829,7 +840,7 @@
+                           <flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+                         </object>
+                         <object class="sizeritem">
+-                          <object class="wxButton" name="btnGutterColour"/>
++                          <object class="wxButton" name="btnGutterColour" />
+                           <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+                         </object>
+                         <object class="sizeritem">
+@@ -899,7 +910,7 @@
+                           <flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+                         </object>
+                         <object class="sizeritem">
+-                          <object class="wxButton" name="btnCaretColour"/>
++                          <object class="wxButton" name="btnCaretColour" />
+                           <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+                         </object>
+                         <object class="sizeritem">
+@@ -1069,7 +1080,7 @@
+                   <border>4</border>
+                 </object>
+                 <object class="sizeritem">
+-                  <object class="wxStaticLine" name="ID_STATICLINE2"/>
++                  <object class="wxStaticLine" name="ID_STATICLINE2" />
+                   <flag>wxTOP|wxLEFT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+                   <border>8</border>
+                 </object>
+@@ -1097,7 +1108,7 @@
+                                   <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+                                 </object>
+                                 <object class="sizeritem">
+-                                  <object class="wxButton" name="btnColoursFore"/>
++                                  <object class="wxButton" name="btnColoursFore" />
+                                   <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+                                 </object>
+                                 <object class="sizeritem">
+@@ -1108,7 +1119,7 @@
+                                   <border>8</border>
+                                 </object>
+                                 <object class="sizeritem">
+-                                  <object class="wxButton" name="btnColoursBack"/>
++                                  <object class="wxButton" name="btnColoursBack" />
+                                   <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+                                 </object>
+                               </object>
+@@ -1146,10 +1157,9 @@
+                           </object>
+                           <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+                         </object>
+-                                                
+                         <object class="spacer">
++                          <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+                           <option>1</option>
+-                          <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+                         </object>
+                         <object class="sizeritem">
+                           <object class="wxButton" name="btnColoursReset">
+@@ -1167,8 +1177,8 @@
+                 </object>
+                 <object class="sizeritem">
+                   <object class="unknown" name="txtColoursSample">
+-                    <style/>
+-                    <style/>
++                    <style></style>
++                    <style></style>
+                   </object>
+                   <flag>wxTOP|wxLEFT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+                   <border>4</border>
+@@ -1231,7 +1241,7 @@
+         <option>1</option>
+       </object>
+       <object class="sizeritem">
+-        <object class="wxStaticLine" name="ID_STATICLINE3"/>
++        <object class="wxStaticLine" name="ID_STATICLINE3" />
+         <flag>wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+         <border>8</border>
+       </object>
+@@ -1239,12 +1249,12 @@
+         <object class="wxStdDialogButtonSizer">
+           <object class="button">
+             <object class="wxButton" name="wxID_OK">
+-              <label/>
++              <label></label>
+             </object>
+           </object>
+           <object class="button">
+             <object class="wxButton" name="wxID_CANCEL">
+-              <label/>
++              <label></label>
+             </object>
+           </object>
+         </object>
+@@ -1252,8 +1262,5 @@
+         <border>4</border>
+       </object>
+     </object>
+-    <title>Configure editor</title>
+-    <centered>1</centered>
+-    <style>wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER</style>
+   </object>
+-</resource>
+\ No newline at end of file
++</resource>
+Index: src/sdk/cbstyledtextctrl.cpp
+===================================================================
+--- src/sdk/cbstyledtextctrl.cpp	(revision 8148)
++++ src/sdk/cbstyledtextctrl.cpp	(working copy)
+@@ -130,6 +130,8 @@
+     m_lastSelectedText = GetSelectedText();
+     bool emulateDwellStart = false;
+ 
++    bool autoEscape = Manager::Get()->GetConfigManager(_T("editor"))->ReadBool(_T("/auto_escape"), false);
++
+     switch (event.GetKeyCode())
+     {
+         case _T('I'):
+@@ -141,18 +143,34 @@
+ 
+         case WXK_TAB:
+         {
+-            if (m_tabSmartJump && !(event.ControlDown() || event.ShiftDown() || event.AltDown()))
++            if (event.GetModifiers() == wxMOD_NONE)
+             {
+-                if (!AutoCompActive() && m_bracePosition != wxSCI_INVALID_POSITION)
++                if (autoEscape && GetSelectedText() == wxEmptyString && GetLexer() == wxSCI_LEX_CPP)
+                 {
+-                    m_lastPosition = GetCurrentPos();
+-                    GotoPos(m_bracePosition);
++                    switch (GetStyleAt(GetCurrentPos()))
++                    {
++                        case wxSCI_C_STRING:
++                        case wxSCI_C_CHARACTER:
++                        case wxSCI_C_STRINGEOL:
++                        {
++                            AddText(wxT("\\t"));
++                            return;
++                        }
++                    }
++                }
++                else if (m_tabSmartJump)
++                {
++                    if (!AutoCompActive() && m_bracePosition != wxSCI_INVALID_POSITION)
++                    {
++                        m_lastPosition = GetCurrentPos();
++                        GotoPos(m_bracePosition);
+ 
+-                    // Need judge if it's the final brace
+-                    HighlightRightBrace();
+-                    if (!m_tabSmartJump && CallTipActive())
+-                        CallTipCancel();
+-                    return;
++                        // Need judge if it's the final brace
++                        HighlightRightBrace();
++                        if (!m_tabSmartJump && CallTipActive())
++                            CallTipCancel();
++                        return;
++                    }
+                 }
+             }
+         }
+@@ -183,6 +201,148 @@
+         break;
+ 
+         case WXK_RETURN:
++        case WXK_NUMPAD_ENTER:
++        {
++            if (autoEscape && GetSelectedText() == wxEmptyString &&
++                GetLexer() == wxSCI_LEX_CPP &&
++                (GetStyleAt(GetCurrentPos() - 1) == wxSCI_C_STRING ||
++                 GetStyleAt(GetCurrentPos() - 1) == wxSCI_C_CHARACTER ||
++                 GetStyleAt(GetCurrentPos() - 1) == wxSCI_C_STRINGEOL))
++            {
++                switch (GetStyleAt(GetCurrentPos()))
++                {
++                    case wxSCI_C_STRING:
++                    {
++                        if (event.GetModifiers() <= wxMOD_ALT) //wxMOD_NONE || wxMOD_ALT
++                        {
++                            BeginUndoAction();
++                            if (event.GetModifiers() == wxMOD_NONE)
++                            {
++                                AddText(wxT("\\n"));
++                            }
++                            if (GetCharAt(GetCurrentPos()) == _T('"'))
++                            {
++                                wxString spaceBuffer = wxT("\"");
++                                if (wxString(");", wxConvUTF8).Find(GetCharAt(GetCurrentPos() + 1)) != -1 && LineFromPosition(GetCurrentPos() + 4) > LineFromPosition(GetCurrentPos()))
++                                {
++                                    wxChar last = GetCharAt(GetCurrentPos() + 1);
++                                    spaceBuffer << last;
++                                    DelLineRight();
++                                    InsertText(GetCurrentPos(), wxT("\""));
++                                }
++                                if (LineFromPosition(GetCurrentPos() + 3) > LineFromPosition(GetCurrentPos()))
++                                {
++                                    CharRight();
++                                    NewLine();
++                                    LineUp();
++                                    while (GetCharAt(GetCurrentPos()) != _T('"'))
++                                    {
++                                        spaceBuffer.Prepend(wxT(" "));
++                                        CharRight();
++                                    }
++                                    InsertText(GetLineEndPosition(LineFromPosition(GetCurrentPos()) + 1), spaceBuffer);
++                                    LineDown();
++                                    AddText(wxT("\""));
++                                }
++                                else if (event.GetModifiers() == wxMOD_ALT)
++                                {
++                                    AddText(wxT("\""));
++                                    NewLine();
++                                    AddText(wxT("\""));
++                                    LineUp();
++                                    spaceBuffer.Clear();
++                                    while (GetCharAt(GetCurrentPos()) != _T('"'))
++                                    {
++                                        spaceBuffer << wxT(" ");
++                                        CharRight();
++                                    }
++                                    InsertText(PositionFromLine(LineFromPosition(GetCurrentPos()) + 1), spaceBuffer);
++                                    LineDown();
++                                    CharRight();
++                                }
++                            }
++                            else if (event.GetModifiers() == wxMOD_ALT)
++                            {
++                                AddText(wxT("\""));
++                                NewLine();
++                                AddText(wxT("\""));
++                                LineUp();
++                                wxString spaceBuffer;
++                                while (GetCharAt(GetCurrentPos()) != _T('"'))
++                                {
++                                    spaceBuffer << wxT(" ");
++                                    CharRight();
++                                }
++                                InsertText(PositionFromLine(LineFromPosition(GetCurrentPos()) + 1), spaceBuffer);
++                                LineDown();
++                                CharRight();
++                            }
++                            EndUndoAction();
++                            return;
++                        }
++                    }
++                    case wxSCI_C_CHARACTER:
++                    {
++                        if (event.GetModifiers() == wxMOD_NONE)
++                        {
++                            AddText(wxT("\\n"));
++                            return;
++                        }
++                        else if(event.GetModifiers() == wxMOD_ALT)
++                        {
++                            BeginUndoAction();
++                            AddText(wxT("'"));
++                            NewLine();
++                            AddText(wxT("'"));
++                            EndUndoAction();
++                            return;
++                        }
++                    }
++                    case wxSCI_C_STRINGEOL:
++                    {
++                        if (event.GetModifiers() <= wxMOD_ALT) // wxMOD_NONE || wxMOD_ALT
++                        {
++                            BeginUndoAction();
++                            int i = 2;
++                            for (; GetStyleAt(GetCurrentPos() - i) == wxSCI_C_STRINGEOL; i++); // iterate 'i'
++                            if (GetCharAt(GetCurrentPos() + 1 - i) != _T('"'))
++                            {
++                                if (event.GetModifiers() == wxMOD_ALT)
++                                {
++                                    AddText(wxT("'"));
++                                    NewLine();
++                                    AddText(wxT("'"));
++                                }
++                                else
++                                {
++                                    AddText(wxT("\\n"));
++                                }
++                                EndUndoAction();
++                                return;
++                            }
++                            if (event.GetModifiers() == wxMOD_NONE)
++                            {
++                                AddText(wxT("\\n"));
++                            }
++                            AddText(wxT("\""));
++                            NewLine();
++                            LineUp();
++                            wxString spaceBuffer;
++                            while (GetCharAt(GetCurrentPos()) != _T('"'))
++                            {
++                                spaceBuffer << wxT(" ");
++                                CharRight();
++                            }
++                            InsertText(PositionFromLine(LineFromPosition(GetCurrentPos()) + 1), spaceBuffer);
++                            LineDown();
++                            AddText(wxT("\""));
++                            EndUndoAction();
++                            return;
++                        }
++                    }
++                }
++            }
++        }
+         case WXK_ESCAPE:
+         {
+             if (m_tabSmartJump)

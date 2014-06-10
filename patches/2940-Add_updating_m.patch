@@ -1,0 +1,387 @@
+Index: src/plugins/contrib/AutoVersioning/AutoVersioning.cpp
+===================================================================
+--- src/plugins/contrib/AutoVersioning/AutoVersioning.cpp	(revision 6186)
++++ src/plugins/contrib/AutoVersioning/AutoVersioning.cpp	(working copy)
+@@ -19,6 +19,8 @@
+ #include <projectmanager.h>
+ #include <tinyxml/tinyxml.h>
+ #endif
++#include <tinyxml/tinywxuni.h>
++#include <wx/textfile.h>
+ 
+ #include "projectloader_hooks.h"
+ 
+@@ -173,6 +175,11 @@
+                 {
+                     Config.Settings.DateDeclarations = Help?true:false;
+                 }
++                // GJH 03/03/10 Added manifest updating.
++                if(pElem->QueryIntAttribute("update_manifest", &Help) == TIXML_SUCCESS)
++                {
++                    Config.Settings.UpdateManifest = Help?true:false;
++                }
+                 if(pElem->QueryIntAttribute("do_auto_increment", &Help) == TIXML_SUCCESS)
+                 {
+                     Config.Settings.DoAutoIncrement = Help?true:false;
+@@ -255,6 +262,8 @@
+             TiXmlElement Settings("Settings");
+             Settings.SetAttribute("autoincrement", NewConfig.Settings.Autoincrement);
+             Settings.SetAttribute("date_declarations", NewConfig.Settings.DateDeclarations);
++            // GJH 03/03/10 Added manifest updating.
++            Settings.SetAttribute("update_manifest", NewConfig.Settings.UpdateManifest);
+             Settings.SetAttribute("do_auto_increment", NewConfig.Settings.DoAutoIncrement);
+             Settings.SetAttribute("ask_to_increment", NewConfig.Settings.AskToIncrement);
+             Settings.SetAttribute("language", NewConfig.Settings.Language.c_str());
+@@ -478,6 +487,8 @@
+ 
+     VersionEditorDialog.SetAuto(GetConfig().Settings.Autoincrement);
+     VersionEditorDialog.SetDates(GetConfig().Settings.DateDeclarations);
++	// GJH 03/03/10 Added manifest updating.
++    VersionEditorDialog.SetManifest(GetConfig().Settings.UpdateManifest);
+ 
+     VersionEditorDialog.SetSvn(GetConfig().Settings.Svn);
+     VersionEditorDialog.SetSvnDirectory(cbC2U(GetConfig().Settings.SvnDirectory.c_str()));
+@@ -513,6 +524,8 @@
+     GetConfig().Scheme.BuildTimesToIncrementMinor = VersionEditorDialog.GetBuildTimesToMinorIncrement();
+     GetConfig().Settings.Autoincrement = VersionEditorDialog.GetAuto();
+     GetConfig().Settings.DateDeclarations = VersionEditorDialog.GetDates();
++	// GJH 03/03/10 Added manifest updating.
++    GetConfig().Settings.UpdateManifest = VersionEditorDialog.GetManifest();
+     GetConfig().Settings.AskToIncrement = VersionEditorDialog.GetCommitAsk();
+     GetConfig().Settings.DoAutoIncrement = VersionEditorDialog.GetCommit();
+     GetConfig().Settings.Language = cbU2C(VersionEditorDialog.GetLanguage());
+@@ -646,7 +659,7 @@
+     {
+         wxString revision,date;
+         if (!QuerySvn(cbC2U(GetConfig().Settings.SvnDirectory.c_str()), revision, date))
+-            wxMessageBox(_("Svn configuration files not found.\nVerify the Autoversioning svn directory."),_("Error"),wxICON_ERROR);
++            wxMessageBox(_("Possible Causes:\n-You don't have SVN installed.\n-Incompatible version of SVN.\n-SVN configuration files not found.\n\nVerify the Autoversioning SVN directory."),_("SVN Error"),wxICON_ERROR);
+         headerOutput << _T("\t") << _T("\n");
+         headerOutput << _T("\t") << _T("//SVN Version") << _T("\n");
+         headerOutput << _T("\t") << _T("static const char ") << prefix << _T("SVN_REVISION[] = ") << _T("\"") + revision + _T("\"")<< _T(";\n");
+@@ -675,6 +688,59 @@
+     m_timerStatus->Start(1000);
+ }
+ 
++/*! \brief 	Update manifest.xml with the latest version string.
++ * \author 	Gary Harris
++ * \date		03/03/10
++ *
++ * \return void
++ *
++ * This function inserts a new version string into the project's manifest.xml.
++ * It searches for the line containing the XML string "<Value version="X.Y.ZZZ" />"
++ * and builds and inserts a new version string based on the current AutoVersion
++ * values.
++ * \note I first used TinyXML to do the XML work but it trashes some text when rewriting the file,
++ * in particular text in the "thanks to" field that is on lines following the value field. This is usually
++ * done to wrap text onto subsequent lines in the plug-in's About dialogue and is probably not strictly
++ * valid XML. TinyXML seems not to like text on following lines.
++ */
++void AutoVersioning::UpdateManifest()
++{
++	wxFileName fnManifest(Manager::Get()->GetProjectManager()->GetActiveProject()->GetCommonTopLevelPath() + wxT("manifest.xml"));
++	wxString sPathManifest(fnManifest.GetFullPath());
++	if (wxFile::Exists(sPathManifest))
++	{
++		wxTextFile fileManifest(sPathManifest);
++		fileManifest.Open();
++		if(fileManifest.IsOpened()){
++			fileManifest.GetFirstLine();
++			wxString sLine;
++			size_t i;
++			while(sLine = fileManifest.GetNextLine())
++			{
++				if(sLine.Find(wxT("<Value version=")) != wxNOT_FOUND)
++				{
++					i = fileManifest.GetCurrentLine();
++					int iFirst, iLast;
++					// Find the first double quote.
++					iFirst = sLine.Find('"');
++					// Find the last double quote.
++					iLast = sLine.Find('"', true);
++					// Create a new version string...
++					wxString sVersion = sLine.SubString(iFirst, iLast);
++					wxString sNewVersion = wxString::Format(wxT("\"%d.%d.%d\""), GetVersionState().Values.Major, GetVersionState().Values.Minor, GetVersionState().Values.Build);
++					// ...and insert it into the XML.
++					sLine.Replace(sVersion, sNewVersion);
++					// Remove the existing line and replace it with the new one.
++					fileManifest.RemoveLine(i);
++					fileManifest.InsertLine(sLine, i);
++					fileManifest.Write();
++					break;
++				}
++			}
++		}
++	}
++}
++
+ void AutoVersioning::CommitChanges()
+ {
+     if (m_Project && IsAttached() && m_IsVersioned[m_Project])
+@@ -723,6 +789,12 @@
+ 
+             m_Modified = false;
+             UpdateVersionHeader();
++			// GJH 03/03/10 Added manifest updating.
++            if(GetConfig().Settings.UpdateManifest)
++            {
++				UpdateManifest();
++            }
++
+         }
+     }
+ }
+Index: src/plugins/contrib/AutoVersioning/AutoVersioning.h
+===================================================================
+--- src/plugins/contrib/AutoVersioning/AutoVersioning.h	(revision 6186)
++++ src/plugins/contrib/AutoVersioning/AutoVersioning.h	(working copy)
+@@ -31,6 +31,8 @@
+     void BuildModuleMenu(const ModuleType type, wxMenu* menu, const FileTreeData* data = 0){}
+     bool BuildToolBar(wxToolBar* toolBar){return false;}
+     void UpdateVersionHeader();
++    // GJH 03/03/10 Added manifest updating.
++	void UpdateManifest();
+ 
+     //Events
+     void OnAttach();
+Index: src/plugins/contrib/AutoVersioning/avChangesDlg.cpp
+===================================================================
+--- src/plugins/contrib/AutoVersioning/avChangesDlg.cpp	(revision 6186)
++++ src/plugins/contrib/AutoVersioning/avChangesDlg.cpp	(working copy)
+@@ -43,7 +43,8 @@
+     wxBoxSizer* sizerConfirmation;
+ 
+     Create(parent, wxID_ANY, _("AutoVersioning :: Changes Log"), wxDefaultPosition, wxDefaultSize, wxCAPTION|wxRESIZE_BORDER, _T("wxID_ANY"));
+-    SetClientSize(wxSize(700,300));
++    SetClientSize(wxSize(800,300));
++    CentreOnParent();
+     BoxSizer1 = new wxBoxSizer(wxVERTICAL);
+     sizerButtons = new wxBoxSizer(wxHORIZONTAL);
+     btnAdd = new wxButton(this, ID_ADD_BUTTON, _("Add"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("ID_ADD_BUTTON"));
+@@ -71,6 +72,7 @@
+     sizerConfirmation->Add(btnCancel, 1, wxALL|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+     BoxSizer1->Add(sizerConfirmation, 0, wxALL|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+     SetSizer(BoxSizer1);
++    BoxSizer1->SetMinSize(800, 200);
+     BoxSizer1->SetSizeHints(this);
+ 
+     Connect(ID_ADD_BUTTON,wxEVT_COMMAND_BUTTON_CLICKED,(wxObjectEventFunction)&avChangesDlg::OnBtnAddClick);
+@@ -84,7 +86,10 @@
+     grdChanges->CreateGrid(0,2);
+     grdChanges->SetColLabelValue(0,_T("Type"));
+     grdChanges->SetColLabelValue(1,_T("Description"));
++
+     grdChanges->AutoSize();
++	grdChanges->SetColSize(0, 60);
++	grdChanges->SetColSize(1, 645);
+ }
+ 
+ avChangesDlg::~avChangesDlg()
+Index: src/plugins/contrib/AutoVersioning/avConfig.h
+===================================================================
+--- src/plugins/contrib/AutoVersioning/avConfig.h	(revision 6186)
++++ src/plugins/contrib/AutoVersioning/avConfig.h	(working copy)
+@@ -64,6 +64,8 @@
+ 	bool Autoincrement;
+ 	bool DateDeclarations;
+ 	bool DoAutoIncrement;
++	// GJH 03/03/10 Added manifest updating.
++	bool UpdateManifest;
+ 	bool AskToIncrement;
+ 	std::string Language;
+ 	bool Svn;
+@@ -73,10 +75,11 @@
+         Language("C++"), Svn(false), SvnDirectory(), HeaderPath("version.h") {}
+ 	bool operator!=(const avSettings& Other) const
+ 	{
+-	    return (Autoincrement != Other.Autoincrement || DateDeclarations != Other.DateDeclarations ||
+-                DoAutoIncrement != Other.DoAutoIncrement || AskToIncrement != Other.AskToIncrement ||
+-                Language != Other.Language || Svn != Other.Svn ||
+-                SvnDirectory != Other.SvnDirectory || HeaderPath != Other.HeaderPath);
++	    return (Autoincrement != Other.Autoincrement || UpdateManifest != Other.UpdateManifest ||
++		DateDeclarations != Other.DateDeclarations || DoAutoIncrement != Other.DoAutoIncrement ||
++		AskToIncrement != Other.AskToIncrement || Language != Other.Language || 
++		Svn != Other.Svn || SvnDirectory != Other.SvnDirectory || 
++		HeaderPath != Other.HeaderPath);
+ 	}
+ };
+ 
+Index: src/plugins/contrib/AutoVersioning/avVersionEditorDlg.cpp
+===================================================================
+--- src/plugins/contrib/AutoVersioning/avVersionEditorDlg.cpp	(revision 6186)
++++ src/plugins/contrib/AutoVersioning/avVersionEditorDlg.cpp	(working copy)
+@@ -55,6 +55,7 @@
+ const long avVersionEditorDlg::ID_CODE_PANEL = wxNewId();
+ const long avVersionEditorDlg::ID_AUTO_CHECK = wxNewId();
+ const long avVersionEditorDlg::ID_DATES_CHECK = wxNewId();
++const long avVersionEditorDlg::ID_UPDATE_MANIFEST = wxNewId();
+ const long avVersionEditorDlg::ID_COMMIT_CHECK = wxNewId();
+ const long avVersionEditorDlg::ID_ASKCOMMIT_CHECK = wxNewId();
+ const long avVersionEditorDlg::ID_STATICLINE3 = wxNewId();
+@@ -247,6 +248,10 @@
+     chkDates->SetValue(true);
+     chkDates->SetToolTip(_("Create variable declarations\nfor date, month and year. And \nalso an ubuntu version style."));
+     BoxSizer13->Add(chkDates, 0, wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
++    chkUpdateManifest = new wxCheckBox(pnlSettings, ID_UPDATE_MANIFEST, _("Update manifest.xml"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("ID_UPDATE_MANIFEST"));
++    chkUpdateManifest->SetValue(false);
++    chkUpdateManifest->SetToolTip(_("Update manifest.xml\'s version field with AutoVersion\'s\nvalues using the format MAJOR.MINOR.BUILD.\nThis setting is mainly useful for plugin developers."));
++    BoxSizer13->Add(chkUpdateManifest, 1, wxALL|wxALIGN_LEFT|wxALIGN_BOTTOM, 5);
+     BoxSizer11->Add(BoxSizer13, 1, wxALL|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+     BoxSizer14 = new wxBoxSizer(wxVERTICAL);
+     chkCommit = new wxCheckBox(pnlSettings, ID_COMMIT_CHECK, _("Do Autoincrement"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("ID_COMMIT_CHECK"));
+@@ -258,6 +263,7 @@
+     chkAskCommit->Disable();
+     chkAskCommit->SetToolTip(_("Ask you to increment every time\na change has been made to the \nsource code, before the compilation\ntakes effect."));
+     BoxSizer14->Add(chkAskCommit, 0, wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
++    BoxSizer14->Add(-1,-1,1, wxALL|wxALIGN_LEFT|wxALIGN_BOTTOM, 5);
+     BoxSizer11->Add(BoxSizer14, 0, wxALL|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+     settingsSizer->Add(BoxSizer11, 1, wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+     StaticLine3 = new wxStaticLine(pnlSettings, ID_STATICLINE3, wxDefaultPosition, wxSize(10,-1), wxLI_HORIZONTAL, _T("ID_STATICLINE3"));
+@@ -267,7 +273,7 @@
+     lblHeaderPath = new wxStaticText(pnlSettings, ID_HEADERPATH_LABEL, _("Header Path:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_HEADERPATH_LABEL"));
+     BoxSizer7->Add(lblHeaderPath, 0, wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+     BoxSizer15 = new wxBoxSizer(wxHORIZONTAL);
+-    txtHeaderPath = new wxTextCtrl(pnlSettings, ID_HEADERPATH_TEXTCTRL, _("verison.h"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("ID_HEADERPATH_TEXTCTRL"));
++    txtHeaderPath = new wxTextCtrl(pnlSettings, ID_HEADERPATH_TEXTCTRL, _("version.h"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("ID_HEADERPATH_TEXTCTRL"));
+     txtHeaderPath->SetToolTip(_("Header path"));
+     BoxSizer15->Add(txtHeaderPath, 1, wxALL|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+     btnHeaderPath = new wxButton(pnlSettings, ID_HEADERPATH_BUTTON, _("..."), wxDefaultPosition, wxSize(23,26), 0, wxDefaultValidator, _T("ID_HEADERPATH_BUTTON"));
+@@ -289,7 +295,7 @@
+     settingsSizer->Add(BoxSizer5, 0, wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+     StaticLine1 = new wxStaticLine(pnlSettings, ID_STATICLINE1, wxDefaultPosition, wxSize(10,-1), wxLI_HORIZONTAL, _T("ID_STATICLINE1"));
+     settingsSizer->Add(StaticLine1, 0, wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+-    chkSvn = new wxCheckBox(pnlSettings, ID_SVN_CHECK, _("svn enabled"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("ID_SVN_CHECK"));
++    chkSvn = new wxCheckBox(pnlSettings, ID_SVN_CHECK, _("SVN enabled"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("ID_SVN_CHECK"));
+     chkSvn->SetValue(false);
+     chkSvn->SetToolTip(_("Check this if your project is controlled by svn\nto generate an SVN_REVISION declaration."));
+     settingsSizer->Add(chkSvn, 0, wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 2);
+@@ -436,6 +442,13 @@
+ 	chkDates->SetValue(value);
+ }
+ 
++// GJH 03/03/10 Added manifest updating.
++void avVersionEditorDlg::SetManifest(bool value)
++{
++	m_updateManifest = value;
++	chkUpdateManifest->SetValue(value);
++}
++
+ void avVersionEditorDlg::SetSvn(bool value)
+ {
+ 	m_svn = value;
+@@ -621,6 +634,8 @@
+ 
+     m_autoMajorMinor = chkAutoIncrement->IsChecked();
+     m_dates = chkDates->IsChecked();
++	// GJH 03/03/10 Added manifest updating.
++	m_updateManifest = chkUpdateManifest->IsChecked();
+     m_svn = chkSvn->IsChecked();
+     m_svnDirectory = txtSvnDir->GetValue();
+     m_commit = chkCommit->IsChecked();
+Index: src/plugins/contrib/AutoVersioning/avVersionEditorDlg.h
+===================================================================
+--- src/plugins/contrib/AutoVersioning/avVersionEditorDlg.h	(revision 6186)
++++ src/plugins/contrib/AutoVersioning/avVersionEditorDlg.h	(working copy)
+@@ -14,7 +14,7 @@
+ #include <typeinfo>
+ 
+ //(*Headers(avVersionEditorDlg)
+-#include "scrollingdialog.h"
++#include "scrollingdialog.h"
+ #include <wx/notebook.h>
+ #include <wx/sizer.h>
+ #include <wx/stattext.h>
+@@ -40,6 +40,8 @@
+     long m_revision;
+     bool m_autoMajorMinor;
+     bool m_dates;
++	// GJH 03/03/10 Added manifest updating.
++    bool m_updateManifest;
+     bool m_svn;
+     bool m_commit;
+     bool m_askCommit;
+@@ -108,6 +110,7 @@
+ 		static const long ID_CODE_PANEL;
+ 		static const long ID_AUTO_CHECK;
+ 		static const long ID_DATES_CHECK;
++		static const long ID_UPDATE_MANIFEST;
+ 		static const long ID_COMMIT_CHECK;
+ 		static const long ID_ASKCOMMIT_CHECK;
+ 		static const long ID_STATICLINE3;
+@@ -231,6 +234,7 @@
+ 		wxStaticText* lblBuild;
+ 		wxBoxSizer* BoxSizer3;
+ 		wxTimer tmrValidateInput;
++		wxCheckBox* chkUpdateManifest;
+ 		wxTextCtrl* txtPrefix;
+ 		wxTextCtrl* txtRevisionMax;
+ 		wxCheckBox* chkAskCommit;
+@@ -270,6 +274,8 @@
+ 	void SetSvnDirectory(const wxString& value);
+ 	void SetAuto(bool value);
+ 	void SetDates(bool value);
++	// GJH 03/03/10 Added manifest updating.
++	void SetManifest(bool value);
+ 	void SetCommit(bool value);
+ 	void SetCommitAsk(bool value);
+ 	void SetLanguage(const wxString& value);
+@@ -289,6 +295,8 @@
+ 	wxString GetSvnDirectory() const {return m_svnDirectory;}
+ 	bool GetAuto() const {return m_autoMajorMinor;}
+ 	bool GetDates() const {return m_dates;}
++	// GJH 03/03/10 Added manifest updating.
++	bool GetManifest() const {return m_updateManifest;}
+ 	bool GetCommit() const {return m_commit;}
+ 	bool GetCommitAsk() const {return m_askCommit;}
+ 	wxString GetLanguage() const {return m_language;}
+Index: src/plugins/contrib/AutoVersioning/wxsmith/avVersionEditorDlg.wxs
+===================================================================
+--- src/plugins/contrib/AutoVersioning/wxsmith/avVersionEditorDlg.wxs	(revision 6186)
++++ src/plugins/contrib/AutoVersioning/wxsmith/avVersionEditorDlg.wxs	(working copy)
+@@ -396,6 +396,15 @@
+ 													<flag>wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
+ 													<border>5</border>
+ 												</object>
++												<object class="sizeritem">
++													<object class="wxCheckBox" name="ID_UPDATE_MANIFEST" variable="chkUpdateManifest" member="yes">
++														<label>Update manifest.xml</label>
++														<tooltip>Update manifest.xml&apos;s version field with AutoVersion&apos;s&#x0A;values using the format MAJOR.MINOR.BUILD.&#x0A;This setting is mainly useful for plugin developers.</tooltip>
++													</object>
++													<flag>wxALL|wxALIGN_LEFT|wxALIGN_BOTTOM</flag>
++													<border>5</border>
++													<option>1</option>
++												</object>
+ 											</object>
+ 											<flag>wxALL|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
+ 											<border>5</border>
+@@ -422,6 +431,11 @@
+ 													<flag>wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
+ 													<border>5</border>
+ 												</object>
++												<object class="spacer">
++													<flag>wxALL|wxALIGN_LEFT|wxALIGN_BOTTOM</flag>
++													<border>5</border>
++													<option>1</option>
++												</object>
+ 											</object>
+ 											<flag>wxALL|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
+ 											<border>5</border>
+@@ -454,7 +468,7 @@
+ 													<object class="wxBoxSizer" variable="BoxSizer15" member="no">
+ 														<object class="sizeritem">
+ 															<object class="wxTextCtrl" name="ID_HEADERPATH_TEXTCTRL" variable="txtHeaderPath" member="yes">
+-																<value>verison.h</value>
++																<value>version.h</value>
+ 																<tooltip>Header path</tooltip>
+ 															</object>
+ 															<flag>wxALL|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
+@@ -515,7 +529,7 @@
+ 								</object>
+ 								<object class="sizeritem">
+ 									<object class="wxCheckBox" name="ID_SVN_CHECK" variable="chkSvn" member="yes">
+-										<label>svn enabled</label>
++										<label>SVN enabled</label>
+ 										<tooltip>Check this if your project is controlled by svn&#x0A;to generate an SVN__REVISION declaration.</tooltip>
+ 										<handler function="OnSvnCheck" entry="EVT_CHECKBOX" />
+ 									</object>

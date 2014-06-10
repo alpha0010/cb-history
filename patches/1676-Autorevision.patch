@@ -1,0 +1,244 @@
+Index: src/build_tools/autorevision/autorevision.cpp
+===================================================================
+--- src/build_tools/autorevision/autorevision.cpp	(revision 3316)
++++ src/build_tools/autorevision/autorevision.cpp	(working copy)
+@@ -26,8 +26,8 @@
+     inline void set_env(const char* k, const char* v) { setenv(k, v, 1); };
+ #endif
+ 
+-bool QuerySvn(const string& workingDir, string& revision, string &date);
+-bool ParseFile(const string& docFile, string& revision, string &date);
++bool QuerySvn(const string& workingDir, string& revision, string& date);
++bool ParseFile(const string& docFile, string& revision, string& date);
+ bool WriteOutput(const string& outputFile, string& revision, string& date);
+ int main(int argc, char** argv);
+ 
+@@ -43,7 +43,6 @@
+     string outputFile;
+     string workingDir;
+ 
+-
+     for(int i = 1; i < argc; ++i)
+     {
+         if(strcmp("+int", argv[i]) == 0)
+@@ -99,43 +98,47 @@
+     return 0;
+ }
+ 
+-
+-
+-bool QuerySvn(const string& workingDir, string& revision, string &date)
++bool QuerySvn(const string& workingDir, string& revision, string& date)
+ {
+     string svncmd("svn info ");
+     svncmd.append(workingDir);
+     set_env("LANG", "en_US");
+-    FILE *svn = popen(svncmd.c_str(), "r");
+ 
+-    if(svn)
++    ifstream svn(svncmd.c_str());
++
++    if (svn)
+     {
+         char buf[1024];
++
+         string line;
+-        while(fgets(buf, 4095, svn))
++
++        while (svn.get(buf, 1024))
+         {
+             line.assign(buf);
+-            if(line.find("Revision:") != string::npos)
++
++            if (line.find("Revision:") != string::npos)
+             {
+                 revision = line.substr(strlen("Revision: "));
+ 
+-                    string lbreak("\r\n");
+-                    size_t i;
+-                    while((i = revision.find_first_of(lbreak)) != string::npos)
+-                        revision.erase(revision.length()-1);
++                string lbreak("\r\n");
++
++                size_t i;
++
++                while ((i = revision.find_first_of(lbreak)) != string::npos)
++                    revision.erase(revision.length() - 1);
+             }
+-            if(line.find("Last Changed Date: ") != string::npos)
+-            {
+-                    date = line.substr(strlen("Last Changed Date: "), strlen("2006-01-01 12:34:56"));
+-            }
++
++            if (line.find("Last Changed Date: ") != string::npos)
++                date = line.substr(strlen("Last Changed Date: "), strlen("2006-01-01 12:34:56"));
+         }
+     }
+-    pclose(svn);
++
++    svn.close();
++
+     return !revision.empty();
+ }
+ 
+-
+-bool ParseFile(const string& docFile, string& revision, string &date)
++bool ParseFile(const string& docFile, string& revision, string& date)
+ {
+     string token[6];
+     date.clear();
+@@ -143,13 +146,13 @@
+     int c = 0;
+ 
+     ifstream inFile(docFile.c_str());
++
+     if (!inFile)
+-    {
+         return false;
+-    }
++
+     else
+     {
+-        while(!inFile.eof() && c < 6)
++        while (!inFile.eof() && c < 6)
+             inFile >> token[c++];
+ 
+         revision = token[2];
+@@ -160,7 +163,6 @@
+     }
+ }
+ 
+-
+ bool WriteOutput(const string& outputFile, string& revision, string& date)
+ {
+     string old;
+@@ -168,70 +170,80 @@
+     comment.append(revision);
+     comment.append("*/");
+ 
++    ifstream in(outputFile.c_str());
++
++    if (!in.bad() && !in.eof())
+     {
+-        ifstream in(outputFile.c_str());
+-        if (!in.bad() && !in.eof())
++        in >> old;
++
++        if (old == comment)
+         {
+-            in >> old;
+-            if(old == comment)
+-            {
+-                if(be_verbose)
+-                    printf("Revision unchanged (%s). Skipping.", revision.c_str());
+-                in.close();
+-                return false;
+-            }
++            if (be_verbose)
++                printf("Revision unchanged (%s). Skipping.", revision.c_str());
++
++            in.close();
++
++            return false;
+         }
+-        in.close();
+     }
+ 
++    in.close();
+ 
+-    FILE *header = fopen(outputFile.c_str(), "wb");
+-    if(!header)
++    ofstream header(outputFile.c_str());
++
++    if (!header)
+     {
+         puts("Error: Could not open output file.");
++
+         return false;
+     }
+ 
+-    fprintf(header, "%s\n", comment.c_str());
+-    fprintf(header, "#ifndef AUTOREVISION_H\n");
+-    fprintf(header, "#define AUTOREVISION_H\n\n\n");
++    header << noskipws;
+ 
+-    if(do_std)
+-        fprintf(header, "#include <string>\n");
+-    if(do_wx)
+-        fprintf(header, "#include <wx/string.h>\n");
++    header << comment << "\n";
++    header << "#ifndef AUTOREVISION_H\n";
++    header << "#define AUTOREVISION_H\n\n";
+ 
+-    fprintf(header, "\n#define SVN_REVISION \"%s\"\n", revision.c_str());
+-    fprintf(header, "\n#define SVN_DATE     \"%s\"\n\n", date.c_str());
++    if (do_std)
++        header << "#include <string>\n";
+ 
+-    if(do_int || do_std || do_wx)
+-        fprintf(header, "namespace autorevision\n{\n");
++    if (do_wx)
++        header << "#include <wx/string.h>\n";
+ 
+-    if(do_int)
+-        fprintf(header, "\tconst unsigned int svn_revision = %s;\n", revision.c_str());
++    header << "\n";
++    header << "#define SVN_REVISION \"" << revision << "\"\n\n";
++    header << "#define SVN_DATE \""     << date     << "\"\n\n";
+ 
+-    if(do_translate)
++    if (do_int || do_std || do_wx)
++        header << "namespace autorevision\n{\n";
++
++    if (do_int)
++        header << "\tconst unsigned int svn_revision = " << revision << ";\n";
++
++    if (do_translate)
+     {
+         revision = "_T(\"" + revision + "\")";
+         date = "_T(\"" + date + "\")";
+     }
++
+     else
+     {
+         revision = "\"" + revision + "\"";
+         date = "\"" + date + "\"";
+     }
+ 
+-    if(do_std)
+-        fprintf(header, "\tconst std::string svn_revision_s(%s);\n", revision.c_str());
+-    if(do_wx)
+-        fprintf(header, "\tconst wxString svnRevision(%s);\n", revision.c_str());
++    if (do_std)
++        header << "\tconst std::string svn_revision_s(" << revision << ");\n";
+ 
+-    if(do_int || do_std || do_wx)
+-        fprintf(header, "}\n\n");
++    if (do_wx)
++        header << "\tconst wxString svnRevision(" << revision << ");\n";
+ 
+-    fprintf(header, "\n\n#endif\n");
+-    fclose(header);
++    if (do_int || do_std || do_wx)
++        header << "}\n\n";
+ 
++    header << "#endif\n";
++
++    header.close();
++
+     return true;
+ }
+-
+Index: src/sdk/configmanager-revision.cpp
+===================================================================
+--- src/sdk/configmanager-revision.cpp	(revision 3316)
++++ src/sdk/configmanager-revision.cpp	(working copy)
+@@ -14,7 +14,7 @@
+ 
+ wxString ConfigManager::GetRevisionString()
+ {
+-    return wxString(wxT(SVN_REVISION));
++    return autorevision::svnRevision;
+ }
+ 
+ unsigned int ConfigManager::GetRevisionNumber()

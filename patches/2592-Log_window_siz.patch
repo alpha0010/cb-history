@@ -1,0 +1,49 @@
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(revision 5299)
++++ src/src/main.cpp	(working copy)
+@@ -670,12 +670,15 @@
+ 
+     if(!Manager::IsBatchBuild())
+     {
++        m_ViewSize = wxSize(clientsize.GetWidth(), bottomH);
+         infoPane = new InfoPane(this);
+         m_LayoutManager.AddPane(infoPane, wxAuiPaneInfo().
+                                   Name(wxT("MessagesPane")).Caption(_("Logs & others")).
+-                                  BestSize(wxSize(clientsize.GetWidth(), bottomH)).//MinSize(wxSize(50,50)).
++                                  BestSize(m_ViewSize).//MinSize(wxSize(50,50)).
+                                   Bottom());
+ 
++
++        m_LayoutManager.SetDockSizeConstraint(0.7,0.7);
+         wxWindow* log;
+ 
+         for(size_t i = LogManager::app_log; i < ::max_logs; ++i)
+@@ -3927,8 +3930,13 @@
+ 
+     if (win)
+     {
+-        m_LayoutManager.GetPane(win).Show(event.IsChecked());
+-        DoUpdateLayout();
++         if (!event.IsChecked())
++             m_ViewSize = win->GetSize();
++         else
++             m_LayoutManager.GetPane(win).BestSize(m_ViewSize);
++
++         m_LayoutManager.GetPane(win).Show(event.IsChecked());
++         DoUpdateLayout();
+     }
+ }
+ 
+Index: src/src/main.h
+===================================================================
+--- src/src/main.h	(revision 5299)
++++ src/src/main.h	(working copy)
+@@ -326,6 +326,7 @@
+ 
+         wxString m_LastLayoutName;
+         wxString m_LastLayoutData;
++        wxSize   m_ViewSize;
+         bool m_LastLayoutIsTemp;
+ 
+         wxWindow* m_pScriptConsole;

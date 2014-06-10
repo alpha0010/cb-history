@@ -1,0 +1,64 @@
+Index: src/plugins/contrib/IncrementalSearch/IncrementalSearch.cpp
+===================================================================
+--- src/plugins/contrib/IncrementalSearch/IncrementalSearch.cpp	(revision 8236)
++++ src/plugins/contrib/IncrementalSearch/IncrementalSearch.cpp	(working copy)
+@@ -35,7 +35,6 @@
+     int idIncSearchFocus = wxNewId();
+ }
+ 
+-
+ // events handling
+ BEGIN_EVENT_TABLE(IncrementalSearch, cbPlugin)
+     EVT_MENU(idIncSearchFocus, IncrementalSearch::OnFocusToolbar)
+@@ -48,6 +47,9 @@
+     EVT_TOOL(XRCID("idIncSearchUseRegex"), IncrementalSearch::OnToggleUseRegex)
+     EVT_TEXT(XRCID("idIncSearchText"), IncrementalSearch::OnTextChanged)
+     EVT_TEXT_ENTER(XRCID("idIncSearchText"), IncrementalSearch::OnSearchNext)
++#ifndef __WXMSW__
++    EVT_MENU(XRCID("idEditPaste"), IncrementalSearch::OnMenuEditPaste)
++#endif
+ END_EVENT_TABLE()
+ 
+ // constructor
+@@ -691,3 +693,27 @@
+     m_pTextCtrl->Update();
+     #endif
+ }
++
++#ifndef __WXMSW__
++void IncrementalSearch::OnMenuEditPaste(wxCommandEvent& event)
++{
++    // Process clipboard data only if we have the focus
++    if ( !IsAttached() )
++    {
++        event.Skip();
++        return;
++    }
++
++    wxWindow* pFocused = wxWindow::FindFocus();
++    if (!pFocused)
++    {
++        event.Skip();
++        return;
++    }
++
++    if (pFocused == m_pTextCtrl)
++        m_pTextCtrl->Paste();
++    else
++        event.Skip();
++}
++#endif
+Index: src/plugins/contrib/IncrementalSearch/IncrementalSearch.h
+===================================================================
+--- src/plugins/contrib/IncrementalSearch/IncrementalSearch.h	(revision 8236)
++++ src/plugins/contrib/IncrementalSearch/IncrementalSearch.h	(working copy)
+@@ -68,6 +68,9 @@
+     void DoSearch(int fromPos, int startPos=wxSCI_INVALID_POSITION, int endPos=wxSCI_INVALID_POSITION);
+     void VerifyPosition();
+     void SetRange();
++    #ifndef __WXMSW__
++    void OnMenuEditPaste(wxCommandEvent& event);
++    #endif
+     wxString m_SearchText;
+     wxColour m_textCtrlBG_Default;
+     wxToolBar* m_pToolbar;

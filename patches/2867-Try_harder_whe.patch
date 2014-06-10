@@ -1,0 +1,141 @@
+Index: src/sdk/globals.cpp
+===================================================================
+--- src/sdk/globals.cpp	(revision 5986)
++++ src/sdk/globals.cpp	(working copy)
+@@ -665,6 +665,64 @@
+     return result;
+ }
+ 
++// Checks whether 'suffix' could be a suffix of 'path' and therefore represents 
++// the same path. This is used to check whether a relative path could represent
++// the same path as absolute path. For instance, for 
++// suffix = sdk/globals.cpp
++// path = /home/user/codeblocks/trunk/src/sdk/globals.cpp
++// it returns true. The function expects that 'path' is normalized and compares
++// 'path' with 'suffix' starting from the end of the path. When it reaches .. in 
++// 'suffix' it gives up (there is no way to check relative filename names 
++// exactly) and if the path compared so far is identical, it returns true
++bool IsSuffixOfPath(wxFileName const & suffix, wxFileName const & path)
++{
++    if (path.GetFullName() != suffix.GetFullName())
++    {
++        return false;
++    }
++
++    wxArrayString suffixDirArray = suffix.GetDirs();
++    wxArrayString pathDirArray = path.GetDirs();
++
++    int j = pathDirArray.GetCount() - 1;
++    for (int i = suffixDirArray.GetCount() - 1; i >= 0; i--)
++    {
++        if (suffixDirArray[i] == _T(".") || suffixDirArray[i] == _T(""))
++        {
++            // skip paths like /./././ and ////
++            continue;
++        }
++
++        if (j < 0)
++        {
++            // suffix has more directories than path - cannot represent the same path
++            return false;
++        }
++
++        if (suffixDirArray[i] == _T(".."))
++        {
++            // suffix contains ".." - from now on we cannot precisely determine 
++            // whether suffix and path match - we assume that they do
++            return true;
++        }
++        else if (suffixDirArray[i] != pathDirArray[j])
++        {
++            // the corresponding directories of the two paths differ
++            return false;
++        }
++
++        j--;
++    }
++
++    if (suffix.IsAbsolute() && (j >= 0 || suffix.GetVolume() != path.GetVolume()))
++    {
++        return false;
++    }
++
++    // 'suffix' is a suffix of 'path'
++    return true;
++}
++
+ // function to check the common controls version
+ // (should it be moved in sdk globals?)
+ #ifdef __WXMSW__
+Index: src/include/globals.h
+===================================================================
+--- src/include/globals.h	(revision 5986)
++++ src/include/globals.h	(working copy)
+@@ -184,6 +184,7 @@
+                                           bool showCreateDirButton = false); // where supported
+ 
+ extern DLLIMPORT bool NormalizePath(wxFileName& f,const wxString& base);
++extern DLLIMPORT bool IsSuffixOfPath(wxFileName const & suffix, wxFileName const & path);
+ 
+ extern DLLIMPORT wxString URLEncode(const wxString &str);
+ 
+Index: src/plugins/compilergcc/compilererrors.cpp
+===================================================================
+--- src/plugins/compilergcc/compilererrors.cpp	(revision 5986)
++++ src/plugins/compilergcc/compilererrors.cpp	(working copy)
+@@ -162,12 +162,52 @@
+ 		}
+ 	}
+ 
+-	// if we reached here and ed is NULL, either the error file doesn't belong to a project,
+-	// or can't be found for any other reason.
+-	// check if we can open it directly...
++	// if we reached here and ed is NULL, the filename in the output isn't relative
++    // to the project root directory or doesn't belong to the project
++
++	// first check if we can open it directly...
+     if (!ed)
+         ed = Manager::Get()->GetEditorManager()->Open(error.filename);
+ 
++    // check if we find the file among opened files (highly probable for error
++    // messages since we are getting error for something we have just screwed up)
++    if (!ed)
++    {
++        for (int i = 0; i < Manager::Get()->GetEditorManager()->GetEditorsCount(); ++i)
++        {
++            cbEditor* edit = Manager::Get()->GetEditorManager()->GetBuiltinEditor(i);
++            if (!edit)
++                continue;
++
++            ProjectFile* pf = edit->GetProjectFile();
++            if (!pf)
++                continue;
++
++            if (IsSuffixOfPath(error.filename, pf->file.GetFullPath()))
++            {
++			    ed = Manager::Get()->GetEditorManager()->Open(pf->file.GetFullPath());
++			    break;
++            }
++        }
++    }
++
++    // finally go through the project files and try to find the file there
++    if (!ed && project)
++    {
++        for (int i = 0; i < project->GetFilesCount(); ++i)
++        {
++            ProjectFile* pf = project->GetFile(i);
++            if (!pf)
++                continue;
++
++            if (IsSuffixOfPath(error.filename, pf->file.GetFullPath()))
++            {
++			    ed = Manager::Get()->GetEditorManager()->Open(pf->file.GetFullPath());
++			    break;
++            }
++        }
++    }
++
+     if (ed)
+     {
+         ed->Activate();

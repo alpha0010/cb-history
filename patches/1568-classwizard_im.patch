@@ -1,0 +1,969 @@
+Index: classwizard.cpp
+===================================================================
+--- classwizard.cpp	(revision 3111)
++++ classwizard.cpp	(working copy)
+@@ -71,34 +71,32 @@
+ {
+     ProjectManager* prjMan = Manager::Get()->GetProjectManager();
+     cbProject* prj = prjMan->GetActiveProject();
+-    if (prj)
+-        wxSetWorkingDirectory(prj->GetBasePath());
+ 
+-	ClassWizardDlg dlg(Manager::Get()->GetAppWindow());
++    ClassWizardDlg dlg(Manager::Get()->GetAppWindow());
+     PlaceWindow(&dlg);
+-	if (dlg.ShowModal() == wxID_OK)
+-	{
+-		if (!prj)
+-		{
+-			cbMessageBox(	_("The new class has been created."),
+-							_("Information"),
+-							wxOK | wxICON_INFORMATION,
+-							Manager::Get()->GetAppWindow());
+-		}
+-		else if( cbMessageBox( _("The new class has been created.\n"
+-							"Do you want to add it to the current project?"),
+-							_("Add to project?"),
+-							wxYES_NO | wxYES_DEFAULT | wxICON_QUESTION,
+-							Manager::Get()->GetAppWindow()) == wxID_YES)
+-		{
++    if (dlg.ShowModal() == wxID_OK)
++    {
++        if (!prj)
++        {
++            cbMessageBox(	_("The new class has been created."),
++                            _("Information"),
++                            wxOK | wxICON_INFORMATION,
++                            Manager::Get()->GetAppWindow());
++        }
++        else if( cbMessageBox( _("The new class has been created.\n"
++                            "Do you want to add it to the current project?"),
++                            _("Add to project?"),
++                            wxYES_NO | wxYES_DEFAULT | wxICON_QUESTION,
++                            Manager::Get()->GetAppWindow()) == wxID_YES)
++        {
+             wxArrayInt targets;
+-			prjMan->AddFileToProject(dlg.GetHeaderFilename(), prj, targets);
+-			if (targets.GetCount() != 0)
+-				prjMan->AddFileToProject(dlg.GetImplementationFilename(), prj, targets);
+-			prjMan->RebuildTree();
+-		}
+-		return 0;
+-	}
++            prjMan->AddFileToProject(dlg.GetHeaderFilename(), prj, targets);
++            if ((targets.GetCount() != 0) && (dlg.GetImplementationFilename() != _T("")) )
++                prjMan->AddFileToProject(dlg.GetImplementationFilename(), prj, targets);
++            prjMan->RebuildTree();
++        }
++        return 0;
++    }
+ 
+-	return -1;
++    return -1;
+ }
+Index: classwizard.h
+===================================================================
+--- classwizard.h	(revision 3111)
++++ classwizard.h	(working copy)
+@@ -12,7 +12,7 @@
+         virtual void OnAttach();
+         virtual void OnRelease(bool appShutDown);
+         virtual int Configure(){ return -1; }
+-		virtual int Execute();
++        virtual int Execute();
+ };
+ 
+ #endif // CLASSWIZARD_H
+Index: classwizarddlg.cpp
+===================================================================
+--- classwizarddlg.cpp	(revision 3111)
++++ classwizarddlg.cpp	(working copy)
+@@ -40,82 +40,159 @@
+ #include "manager.h"
+ #endif
+ #include "classwizarddlg.h"
++#include <wx/tokenzr.h>
++#include <wx/dirdlg.h>
+ 
++namespace {
++
++
++void ForceDirectory(const wxFileName & filename)
++{
++    wxFileName parentname(filename);
++    parentname.RemoveLastDir();
++    if (filename!=parentname)
++        ForceDirectory(parentname);
++    if (!wxDirExists(filename.GetPath()))
++        wxMkdir(filename.GetPath());
++}
++
++}
++
++
+ BEGIN_EVENT_TABLE(ClassWizardDlg, wxDialog)
+-	EVT_UPDATE_UI(-1, ClassWizardDlg::OnUpdateUI)
+-	EVT_BUTTON(XRCID("wxID_OK"), ClassWizardDlg::OnOKClick)
+-	EVT_BUTTON(XRCID("wxID_CANCEL"), ClassWizardDlg::OnCancelClick)
+-	EVT_TEXT(XRCID("txtName"), ClassWizardDlg::OnNameChange)
++    EVT_UPDATE_UI(-1, ClassWizardDlg::OnUpdateUI)
++    EVT_BUTTON(XRCID("wxID_OK"), ClassWizardDlg::OnOKClick)
++    EVT_BUTTON(XRCID("wxID_CANCEL"), ClassWizardDlg::OnCancelClick)
++    EVT_TEXT(XRCID("txtName"), ClassWizardDlg::OnNameChange)
++    EVT_TEXT(XRCID("txtInheritance"), ClassWizardDlg::OnAncestorChange)
++    EVT_BUTTON(XRCID("btnBaseDir"), ClassWizardDlg::OnBaseDirClick)
+ END_EVENT_TABLE()
+ 
++
+ ClassWizardDlg::ClassWizardDlg(wxWindow* parent)
+ {
+-	wxXmlResource::Get()->LoadDialog(this, parent, _T("dlgNewClass"));
++    wxXmlResource::Get()->LoadDialog(this, parent, _T("dlgNewClass"));
++
++    ProjectManager* prjMan = Manager::Get()->GetProjectManager();
++    cbProject* prj = prjMan->GetActiveProject();
++    if (prj)
++  	    XRCCTRL(*this, "txtBaseDir", wxTextCtrl)->SetValue(prj->GetBasePath());
++    else
++  	    XRCCTRL(*this, "txtBaseDir", wxTextCtrl)->SetValue(wxGetWorkingDirectory());
+ }
+ 
++
+ ClassWizardDlg::~ClassWizardDlg()
+ {
+ }
+ 
++
+ void ClassWizardDlg::DoGuardBlock()
+ {
+-	m_Header = XRCCTRL(*this, "txtHeader", wxTextCtrl)->GetValue();
+-	wxFileName headerFname(m_Header);
+-	wxString GuardWord = headerFname.GetFullName();
+-	GuardWord.MakeUpper();
+-	GuardWord.Replace(_T("."), _T("_"));
+-	XRCCTRL(*this, "txtGuardBlock", wxTextCtrl)->SetValue(GuardWord);
++    m_Header = XRCCTRL(*this, "txtHeader", wxTextCtrl)->GetValue();
++    wxString GuardWord = m_Header;
++    GuardWord.MakeUpper();
++    while (GuardWord.Replace(_T("."), _T("_")))
++        ;
++    while (GuardWord.Replace(_T("/"), _T("_")))
++        ;
++    while (GuardWord.Replace(_T("\\"), _T("_")))
++        ;
++    XRCCTRL(*this, "txtGuardBlock", wxTextCtrl)->SetValue(GuardWord);
+ }
+ 
+ // events
+ 
+ void ClassWizardDlg::OnNameChange(wxCommandEvent& event)
+ {
+-	wxString name = XRCCTRL(*this, "txtName", wxTextCtrl)->GetValue();
+-	name.MakeLower();
+-	XRCCTRL(*this, "txtHeader", wxTextCtrl)->SetValue(name + _T(".h"));
+-	XRCCTRL(*this, "txtImplementation", wxTextCtrl)->SetValue(name + _T(".cpp"));
+-	DoGuardBlock();
++    wxString name = XRCCTRL(*this, "txtName", wxTextCtrl)->GetValue();
++    name.MakeLower();
++    while (name.Replace(_T("::"), _T("/")))
++        ;
++    XRCCTRL(*this, "txtHeader", wxTextCtrl)->SetValue(name + _T(".h"));
++    XRCCTRL(*this, "txtImplementation", wxTextCtrl)->SetValue(name + _T(".cpp"));
++    DoGuardBlock();
+ }
+ 
++
++void ClassWizardDlg::OnAncestorChange(wxCommandEvent& event)
++{
++    wxString name = XRCCTRL(*this, "txtInheritance", wxTextCtrl)->GetValue();
++    name.MakeLower();
++    while (name.Replace(_T("::"), _T("/")))
++        ;
++    XRCCTRL(*this, "txtInheritanceFilename", wxTextCtrl)->SetValue(name + _T(".h"));
++    DoGuardBlock();
++}
++
++
+ void ClassWizardDlg::OnUpdateUI(wxUpdateUIEvent& event)
+ {
+-	bool inherits = XRCCTRL(*this, "chkInherits", wxCheckBox)->GetValue();
+-	XRCCTRL(*this, "txtInheritance", wxTextCtrl)->Enable(inherits);
+-	XRCCTRL(*this, "txtInheritanceFilename", wxTextCtrl)->Enable(inherits);
+-	XRCCTRL(*this, "cmbInheritanceScope", wxComboBox)->Enable(inherits);
++    bool inherits = XRCCTRL(*this, "chkInherits", wxCheckBox)->GetValue();
++    XRCCTRL(*this, "txtInheritance", wxTextCtrl)->Enable(inherits);
++    XRCCTRL(*this, "txtInheritanceFilename", wxTextCtrl)->Enable(inherits);
++    XRCCTRL(*this, "cmbInheritanceScope", wxComboBox)->Enable(inherits);
++
++    bool genimpl = XRCCTRL(*this, "chkImplementation", wxCheckBox)->GetValue();
++    XRCCTRL(*this, "txtImplementation", wxTextCtrl)->Enable(genimpl);
++
++    bool genguard = XRCCTRL(*this, "chkGuardBlock", wxCheckBox)->GetValue();
++    XRCCTRL(*this, "txtGuardBlock", wxTextCtrl)->Enable(genguard);
+ }
+ 
++
++
+ void ClassWizardDlg::OnOKClick(wxCommandEvent& event)
+ {
+     wxLogNull null_logger; // we do all file checks ourselves
+ 
+-	// set some variable for easy reference
+-	wxString Name = XRCCTRL(*this, "txtName", wxTextCtrl)->GetValue();
+-	wxString Constructor = XRCCTRL(*this, "txtConstructor", wxTextCtrl)->GetValue();
+-	bool VirtualDestructor = XRCCTRL(*this, "chkVirtualDestructor", wxCheckBox)->GetValue();
++    // set some variable for easy reference
++    wxString Name = XRCCTRL(*this, "txtName", wxTextCtrl)->GetValue();
++    wxArrayString NameSpaces;
++    wxStringTokenizer tkz(Name, _T("::"));
++    Name=_T("");
++    while ( tkz.HasMoreTokens() )
++    {
++        if (Name!=_T(""))
++            NameSpaces.Add(Name);
++        Name = tkz.GetNextToken();
++    }
+ 
+-	wxString Ancestor = XRCCTRL(*this, "txtInheritance", wxTextCtrl)->GetValue();
+-	wxString AncestorFilename = XRCCTRL(*this, "txtInheritanceFilename", wxTextCtrl)->GetValue();
+-	wxString AncestorScope = XRCCTRL(*this, "cmbInheritanceScope", wxComboBox)->GetValue();
+-	bool Inherits = XRCCTRL(*this, "chkInherits", wxCheckBox)->GetValue() && !Ancestor.IsEmpty();
++    wxString baseDir = XRCCTRL(*this, "txtBaseDir", wxTextCtrl)->GetValue();
++    //wxSetWorkingDirectory(baseDir);
+ 
+-	m_Header = XRCCTRL(*this, "txtHeader", wxTextCtrl)->GetValue();
+-	m_Implementation = XRCCTRL(*this, "txtImplementation", wxTextCtrl)->GetValue();
+-	bool GuardBlock = XRCCTRL(*this, "chkGuardBlock", wxCheckBox)->GetValue();
+-	wxString GuardWord = XRCCTRL(*this, "txtGuardBlock", wxTextCtrl)->GetValue();
+-	if (GuardWord.IsEmpty())
+-		DoGuardBlock();
+-	wxFileName headerFname(UnixFilename(m_Header));
++    wxString Constructor = XRCCTRL(*this, "txtConstructor", wxTextCtrl)->GetValue();
++    bool VirtualDestructor = XRCCTRL(*this, "chkVirtualDestructor", wxCheckBox)->GetValue();
+ 
+-	bool usestabs = Manager::Get()->GetConfigManager(_T("editor"))->ReadBool(_T("/use_tab"), false);
+-	int tabsize = Manager::Get()->GetConfigManager(_T("editor"))->ReadInt(_T("/tab_size"), 4);
+-	int eolmode = Manager::Get()->GetConfigManager(_T("editor"))->ReadInt(_T("/eol/eolmode"), 0);
++    wxString Ancestor = XRCCTRL(*this, "txtInheritance", wxTextCtrl)->GetValue();
++    wxString AncestorFilename = XRCCTRL(*this, "txtInheritanceFilename", wxTextCtrl)->GetValue();
++    wxString AncestorScope = XRCCTRL(*this, "cmbInheritanceScope", wxComboBox)->GetValue();
++    bool Inherits = XRCCTRL(*this, "chkInherits", wxCheckBox)->GetValue() && !Ancestor.IsEmpty();
+ 
+-	wxString buffer;
+-	wxString tabstr = usestabs ? wxString(_T("\t")) : wxString(_T(' '),tabsize);
+-	wxString eolstr;
+-	if(eolmode == 2)
++    m_Header = XRCCTRL(*this, "txtHeader", wxTextCtrl)->GetValue();
++    m_Implementation = XRCCTRL(*this, "txtImplementation", wxTextCtrl)->GetValue();
++    bool GenerateImplementation = XRCCTRL(*this, "chkImplementation", wxCheckBox)->GetValue();
++    bool GuardBlock = XRCCTRL(*this, "chkGuardBlock", wxCheckBox)->GetValue();
++    wxString GuardWord = XRCCTRL(*this, "txtGuardBlock", wxTextCtrl)->GetValue();
++    if (GuardWord.IsEmpty())
++        DoGuardBlock();
++
++
++    wxFileName headerFname(UnixFilename(m_Header));
++    wxFileName implementationFname(UnixFilename(m_Implementation));
++    headerFname.MakeAbsolute(baseDir);
++    implementationFname.MakeAbsolute(baseDir);
++
++    bool usestabs = Manager::Get()->GetConfigManager(_T("editor"))->ReadBool(_T("/use_tab"), false);
++    int tabsize = Manager::Get()->GetConfigManager(_T("editor"))->ReadInt(_T("/tab_size"), 4);
++    int eolmode = Manager::Get()->GetConfigManager(_T("editor"))->ReadInt(_T("/eol/eolmode"), 0);
++
++    ForceDirectory(headerFname);
++    cbEditor * new_ed = Manager::Get()->GetEditorManager()->New(headerFname.GetFullPath());
++    wxString buffer = new_ed->GetControl()->GetText();
++    wxString tabstr = usestabs ? wxString(_T("\t")) : wxString(_T(' '),tabsize);
++    wxString eolstr;
++    if(eolmode == 2)
+         eolstr = _T("\n");
+     else if(eolmode == 1)
+         eolstr = _T("\r");
+@@ -123,83 +200,125 @@
+         eolstr = _T("\r\n");
+ 
+ 
+-	// actual creation starts here
+-	// let's start with the header file
+-	if (GuardBlock)
+-	{
+-		buffer << _T("#ifndef ") << GuardWord << eolstr;
+-		buffer << _T("#define ") << GuardWord << eolstr;
+-		buffer << eolstr;
+-	}
++    // actual creation starts here
++    // let's start with the header file
++    if (GuardBlock)
++    {
++        buffer << _T("#ifndef ") << GuardWord << eolstr;
++        buffer << _T("#define ") << GuardWord << eolstr;
++        buffer << eolstr;
++    }
+ 
+     if (!AncestorFilename.IsEmpty())
+     {
+         buffer << _T("#include <") << AncestorFilename << _T(">") << eolstr;
+         buffer << eolstr;
+     }
+-	buffer << _T("class ") << Name;
+-	if (Inherits)
+-		buffer << _T(" : ") << AncestorScope << _T(" ") << Ancestor;
+-	buffer << eolstr;
+-	buffer << _T("{") << eolstr;
+-	buffer << tabstr << _T("public:") << eolstr;
+-	buffer << tabstr << tabstr << Name << _T("(") << Constructor << _T(");") << eolstr;
++
++    for (unsigned int i=0; i<NameSpaces.GetCount(); ++i)
++        buffer << _T("namespace ") << NameSpaces[i] << _T(" {") << eolstr;
++    buffer << eolstr;
++
++
++    buffer << _T("class ") << Name;
++    if (Inherits)
++        buffer << _T(" : ") << AncestorScope << _T(" ") << Ancestor;
++    buffer << eolstr;
++    buffer << _T("{") << eolstr;
++    buffer << tabstr << _T("public:") << eolstr;
++    buffer << tabstr << tabstr << Name << _T("(") << Constructor << _T(");") << eolstr;
+     buffer << tabstr << tabstr;
+-	if (VirtualDestructor)
+-		buffer << _T("virtual ");
++    if (VirtualDestructor)
++        buffer << _T("virtual ");
+     buffer << _T('~') << Name << _T("();") << eolstr;
+-	buffer << tabstr << _T("protected:") << eolstr;
+-	buffer << tabstr << _T("private:") << eolstr;
+-	buffer << _T("};") << eolstr;
++    buffer << tabstr << _T("protected:") << eolstr;
++    buffer << tabstr << _T("private:") << eolstr;
++    buffer << _T("};") << eolstr;
+ 
+-	if (GuardBlock)
+-	{
+-		buffer << eolstr;
+-		buffer << _T("#endif // ") << GuardWord << eolstr;
+-	}
++    buffer << eolstr;
++    for (int i=NameSpaces.GetCount(); i>0; --i)
++        buffer << _T("} // namespace ") << NameSpaces[i-1] << eolstr;
++    buffer << eolstr;
+ 
+-	// write buffer to disk
+-	wxFile hdr(UnixFilename(m_Header), wxFile::write);
+-	if (!hdr.IsOpened())
+-	{
++    if (GuardBlock)
++    {
++        buffer << eolstr;
++        buffer << _T("#endif // ") << GuardWord << eolstr;
++    }
++
++    new_ed->GetControl()->SetText(buffer);
++    if (!new_ed->Save())
++    {
+         wxString msg;
+-        msg.Printf(_("Could not create header file %s.\nAborting..."), m_Header.c_str());
++        msg.Printf(_("Could not save header file %s.\nAborting..."), headerFname.GetFullPath().c_str());
+         cbMessageBox(msg, _("Error"), wxICON_ERROR);
+         return;
+-	}
+-	cbWrite(hdr,buffer);
+-	// end of header file
++    }
+ 
+-	// now the implementation file
+-	buffer.Clear();
+-	buffer << _T("#include \"") << headerFname.GetFullName() << _T("\"") << eolstr;
+-	buffer << eolstr;
+-	buffer << Name << _T("::") << Name << _T("(") << Constructor << _T(")") << eolstr;
+-	buffer << _T("{") << eolstr;
+-	buffer << tabstr << _T("//ctor") << eolstr;
+-	buffer << _T("}") << eolstr;
+-	buffer << eolstr;
+-	buffer << Name << _T("::~") << Name << _T("()") << eolstr;
+-	buffer << _T("{") << eolstr;
+-	buffer << tabstr << _T("//dtor") << eolstr;
+-	buffer << _T("}") << eolstr;
+-	buffer << eolstr;
+-	// write buffer to disk
+-	wxFile impl(UnixFilename(m_Implementation), wxFile::write);
+-	if (!impl.IsOpened())
+-	{
++
++    if (!GenerateImplementation)
++    {
++        m_Header = headerFname.GetFullPath();
++        m_Implementation = _T("");
++        EndModal(wxID_OK);
++        return;
++    }
++    // now the implementation file
++
++    ForceDirectory(implementationFname);
++    new_ed = Manager::Get()->GetEditorManager()->New(implementationFname.GetFullPath());
++    buffer = new_ed->GetControl()->GetText();
++
++    buffer << _T("#include \"") << m_Header << _T("\"") << eolstr;
++    buffer << eolstr;
++    for (unsigned int i=0; i<NameSpaces.GetCount(); ++i)
++        buffer << _T("namespace ") << NameSpaces[i] << _T(" {") << eolstr;
++    buffer << eolstr;
++
++    buffer << Name << _T("::") << Name << _T("(") << Constructor << _T(")") << eolstr;
++    buffer << _T("{") << eolstr;
++    buffer << tabstr << _T("//ctor") << eolstr;
++    buffer << _T("}") << eolstr;
++    buffer << eolstr;
++    buffer << Name << _T("::~") << Name << _T("()") << eolstr;
++    buffer << _T("{") << eolstr;
++    buffer << tabstr << _T("//dtor") << eolstr;
++    buffer << _T("}") << eolstr;
++
++    buffer << eolstr;
++    for (int i=NameSpaces.GetCount(); i>0; --i)
++        buffer << _T("} // namespace ") << NameSpaces[i-1] << eolstr;
++    buffer << eolstr;
++
++    new_ed->GetControl()->SetText(buffer);
++    if (!new_ed->Save())
++    {
+         wxString msg;
+-        msg.Printf(_("Could not create implementation file %s.\nAborting..."), m_Implementation.c_str());
++        msg.Printf(_("Could not save implementation file %s.\nAborting..."), implementationFname.GetFullPath().c_str());
+         cbMessageBox(msg, _("Error"), wxICON_ERROR);
+         return;
+-	}
+-	cbWrite(impl,buffer);
+-	// end of implementation file
++    }
+ 
+-	EndModal(wxID_OK);
++    m_Header= headerFname.GetFullPath();
++    m_Implementation= implementationFname.GetFullPath();
++
++    EndModal(wxID_OK);
+ }
+ 
++
++void ClassWizardDlg::OnBaseDirClick(wxCommandEvent& event)
++{
++    wxString path = XRCCTRL(*this, "txtBaseDir", wxTextCtrl)->GetValue();
++    wxDirDialog dlg (this, _T("Choose a directory"), path);
++    if (dlg.ShowModal()==wxID_OK)
++    {
++        path = dlg.GetPath();
++        XRCCTRL(*this, "txtBaseDir", wxTextCtrl)->SetValue(path);
++    }
++}
++
++
+ void ClassWizardDlg::OnCancelClick(wxCommandEvent& event)
+ {
+-	EndModal(wxID_CANCEL);
++    EndModal(wxID_CANCEL);
+ }
+Index: classwizarddlg.h
+===================================================================
+--- classwizarddlg.h	(revision 3111)
++++ classwizarddlg.h	(working copy)
+@@ -12,17 +12,19 @@
+     public:
+         ClassWizardDlg(wxWindow* parent);
+         ~ClassWizardDlg();
+-		const wxString& GetHeaderFilename() const { return m_Header; }
+-		const wxString& GetImplementationFilename() const { return m_Implementation; }
+-	private:
+-    	void OnUpdateUI(wxUpdateUIEvent& event);
+-		void OnOKClick(wxCommandEvent& event);
+-		void OnCancelClick(wxCommandEvent& event);
+-		void OnNameChange(wxCommandEvent& event);
+-		void DoGuardBlock();
++        const wxString& GetHeaderFilename() const { return m_Header; }
++        const wxString& GetImplementationFilename() const { return m_Implementation; }
++    private:
++        void OnUpdateUI(wxUpdateUIEvent& event);
++        void OnOKClick(wxCommandEvent& event);
++        void OnCancelClick(wxCommandEvent& event);
++        void OnNameChange(wxCommandEvent& event);
++        void OnAncestorChange(wxCommandEvent& event);
++        void OnBaseDirClick(wxCommandEvent& event);
++        void DoGuardBlock();
+ 
+-		wxString m_Header;
+-		wxString m_Implementation;
++        wxString m_Header;
++        wxString m_Implementation;
+ 
+         DECLARE_EVENT_TABLE()
+ };
+Index: resources/manifest.xml
+===================================================================
+--- resources/manifest.xml	(revision 3111)
++++ resources/manifest.xml	(working copy)
+@@ -3,7 +3,7 @@
+     <SdkVersion major="1" minor="10" release="0" />
+     <Plugin name="ClassWizard">
+         <Value title="Class wizard" />
+-        <Value version="0.2" />
++        <Value version="0.3" />
+         <Value description="This plugin provides an easy way to create a
+ new C++ class file pair. It's by no means
+ complete yet but it's here nevertheless ;)" />
+Index: resources/new_class.xrc
+===================================================================
+--- resources/new_class.xrc	(revision 3111)
++++ resources/new_class.xrc	(working copy)
+@@ -1,199 +1,261 @@
+-<?xml version="1.0" ?>
+ <resource>
+-  <object class="wxDialog" name="dlgNewClass">
+-    <title>Create new class</title>
+-    <object class="wxBoxSizer">
+-      <orient>wxVERTICAL</orient>
+-      <object class="sizeritem">
+-        <object class="wxFlexGridSizer">
+-          <cols>2</cols>
+-          <object class="sizeritem">
+-            <object class="wxStaticText">
+-              <label>Class name:</label>
++    <object class="wxDialog" name="dlgNewClass">
++        <title>Create new class</title>
++        <centered>1</centered>
++        <object class="wxBoxSizer">
++            <orient>wxVERTICAL</orient>
++            <object class="sizeritem">
++                <option>1</option>
++                <border>8</border>
++                <flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                <object class="wxFlexGridSizer">
++                    <rows>0</rows>
++                    <cols>2</cols>
++                    <vgap>8</vgap>
++                    <hgap>8</hgap>
++                    <growablecols>1</growablecols>
++                    <object class="sizeritem">
++                        <border>4</border>
++                        <flag>wxTOP|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                        <object class="wxStaticText" name="ID_STATICTEXT1">
++                            <label>Class name:</label>
++                        </object>
++                    </object>
++                    <object class="sizeritem">
++                        <flag>wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                        <object class="wxTextCtrl" name="txtName">
++                            <value></value>
++                        </object>
++                    </object>
++                    <object class="sizeritem">
++                        <border>4</border>
++                        <flag>wxTOP|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                        <object class="wxStaticText" name="ID_STATICTEXT2">
++                            <label>Constructor arguments:</label>
++                        </object>
++                    </object>
++                    <object class="sizeritem">
++                        <flag>wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                        <object class="wxTextCtrl" name="txtConstructor">
++                            <value></value>
++                        </object>
++                    </object>
++                    <object class="spacer">
++                        <size>0,0</size>
++                        <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                    </object>
++                    <object class="sizeritem">
++                        <flag>wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                        <object class="wxCheckBox" name="chkVirtualDestructor">
++                            <label>Virtual destructor</label>
++                            <checked>1</checked>
++                        </object>
++                    </object>
++                </object>
+             </object>
+-            <flag>wxTOP</flag>
+-            <border>4</border>
+-          </object>
+-          <object class="sizeritem">
+-            <object class="wxTextCtrl" name="txtName"/>
+-            <flag>wxEXPAND</flag>
+-          </object>
+-          <vgap>8</vgap>
+-          <hgap>8</hgap>
+-          <object class="sizeritem">
+-            <object class="wxStaticText">
+-              <label>Constructor arguments:</label>
++            <object class="sizeritem">
++                <border>8</border>
++                <flag>wxLEFT|wxRIGHT|wxBOTTOM|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                <object class="wxStaticBoxSizer">
++                    <orient>wxVERTICAL</orient>
++                    <label>Inheritance</label>
++                    <object class="sizeritem">
++                        <option>1</option>
++                        <border>8</border>
++                        <flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                        <object class="wxFlexGridSizer">
++                            <rows>0</rows>
++                            <cols>2</cols>
++                            <vgap>8</vgap>
++                            <hgap>8</hgap>
++                            <growablecols>1</growablecols>
++                            <object class="sizeritem">
++                                <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                <object class="wxCheckBox" name="chkInherits">
++                                    <label>Inherits another class</label>
++                                </object>
++                            </object>
++                            <object class="spacer">
++                                <size>0,0</size>
++                                <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                            </object>
++                            <object class="sizeritem">
++                                <border>4</border>
++                                <flag>wxTOP|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                <object class="wxStaticText" name="ID_STATICTEXT3">
++                                    <label>Ancestor:</label>
++                                </object>
++                            </object>
++                            <object class="sizeritem">
++                                <flag>wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                                <object class="wxTextCtrl" name="txtInheritance">
++                                    <value></value>
++                                </object>
++                            </object>
++                            <object class="sizeritem">
++                                <border>4</border>
++                                <flag>wxTOP|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                <object class="wxStaticText" name="ID_STATICTEXT4">
++                                    <label>Ancestor&apos;s include filename:</label>
++                                </object>
++                            </object>
++                            <object class="sizeritem">
++                                <flag>wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                                <object class="wxTextCtrl" name="txtInheritanceFilename">
++                                    <value></value>
++                                </object>
++                            </object>
++                            <object class="sizeritem">
++                                <border>4</border>
++                                <flag>wxTOP|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                <object class="wxStaticText" name="ID_STATICTEXT5">
++                                    <label>Scope:</label>
++                                </object>
++                            </object>
++                            <object class="sizeritem">
++                                <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                <object class="wxComboBox" name="cmbInheritanceScope">
++                                    <selection>0</selection>
++                                    <content>
++                                        <item>public</item>
++                                        <item>protected</item>
++                                        <item>private</item>
++                                    </content>
++                                    <style>wxCB_READONLY|wxCB_DROPDOWN</style>
++                                </object>
++                            </object>
++                        </object>
++                    </object>
++                </object>
+             </object>
+-            <flag>wxTOP</flag>
+-            <border>4</border>
+-          </object>
+-          <object class="sizeritem">
+-            <object class="wxTextCtrl" name="txtConstructor"/>
+-            <flag>wxEXPAND</flag>
+-          </object>
+-          <growablecols>1</growablecols>
+-          <object class="spacer">
+-            <size>0,0</size>
+-          </object>
+-          <object class="sizeritem">
+-            <object class="wxCheckBox" name="chkVirtualDestructor">
+-              <label>Virtual destructor</label>
+-              <checked>1</checked>
+-            </object>
+-            <flag>wxEXPAND</flag>
+-          </object>
+-        </object>
+-        <option>1</option>
+-        <flag>wxALL|wxEXPAND</flag>
+-        <border>8</border>
+-      </object>
+-      <object class="sizeritem">
+-        <object class="wxStaticBoxSizer">
+-          <label>Inheritance</label>
+-          <orient>wxVERTICAL</orient>
+-          <object class="sizeritem">
+-            <object class="wxFlexGridSizer">
+-              <cols>2</cols>
+-              <vgap>8</vgap>
+-              <hgap>8</hgap>
+-              <object class="sizeritem">
+-                <object class="wxCheckBox" name="chkInherits">
+-                  <label>Inherits another class</label>
++            <object class="sizeritem">
++                <border>8</border>
++                <flag>wxLEFT|wxRIGHT|wxBOTTOM|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                <object class="wxStaticBoxSizer">
++                    <orient>wxVERTICAL</orient>
++                    <label>Filenames</label>
++                    <object class="sizeritem">
++                        <option>1</option>
++                        <border>8</border>
++                        <flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                        <object class="wxFlexGridSizer">
++                            <rows>0</rows>
++                            <cols>2</cols>
++                            <vgap>8</vgap>
++                            <hgap>8</hgap>
++                            <growablecols>1</growablecols>
++                            <object class="sizeritem">
++                                <flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                <object class="wxStaticText" name="ID_STATICTEXT9">
++                                    <label>Base folder:</label>
++                                </object>
++                            </object>
++                            <object class="sizeritem">
++                                <flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                                <object class="wxBoxSizer">
++                                    <orient>wxHORIZONTAL</orient>
++                                    <object class="sizeritem">
++                                        <option>1</option>
++                                        <flag>wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                                        <object class="wxTextCtrl" name="txtBaseDir">
++                                            <value>Text</value>
++                                            <size>115,23</size>
++                                        </object>
++                                    </object>
++                                    <object class="sizeritem">
++                                        <flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                        <object class="wxButton" name="btnBaseDir">
++                                            <label>...</label>
++                                            <size>24,23</size>
++                                        </object>
++                                    </object>
++                                </object>
++                            </object>
++                            <object class="sizeritem">
++                                <border>4</border>
++                                <flag>wxTOP|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                <object class="wxStaticText" name="ID_STATICTEXT6">
++                                    <label>Header filename:</label>
++                                </object>
++                            </object>
++                            <object class="sizeritem">
++                                <flag>wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                                <object class="wxTextCtrl" name="txtHeader">
++                                    <value></value>
++                                </object>
++                            </object>
++                            <object class="spacer">
++                                <size>0,0</size>
++                                <flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                            </object>
++                            <object class="sizeritem">
++                                <flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                <object class="wxCheckBox" name="chkImplementation">
++                                    <label>Generate implementation file</label>
++                                    <checked>1</checked>
++                                </object>
++                            </object>
++                            <object class="sizeritem">
++                                <border>4</border>
++                                <flag>wxTOP|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                <object class="wxStaticText" name="ID_STATICTEXT7">
++                                    <label>Implementation filename:</label>
++                                </object>
++                            </object>
++                            <object class="sizeritem">
++                                <flag>wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                                <object class="wxTextCtrl" name="txtImplementation">
++                                    <value></value>
++                                </object>
++                            </object>
++                            <object class="spacer">
++                                <size>0,0</size>
++                                <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                            </object>
++                            <object class="sizeritem">
++                                <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                <object class="wxCheckBox" name="chkGuardBlock">
++                                    <label>Add Guard-Block in header file</label>
++                                    <checked>1</checked>
++                                </object>
++                            </object>
++                            <object class="sizeritem">
++                                <border>4</border>
++                                <flag>wxTOP|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                <object class="wxStaticText" name="ID_STATICTEXT8">
++                                    <label>Guard-Block word:</label>
++                                </object>
++                            </object>
++                            <object class="sizeritem">
++                                <flag>wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                                <object class="wxTextCtrl" name="txtGuardBlock">
++                                    <value></value>
++                                </object>
++                            </object>
++                        </object>
++                    </object>
+                 </object>
+-              </object>
+-              <object class="spacer">
+-                <size>0,0</size>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticText">
+-                  <label>Ancestor:</label>
+-                </object>
+-                <flag>wxTOP</flag>
+-                <border>4</border>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxTextCtrl" name="txtInheritance"/>
+-                <flag>wxEXPAND</flag>
+-              </object>
+-              <growablecols>1</growablecols>
+-              <object class="sizeritem">
+-                <object class="wxStaticText">
+-                  <label>Ancestor's include filename:</label>
+-                </object>
+-                <flag>wxTOP</flag>
+-                <border>4</border>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxTextCtrl" name="txtInheritanceFilename"/>
+-                <flag>wxEXPAND</flag>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticText">
+-                  <label>Scope:</label>
+-                </object>
+-                <flag>wxTOP</flag>
+-                <border>4</border>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxComboBox" name="cmbInheritanceScope">
+-                  <content>
+-                    <item>public</item>
+-                    <item>protected</item>
+-                    <item>private</item>
+-                  </content>
+-                  <selection>0</selection>
+-                  <style>wxCB_READONLY|wxCB_DROPDOWN</style>
+-                </object>
+-              </object>
+             </object>
+-            <option>1</option>
+-            <flag>wxALL|wxEXPAND</flag>
+-            <border>8</border>
+-          </object>
+-        </object>
+-        <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND</flag>
+-        <border>8</border>
+-      </object>
+-      <object class="sizeritem">
+-        <object class="wxStaticBoxSizer">
+-          <label>Filenames</label>
+-          <orient>wxVERTICAL</orient>
+-          <object class="sizeritem">
+-            <object class="wxFlexGridSizer">
+-              <cols>2</cols>
+-              <vgap>8</vgap>
+-              <hgap>8</hgap>
+-              <object class="sizeritem">
+-                <object class="wxStaticText">
+-                  <label>Header filename:</label>
++            <object class="sizeritem">
++                <border>8</border>
++                <flag>wxLEFT|wxRIGHT|wxBOTTOM|wxALIGN_CENTER</flag>
++                <object class="wxBoxSizer">
++                    <orient>wxHORIZONTAL</orient>
++                    <object class="sizeritem">
++                        <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                        <object class="wxButton" name="wxID_OK">
++                            <label>C&amp;reate</label>
++                            <default>1</default>
++                        </object>
++                    </object>
++                    <object class="sizeritem">
++                        <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                        <object class="wxButton" name="wxID_CANCEL">
++                            <label>&amp;Cancel</label>
++                        </object>
++                    </object>
+                 </object>
+-                <flag>wxTOP</flag>
+-                <border>4</border>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxTextCtrl" name="txtHeader"/>
+-                <flag>wxEXPAND</flag>
+-              </object>
+-              <growablecols>1</growablecols>
+-              <object class="sizeritem">
+-                <object class="wxStaticText">
+-                  <label>Implementation filename:</label>
+-                </object>
+-                <flag>wxTOP</flag>
+-                <border>4</border>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxTextCtrl" name="txtImplementation"/>
+-                <flag>wxEXPAND</flag>
+-              </object>
+-              <object class="spacer">
+-                <size>0,0</size>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxCheckBox" name="chkGuardBlock">
+-                  <label>Add Guard-Block in header file</label>
+-                  <checked>1</checked>
+-                </object>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticText">
+-                  <label>Guard-Block word:</label>
+-                </object>
+-                <flag>wxTOP</flag>
+-                <border>4</border>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxTextCtrl" name="txtGuardBlock"/>
+-                <flag>wxEXPAND</flag>
+-              </object>
+             </object>
+-            <option>1</option>
+-            <flag>wxALL|wxEXPAND</flag>
+-            <border>8</border>
+-          </object>
+         </object>
+-        <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND</flag>
+-        <border>8</border>
+-      </object>
+-      <object class="sizeritem">
+-        <object class="wxBoxSizer">
+-          <orient>wxHORIZONTAL</orient>
+-          <object class="sizeritem">
+-            <object class="wxButton" name="wxID_OK">
+-              <label>C&amp;reate</label>
+-              <default>1</default>
+-            </object>
+-          </object>
+-          <object class="sizeritem">
+-            <object class="wxButton" name="wxID_CANCEL">
+-              <label>&amp;Cancel</label>
+-            </object>
+-          </object>
+-        </object>
+-        <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_CENTRE</flag>
+-        <border>8</border>
+-      </object>
+     </object>
+-    <centered>1</centered>
+-  </object>
+-</resource>
+\ No newline at end of file
++</resource>

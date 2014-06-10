@@ -1,0 +1,49 @@
+Index: src/sdk/annoyingdialog.cpp
+===================================================================
+--- src/sdk/annoyingdialog.cpp	(revision 3275)
++++ src/sdk/annoyingdialog.cpp	(working copy)
+@@ -101,11 +101,33 @@
+ 
+     wxButton *but1 = new wxButton(this, id1, bTxt1, wxDefaultPosition, wxDefaultSize, 0);
+     but1->SetDefault();
+-    buttonArea->Add(but1, 0, wxALIGN_CENTER|wxALL, 5);
++#ifdef __WXGTK__
++    if (numButtons == 1)
++        buttonArea->Add(but1, 0, wxALIGN_CENTER|wxALL, 5);
+ 
+     if(growableCol != -1)
+         buttonArea->Add(1, 1, 0, wxGROW|wxALIGN_CENTER_VERTICAL, 5 );
+ 
++    if(numButtons == 2)
++    {
++        wxButton *but2 = new wxButton(this, id2, bTxt2, wxDefaultPosition, wxDefaultSize, 0);
++        but2->SetDefault();
++        buttonArea->Add(but2, 0, wxALIGN_CENTER|wxALL, 5);
++        buttonArea->Add(but1, 0, wxALIGN_CENTER|wxTOP|wxBOTTOM|wxRIGHT, 5);
++    }
++    if(numButtons == 3)
++    {
++        wxButton *but2 = new wxButton(this, id2, bTxt2, wxDefaultPosition, wxDefaultSize, 0);
++        wxButton *but3 = new wxButton(this, id3, bTxt3, wxDefaultPosition, wxDefaultSize, 0);
++        but3->SetDefault();
++        buttonArea->Add(but2, 0, wxALIGN_CENTER|wxALL, 5);
++        buttonArea->Add(but3, 0, wxALIGN_CENTER|wxTOP|wxBOTTOM|wxRIGHT, 5);
++        buttonArea->Add(but1, 0, wxALIGN_CENTER|wxTOP|wxBOTTOM|wxRIGHT, 5);
++    }
++#else
++    buttonArea->Add(but1, 0, wxALIGN_CENTER|wxALL, 5);
++    if(growableCol != -1)
++        buttonArea->Add(1, 1, 0, wxGROW|wxALIGN_CENTER_VERTICAL, 5 );
+     if(numButtons > 1)
+     {
+         wxButton *but2 = new wxButton(this, id2, bTxt2, wxDefaultPosition, wxDefaultSize, 0);
+@@ -118,6 +140,9 @@
+         but3->SetDefault();
+         buttonArea->Add(but3, 0, wxALIGN_CENTER|wxTOP|wxBOTTOM|wxRIGHT, 5);
+     }
++#endif
++
++
+ //    mainArea->Add( buttonArea, 0, wxALIGN_CENTER|wxTOP, 10);
+ 
+     outerSizer->Add( mainArea, 0, wxALIGN_CENTER|wxALL, 5);

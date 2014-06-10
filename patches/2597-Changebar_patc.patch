@@ -1,0 +1,1124 @@
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 5311)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -55,8 +55,15 @@
+ #define DEBUG_MARKER        4
+ #define DEBUG_STYLE         wxSCI_MARK_ARROW
+ 
++#define CHANGEUNSAVED_MARKER    23
++#define CHANGEUNSAVED_STYLE     wxSCI_MARK_LEFTRECT
+ 
++#define CHANGESAVED_MARKER      24
++#define CHANGESAVED_STYLE       wxSCI_MARK_LEFTRECT
+ 
++static const int foldingMargin   = 2;
++static const int changebarMargin = 3;
++
+ /* This struct holds private data for the cbEditor class.
+  * It's a paradigm to avoid rebuilding the entire project (as cbEditor is a basic dependency)
+  * for just adding a private var or method.
+@@ -1064,6 +1071,16 @@
+ 
+     control->SetEOLMode(mgr->ReadInt(_T("/eol/eolmode"), default_eol));
+ 
++    control->SetMarginType(changebarMargin,  wxSCI_MARGIN_SYMBOL);
++    control->SetMarginWidth(changebarMargin, 4);
++    control->SetMarginMask(changebarMargin, (1 << CHANGEUNSAVED_MARKER) | (1 << CHANGESAVED_MARKER) );
++    control->SetMarginUseFoldingBackground(changebarMargin, true);
++
++    control->MarkerDefine(CHANGEUNSAVED_MARKER, CHANGEUNSAVED_STYLE);
++    control->MarkerSetBackground(CHANGEUNSAVED_MARKER, wxColour(0xFF, 0xE6, 0x04));
++    control->MarkerDefine(CHANGESAVED_MARKER, CHANGESAVED_STYLE);
++    control->MarkerSetBackground(CHANGESAVED_MARKER, wxColour(0x04, 0xFF, 0x50));
++
+     // folding margin
+     control->SetProperty(_T("fold"), mgr->ReadBool(_T("/folding/show_folds"), true) ? _T("1") : _T("0"));
+     control->SetProperty(_T("fold.html"), mgr->ReadBool(_T("/folding/fold_xml"), true) ? _T("1") : _T("0"));
+@@ -1073,10 +1090,10 @@
+     if (mgr->ReadBool(_T("/folding/show_folds"), true))
+     {
+         control->SetFoldFlags(16);
+-        control->SetMarginType(2, wxSCI_MARGIN_SYMBOL);
+-        control->SetMarginWidth(2, 16);
+-        control->SetMarginMask(2, wxSCI_MASK_FOLDERS);
+-        control->SetMarginSensitive(2, 1);
++        control->SetMarginType(foldingMargin, wxSCI_MARGIN_SYMBOL);
++        control->SetMarginWidth(foldingMargin, 16);
++        control->SetMarginMask(foldingMargin, wxSCI_MASK_FOLDERS);
++        control->SetMarginSensitive(foldingMargin, 1);
+ 
+         /*Default behaviour
+         control->MarkerDefine(wxSCI_MARKNUM_FOLDEROPEN, wxSCI_MARK_BOXMINUS);
+@@ -1103,7 +1120,7 @@
+         */
+     }
+     else
+-        control->SetMarginWidth(2, 0);
++        control->SetMarginWidth(foldingMargin, 0);
+ }
+ 
+ // static
+@@ -2269,7 +2286,8 @@
+         wxPoint clientpos(ScreenToClient(position));
+         const int margin = m_pControl->GetMarginWidth(0) + // numbers, if present
+                            m_pControl->GetMarginWidth(1) + // breakpoints, bookmarks... if present
+-                           m_pControl->GetMarginWidth(2);  // folding, if present
++                           m_pControl->GetMarginWidth(changebarMargin) +
++                           m_pControl->GetMarginWidth(foldingMargin);  // folding, if present
+         wxRect r = m_pControl->GetRect();
+ 
+         bool inside1 = r.Contains(clientpos);
+@@ -2495,7 +2513,7 @@
+             ToggleBreakpoint(line);
+             break;
+         }
+-        case 2: // folding margin
++        case foldingMargin: // folding margin
+         {
+             int lineYpix = event.GetPosition();
+             int line = GetControl()->LineFromPosition(lineYpix);
+Index: src/sdk/wxscintilla/src/scintilla/include/Scintilla.h
+===================================================================
+--- src/sdk/wxscintilla/src/scintilla/include/Scintilla.h	(revision 5311)
++++ src/sdk/wxscintilla/src/scintilla/include/Scintilla.h	(working copy)
+@@ -120,6 +120,8 @@
+ #define SC_MARK_FULLRECT 26
+ #define SC_MARK_LEFTRECT 27
+ #define SC_MARK_CHARACTER 10000
++#define SC_MARKNUM_CHANGEUNSAVED 23
++#define SC_MARKNUM_CHANGESAVED 24
+ #define SC_MARKNUM_FOLDEREND 25
+ #define SC_MARKNUM_FOLDEROPENMID 26
+ #define SC_MARKNUM_FOLDERMIDTAIL 27
+@@ -144,6 +146,7 @@
+ #define SC_MARGIN_NUMBER 1
+ #define SC_MARGIN_BACK 2
+ #define SC_MARGIN_FORE 3
++#define SC_MARGIN_CHANGED 4
+ #define SCI_SETMARGINTYPEN 2240
+ #define SCI_GETMARGINTYPEN 2241
+ #define SCI_SETMARGINWIDTHN 2242
+@@ -470,6 +473,7 @@
+ #define SCI_LINESSPLIT 2289
+ #define SCI_SETFOLDMARGINCOLOUR 2290
+ #define SCI_SETFOLDMARGINHICOLOUR 2291
++#define SCI_SETMARGINUSEFOLDINGBACKGROUND 2292
+ #define SCI_LINEDOWN 2300
+ #define SCI_LINEDOWNEXTEND 2301
+ #define SCI_LINEUP 2302
+Index: src/sdk/wxscintilla/src/scintilla/include/Scintilla.iface
+===================================================================
+--- src/sdk/wxscintilla/src/scintilla/include/Scintilla.iface	(revision 5311)
++++ src/sdk/wxscintilla/src/scintilla/include/Scintilla.iface	(working copy)
+@@ -273,7 +273,9 @@
+ val SC_MARK_CHARACTER=10000
+ 
+ enu MarkerOutline=SC_MARKNUM_
+-# Markers used for outlining column.
++# Markers used for outlining and changed column.
++val SC_MARKNUM_CHANGEUNSAVED=23
++val SC_MARKNUM_CHANGESAVED=24
+ val SC_MARKNUM_FOLDEREND=25
+ val SC_MARKNUM_FOLDEROPENMID=26
+ val SC_MARKNUM_FOLDERMIDTAIL=27
+@@ -325,6 +327,7 @@
+ val SC_MARGIN_NUMBER=1
+ val SC_MARGIN_BACK=2
+ val SC_MARGIN_FORE=3
++val SC_MARGIN_CHANGED=4
+ 
+ # Set a margin to be either numeric or symbolic.
+ set void SetMarginTypeN=2240(int margin, int marginType)
+Index: src/sdk/wxscintilla/src/scintilla/src/RunStyles.h
+===================================================================
+--- src/sdk/wxscintilla/src/scintilla/src/RunStyles.h	(revision 5311)
++++ src/sdk/wxscintilla/src/scintilla/src/RunStyles.h	(working copy)
+@@ -10,12 +10,13 @@
+ #ifndef RUNSTYLES_H
+ #define RUNSTYLES_H
+ 
+-#include "Partitioning.h"
+-
+ #ifdef SCI_NAMESPACE
+ namespace Scintilla {
+ #endif
+ 
++class Partitioning;
++template<class T> class SplitVector;
++
+ class RunStyles {
+ public:
+ 	Partitioning *starts;
+@@ -39,6 +40,10 @@
+ 	void InsertSpace(int position, int insertLength);
+ 	void DeleteAll();
+ 	void DeleteRange(int position, int deleteLength);
++
++	char *PersistantForm() const;
++	void FromPersistant(const char *form);
++	static bool PersistantSame(const char *form1, const char *form2);
+ };
+ 
+ #ifdef SCI_NAMESPACE
+Index: src/sdk/wxscintilla/src/scintilla/src/CellBuffer.h
+===================================================================
+--- src/sdk/wxscintilla/src/scintilla/src/CellBuffer.h	(revision 5311)
++++ src/sdk/wxscintilla/src/scintilla/src/CellBuffer.h	(working copy)
+@@ -8,6 +8,11 @@
+ #ifndef CELLBUFFER_H
+ #define CELLBUFFER_H
+ 
++
++#include "RunStyles.h"
++#include "Partitioning.h"
++
++
+ #ifdef SCI_NAMESPACE
+ namespace Scintilla {
+ #endif
+@@ -41,6 +46,25 @@
+ 	void CombineWith(MarkerHandleSet *other);
+ };
+ 
++class LineChanges {
++	bool collecting;
++	RunStyles state;
++	int edition;
++public:
++	LineChanges();
++	~LineChanges();
++	void AdvanceEdition();
++	int GetEdition() const;
++	char *PersistantForm() const;
++	void SetChanges(const char *changesState);
++	void InsertText(int line, int edition, bool undoing);
++	void InsertLine(int line, bool undoing);
++	void RemoveLine(int line, bool undoing);
++	void EnableChangeCollection(bool collecting_, int lines);
++	void ClearChanged();
++	int GetChanged(int line) const;
++};
++
+ /**
+  * The line vector contains information about each of the lines in a cell buffer.
+  */
+@@ -51,6 +75,7 @@
+ 	SplitVector<int> levels;
+ 	/// Handles are allocated sequentially and should never have to be reused as 32 bit ints are very big.
+ 	int handleCurrent;
++	LineChanges changes;
+ 
+ public:
+ 
+@@ -63,10 +88,10 @@
+ 	int SetLevel(int line, int level);
+ 	int GetLevel(int line);
+ 
+-	void InsertText(int line, int delta);
+-	void InsertLine(int line, int position);
++	void InsertText(int line, int delta, int edition, bool undoing);
++	void InsertLine(int line, int position, bool undoing);
+ 	void SetLineStart(int line, int position);
+-	void RemoveLine(int line);
++	void RemoveLine(int line, bool undoing);
+ 	int Lines() const {
+ 		return starts.Partitions();
+ 	}
+@@ -81,6 +106,14 @@
+ 	void DeleteMark(int line, int markerNum, bool all);
+ 	void DeleteMarkFromHandle(int markerHandle);
+ 	int LineFromHandle(int markerHandle);
++
++	void EnableChangeCollection(bool changesCollecting_);
++	int GetChanged(int line) const;
++	void SetSavePoint();
++	int GetChangesEdition() const;
++	void PerformingUndo(bool undo);
++	char *PersistantForm() const;
++	void SetChanges(const char *changesState);
+ };
+ 
+ enum actionType { insertAction, removeAction, startAction };
+@@ -113,6 +146,8 @@
+ 	int currentAction;
+ 	int undoSequenceDepth;
+ 	int savePoint;
++	int savePointEffective;
++	int **changeActions;
+ 
+ 	void EnsureUndoRoom();
+ 
+@@ -120,17 +155,21 @@
+ 	UndoHistory();
+ 	~UndoHistory();
+ 
+-	void AppendAction(actionType at, int position, char *data, int length, bool &startSequence);
++	void AppendAction(actionType at, int position, char *data, int length, bool &startSequence, char *persistantChanges);
+ 
+ 	void BeginUndoAction();
+ 	void EndUndoAction();
+ 	void DropUndoSequence();
+ 	void DeleteUndoHistory();
+ 
++	void DeleteChangeHistory();
++	void EnableChangeHistory(bool enable);
++
+ 	/// The save point is a marker in the undo stack where the container has stated that
+ 	/// the buffer was saved. Undo and redo can move over the save point.
+ 	void SetSavePoint();
+ 	bool IsSavePoint() const;
++	bool BeforeSavePointEffective(int action) const;
+ 
+ 	/// To perform an undo, StartUndo is called to retrieve the number of steps, then UndoStep is
+ 	/// called that many times. Similarly for redo.
+@@ -138,10 +177,13 @@
+ 	int StartUndo();
+ 	const Action &GetUndoStep() const;
+ 	void CompletedUndoStep();
++	char *GetChangesStep() const;
+ 	bool CanRedo() const;
+ 	int StartRedo();
+ 	const Action &GetRedoStep() const;
+ 	void CompletedRedoStep();
++
++	int Edition() const;
+ };
+ 
+ /**
+@@ -178,8 +220,8 @@
+ 	int Lines() const;
+ 	int LineStart(int line) const;
+ 	int LineFromPosition(int pos) { return lv.LineFromPosition(pos); }
+-	void InsertLine(int line, int position);
+-	void RemoveLine(int line);
++	void InsertLine(int line, int position, bool undoing);
++	void RemoveLine(int line, bool undoing);
+ 	const char *InsertString(int position, const char *s, int insertLength, bool &startSequence);
+ 
+ 	/// Setting styles for positions outside the range of the buffer is safe and has no effect.
+@@ -205,15 +247,19 @@
+ 	void DeleteAllMarks(int markerNum);
+ 	int LineFromHandle(int markerHandle);
+ 
++	void EnableChangeCollection(bool changesCollecting_);
++	int GetChanged(int line) const;
++	int GetChangesEdition() const;
++
+ 	/// Actions without undo
+-	void BasicInsertString(int position, const char *s, int insertLength);
+-	void BasicDeleteChars(int position, int deleteLength);
++	void BasicInsertString(int position, const char *s, int insertLength, bool undoing);
++	void BasicDeleteChars(int position, int deleteLength, bool undoing);
+ 
+ 	bool SetUndoCollection(bool collectUndo);
+ 	bool IsCollectingUndo();
+ 	void BeginUndoAction();
+ 	void EndUndoAction();
+-	void DeleteUndoHistory();
++	void DeleteUndoHistory(bool collectChangeHistory);
+ 
+ 	/// To perform an undo, StartUndo is called to retrieve the number of steps, then UndoStep is
+ 	/// called that many times. Similarly for redo.
+Index: src/sdk/wxscintilla/src/scintilla/src/ContractionState.h
+===================================================================
+--- src/sdk/wxscintilla/src/scintilla/src/ContractionState.h	(revision 5311)
++++ src/sdk/wxscintilla/src/scintilla/src/ContractionState.h	(working copy)
+@@ -8,12 +8,13 @@
+ #ifndef CONTRACTIONSTATE_H
+ #define CONTRACTIONSTATE_H
+ 
+-#include "RunStyles.h"
+-
+ #ifdef SCI_NAMESPACE
+ namespace Scintilla {
+ #endif
+ 
++class RunStyles;
++class Partitioning;
++
+ /**
+  */
+ class ContractionState {
+Index: src/sdk/wxscintilla/src/scintilla/src/Document.cxx
+===================================================================
+--- src/sdk/wxscintilla/src/scintilla/src/Document.cxx	(revision 5311)
++++ src/sdk/wxscintilla/src/scintilla/src/Document.cxx	(working copy)
+@@ -102,7 +102,11 @@
+ }
+ 
+ void Document::SetSavePoint() {
++	int changesEdition = cb.GetChangesEdition();
+ 	cb.SetSavePoint();
++	if (cb.GetChangesEdition() != changesEdition) {
++		NotifyModified(DocModification(SC_MOD_CHANGEMARKER, 0, 0, 0, 0, -1));
++	}
+ 	NotifySavePoint(true);
+ }
+ 
+@@ -430,6 +434,8 @@
+ 			        SC_MOD_BEFOREDELETE | SC_PERFORMED_USER,
+ 			        pos, len,
+ 			        0, 0));
++
++			int changesEdition = cb.GetChangesEdition();
+ 			int prevLinesTotal = LinesTotal();
+ 			bool startSavePoint = cb.IsSavePoint();
+ 			bool startSequence = false;
+@@ -440,9 +446,11 @@
+ 				ModifiedAt(pos);
+ 			else
+ 				ModifiedAt(pos-1);
++			int changeBarFlags = (cb.GetChangesEdition() == changesEdition) ? 
++				0 : SC_MOD_CHANGEMARKER | SC_MOD_CHANGEFOLD;
+ 			NotifyModified(
+ 			    DocModification(
+-			        SC_MOD_DELETETEXT | SC_PERFORMED_USER | (startSequence?SC_STARTACTION:0),
++			        SC_MOD_DELETETEXT | SC_PERFORMED_USER | (startSequence?SC_STARTACTION:0) | changeBarFlags,
+ 			        pos, len,
+ 			        LinesTotal() - prevLinesTotal, text));
+ 		}
+@@ -469,6 +477,8 @@
+ 			        SC_MOD_BEFOREINSERT | SC_PERFORMED_USER,
+ 			        position, insertLength,
+ 			        0, s));
++
++			int changesEdition = cb.GetChangesEdition();
+ 			int prevLinesTotal = LinesTotal();
+ 			bool startSavePoint = cb.IsSavePoint();
+ 			bool startSequence = false;
+@@ -476,9 +486,11 @@
+ 			if (startSavePoint && cb.IsCollectingUndo())
+ 				NotifySavePoint(!startSavePoint);
+ 			ModifiedAt(position);
++			int changeBarFlags = (cb.GetChangesEdition() == changesEdition) ? 
++				0 : SC_MOD_CHANGEMARKER | SC_MOD_CHANGEFOLD;
+ 			NotifyModified(
+ 			    DocModification(
+-			        SC_MOD_INSERTTEXT | SC_PERFORMED_USER | (startSequence?SC_STARTACTION:0),
++			        SC_MOD_INSERTTEXT | SC_PERFORMED_USER | (startSequence?SC_STARTACTION:0) | changeBarFlags,
+ 			        position, insertLength,
+ 			        LinesTotal() - prevLinesTotal, text));
+ 		}
+@@ -495,6 +507,7 @@
+ 		if (!cb.IsReadOnly()) {
+ 			bool startSavePoint = cb.IsSavePoint();
+ 			bool multiLine = false;
++			int changesEdition = cb.GetChangesEdition();
+ 			int steps = cb.StartUndo();
+ 			//Platform::DebugPrintf("Steps=%d\n", steps);
+ 			for (int step = 0; step < steps; step++) {
+@@ -530,6 +543,9 @@
+ 					if (multiLine)
+ 						modFlags |= SC_MULTILINEUNDOREDO;
+ 				}
++				int changeBarFlags = (cb.GetChangesEdition() == changesEdition) ? 
++					0 : SC_MOD_CHANGEMARKER | SC_MOD_CHANGEFOLD;
++				modFlags |= changeBarFlags;
+ 				NotifyModified(DocModification(modFlags, cellPosition, action.lenData,
+ 											   linesAdded, action.data));
+ 			}
+@@ -551,6 +567,7 @@
+ 		if (!cb.IsReadOnly()) {
+ 			bool startSavePoint = cb.IsSavePoint();
+ 			bool multiLine = false;
++			int changesEdition = cb.GetChangesEdition();
+ 			int steps = cb.StartRedo();
+ 			for (int step = 0; step < steps; step++) {
+ 				const int prevLinesTotal = LinesTotal();
+@@ -583,6 +600,9 @@
+ 					if (multiLine)
+ 						modFlags |= SC_MULTILINEUNDOREDO;
+ 				}
++				int changeBarFlags = (cb.GetChangesEdition() == changesEdition) ? 
++					0 : SC_MOD_CHANGEMARKER | SC_MOD_CHANGEFOLD;
++				modFlags |= changeBarFlags;
+ 				NotifyModified(
+ 					DocModification(modFlags, action.position, action.lenData,
+ 									linesAdded, action.data));
+Index: src/sdk/wxscintilla/src/scintilla/src/ViewStyle.h
+===================================================================
+--- src/sdk/wxscintilla/src/scintilla/src/ViewStyle.h	(revision 5311)
++++ src/sdk/wxscintilla/src/scintilla/src/ViewStyle.h	(working copy)
+@@ -20,6 +20,7 @@
+ 	int width;
+ 	int mask;
+ 	bool sensitive;
++	bool useFoldingBackground;
+ 	MarginStyle();
+ };
+ 
+Index: src/sdk/wxscintilla/src/scintilla/src/Editor.cxx
+===================================================================
+--- src/sdk/wxscintilla/src/scintilla/src/Editor.cxx	(revision 5311)
++++ src/sdk/wxscintilla/src/scintilla/src/Editor.cxx	(working copy)
+@@ -1491,7 +1491,7 @@
+ 					// Required because of special way brush is created for selection margin
+ 					surface->FillRectangle(rcSelMargin, pixmapSelPattern);
+ 				*/
+-				if (vs.ms[margin].mask & SC_MASK_FOLDERS)
++				if (vs.ms[margin].mask & SC_MASK_FOLDERS || vs.ms[margin].useFoldingBackground)
+ 					// Required because of special way brush is created for selection margin
+ 					surface->FillRectangle(rcSelMargin, *pixmapSelPattern);
+ 				else {
+@@ -1611,6 +1611,12 @@
+ 					}
+ 				}
+ 
++				int changed = pdoc->GetChanged(lineDoc);
++				if (changed == 1)
++					marks |= 1 << SC_MARKNUM_CHANGEUNSAVED;
++				if (changed == 2)
++					marks |= 1 << SC_MARKNUM_CHANGESAVED;
++
+ 				marks &= vs.ms[margin].mask;
+ 				PRectangle rcMarker = rcSelMargin;
+ 				rcMarker.top = yposScreen;
+@@ -6028,7 +6034,7 @@
+ 		return (pdoc->CanUndo() && !pdoc->IsReadOnly()) ? 1 : 0;
+ 
+ 	case SCI_EMPTYUNDOBUFFER:
+-		pdoc->DeleteUndoHistory();
++		pdoc->DeleteUndoHistory(true);
+ 		return 0;
+ 
+ 	case SCI_GETFIRSTVISIBLELINE:
+@@ -7549,6 +7555,16 @@
+ 		InvalidateStyleRedraw();
+ 		break;
+ 
++	case SCI_SETMARGINUSEFOLDINGBACKGROUND:
++        if (ValidMargin(wParam)) {
++			// Short-circuit if the width is unchanged, to avoid unnecessary redraw.
++			if (vs.ms[wParam].useFoldingBackground != lParam) {
++				vs.ms[wParam].useFoldingBackground = lParam;
++				InvalidateStyleRedraw();
++			}
++		}
++		break;
++
+ 	case SCI_SETHOTSPOTACTIVEFORE:
+ 		vs.hotspotForegroundSet = wParam != 0;
+ 		vs.hotspotForeground.desired = ColourDesired(lParam);
+Index: src/sdk/wxscintilla/src/scintilla/src/Document.h
+===================================================================
+--- src/sdk/wxscintilla/src/scintilla/src/Document.h	(revision 5311)
++++ src/sdk/wxscintilla/src/scintilla/src/Document.h	(working copy)
+@@ -168,7 +168,7 @@
+ 	int Redo();
+ 	bool CanUndo() { return cb.CanUndo(); }
+ 	bool CanRedo() { return cb.CanRedo(); }
+-	void DeleteUndoHistory() { cb.DeleteUndoHistory(); }
++	void DeleteUndoHistory(bool collectChangeHistory) { cb.DeleteUndoHistory(collectChangeHistory); }
+ 	bool SetUndoCollection(bool collectUndo) {
+ 		return cb.SetUndoCollection(collectUndo);
+ 	}
+@@ -218,6 +218,7 @@
+ 	void ClearLevels() { cb.ClearLevels(); }
+ 	int GetLastChild(int lineParent, int level=-1);
+ 	int GetFoldParent(int line);
++	int GetChanged(int line) { return cb.GetChanged(line); }
+ 
+ 	void Indent(bool forwards);
+ 	int ExtendWordSelect(int pos, int delta, bool onlyWordCharacters=false);
+Index: src/sdk/wxscintilla/src/scintilla/src/CellBuffer.cxx
+===================================================================
+--- src/sdk/wxscintilla/src/scintilla/src/CellBuffer.cxx	(revision 5311)
++++ src/sdk/wxscintilla/src/scintilla/src/CellBuffer.cxx	(working copy)
+@@ -15,6 +15,7 @@
+ #include "Scintilla.h"
+ #include "SplitVector.h"
+ #include "Partitioning.h"
++#include "RunStyles.h"
+ #include "CellBuffer.h"
+ 
+ #ifdef SCI_NAMESPACE
+@@ -126,6 +127,87 @@
+ 	other->root = 0;
+ }
+ 
++LineChanges::LineChanges() : collecting(0), edition(0) {
++}
++
++LineChanges::~LineChanges() {
++}
++
++void LineChanges::AdvanceEdition() {
++	edition = (edition + 1) % 0x40000000;
++}
++
++int LineChanges::GetEdition() const {
++	return edition;
++}
++
++char *LineChanges::PersistantForm() const {
++	if (collecting)
++		return state.PersistantForm();
++	else
++		return 0;
++}
++
++void LineChanges::SetChanges(const char *changesState) {
++	if (collecting && changesState) {
++		state.FromPersistant(changesState);
++		AdvanceEdition();
++	}
++}
++
++void LineChanges::InsertText(int line, int edition, bool undoing) {
++	if (collecting && !undoing) {
++		int position = line;
++		int fillLength = 1;
++		if (state.FillRange(position, edition, fillLength)) {
++			if (fillLength > 0) {
++				AdvanceEdition();
++			}
++		}
++	}
++}
++
++void LineChanges::InsertLine(int line, bool undoing) {
++	if (collecting && !undoing) {
++		state.InsertSpace(line, 1);
++		int linePosition = line;
++		int fillLength = 1;
++		if (state.FillRange(linePosition, 1, fillLength)) 
++			AdvanceEdition();
++	}
++}
++
++void LineChanges::RemoveLine(int line, bool undoing) {
++	if (collecting && !undoing) {
++		state.DeleteRange(line, 1);
++		AdvanceEdition();
++	}
++}
++
++void LineChanges::EnableChangeCollection(bool collecting_, int lines) {
++	collecting = collecting_;
++	if (collecting) {
++		state.InsertSpace(0, lines);
++	}
++}
++
++void LineChanges::ClearChanged() {
++	if (collecting) {
++		int position = 0;
++		int length = state.Length();
++		if (state.FillRange(position, 0, length))
++			AdvanceEdition();
++	}
++}
++
++int LineChanges::GetChanged(int line) const {
++	if (collecting) {
++		return state.ValueAt(line);
++	}
++	return 0;
++}
++
++
+ LineVector::LineVector() : starts(256) {
+ 	handleCurrent = 1;
+ 
+@@ -182,15 +264,17 @@
+ 	}
+ }
+ 
+-void LineVector::InsertText(int line, int delta) {
++void LineVector::InsertText(int line, int delta, int edition, bool undoing) {
+ 	starts.InsertText(line, delta);
++	changes.InsertText(line, edition, undoing);
+ }
+ 
+-void LineVector::InsertLine(int line, int position) {
++void LineVector::InsertLine(int line, int position, bool undoing) {
+ 	starts.InsertPartition(line, position);
+ 	if (markers.Length()) {
+ 		markers.Insert(line, 0);
+ 	}
++	changes.InsertLine(line, undoing);
+ 	if (levels.Length()) {
+ 		int level = SC_FOLDLEVELBASE;
+ 		if ((line > 0) && (line < Lines())) {
+@@ -204,7 +288,7 @@
+ 	starts.SetPartitionStartPosition(line, position);
+ }
+ 
+-void LineVector::RemoveLine(int line) {
++void LineVector::RemoveLine(int line, bool undoing) {
+ 	starts.RemovePartition(line);
+ 	// Retain the markers from the deleted line by oring them into the previous line
+ 	if (markers.Length()) {
+@@ -213,6 +297,7 @@
+ 		}
+ 		markers.Delete(line);
+ 	}
++	changes.RemoveLine(line, undoing);
+ 	if (levels.Length()) {
+ 		// Move up following lines but merge header flag from this line
+ 		// to line before to avoid a temporary disappearence causing expansion.
+@@ -303,6 +388,31 @@
+ 	return -1;
+ }
+ 
++void LineVector::EnableChangeCollection(bool changesCollecting_) {
++	changes.ClearChanged();
++	changes.EnableChangeCollection(changesCollecting_, Lines());
++}
++
++int LineVector::GetChanged(int line) const {
++	return changes.GetChanged(line);
++}
++
++int LineVector::GetChangesEdition() const {
++	return changes.GetEdition();
++}
++
++void LineVector::SetSavePoint() {
++	changes.AdvanceEdition();
++}
++
++char *LineVector::PersistantForm() const {
++	return changes.PersistantForm();
++}
++
++void LineVector::SetChanges(const char *changesState) {
++	changes.SetChanges(changesState);
++}
++
+ Action::Action() {
+ 	at = startAction;
+ 	position = 0;
+@@ -371,11 +481,15 @@
+ 	currentAction = 0;
+ 	undoSequenceDepth = 0;
+ 	savePoint = 0;
++	savePointEffective = 0;
+ 
++	changeActions = 0;
++
+ 	actions[currentAction].Create(startAction);
+ }
+ 
+ UndoHistory::~UndoHistory() {
++	DeleteChangeHistory();
+ 	delete []actions;
+ 	actions = 0;
+ }
+@@ -386,6 +500,18 @@
+ 	if (currentAction >= (lenActions - 2)) {
+ 		// Run out of undo nodes so extend the array
+ 		int lenActionsNew = lenActions * 2;
++
++		if (changeActions) {
++			int **changeActionsNew = new int *[lenActionsNew];
++			if (!changeActionsNew)
++				return;
++			for (int i=0;i<lenActionsNew;i++) {
++				changeActionsNew[i] = (i < lenActions) ? changeActions[i] : 0;
++			}
++			delete []changeActions;
++			changeActions = changeActionsNew;
++		}
++
+ 		Action *actionsNew = new Action[lenActionsNew];
+ 		if (!actionsNew)
+ 			return;
+@@ -398,12 +524,13 @@
+ }
+ 
+ void UndoHistory::AppendAction(actionType at, int position, char *data, int lengthData,
+-	bool &startSequence) {
++	bool &startSequence, char *persistantChanges) {
+ 	EnsureUndoRoom();
+ 	//Platform::DebugPrintf("%% %d action %d %d %d\n", at, position, lengthData, currentAction);
+ 	//Platform::DebugPrintf("^ %d action %d %d\n", actions[currentAction - 1].at,
+ 	//	actions[currentAction - 1].position, actions[currentAction - 1].lenData);
+ 	if (currentAction < savePoint) {
++		savePointEffective = currentAction;
+ 		savePoint = -1;
+ 	}
+ 	int oldCurrentAction = currentAction;
+@@ -452,6 +579,12 @@
+ 	}
+ 	startSequence = oldCurrentAction != currentAction;
+ 	actions[currentAction].Create(at, position, data, lengthData);
++
++	if (changeActions) {
++		delete []changeActions[currentAction];
++		changeActions[currentAction] = (int *)persistantChanges;
++	}
++
+ 	currentAction++;
+ 	actions[currentAction].Create(startAction);
+ 	maxAction = currentAction;
+@@ -495,16 +628,45 @@
+ 	currentAction = 0;
+ 	actions[currentAction].Create(startAction);
+ 	savePoint = 0;
++	savePointEffective = 0;
+ }
+ 
++void UndoHistory::DeleteChangeHistory() {
++	if (changeActions) {
++		for (int i=0;i<lenActions;i++) {
++			delete []changeActions[i];
++		}
++		delete []changeActions;
++		changeActions = 0;
++	}
++}
++
++void UndoHistory::EnableChangeHistory(bool enable) {
++	if (enable) {
++		if (!changeActions) {
++			changeActions = new int *[lenActions];
++			for (int i=0;i<lenActions;i++) {
++				changeActions[i] = 0;
++			}
++		}
++	} else {
++		DeleteChangeHistory();
++	}
++}
++
+ void UndoHistory::SetSavePoint() {
+ 	savePoint = currentAction;
++	savePointEffective = currentAction;
+ }
+ 
+ bool UndoHistory::IsSavePoint() const {
+ 	return savePoint == currentAction;
+ }
+ 
++bool UndoHistory::BeforeSavePointEffective(int action) const {
++	return action <= savePointEffective;
++}
++
+ bool UndoHistory::CanUndo() const {
+ 	return (currentAction > 0) && (maxAction > 0);
+ }
+@@ -530,6 +692,10 @@
+ 	currentAction--;
+ }
+ 
++char *UndoHistory::GetChangesStep() const {
++	return changeActions ? (char *)changeActions[currentAction] : 0;
++}
++
+ bool UndoHistory::CanRedo() const {
+ 	return maxAction > currentAction;
+ }
+@@ -555,6 +721,10 @@
+ 	currentAction++;
+ }
+ 
++int UndoHistory::Edition() const {
++	return currentAction;
++}
++
+ CellBuffer::CellBuffer() {
+ 	readOnly = false;
+ 	collectingUndo = true;
+@@ -603,10 +773,11 @@
+ 			for (int i = 0; i < insertLength; i++) {
+ 				data[i] = s[i];
+ 			}
+-			uh.AppendAction(insertAction, position, data, insertLength, startSequence);
++			char *persistantForm = lv.PersistantForm();
++			uh.AppendAction(insertAction, position, data, insertLength, startSequence, persistantForm);
+ 		}
+ 
+-		BasicInsertString(position, s, insertLength);
++		BasicInsertString(position, s, insertLength, false);
+ 	}
+ 	return data;
+ }
+@@ -649,10 +820,11 @@
+ 			for (int i = 0; i < deleteLength; i++) {
+ 				data[i] = substance.ValueAt(position + i);
+ 			}
+-			uh.AppendAction(removeAction, position, data, deleteLength, startSequence);
++			char *persistantForm = lv.PersistantForm();
++			uh.AppendAction(removeAction, position, data, deleteLength, startSequence, persistantForm);
+ 		}
+ 
+-		BasicDeleteChars(position, deleteLength);
++		BasicDeleteChars(position, deleteLength, false);
+ 	}
+ 	return data;
+ }
+@@ -689,6 +861,7 @@
+ 
+ void CellBuffer::SetSavePoint() {
+ 	uh.SetSavePoint();
++	lv.SetSavePoint();
+ }
+ 
+ bool CellBuffer::IsSavePoint() {
+@@ -728,24 +901,38 @@
+ 	return lv.LineFromHandle(markerHandle);
+ }
+ 
++int CellBuffer::GetChanged(int line) const {
++	int changed = lv.GetChanged(line);
++	if (changed == 0)
++		return 0;
++	else if (uh.BeforeSavePointEffective(changed))
++		return 2;
++	else
++		return 1;
++}
++
++int CellBuffer::GetChangesEdition() const {
++	return lv.GetChangesEdition();
++}
++
+ // Without undo
+ 
+-void CellBuffer::InsertLine(int line, int position) {
+-	lv.InsertLine(line, position);
++void CellBuffer::InsertLine(int line, int position, bool undoing) {
++	lv.InsertLine(line, position, undoing);
+ 	if (lineStates.Length()) {
+ 		lineStates.EnsureLength(line);
+ 		lineStates.Insert(line, 0);
+ 	}
+ }
+ 
+-void CellBuffer::RemoveLine(int line) {
+-	lv.RemoveLine(line);
++void CellBuffer::RemoveLine(int line, bool undoing) {
++	lv.RemoveLine(line, undoing);
+ 	if (lineStates.Length() > line) {
+ 		lineStates.Delete(line);
+ 	}
+ }
+ 
+-void CellBuffer::BasicInsertString(int position, const char *s, int insertLength) {
++void CellBuffer::BasicInsertString(int position, const char *s, int insertLength, bool undoing) {
+ 	if (insertLength == 0)
+ 		return;
+ 	PLATFORM_ASSERT(insertLength > 0);
+@@ -755,26 +942,26 @@
+ 
+ 	int lineInsert = lv.LineFromPosition(position) + 1;
+ 	// Point all the lines after the insertion point further along in the buffer
+-	lv.InsertText(lineInsert-1, insertLength);
++	lv.InsertText(lineInsert-1, insertLength, uh.Edition(), undoing);
+ 	char chPrev = substance.ValueAt(position - 1);
+ 	char chAfter = substance.ValueAt(position + insertLength);
+ 	if (chPrev == '\r' && chAfter == '\n') {
+ 		// Splitting up a crlf pair at position
+-		InsertLine(lineInsert, position);
++		InsertLine(lineInsert, position, undoing);
+ 		lineInsert++;
+ 	}
+ 	char ch = ' ';
+ 	for (int i = 0; i < insertLength; i++) {
+ 		ch = s[i];
+ 		if (ch == '\r') {
+-			InsertLine(lineInsert, (position + i) + 1);
++			InsertLine(lineInsert, (position + i) + 1, undoing);
+ 			lineInsert++;
+ 		} else if (ch == '\n') {
+ 			if (chPrev == '\r') {
+ 				// Patch up what was end of line
+ 				lv.SetLineStart(lineInsert - 1, (position + i) + 1);
+ 			} else {
+-				InsertLine(lineInsert, (position + i) + 1);
++				InsertLine(lineInsert, (position + i) + 1, undoing);
+ 				lineInsert++;
+ 			}
+ 		}
+@@ -784,12 +971,12 @@
+ 	if (chAfter == '\n') {
+ 		if (ch == '\r') {
+ 			// End of line already in buffer so drop the newly created one
+-			RemoveLine(lineInsert - 1);
++			RemoveLine(lineInsert - 1, undoing);
+ 		}
+ 	}
+ }
+ 
+-void CellBuffer::BasicDeleteChars(int position, int deleteLength) {
++void CellBuffer::BasicDeleteChars(int position, int deleteLength, bool undoing) {
+ 	if (deleteLength == 0)
+ 		return;
+ 
+@@ -802,7 +989,7 @@
+ 		// to work out which lines have been removed
+ 
+ 		int lineRemove = lv.LineFromPosition(position) + 1;
+-		lv.InsertText(lineRemove-1, - (deleteLength));
++		lv.InsertText(lineRemove-1, - (deleteLength), uh.Edition(), undoing);
+ 		char chPrev = substance.ValueAt(position - 1);
+ 		char chBefore = chPrev;
+ 		char chNext = substance.ValueAt(position);
+@@ -819,13 +1006,13 @@
+ 			chNext = substance.ValueAt(position + i + 1);
+ 			if (ch == '\r') {
+ 				if (chNext != '\n') {
+-					RemoveLine(lineRemove);
++					RemoveLine(lineRemove, undoing);
+ 				}
+ 			} else if (ch == '\n') {
+ 				if (ignoreNL) {
+ 					ignoreNL = false; 	// Further \n are real deletions
+ 				} else {
+-					RemoveLine(lineRemove);
++					RemoveLine(lineRemove, undoing);
+ 				}
+ 			}
+ 
+@@ -836,7 +1023,7 @@
+ 		char chAfter = substance.ValueAt(position + deleteLength);
+ 		if (chBefore == '\r' && chAfter == '\n') {
+ 			// Using lineRemove-1 as cr ended line before start of deletion
+-			RemoveLine(lineRemove - 1);
++			RemoveLine(lineRemove - 1, undoing);
+ 			lv.SetLineStart(lineRemove - 1, position + 1);
+ 		}
+ 	}
+@@ -862,8 +1049,10 @@
+ 	uh.EndUndoAction();
+ }
+ 
+-void CellBuffer::DeleteUndoHistory() {
++void CellBuffer::DeleteUndoHistory(bool collectChangeHistory) {
+ 	uh.DeleteUndoHistory();
++	uh.EnableChangeHistory(collectChangeHistory);
++	lv.EnableChangeCollection(collectChangeHistory);
+ }
+ 
+ bool CellBuffer::CanUndo() {
+@@ -879,11 +1068,13 @@
+ }
+ 
+ void CellBuffer::PerformUndoStep() {
++	const char *changesState = uh.GetChangesStep();
++	lv.SetChanges(changesState);
+ 	const Action &actionStep = uh.GetUndoStep();
+ 	if (actionStep.at == insertAction) {
+-		BasicDeleteChars(actionStep.position, actionStep.lenData);
++		BasicDeleteChars(actionStep.position, actionStep.lenData, true);
+ 	} else if (actionStep.at == removeAction) {
+-		BasicInsertString(actionStep.position, actionStep.data, actionStep.lenData);
++		BasicInsertString(actionStep.position, actionStep.data, actionStep.lenData, true);
+ 	}
+ 	uh.CompletedUndoStep();
+ }
+@@ -903,11 +1094,14 @@
+ void CellBuffer::PerformRedoStep() {
+ 	const Action &actionStep = uh.GetRedoStep();
+ 	if (actionStep.at == insertAction) {
+-		BasicInsertString(actionStep.position, actionStep.data, actionStep.lenData);
++		BasicInsertString(actionStep.position, actionStep.data, actionStep.lenData, false);
+ 	} else if (actionStep.at == removeAction) {
+-		BasicDeleteChars(actionStep.position, actionStep.lenData);
++		BasicDeleteChars(actionStep.position, actionStep.lenData, false);
+ 	}
+ 	uh.CompletedRedoStep();
++	if (IsSavePoint()) {
++		lv.SetSavePoint();
++	}
+ }
+ 
+ int CellBuffer::SetLineState(int line, int state) {
+Index: src/sdk/wxscintilla/src/scintilla/src/ViewStyle.cxx
+===================================================================
+--- src/sdk/wxscintilla/src/scintilla/src/ViewStyle.cxx	(revision 5311)
++++ src/sdk/wxscintilla/src/scintilla/src/ViewStyle.cxx	(working copy)
+@@ -212,12 +212,15 @@
+ 	ms[0].style = SC_MARGIN_NUMBER;
+ 	ms[0].width = 0;
+ 	ms[0].mask = 0;
++	ms[0].useFoldingBackground = false;
+ 	ms[1].style = SC_MARGIN_SYMBOL;
+ 	ms[1].width = 16;
+ 	ms[1].mask = ~SC_MASK_FOLDERS;
++	ms[1].useFoldingBackground = false;
+ 	ms[2].style = SC_MARGIN_SYMBOL;
+ 	ms[2].width = 0;
+ 	ms[2].mask = 0;
++	ms[2].useFoldingBackground = false;
+ 	fixedColumnWidth = leftMarginWidth;
+ 	symbolMargin = false;
+ 	maskInLine = 0xffffffff;
+Index: src/sdk/wxscintilla/src/scintilla/src/RunStyles.cxx
+===================================================================
+--- src/sdk/wxscintilla/src/scintilla/src/RunStyles.cxx	(revision 5311)
++++ src/sdk/wxscintilla/src/scintilla/src/RunStyles.cxx	(working copy)
+@@ -214,3 +214,43 @@
+ 	}
+ }
+ 
++char *RunStyles::PersistantForm() const {
++	int len = starts->Partitions();
++	char *form = new char[(len * 2 + 1) * sizeof(int)];
++	int *data = reinterpret_cast<int *>(form);
++	data[0] = len;
++	for (int i=0;i<len;i++) {
++		data[i*2+1] = 	starts->PositionFromPartition(i+1) - starts->PositionFromPartition(i);
++		data[i*2+2] = styles->ValueAt(i);
++	}
++	return form;
++}
++
++void RunStyles::FromPersistant(const char *form) {
++	DeleteAll();
++	const int *data = reinterpret_cast<const int *>(form);
++	int len = data[0];
++	int pos = 0;
++	for (int i=0;i<len;i++) {
++		int runLength = data[i*2+1];
++		int value = data[i*2+2];
++		InsertSpace(pos, runLength);
++		int posTemp = pos;
++		int fillLength = runLength;
++		FillRange(posTemp, value, fillLength);
++		pos += runLength;
++	}
++}
++
++bool RunStyles::PersistantSame(const char *form1, const char *form2) {
++	const int *data1 = reinterpret_cast<const int *>(form1);
++	const int *data2 = reinterpret_cast<const int *>(form2);
++	if (data1[0] != data2[0]) 
++		return false;
++	int len = data1[0];
++	for (int i=1;i<len*2+1;i++) {
++		if (data1[i] != data2[i]) 
++			return false;
++	}
++	return true;
++}
+Index: src/sdk/wxscintilla/src/wxscintilla.cpp
+===================================================================
+--- src/sdk/wxscintilla/src/wxscintilla.cpp	(revision 5311)
++++ src/sdk/wxscintilla/src/wxscintilla.cpp	(working copy)
+@@ -2116,6 +2116,11 @@
+     SendMsg(SCI_SETFOLDMARGINHICOLOUR, useSetting, wxColourAsLong(fore));
+ }
+ 
++void wxScintilla::SetMarginUseFoldingBackground (int margin, bool useBackground)
++{
++    SendMsg(SCI_SETMARGINUSEFOLDINGBACKGROUND, margin, useBackground);
++}
++
+ // Move caret down one line.
+ void wxScintilla::LineDown()
+ {
+Index: src/include/wxscintilla/include/wx/wxscintilla.h
+===================================================================
+--- src/include/wxscintilla/include/wx/wxscintilla.h	(revision 5311)
++++ src/include/wxscintilla/include/wx/wxscintilla.h	(working copy)
+@@ -2999,6 +2999,7 @@
+     // Set the colours used as a chequerboard pattern in the fold margin
+     void SetFoldMarginColour(bool useSetting, const wxColour& back);
+     void SetFoldMarginHiColour(bool useSetting, const wxColour& fore);
++    void SetMarginUseFoldingBackground (int margin, bool useBackground);
+ 
+     // Move caret down one line.
+     void LineDown();

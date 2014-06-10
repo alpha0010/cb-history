@@ -1,0 +1,2536 @@
+Index: debian/changelog
+===================================================================
+--- debian/changelog	(revision 7254)
++++ debian/changelog	(working copy)
+@@ -1,4 +1,4 @@
+-codeblocks (10.05svn6787) unstable; urgency=low
++codeblocks (10.05svn7252) unstable; urgency=low
+ 
+   * New svn revision
+ 
+Index: configure.in
+===================================================================
+--- configure.in	(revision 7254)
++++ configure.in	(working copy)
+@@ -305,6 +305,7 @@
+ 	src/plugins/scriptedwizard/resources/Makefile
+ 	src/plugins/scriptedwizard/resources/arm/Makefile
+ 	src/plugins/scriptedwizard/resources/avr/Makefile
++	src/plugins/scriptedwizard/resources/catalina/Makefile
+ 	src/plugins/scriptedwizard/resources/c_file/Makefile
+ 	src/plugins/scriptedwizard/resources/console/Makefile
+ 	src/plugins/scriptedwizard/resources/d/Makefile
+Index: src/plugins/compilergcc/compilerCatalina.h
+===================================================================
+--- src/plugins/compilergcc/compilerCatalina.h	(revision 0)
++++ src/plugins/compilergcc/compilerCatalina.h	(revision 0)
+@@ -0,0 +1,23 @@
++/*
++ * This file is part of the Code::Blocks IDE and licensed under the GNU General Public License, version 3
++ * http://www.gnu.org/licenses/gpl-3.0.html
++ */
++
++#ifndef COMPILER_CATALINA_H
++#define COMPILER_CATALINA_H
++
++#include "compiler.h"
++
++class CompilerCatalina : public Compiler
++{
++    public:
++        CompilerCatalina();
++        virtual ~CompilerCatalina();
++        virtual void Reset();
++        virtual void LoadDefaultRegExArray();
++        virtual AutoDetectResult AutoDetectInstallationDir();
++    protected:
++        virtual Compiler* CreateCopy();
++};
++
++#endif // COMPILER_CATALINA_H
+Index: src/plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- src/plugins/compilergcc/compilergcc.cpp	(revision 7254)
++++ src/plugins/compilergcc/compilergcc.cpp	(working copy)
+@@ -8,20 +8,11 @@
+  */
+ 
+ #include <sdk.h>
+-
++#include <prep.h>
+ #include <wx/frame.h> // GetMenuBar
+ #include <wx/gauge.h>     // Needs to be before compilergcc.h if NOPCH on wxMSW
+ #include <wx/listctrl.h>
+-#include <wx/xrc/xmlres.h>
+-#include <wx/sizer.h>
+-#include <wx/button.h>
+-#include <wx/stattext.h>
+-#include <wx/statline.h>
+-#include <wx/ffile.h>
+-#include <wx/utils.h>
+-#include <wx/uri.h>
+-
+-#include <prep.h>
++#include "compilergcc.h"
+ #include <manager.h>
+ #include <sdk_events.h>
+ #include <pipedprocess.h>
+@@ -36,8 +27,14 @@
+ #include <cbeditor.h>
+ #include <annoyingdialog.h>
+ #include <filefilters.h>
+-
+-#include "compilergcc.h"
++#include <wx/xrc/xmlres.h>
++#include <wx/sizer.h>
++#include <wx/button.h>
++#include <wx/stattext.h>
++#include <wx/statline.h>
++#include <wx/ffile.h>
++#include <wx/utils.h>
++#include <wx/uri.h>
+ #include "makefilegenerator.h"
+ #include "compileroptionsdlg.h"
+ #include "directcommands.h"
+@@ -49,16 +46,17 @@
+ #include "compilerMINGW.h"
+ #ifdef __WXGTK__
+ // TODO (mandrav#1#): Find out which compilers exist for linux and adapt this
++    #include "compilerDMD.h"
+     #include "compilerGNUARM.h"
+     #include "compilerGNUAVR.h"
+ #endif
+ #ifdef __WXMSW__
+     #include "compilerMSVC.h"
+     #include "compilerMSVC8.h"
+-    #include "compilerMSVC10.h"
+     #include "compilerBCC.h"
+     #include "compilerDMC.h"
+     #include "compilerOW.h"
++    #include "compilerDMD.h"
+     #include "compilerGNUARM.h"
+     #include "compilerGNUAVR.h"
+     #include "compilerGNUMSP430.h"
+@@ -68,9 +66,8 @@
+ #include "compilerICC.h"
+ #include "compilerSDCC.h"
+ #include "compilerTcc.h"
++#include "compilerCatalina.h"
+ #include "compilerGDC.h"
+-#include "compilerLDC.h"
+-#include "compilerDMD.h"
+ #include "compilerGNUPOWERPC.h"
+ #include "compilerGNUTRICORE.h"
+ 
+@@ -112,7 +109,7 @@
+ 
+         style[caption].SetAlignment(wxTEXT_ALIGNMENT_DEFAULT);
+         style[caption].SetFont(style[error].GetFont());
+-        style[warning].SetTextColour(BlendTextColour(*wxBLUE));
++        style[warning].SetTextColour(*wxBLUE);
+         style[error].SetFont(style[info].GetFont());
+     }
+ 
+@@ -194,10 +191,10 @@
+ int idMenuRebuild = XRCID("idCompilerMenuRebuild");
+ int idMenuRebuildTarget = wxNewId();
+ int idMenuRebuildFromProjectManager = wxNewId();
++int idMenuCompileAll = XRCID("idCompilerMenuCompileAll");
++int idMenuRebuildAll = XRCID("idCompilerMenuRebuildAll");
+ int idMenuClean = XRCID("idCompilerMenuClean");
+-int idMenuBuildWorkspace = XRCID("idCompilerMenuBuildWorkspace");
+-int idMenuRebuildWorkspace = XRCID("idCompilerMenuRebuildWorkspace");
+-int idMenuCleanWorkspace = XRCID("idCompilerMenuCleanWorkspace");
++int idMenuCleanAll = XRCID("idCompilerMenuCleanAll");
+ int idMenuCleanTarget = wxNewId();
+ int idMenuCleanFromProjectManager = wxNewId();
+ int idMenuCompileAndRun = XRCID("idCompilerMenuCompileAndRun");
+@@ -243,10 +240,10 @@
+     EVT_UPDATE_UI(idMenuRebuild, CompilerGCC::OnUpdateUI)
+     EVT_UPDATE_UI(idMenuRebuildTarget, CompilerGCC::OnUpdateUI)
+     EVT_UPDATE_UI(idMenuRebuildFromProjectManager, CompilerGCC::OnUpdateUI)
+-    EVT_UPDATE_UI(idMenuBuildWorkspace, CompilerGCC::OnUpdateUI)
+-    EVT_UPDATE_UI(idMenuRebuildWorkspace, CompilerGCC::OnUpdateUI)
++    EVT_UPDATE_UI(idMenuCompileAll, CompilerGCC::OnUpdateUI)
++    EVT_UPDATE_UI(idMenuRebuildAll, CompilerGCC::OnUpdateUI)
+     EVT_UPDATE_UI(idMenuClean, CompilerGCC::OnUpdateUI)
+-    EVT_UPDATE_UI(idMenuCleanWorkspace, CompilerGCC::OnUpdateUI)
++    EVT_UPDATE_UI(idMenuCleanAll, CompilerGCC::OnUpdateUI)
+     EVT_UPDATE_UI(idMenuCleanTarget, CompilerGCC::OnUpdateUI)
+     EVT_UPDATE_UI(idMenuCleanFromProjectManager, CompilerGCC::OnUpdateUI)
+     EVT_UPDATE_UI(idMenuCompileAndRun, CompilerGCC::OnUpdateUI)
+@@ -272,13 +269,13 @@
+     EVT_MENU(idMenuCompileFileFromProjectManager,   CompilerGCC::Dispatcher)
+     EVT_MENU(idMenuRebuild,                         CompilerGCC::Dispatcher)
+     EVT_MENU(idMenuRebuildFromProjectManager,       CompilerGCC::Dispatcher)
+-    EVT_MENU(idMenuBuildWorkspace,                  CompilerGCC::Dispatcher)
+-    EVT_MENU(idMenuRebuildWorkspace,                CompilerGCC::Dispatcher)
++    EVT_MENU(idMenuCompileAll,                      CompilerGCC::Dispatcher)
++    EVT_MENU(idMenuRebuildAll,                      CompilerGCC::Dispatcher)
+     EVT_MENU(idMenuProjectCompilerOptions,          CompilerGCC::Dispatcher)
+     EVT_MENU(idMenuProjectCompilerOptionsFromProjectManager, CompilerGCC::Dispatcher)
+     EVT_MENU(idMenuTargetCompilerOptions,           CompilerGCC::Dispatcher)
+     EVT_MENU(idMenuClean,                           CompilerGCC::Dispatcher)
+-    EVT_MENU(idMenuCleanWorkspace,                  CompilerGCC::Dispatcher)
++    EVT_MENU(idMenuCleanAll,                        CompilerGCC::Dispatcher)
+     EVT_MENU(idMenuCleanFromProjectManager,         CompilerGCC::Dispatcher)
+     EVT_MENU(idMenuKillProcess,                     CompilerGCC::Dispatcher)
+     EVT_MENU(idMenuNextError,                       CompilerGCC::Dispatcher)
+@@ -289,15 +286,15 @@
+ 
+     EVT_TEXT_URL(idBuildLog,                        CompilerGCC::TextURL)
+ 
+-    EVT_CHOICE(idToolTarget,                        CompilerGCC::OnSelectTarget)
++    EVT_CHOICE(idToolTarget,                      CompilerGCC::OnSelectTarget)
+ 
+-    EVT_PIPEDPROCESS_STDOUT_RANGE(idGCCProcess1,     idGCCProcess16, CompilerGCC::OnGCCOutput)
+-    EVT_PIPEDPROCESS_STDERR_RANGE(idGCCProcess1,     idGCCProcess16, CompilerGCC::OnGCCError)
++    EVT_PIPEDPROCESS_STDOUT_RANGE(idGCCProcess1, idGCCProcess16, CompilerGCC::OnGCCOutput)
++    EVT_PIPEDPROCESS_STDERR_RANGE(idGCCProcess1, idGCCProcess16, CompilerGCC::OnGCCError)
+     EVT_PIPEDPROCESS_TERMINATED_RANGE(idGCCProcess1, idGCCProcess16, CompilerGCC::OnGCCTerminated)
+ END_EVENT_TABLE()
+ 
+-CompilerGCC::CompilerGCC() :
+-    m_RealTargetsStartIndex(0),
++CompilerGCC::CompilerGCC()
++    : m_RealTargetsStartIndex(0),
+     m_RealTargetIndex(0),
+     m_PageIndex(-1),
+     m_ListPageIndex(-1),
+@@ -331,8 +328,10 @@
+     m_IsWorkspaceOperation(false),
+     m_LogBuildProgressPercentage(false)
+ {
+-    if (!Manager::LoadResource(_T("compiler.zip")))
++    if(!Manager::LoadResource(_T("compiler.zip")))
++    {
+         NotifyMissingFile(_T("compiler.zip"));
++    }
+ }
+ 
+ CompilerGCC::~CompilerGCC()
+@@ -381,11 +380,11 @@
+         idMenuSelectTargetOther[i] = wxNewId();
+     // register built-in compilers
+     CompilerFactory::RegisterCompiler(new CompilerMINGW);
++    CompilerFactory::RegisterCompiler(new CompilerCatalina);
+ #ifdef __WXMSW__
+     // can't use platform::windows here due to classes do *not* exist on other platform than windows!
+     CompilerFactory::RegisterCompiler(new CompilerMSVC);
+     CompilerFactory::RegisterCompiler(new CompilerMSVC8);
+-    CompilerFactory::RegisterCompiler(new CompilerMSVC10);
+     CompilerFactory::RegisterCompiler(new CompilerBCC);
+     CompilerFactory::RegisterCompiler(new CompilerDMC);
+     CompilerFactory::RegisterCompiler(new CompilerOW);
+@@ -397,9 +396,8 @@
+     CompilerFactory::RegisterCompiler(new CompilerSDCC);
+     CompilerFactory::RegisterCompiler(new CompilerTcc);
+     CompilerFactory::RegisterCompiler(new CompilerGDC);
+-    CompilerFactory::RegisterCompiler(new CompilerLDC);
++#if defined(__WIN32__) || defined(__linux__)
+     CompilerFactory::RegisterCompiler(new CompilerDMD);
+-#if defined(__WIN32__) || defined(__linux__)
+     CompilerFactory::RegisterCompiler(new CompilerGNUARM);
+     CompilerFactory::RegisterCompiler(new CompilerGNUAVR);
+     CompilerFactory::RegisterCompiler(new CompilerGNUPOWERPC);
+@@ -471,9 +469,9 @@
+         ScriptBindings::gBuildLogId = -1;
+ 
+     // register event sink
+-    Manager::Get()->RegisterEventSink(cbEVT_PROJECT_ACTIVATE,         new cbEventFunctor<CompilerGCC, CodeBlocksEvent>(this, &CompilerGCC::OnProjectActivated));
+-    Manager::Get()->RegisterEventSink(cbEVT_PROJECT_OPEN,             new cbEventFunctor<CompilerGCC, CodeBlocksEvent>(this, &CompilerGCC::OnProjectLoaded));
+-    Manager::Get()->RegisterEventSink(cbEVT_PROJECT_CLOSE,            new cbEventFunctor<CompilerGCC, CodeBlocksEvent>(this, &CompilerGCC::OnProjectUnloaded));
++    Manager::Get()->RegisterEventSink(cbEVT_PROJECT_ACTIVATE, new cbEventFunctor<CompilerGCC, CodeBlocksEvent>(this, &CompilerGCC::OnProjectActivated));
++    Manager::Get()->RegisterEventSink(cbEVT_PROJECT_OPEN, new cbEventFunctor<CompilerGCC, CodeBlocksEvent>(this, &CompilerGCC::OnProjectLoaded));
++    Manager::Get()->RegisterEventSink(cbEVT_PROJECT_CLOSE, new cbEventFunctor<CompilerGCC, CodeBlocksEvent>(this, &CompilerGCC::OnProjectUnloaded));
+     Manager::Get()->RegisterEventSink(cbEVT_PROJECT_TARGETS_MODIFIED, new cbEventFunctor<CompilerGCC, CodeBlocksEvent>(this, &CompilerGCC::OnProjectActivated));
+ }
+ 
+@@ -502,8 +500,20 @@
+ 
+     // let wx handle this on shutdown ( if we return here Valgrind will be sad :'( )
+     if (!appShutDown)
++    {
+         DoClearTargetMenu();
++    }
+ 
++//    if (m_Menu)
++//    {
++//        wxMenuBar* mBar = Manager::Get()->GetAppWindow()->GetMenuBar();
++//        int pos = mBar->FindMenu(_("&Build"));
++//        if (pos != wxNOT_FOUND)
++//            mBar->Remove(pos);
++//        delete m_Menu;
++//        m_Menu = 0L;
++//    }
++
+     m_timerIdleWakeUp.Stop();
+ 
+     FreeProcesses();
+@@ -516,10 +526,9 @@
+ {
+     cbConfigurationDialog dlg(Manager::Get()->GetAppWindow(), wxID_ANY, _("Project build options"));
+     cbConfigurationPanel* panel = new CompilerOptionsDlg(&dlg, this, project, target);
+-    panel->SetParentDialog(&dlg);
+     dlg.AttachConfigurationPanel(panel);
+     PlaceWindow(&dlg);
+-    if (dlg.ShowModal() == wxID_OK)
++    if(dlg.ShowModal() == wxID_OK)
+     {
+         SaveOptions();
+ //        SetupEnvironment();
+@@ -541,7 +550,7 @@
+     return dlg;
+ }
+ 
+-void CompilerGCC::OnConfig(wxCommandEvent& /*event*/)
++void CompilerGCC::OnConfig(wxCommandEvent& event)
+ {
+     Configure(NULL);
+ }
+@@ -551,7 +560,7 @@
+     if (!IsAttached())
+         return;
+ 
+-    m_Menu = Manager::Get()->LoadMenu(_T("compiler_menu"),true);
++    m_Menu=Manager::Get()->LoadMenu(_T("compiler_menu"),true);
+ 
+     // target selection menu
+     wxMenuItem *tmpitem=m_Menu->FindItem(idMenuSelectTarget,NULL);
+@@ -590,6 +599,13 @@
+         prj->Insert(propsPos, idMenuProjectCompilerOptions, _("Build options..."), _("Set the project's build options"));
+         prj->InsertSeparator(propsPos);
+     }
++//    // Add entry in settings menu (outside "plugins")
++//    int settingsMenuPos = menuBar->FindMenu(_("&Settings"));
++//    if (settingsMenuPos != wxNOT_FOUND)
++//    {
++//        wxMenu* settingsmenu = menuBar->GetMenu(settingsMenuPos);
++//        settingsmenu->Insert(2,idMenuSettings,_("&Compiler"),_("Global Compiler Options"));
++//    }
+ }
+ 
+ void CompilerGCC::BuildModuleMenu(const ModuleType type, wxMenu* menu, const FileTreeData* data)
+@@ -606,11 +622,8 @@
+     if (!data || data->GetKind() == FileTreeData::ftdkUndefined)
+     {
+         // popup menu in empty space in ProjectManager
+-        if (menu->GetMenuItemCount() > 0)
+-            menu->AppendSeparator();
+-        menu->Append(idMenuBuildWorkspace,   _("Build workspace"));
+-        menu->Append(idMenuRebuildWorkspace, _("Rebuild workspace"));
+-        menu->Append(idMenuCleanWorkspace,   _("Clean workspace"));
++        menu->Append(idMenuCompileAll, _("Build workspace"));
++        menu->Append(idMenuRebuildAll, _("Rebuild workspace"));
+     }
+     else if (data && data->GetKind() == FileTreeData::ftdkProject)
+     {
+@@ -618,7 +631,7 @@
+         menu->AppendSeparator();
+         menu->Append(idMenuCompileFromProjectManager, _("Build"));
+         menu->Append(idMenuRebuildFromProjectManager, _("Rebuild"));
+-        menu->Append(idMenuCleanFromProjectManager,   _("Clean"));
++        menu->Append(idMenuCleanFromProjectManager, _("Clean"));
+         menu->AppendSeparator();
+         menu->Append(idMenuProjectCompilerOptionsFromProjectManager, _("Build options..."));
+     }
+@@ -670,18 +683,18 @@
+         OnRebuild(event);
+     else if (eventId == idMenuRebuildFromProjectManager)
+         OnRebuild(event);
+-    else if (eventId == idMenuBuildWorkspace)
++    else if (eventId == idMenuCompileAll)
+         OnCompileAll(event);
+-    else if (eventId == idMenuRebuildWorkspace)
++    else if (eventId == idMenuRebuildAll)
+         OnRebuildAll(event);
+     else if (   eventId == idMenuProjectCompilerOptions
+-             || eventId == idMenuProjectCompilerOptionsFromProjectManager )
++	         || eventId == idMenuProjectCompilerOptionsFromProjectManager )
+         OnProjectCompilerOptions(event);
+     else if (eventId == idMenuTargetCompilerOptions)
+         OnTargetCompilerOptions(event);
+     else if (eventId == idMenuClean)
+         OnClean(event);
+-    else if (eventId == idMenuCleanWorkspace)
++    else if (eventId == idMenuCleanAll)
+         OnCleanAll(event);
+     else if (eventId == idMenuCleanFromProjectManager)
+         OnClean(event);
+@@ -701,7 +714,9 @@
+     // Return focus to current editor
+     cbEditor* ed = 0;
+     if ( (ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor()) )
++    {
+         ed->GetControl()->SetFocus();
++    }
+ }
+ 
+ void CompilerGCC::TextURL(wxTextUrlEvent& event)
+@@ -745,10 +760,10 @@
+ 
+ void CompilerGCC::SetEnvironmentForCompiler(const wxString& id, wxString& envPath)
+ {
+-    Compiler* compiler = CompilerFactory::GetCompiler(id);
+-    if (!compiler)
++    if (!CompilerFactory::GetCompiler(id))
+         return;
+ 
++    Compiler* compiler = CompilerFactory::GetCompiler(id);
+     wxString sep = wxFileName::GetPathSeparator();
+ 
+     wxString masterPath = compiler->GetMasterPath();
+@@ -828,9 +843,10 @@
+             if (!extraPaths[i].IsEmpty())
+             {
+                 int index = envPathArr.Index(extraPaths[i], caseSensitive);
+-                if (index != wxNOT_FOUND)
++                if(index != wxNOT_FOUND)
++                {
+                     envPathArr.RemoveAt(index);
+-
++                }
+                 envPath += extraPaths[i] + path_sep;
+             }
+         }
+@@ -840,17 +856,19 @@
+         if  (wxFileExists(pathCheck + sep + gcc))
+         {
+             int index = envPathArr.Index(pathCheck, caseSensitive);
+-            if (index != wxNOT_FOUND)
++            if(index != wxNOT_FOUND)
++            {
+                 envPathArr.RemoveAt(index);
+-
++            }
+             envPath = masterPath + sep + _T("bin") + path_sep + envPath;
+         }
+         else if (wxFileExists(masterPath + sep + gcc))
+         {
+             int index = envPathArr.Index(masterPath, caseSensitive);
+-            if (index != wxNOT_FOUND)
++            if(index != wxNOT_FOUND)
++            {
+                 envPathArr.RemoveAt(index);
+-
++            }
+             envPath = masterPath + path_sep + envPath;
+         }
+         envPath = envPath + GetStringFromArray(envPathArr, path_sep, false);
+@@ -983,10 +1001,10 @@
+ void CompilerGCC::AddToCommandQueue(const wxArrayString& commands)
+ {
+     // loop added for compiler log when not working with Makefiles
+-    wxString mySimpleLog    = wxString(COMPILER_SIMPLE_LOG);
++    wxString mySimpleLog = wxString(COMPILER_SIMPLE_LOG);
+     wxString myTargetChange = wxString(COMPILER_TARGET_CHANGE);
+-    wxString myWait         = wxString(COMPILER_WAIT);
+-    wxString myWaitLink     = wxString(COMPILER_WAIT_LINK);
++    wxString myWait = wxString(COMPILER_WAIT);
++    wxString myWaitLink = wxString(COMPILER_WAIT_LINK);
+ //    wxString myWaitEnd = wxString(COMPILER_WAIT_END);
+ //    ProjectBuildTarget* lastTarget = 0;
+     ProjectBuildTarget* bt = m_pBuildingProject ? m_pBuildingProject->GetBuildTarget(GetTargetIndexFromName(m_pBuildingProject, m_BuildingTargetName)) : 0;
+@@ -1008,7 +1026,6 @@
+         // compiler change
+         else if (cmd.StartsWith(myTargetChange))
+         {
+-            ; // nothing to do for now
+         }
+         else if (cmd.StartsWith(myWait))
+         {
+@@ -1137,7 +1154,9 @@
+     if (!cmd)
+     {
+         if (IsProcessRunning())
++        {
+             return 0;
++        }
+ 
+         while (1)
+         {
+@@ -1354,7 +1373,9 @@
+ 
+         // update combo
+         if (m_ToolTarget)
++        {
+             m_ToolTarget->SetSelection(m_TargetIndex);
++        }
+ 
+         // finally, make sure we 're using the correct compiler for the project
+         SwitchCompiler(m_Project->GetCompilerID());
+@@ -1438,7 +1459,7 @@
+         CodeBlocksEvent evt(cbEVT_COMPILER_STARTED, 0, m_Project, 0, this);
+         Manager::Get()->ProcessEvent(evt);
+ 
+-        if (clearLog)
++        if(clearLog)
+             ClearLog();
+         DoClearErrors();
+         // wxStartTimer();
+@@ -1447,27 +1468,6 @@
+     Manager::Yield();
+ }
+ 
+-void CompilerGCC::NotifyCleanProject(const wxString& target)
+-{
+-    if (m_CommandQueue.GetCount() == 0)
+-    {
+-        CodeBlocksEvent evt(cbEVT_CLEAN_PROJECT_STARTED, 0, m_Project, 0, this);
+-        evt.SetBuildTargetName(target);
+-        Manager::Get()->ProcessEvent(evt);
+-    }
+-    Manager::Yield();
+-}
+-
+-void CompilerGCC::NotifyCleanWorkspace()
+-{
+-    if (m_CommandQueue.GetCount() == 0)
+-    {
+-        CodeBlocksEvent evt(cbEVT_CLEAN_WORKSPACE_STARTED, 0, 0, 0, this);
+-        Manager::Get()->ProcessEvent(evt);
+-    }
+-    Manager::Yield();
+-}
+-
+ ProjectBuildTarget* CompilerGCC::DoAskForTarget()
+ {
+     if (!CheckProject())
+@@ -1494,14 +1494,15 @@
+ 
+ bool CompilerGCC::UseMake(cbProject* project)
+ {
+-    if (!project)
++    if(!project)
+         project = m_Project;
+     if (!project)
+         return false;
+     wxString idx = project->GetCompilerID();
+     if (CompilerFactory::GetCompiler(idx))
++    {
+         return project->IsMakefileCustom();
+-
++    }
+     return false;
+ }
+ 
+@@ -1545,7 +1546,7 @@
+     if (!m_Project)
+         return false;
+ 
+-    if ( UseMake() )
++    if (UseMake())
+     {
+         // if the project has a custom makefile, use that (i.e. don't create makefile)
+         if (temporary && m_Project->IsMakefileCustom())
+@@ -1573,7 +1574,7 @@
+     PrintBanner(baBuild);
+     wxSetWorkingDirectory(m_Project->GetBasePath());
+ 
+-    if ( UseMake() )
++    if (UseMake())
+     {
+         MakefileGenerator generator(this, m_Project, m_LastTempMakefile, m_PageIndex);
+         bool ret = generator.CreateMakefile();
+@@ -1602,8 +1603,9 @@
+ 
+     wxString Action = _("Build");
+     if (action ==  baClean)
++    {
+         Action = _("Clean");
+-
++    }
+     wxString banner;
+     #if wxCHECK_VERSION(2, 9, 0)
+     banner.Printf(_("-------------- %s: %s in %s ---------------"),
+@@ -1727,10 +1729,6 @@
+             return RunSingleFile(Manager::Get()->GetEditorManager()->GetActiveEditor()->GetFilename());
+         return -1;
+     }
+-    else
+-    {
+-        target = m_Project->GetBuildTarget(m_Project->GetActiveBuildTarget());
+-    }
+     DoPrepareQueue();
+     if (!CompilerValid(target))
+         return -1;
+@@ -1841,8 +1839,8 @@
+         }
+     }
+ 
+-    if (   target->GetTargetType() == ttDynamicLib
+-        || target->GetTargetType() == ttStaticLib )
++    if (target->GetTargetType() == ttDynamicLib ||
++        target->GetTargetType() == ttStaticLib)
+     {
+         // check for hostapp
+         if (target->GetHostApplication().IsEmpty())
+@@ -1862,7 +1860,7 @@
+         // each shell execution must be enclosed to "":
+         // xterm -T X -e /bin/sh -c "/usr/bin/cb_console_runner X"
+         // here is last \"
+-        if (commandIsQuoted)
++        if(commandIsQuoted)
+             command << strQUOTE;
+     }
+     else
+@@ -1928,7 +1926,9 @@
+ wxString CompilerGCC::GetDynamicLinkerPathForTarget(ProjectBuildTarget* target)
+ {
+     if (!target)
++    {
+         return wxEmptyString;
++    }
+ 
+     Compiler* compiler = CompilerFactory::GetCompiler(target->GetCompilerID());
+     if (compiler)
+@@ -1955,9 +1955,8 @@
+     wxString command = target && !target->GetMakeCommandFor(cmd).empty() ?
+                        target->GetMakeCommandFor(cmd) : project->GetMakeCommandFor(cmd);
+ 
+-    Compiler* compiler = CompilerFactory::GetCompiler(compilerId);
+     command.Replace(_T("$makefile"), project->GetMakefile());
+-    command.Replace(_T("$make"), compiler ? compiler->GetPrograms().MAKE : _T("make"));
++    command.Replace(_T("$make"), CompilerFactory::GetCompiler(compilerId)->GetPrograms().MAKE);
+     command.Replace(_T("$target"), target ? target->GetTitle() : _T(""));
+     Manager::Get()->GetMacrosManager()->ReplaceMacros(command);
+ 
+@@ -1990,7 +1989,7 @@
+     wxArrayString output, errors;
+     wxSetWorkingDirectory(m_pBuildingProject->GetExecutionDir());
+     long result = wxExecute(cmd, output, errors, wxEXEC_SYNC);
+-    if (showOutput)
++    if(showOutput)
+     {
+         for(size_t i = 0; i < output.GetCount(); i++)
+         {
+@@ -2034,11 +2033,9 @@
+ 
+     if (m_Project)
+         wxSetWorkingDirectory(m_Project->GetBasePath());
+-    Compiler* compiler = CompilerFactory::GetCompiler(m_CompilerId);
+-    if (compiler)
+-        compiler->Init(m_Project);
++    CompilerFactory::GetCompiler(m_CompilerId)->Init(m_Project);
+ 
+-    if ( UseMake() )
++    if (UseMake())
+     {
+         wxString cmd = GetMakeCommandFor(mcDistClean, m_Project, target);
+         m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, m_Project, target));
+@@ -2052,7 +2049,7 @@
+     return 0;
+ }
+ 
+-void CompilerGCC::OnExportMakefile(wxCommandEvent& /*event*/)
++void CompilerGCC::OnExportMakefile(wxCommandEvent& event)
+ {
+     cbMessageBox(_("This functionality has been temporarily removed from Code::Blocks.\n"
+                     "With all the updates from the last couple of months, the makefile exporter "
+@@ -2069,8 +2066,10 @@
+         return;
+ 
+     wxSetWorkingDirectory(m_Project->GetBasePath());
+-    if ( UseMake() )
++    if (UseMake())
++    {
+         DoCreateMakefile(false, makefile);
++    }
+     else
+     {
+         MakefileGenerator generator(this, m_Project, makefile, m_PageIndex);
+@@ -2154,26 +2153,31 @@
+         case bsProjectPreBuild:
+         {
+             if (clean && !build)
++            {
+                 return bsTargetClean;
+-
++            }
+             return bsTargetPreBuild;
+         }
+ 
+         case bsTargetPreBuild:
+         {
+-            if      (clean)
++            if (clean)
++            {
+                 return bsTargetClean;
++            }
+             else if (build)
++            {
+                 return bsTargetBuild;
+-
++            }
+             return bsTargetPostBuild;
+         }
+ 
+         case bsTargetClean:
+         {
+             if (build)
++            {
+                 return bsTargetBuild;
+-
++            }
+             return bsTargetDone;
+         }
+ 
+@@ -2197,15 +2201,17 @@
+                     m_BuildingTargetName = bj.targetName;
+                     // switching targets
+                     if (clean && !build)
++                    {
+                         return bsTargetClean;
+-
++                    }
+                     return bsTargetPreBuild;
+                 }
+                 // switch project
+                 // don't run postbuild step, if we only clean the project
+-                if (build)
+-                    return bsProjectPostBuild;
+-
++                if(build)
++                {
++                return bsProjectPostBuild;
++                }
+                 return bsProjectDone;
+             }
+             m_pBuildingProject->SetCurrentlyCompilingTarget(0);
+@@ -2221,16 +2227,7 @@
+             if (m_pBuildingProject)
+                 m_pBuildingProject->SetCurrentlyCompilingTarget(0);
+             m_NextBuildState = bsProjectPreBuild;
+-            // DoBuild runs ProjectPreBuild, next step has to be TargetClean or TargetPreBuild
+-            if (DoBuild(clean, build) >= 0)
+-            {
+-                if (clean && !build)
+-                    return bsTargetClean;
+-
+-                return bsTargetPreBuild;
+-            }
+-            else
+-                return bsNone;
++            return DoBuild(clean, build) >= 0 ? bsProjectPreBuild : bsNone;
+         }
+ 
+         default:
+@@ -2243,7 +2240,9 @@
+ {
+ //    Manager::Get()->GetMessageManager()->Log(m_PageIndex, _T("BuildStateManagement")));
+     if (IsProcessRunning())
++    {
+         return;
++    }
+ 
+     Manager::Yield();
+     if (!m_pBuildingProject)
+@@ -2265,6 +2264,12 @@
+         if (bt)
+             SwitchCompiler(bt->GetCompilerID());
+ 
++//        Manager::Get()->GetLogManager()->Log(m_PageIndex, _T("CHANGE *****> m_BuildState=%s, m_NextBuildState=%s, m_pBuildingProject=%p, bt=%p (%p)"), StateToString(m_BuildState).c_str(), StateToString(m_NextBuildState).c_str(), m_pBuildingProject, bt, m_pLastBuildingTarget);
++//        if ((m_pBuildingProject == m_pLastBuildingProject && m_NextBuildState == bsTargetPreBuild) || m_NextBuildState == bsProjectPreBuild)
++//        {
++//            PrintBanner(baBuild, m_pBuildingProject, bt);
++//        }
++
+         // avoid calling Compiler::Init() twice below, if it is the same compiler
+         Compiler* initCompiler = 0;
+ 
+@@ -2272,9 +2277,8 @@
+         {
+             m_pLastBuildingProject = m_pBuildingProject;
+             wxSetWorkingDirectory(m_pBuildingProject->GetBasePath());
++            CompilerFactory::GetCompiler(m_CompilerId)->Init(m_pBuildingProject);
+             initCompiler = CompilerFactory::GetCompiler(m_CompilerId);
+-            if (initCompiler)
+-                initCompiler->Init(m_pBuildingProject);
+         }
+         if (bt != m_pLastBuildingTarget)
+         {
+@@ -2292,15 +2296,21 @@
+     DirectCommands dc(this, CompilerFactory::GetCompiler(bt->GetCompilerID()), m_pBuildingProject, m_PageIndex);
+     dc.m_doYield = true;
+ 
++//    Manager::Get()->GetMessageManager()->Log(m_PageIndex, _T("BuildState *****> m_BuildState=%s, m_NextBuildState=%s, m_pBuildingProject=%s, bt=%s"),
++//        StateToString(m_BuildState).c_str(),
++//        StateToString(m_NextBuildState).c_str(),
++//        m_pBuildingProject ? m_pBuildingProject->GetTitle().c_str() : _T("<none>"),
++//        bt ? bt->GetTitle().c_str() : _T("<none>")));
++
+     m_BuildState = m_NextBuildState;
+     wxArrayString cmds;
+     switch (m_NextBuildState)
+     {
+         case bsProjectPreBuild:
+         {
+-            // don't run project pre-build steps if we only clean it
+-            if (m_Build)
+-                cmds = dc.GetPreBuildCommands(0);
++            // don't run project pre-build steps if we only clan it
++            if(m_Build)
++            cmds = dc.GetPreBuildCommands(0);
+             break;
+         }
+ 
+@@ -2316,44 +2326,40 @@
+         {
+             PrintBanner(baClean, m_pBuildingProject, bt);
+ 
+-            if ( UseMake(m_pBuildingProject) )
++            if (UseMake(m_pBuildingProject))
+             {
+                 wxString cmd = GetMakeCommandFor(mcClean, m_pBuildingProject, bt);
+                 bool cleanOK = false;
+-                Compiler* tgtCompiler = CompilerFactory::GetCompiler(bt->GetCompilerID());
+-                if (tgtCompiler)
++                switch (CompilerFactory::GetCompiler(bt->GetCompilerID())->GetSwitches().logging)
+                 {
+-                    switch (tgtCompiler->GetSwitches().logging)
+-                    {
+-                        case clogFull:
+-                            cleanOK = DoCleanWithMake(cmd, true);
+-                            break;
++                    case clogFull:
++                        cleanOK = DoCleanWithMake(cmd, true);
++                        break;
+ 
+-                        case clogSimple:
+-                        case clogNone:
+-                            cleanOK = DoCleanWithMake(cmd);
+-                            break;
++                    case clogSimple:
++                    case clogNone:
++                        cleanOK = DoCleanWithMake(cmd);
++                        break;
+ 
+-                        default:
+-                            break;
+-                    }
+-                    if (cleanOK)
+-                    {
+-                        #if wxCHECK_VERSION(2, 9, 0)
+-                        Manager::Get()->GetLogManager()->Log(F(_("Cleaned \"%s - %s\""), m_pBuildingProject->GetTitle().wx_str(), bt ? bt->GetTitle().wx_str() : _("<all targets>").wx_str()), m_PageIndex);
+-                        #else
+-                        Manager::Get()->GetLogManager()->Log(F(_("Cleaned \"%s - %s\""), m_pBuildingProject->GetTitle().c_str(), bt ? bt->GetTitle().c_str() : _("<all targets>")), m_PageIndex);
+-                        #endif
+-                    }
+-                    else
+-                    {
+-                        #if wxCHECK_VERSION(2, 9, 0)
+-                        Manager::Get()->GetLogManager()->Log(F(_("Error cleaning \"%s - %s\""), m_pBuildingProject->GetTitle().wx_str(), bt ? bt->GetTitle().wx_str() : _("<all targets>").wx_str()), m_PageIndex);
+-                        #else
+-                        Manager::Get()->GetLogManager()->Log(F(_("Error cleaning \"%s - %s\""), m_pBuildingProject->GetTitle().c_str(), bt ? bt->GetTitle().c_str() : _("<all targets>")), m_PageIndex);
+-                        #endif
+-                    }
++                    default:
++                        break;
+                 }
++                if(cleanOK)
++                {
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    Manager::Get()->GetLogManager()->Log(F(_("Cleaned \"%s - %s\""), m_pBuildingProject->GetTitle().wx_str(), bt ? bt->GetTitle().wx_str() : _("<all targets>").wx_str()), m_PageIndex);
++                    #else
++                    Manager::Get()->GetLogManager()->Log(F(_("Cleaned \"%s - %s\""), m_pBuildingProject->GetTitle().c_str(), bt ? bt->GetTitle().c_str() : _("<all targets>")), m_PageIndex);
++                    #endif
++                }
++                else
++                {
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    Manager::Get()->GetLogManager()->Log(F(_("Error cleaning \"%s - %s\""), m_pBuildingProject->GetTitle().wx_str(), bt ? bt->GetTitle().wx_str() : _("<all targets>").wx_str()), m_PageIndex);
++                    #else
++                    Manager::Get()->GetLogManager()->Log(F(_("Error cleaning \"%s - %s\""), m_pBuildingProject->GetTitle().c_str(), bt ? bt->GetTitle().c_str() : _("<all targets>")), m_PageIndex);
++                    #endif
++                }
+             }
+             else
+             {
+@@ -2373,36 +2379,34 @@
+             PrintBanner(baBuild, m_pBuildingProject, bt);
+ 
+             // run target build
+-            if ( UseMake(m_pBuildingProject) )
++            if (UseMake(m_pBuildingProject))
+             {
+                 wxArrayString output, error;
+                 wxSetWorkingDirectory(m_pBuildingProject->GetExecutionDir());
+-                if (wxExecute(GetMakeCommandFor(mcAskRebuildNeeded, m_pBuildingProject, bt), output, error, wxEXEC_SYNC | wxEXEC_NODISABLE))
++                if(wxExecute(GetMakeCommandFor(mcAskRebuildNeeded, m_pBuildingProject, bt), output, error, wxEXEC_SYNC | wxEXEC_NODISABLE))
+                 {
+-                    Compiler* tgtCompiler = CompilerFactory::GetCompiler(bt->GetCompilerID());
+-                    if (tgtCompiler)
++                    switch (CompilerFactory::GetCompiler(bt->GetCompilerID())->GetSwitches().logging)
+                     {
+-                        switch (tgtCompiler->GetSwitches().logging)
+-                        {
+-                            case clogFull:
+-                                cmds.Add(wxString(COMPILER_SIMPLE_LOG) + _("Running command: ") + GetMakeCommandFor(mcBuild, m_pBuildingProject, bt));
+-                                cmds.Add(GetMakeCommandFor(mcBuild, m_pBuildingProject, bt));
+-                                break;
++                        case clogFull:
++                            cmds.Add(wxString(COMPILER_SIMPLE_LOG) + _("Running command: ") + GetMakeCommandFor(mcBuild, m_pBuildingProject, bt));
++                            cmds.Add(GetMakeCommandFor(mcBuild, m_pBuildingProject, bt));
++                            break;
+ 
+-                            case clogSimple:
+-                                cmds.Add(wxString(COMPILER_SIMPLE_LOG) + _("Using makefile: ") + m_pBuildingProject->GetMakefile());
+-                            case clogNone:
+-                                cmds.Add(GetMakeCommandFor(mcSilentBuild, m_pBuildingProject, bt));
+-                                break;
++                        case clogSimple:
++                            cmds.Add(wxString(COMPILER_SIMPLE_LOG) + _("Using makefile: ") + m_pBuildingProject->GetMakefile());
++                        case clogNone:
++                            cmds.Add(GetMakeCommandFor(mcSilentBuild, m_pBuildingProject, bt));
++                            break;
+ 
+-                            default:
+-                                break;
+-                        }
++                        default:
++                            break;
+                     }
+                 }
+             }
+             else
++            {
+                 cmds = dc.GetCompileCommands(bt);
++            }
+ 
+             bool hasCommands = cmds.GetCount();
+             m_RunTargetPostBuild = hasCommands;
+@@ -2455,7 +2459,9 @@
+     {
+         ProjectBuildTarget* bt_search =  prj->GetBuildTarget(i);
+         if (bt_search->GetTitle() == name)
++        {
+             return i;
++        }
+     }
+     return -1;
+ }
+@@ -2528,7 +2534,7 @@
+             if (!CompilerValid(tgt))
+             {
+                 wxString msg;
+-                msg.Printf(_T("\"%s - %s\": The compiler's setup is invalid so Code::Blocks cannot find/run the compiler. Probably the toolchain path within the compiler options is not setup correctly?! Skipping..."),
++                msg.Printf(_T("\"%s - %s\" uses an invalid compiler. Probably the toolchain path within the compiler options is not setup correctly?! Skipping..."),
+                 #if wxCHECK_VERSION(2, 9, 0)
+                             prj->GetTitle().wx_str(), tlist[x].wx_str());
+                 #else
+@@ -2561,7 +2567,9 @@
+ 
+     // were there any jobs generated?
+     if (m_BuildJobTargetsList.empty())
++    {
+         NotifyJobDone(true);
++    }
+ 
+ //    Manager::Get()->GetMessageManager()->Log(m_PageIndex, _T("** Done creating deps")));
+ }
+@@ -2595,9 +2603,9 @@
+         return -2;
+ 
+     // make sure all project files are saved
+-    if (    bj.project
+-        && (bj.project != m_pBuildingProject)
+-        && !bj.project->SaveAllFiles() )  // avoid saving when we only switch targets
++    if (bj.project &&
++        bj.project != m_pBuildingProject && // avoid saving when we only switch targets
++        !bj.project->SaveAllFiles())
+     {
+         Manager::Get()->GetLogManager()->Log(_("Could not save all files..."));
+     }
+@@ -2613,7 +2621,6 @@
+         return -2;
+ 
+     BuildStateManagement();
+-
+     return 0;
+ }
+ 
+@@ -2705,19 +2712,20 @@
+     {
+         DoClearErrors();
+         InitBuildLog(false);
++//    if (!m_IsWorkspaceOperation)
+         DoPrepareQueue(clearLog);
+-        if (clean)
+-            NotifyCleanProject(realTarget);
+     }
+ 
+     PreprocessJob(m_Project, realTarget);
+     if (m_BuildJobTargetsList.empty())
++    {
+         return -1;
+-
++    }
+     InitBuildState(bjProject, realTarget);
+     if (DoBuild(clean, build))
++    {
+         return -2;
+-
++    }
+     return DoRunQueue();
+ }
+ 
+@@ -2740,9 +2748,10 @@
+ int CompilerGCC::Rebuild(const wxString& target)
+ {
+     m_LastBuildStep = Manager::Get()->GetConfigManager(_T("compiler"))->ReadBool(_T("/rebuild_seperately"), false);
+-    if (m_LastBuildStep)
++    if(m_LastBuildStep)
++    {
+         return DoBuild(target, true, true);
+-
++    }
+     int result = DoBuild(target, true, false);
+     m_LastBuildStep = true;
+     return result + DoBuild(target, false, true, false);
+@@ -2760,8 +2769,6 @@
+         return -1;
+ 
+     DoPrepareQueue(clearLog);
+-    if (clean)
+-        NotifyCleanWorkspace();
+     m_IsWorkspaceOperation = true;
+ 
+     InitBuildLog(true);
+@@ -2791,7 +2798,6 @@
+ 
+     DoBuild(clean,build);
+     m_IsWorkspaceOperation = false;
+-
+     return DoRunQueue();
+ }
+ 
+@@ -2803,9 +2809,10 @@
+ int CompilerGCC::RebuildWorkspace(const wxString& target)
+ {
+     m_LastBuildStep = Manager::Get()->GetConfigManager(_T("compiler"))->ReadBool(_T("/rebuild_seperately"), false);
+-    if (m_LastBuildStep)
++    if(m_LastBuildStep)
++    {
+         return DoWorkspaceBuild(target, true, true);
+-
++    }
+     int result = DoWorkspaceBuild(target, true, false);
+     m_LastBuildStep = true;
+     return result + DoWorkspaceBuild(target, false, true, false);
+@@ -2845,7 +2852,7 @@
+ 
+         if (!platform::windows)
+         {
+-            if (ret != wxKILL_OK)
++            if(ret != wxKILL_OK)
+             {
+                 // No need to tell the user about the errors - just keep him waiting.
+                 Manager::Get()->GetLogManager()->Log(F(_("Aborting process %d ..."), i), m_PageIndex);
+@@ -2907,12 +2914,8 @@
+ 
+ int CompilerGCC::CompileFile(const wxString& file)
+ {
+-    ProjectBuildTarget* target = NULL;
+-    if (CheckProject())
+-        target = m_Project->GetBuildTarget(m_Project->GetActiveBuildTarget());
+-
+     DoPrepareQueue();
+-    if (!CompilerValid(target))
++    if (!CompilerValid())
+         return -1;
+ 
+     ProjectFile* pf = m_Project ? m_Project->GetFileByFilename(file, true, false) : 0;
+@@ -2926,13 +2929,10 @@
+ 
+         // switch to the default compiler
+         SwitchCompiler(CompilerFactory::GetDefaultCompilerID());
+-//        Manager::Get()->GetMessageManager()->DebugLog("-----CompileFile [if (!pf)]-----"));
++//        Manager::Get()->GetMessageManager()->DebugLog("-----CompileFile [if(!pf)]-----"));
+         Manager::Get()->GetMacrosManager()->Reset();
+-        Compiler* compiler = CompilerFactory::GetCompiler(m_CompilerId);
+-        if (compiler)
+-            compiler->Init(0);
++        CompilerFactory::GetCompiler(m_CompilerId)->Init(0);
+ 
+-        // TODO (Morten#5#): Why is m_CompilerID iused for initialisation, but the default compiler for compiling (DirectCommands)???
+         // get compile commands for file (always linked as console-executable)
+         DirectCommands dc(this, CompilerFactory::GetDefaultCompiler(), 0, m_PageIndex);
+         wxArrayString compile = dc.GetCompileSingleFileCommand(file);
+@@ -2962,9 +2962,7 @@
+     }
+     else
+     {
+-        Compiler* compiler = CompilerFactory::GetCompiler(m_CompilerId);
+-        if (compiler)
+-            compiler->Init(m_Project);
++        CompilerFactory::GetCompiler(m_CompilerId)->Init(m_Project);
+ 
+         DirectCommands dc(this, CompilerFactory::GetCompiler(bt->GetCompilerID()), m_Project, m_PageIndex);
+         wxArrayString compile = dc.CompileFile(bt, pf);
+@@ -2992,22 +2990,25 @@
+         event.Skip();
+ }
+ 
+-void CompilerGCC::OnTimer(wxTimerEvent& /*event*/)
++void CompilerGCC::OnTimer(wxTimerEvent& event)
+ {
+     wxWakeUpIdle();
+ }
+ 
+-void CompilerGCC::OnRun(wxCommandEvent& /*event*/)
++void CompilerGCC::OnRun(wxCommandEvent& event)
+ {
+     if (Run() == 0)
+         DoRunQueue();
+ }
+ 
+-void CompilerGCC::OnCompileAndRun(wxCommandEvent& /*event*/)
++void CompilerGCC::OnCompileAndRun(wxCommandEvent& event)
+ {
+-    ProjectBuildTarget* target = 0;
++    ProjectBuildTarget* target = 0;//DoAskForTarget();
+     m_RunAfterCompile = true;
+     Build(target);
++//    if (m_CommandQueue.GetCount()) // if we have build commands, use the flag to run
++//    else // else make it a "Run" command
++//        OnRun(event);
+ }
+ 
+ void CompilerGCC::OnCompile(wxCommandEvent& event)
+@@ -3019,7 +3020,7 @@
+         // let's check the selected project...
+         DoSwitchProjectTemporarily();
+     }
+-    ProjectBuildTarget* target = 0;
++    ProjectBuildTarget* target = 0;//DoAskForTarget();
+     Build(target);
+     m_RealTargetIndex = bak;
+ }
+@@ -3035,8 +3036,10 @@
+         FileTreeData* ftd = DoSwitchProjectTemporarily();
+         ProjectFile* pf = m_Project->GetFile(ftd->GetFileIndex());
+         if (!pf)
++        {
++//            wxLogError("File index=%d", ftd->GetFileIndex());
+             return;
+-
++        }
+         file = pf->file;
+         CheckProject();
+     }
+@@ -3064,9 +3067,10 @@
+ 
+     if (m_Project)
+     {
+-        if (!m_Project->SaveAllFiles())
++        if(!m_Project->SaveAllFiles())
++        {
+             Manager::Get()->GetLogManager()->Log(_("Could not save all files..."));
+-
++        }
+         file.MakeRelativeTo(m_Project->GetBasePath());
+     }
+ #ifdef ALWAYS_USE_MAKEFILE
+@@ -3091,7 +3095,9 @@
+                     AnnoyingDialog::YES_NO,
+                     wxID_YES);
+     if (m_Project && dlg.ShowModal() == wxID_NO)
++    {
+         return;
++    }
+ 
+     int bak = m_RealTargetIndex;
+     if (event.GetId() == idMenuRebuildFromProjectManager)
+@@ -3100,17 +3106,17 @@
+         // let's check the selected project...
+         DoSwitchProjectTemporarily();
+     }
+-    ProjectBuildTarget* target = 0;
++    ProjectBuildTarget* target = 0;//DoAskForTarget();
+     Rebuild(target);
+     m_RealTargetIndex = bak;
+ }
+ 
+-void CompilerGCC::OnCompileAll(wxCommandEvent& /*event*/)
++void CompilerGCC::OnCompileAll(wxCommandEvent& event)
+ {
+     BuildWorkspace();
+ }
+ 
+-void CompilerGCC::OnRebuildAll(wxCommandEvent& /*event*/)
++void CompilerGCC::OnRebuildAll(wxCommandEvent& event)
+ {
+     AnnoyingDialog dlg(_("Rebuild workspace"),
+                         _("Rebuilding ALL the open projects will cause the deletion of all "
+@@ -3123,12 +3129,13 @@
+                     AnnoyingDialog::YES_NO,
+                     wxID_YES);
+     if (dlg.ShowModal() == wxID_NO)
++    {
+         return;
+-
++    }
+     RebuildWorkspace();
+ }
+ 
+-void CompilerGCC::OnCleanAll(wxCommandEvent& /*event*/)
++void CompilerGCC::OnCleanAll(wxCommandEvent& event)
+ {
+     AnnoyingDialog dlg(_("Clean project"),
+                         _("Cleaning ALL the open projects will cause the deletion "
+@@ -3143,8 +3150,9 @@
+                     AnnoyingDialog::YES_NO,
+                     wxID_YES);
+     if (dlg.ShowModal() == wxID_NO)
++    {
+         return;
+-
++    }
+     CleanWorkspace();
+ }
+ 
+@@ -3164,7 +3172,9 @@
+                     AnnoyingDialog::YES_NO,
+                     wxID_YES);
+     if (m_Project && dlg.ShowModal() == wxID_NO)
++    {
+         return;
++    }
+ 
+     int bak = m_RealTargetIndex;
+     if (event.GetId() == idMenuCleanFromProjectManager)
+@@ -3173,12 +3183,12 @@
+         // let's check the selected project...
+         DoSwitchProjectTemporarily();
+     }
+-    ProjectBuildTarget* target = 0;
++    ProjectBuildTarget* target = 0;//DoAskForTarget();
+     Clean(target);
+     m_RealTargetIndex = bak;
+ }
+ 
+-void CompilerGCC::OnProjectCompilerOptions(wxCommandEvent& /*event*/)
++void CompilerGCC::OnProjectCompilerOptions(wxCommandEvent& event)
+ {
+     wxTreeCtrl* tree = Manager::Get()->GetProjectManager()->GetTree();
+     wxTreeItemId sel = tree->GetSelection();
+@@ -3197,11 +3207,13 @@
+     else
+     {
+         if (cbProject* prj = Manager::Get()->GetProjectManager()->GetActiveProject())
++        {
+             Configure(prj);
++        }
+     }
+ } // end of OnProjectCompilerOptions
+ 
+-void CompilerGCC::OnTargetCompilerOptions(wxCommandEvent& /*event*/)
++void CompilerGCC::OnTargetCompilerOptions(wxCommandEvent& event)
+ {
+     int bak = m_RealTargetIndex;
+     // we 're called from a menu in ProjectManager
+@@ -3210,16 +3222,15 @@
+         return;
+     else
+         m_RealTargetIndex = idx; // TODO: check
++       // let's check the selected project...
++       DoSwitchProjectTemporarily();
+ 
+-    // let's check the selected project...
+-    DoSwitchProjectTemporarily();
+-
+-    ProjectBuildTarget* target = 0;
++    ProjectBuildTarget* target = 0;//DoAskForTarget();
+     m_RealTargetIndex = bak;
+     Configure(m_Project, target);
+ }
+ 
+-void CompilerGCC::OnKillProcess(wxCommandEvent& /*event*/)
++void CompilerGCC::OnKillProcess(wxCommandEvent& event)
+ {
+     KillProcess();
+ }
+@@ -3238,17 +3249,17 @@
+     }
+ } // end of OnSelectTarget
+ 
+-void CompilerGCC::OnNextError(wxCommandEvent& /*event*/)
++void CompilerGCC::OnNextError(wxCommandEvent& event)
+ {
+     DoGotoNextError();
+ }
+ 
+-void CompilerGCC::OnPreviousError(wxCommandEvent& /*event*/)
++void CompilerGCC::OnPreviousError(wxCommandEvent& event)
+ {
+     DoGotoPreviousError();
+ }
+ 
+-void CompilerGCC::OnClearErrors(wxCommandEvent& /*event*/)
++void CompilerGCC::OnClearErrors(wxCommandEvent& event)
+ {
+     DoClearErrors();
+ }
+@@ -3262,15 +3273,15 @@
+     if (mbar)
+     {
+         mbar->Enable(idMenuCompile, !running && (prj || ed));
+-        mbar->Enable(idMenuBuildWorkspace, !running && prj);
++        mbar->Enable(idMenuCompileAll, !running && prj);
+ //        mbar->Enable(idMenuCompileFromProjectManager, !running && prj);
+         mbar->Enable(idMenuCompileFile, !running && ed);
+ //        mbar->Enable(idMenuCompileFileFromProjectManager, !running && prj);
+         mbar->Enable(idMenuRebuild, !running && prj);
+-        mbar->Enable(idMenuRebuildWorkspace, !running && prj);
++        mbar->Enable(idMenuRebuildAll, !running && prj);
+ //        mbar->Enable(idMenuRebuildFromProjectManager, !running && prj);
+         mbar->Enable(idMenuClean, !running && prj);
+-        mbar->Enable(idMenuCleanWorkspace, !running && prj);
++        mbar->Enable(idMenuCleanAll, !running && prj);
+ //        mbar->Enable(idMenuCleanFromProjectManager, !running && prj);
+         mbar->Enable(idMenuCompileAndRun, !running && (prj || ed));
+         mbar->Enable(idMenuRun, !running && (prj || ed));
+@@ -3321,7 +3332,7 @@
+         UpdateProjectTargets(event.GetProject());
+ }
+ 
+-void CompilerGCC::OnProjectLoaded(CodeBlocksEvent& /*event*/)
++void CompilerGCC::OnProjectLoaded(CodeBlocksEvent& event)
+ {
+ }
+ 
+@@ -3373,8 +3384,6 @@
+     }
+ 
+     Compiler* compiler = CompilerFactory::GetCompiler(m_CompilerId);
+-    if (!compiler)
+-        return;
+     CompilerLineType clt = compiler->CheckForWarningsAndErrors(output);
+ 
+     // if max_errors reached, display a one-time message and do not log anymore
+@@ -3419,14 +3428,16 @@
+         }
+         // actually log message
+         wxString last_error_filename = compiler->GetLastErrorFilename();
+-        if ( UseMake() )
++        if (UseMake())
+         {
+             wxFileName last_error_file(last_error_filename);
+             if (!last_error_file.IsAbsolute())
+             {
+                 cbProject* project = m_Project;
+                 if (m_pLastBuildingTarget)
++                {
+                     project = m_pLastBuildingTarget->GetParentProject();
++                }
+                 else
+                 {
+                     AskForActiveProject();
+@@ -3471,15 +3482,22 @@
+     if (log & ltFile)
+     {
+         if (forceErrorColour)
++        {
+             m_BuildLogContents << _T("<font color=\"#a00000\">");
++        }
+         else if (lt == cltError)
++        {
+             m_BuildLogContents << _T("<font color=\"#ff0000\">");
++        }
+         else if (lt == cltWarning)
++        {
+             m_BuildLogContents << _T("<font color=\"#0000ff\">");
++        }
+ 
+         if (isTitle)
++        {
+             m_BuildLogContents << _T("<b>");
+-
++        }
+         // replace the Â´ family by "
+         wxString Quoted = message;
+         Quoted.Replace(_T("â"), _T("\""), true);
+@@ -3487,10 +3505,14 @@
+         m_BuildLogContents << Quoted;
+ 
+         if (isTitle)
++        {
+             m_BuildLogContents << _T("</b>");
++        }
+ 
+         if (lt == cltWarning || lt == cltError || forceErrorColour)
++        {
+             m_BuildLogContents << _T("</font>");
++        }
+ 
+         m_BuildLogContents << _T("<br />\n");
+     }
+@@ -3604,9 +3626,7 @@
+     f.Write(_T("</html>\n"));
+ 
+     Manager::Get()->GetLogManager()->Log(_("Build log saved as: "), m_PageIndex);
+-    wxString tempBuildLogFilename = m_BuildLogFilename;
+-    tempBuildLogFilename.Replace(_("\\"), _("/"));
+-    wxURI tmpFilename = tempBuildLogFilename;
++    wxURI tmpFilename = m_BuildLogFilename;
+ 
+     #if wxCHECK_VERSION(2, 9, 0)
+     Manager::Get()->GetLogManager()->Log(F(_T("file://%s"), tmpFilename.BuildURI().wx_str()), m_PageIndex, Logger::warning);
+@@ -3668,7 +3688,10 @@
+     }
+ 
+     if (m_CommandQueue.GetCount() != 0 && exitCode == 0)
+-        DoRunQueue(); // continue running commands while last exit code was 0.
++    {
++        // continue running commands while last exit code was 0.
++        DoRunQueue();
++    }
+     else
+     {
+         if (exitCode == 0)
+@@ -3709,15 +3732,12 @@
+         LogMessage(msg, exitCode == 0 ? cltWarning : cltError, ltAll, exitCode != 0);
+         if (!m_CommandQueue.LastCommandWasRun())
+         {
+-            wxString msg = wxString::Format(_("%d errors, %d warnings (%d minutes, %d seconds)"),
+-                                            m_Errors.GetCount(cltError), m_Errors.GetCount(cltWarning), mins, secs);
++            wxString msg = wxString::Format(_("%d errors, %d warnings"), m_Errors.GetCount(cltError), m_Errors.GetCount(cltWarning));
+             LogMessage(msg, exitCode == 0 ? cltWarning : cltError, ltAll, exitCode != 0);
+             #if wxCHECK_VERSION(2, 9, 0)
+-            LogWarningOrError(cltNormal, 0, wxEmptyString, wxEmptyString,
+-                              wxString::Format(_("=== Build finished: %s ==="), msg.wx_str()));
++            LogWarningOrError(cltNormal, 0, wxEmptyString, wxEmptyString, wxString::Format(_("=== Build finished: %s ==="), msg.wx_str()));
+             #else
+-            LogWarningOrError(cltNormal, 0, wxEmptyString, wxEmptyString,
+-                              wxString::Format(_("=== Build finished: %s ==="), msg.c_str()));
++            LogWarningOrError(cltNormal, 0, wxEmptyString, wxEmptyString, wxString::Format(_("=== Build finished: %s ==="), msg.c_str()));
+             #endif
+             SaveBuildLog();
+         }
+@@ -3786,13 +3806,15 @@
+ 
+ void CompilerGCC::NotifyJobDone(bool showNothingToBeDone)
+ {
+-    if (!m_LastBuildStep)
++    if(!m_LastBuildStep)
++    {
+         return;
++    }
+ 
+     m_BuildJob = bjIdle;
+     if (showNothingToBeDone)
+     {
+-        LogMessage(m_Clean ? _("Done.\n") : _("Nothing to be done (all items are up-to-date).\n"));
++        LogMessage(m_Clean?_("Done.\n"):_("Nothing to be done.\n"));
+         // if message manager is auto-hiding, unlock it (i.e. close it)
+         CodeBlocksLogEvent evtShow(cbEVT_HIDE_LOG_MANAGER);
+         Manager::Get()->ProcessEvent(evtShow);
+Index: src/plugins/compilergcc/compilerCatalina.cpp
+===================================================================
+--- src/plugins/compilergcc/compilerCatalina.cpp	(revision 0)
++++ src/plugins/compilergcc/compilerCatalina.cpp	(revision 0)
+@@ -0,0 +1,624 @@
++/*
++ * This file is part of the Code::Blocks IDE and licensed under the GNU General Public License, version 3
++ * http://www.gnu.org/licenses/gpl-3.0.html
++ *
++ * $Revision: 5929 $
++ * $Id: compilerCatalina.cpp 5929 2009-11-21 14:34:53Z biplab $
++ * $HeadURL: svn+ssh://jenslody@svn.berlios.de/svnroot/repos/codeblocks/trunk/src/plugins/compilergcc/compilerCatalina.cpp $
++ */
++
++#include <sdk.h>
++#include <prep.h>
++#ifndef CB_PRECOMP
++    #include <wx/intl.h>
++    #include <wx/regex.h>
++    #include <wx/string.h>
++#endif
++#include <wx/filefn.h> // wxFileExists
++#include "compilerCatalina.h"
++
++CompilerCatalina::CompilerCatalina()
++    : Compiler(_T("Catalina C Compiler"), _T("catalina"))
++{
++    Reset();
++}
++
++CompilerCatalina::~CompilerCatalina()
++{
++    //dtor
++}
++
++Compiler * CompilerCatalina::CreateCopy()
++{
++    Compiler* c = new CompilerCatalina(*this);
++    c->SetExtraPaths(m_ExtraPaths); // wxArrayString doesn't seem to be copied with the default copy ctor...
++    return c;
++} // end of CreateCopy
++
++void CompilerCatalina::Reset()
++{
++    if (platform::windows)
++    {
++        m_Programs.C = _T("catalina.exe");
++        m_Programs.CPP = _T("");
++        m_Programs.LD = _T("catalina.exe");
++        m_Programs.DBG = _T("blackbox.exe");
++        m_Programs.LIB = _T("catalina.exe");
++        m_Programs.WINDRES = _T("");
++        m_Programs.MAKE = _T("mingw32-make.exe");
++    }
++    else
++    {
++        m_Programs.C = _T("catalina");
++        m_Programs.CPP = _T("");
++        m_Programs.LD = _T("catalina");
++        m_Programs.DBG = _T("blackbox");
++        m_Programs.LIB = _T("catalina");
++        m_Programs.WINDRES = _T("");
++        m_Programs.MAKE = _T("make");
++    }
++    m_Switches.includeDirs = _T("-I");
++    m_Switches.libDirs = _T("-L");
++    m_Switches.linkLibs = _T("-l");
++    m_Switches.defines = _T("-W-D");
++    m_Switches.genericSwitch = _T("-");
++    m_Switches.objectExtension = _T("obj");
++    m_Switches.needDependencies = true;
++    m_Switches.forceCompilerUseQuotes = false;
++    m_Switches.forceLinkerUseQuotes = false;
++    m_Switches.logging = clogSimple;
++    m_Switches.libPrefix = _T("lib");
++    m_Switches.libExtension = _T("");
++    m_Switches.linkerNeedsLibPrefix = false;
++    m_Switches.linkerNeedsLibExtension = false;
++    m_Switches.supportsPCH = false;
++    m_Switches.PCHExtension = _T("");
++
++    // Summary of catalina options
++
++    m_Options.ClearOptions();
++
++    wxString   category;
++
++    category = _T("Platform Selection (default is HYDRA)");
++
++    m_Options.AddOption(_T("HYDRA platform"),
++                _T("-DHYDRA"),
++                category,
++                _T("-DHYDRA"),
++                true,
++                _T("-DHYBRID -DDEMO -DTRIBLADEPROP -DMORPHEUS -DC3 -DDRACBLADE -DRAMBLADE -DASC -DCUSTOM"),
++                _T("You have multiple targets enabled - the resulting executable may be unusable ..."));
++
++    m_Options.AddOption(_T("HYBRID platform"),
++                _T("-DHYBRID"),
++                category,
++                _T("-DHYBRID"),
++                true,
++                _T("-DHYDRA -DDEMO -DTRIBLADEPROP -DMORPHEUS -DC3 -DDRACBLADE -DRAMBLADE -DASC -DCUSTOM"),
++                _T("You have multiple targets enabled - the resulting executable may be unusable..."));
++
++    m_Options.AddOption(_T("DEMO platform"),
++                _T("-DDEMO"),
++                category,
++                _T("-DDEMO"),
++                true,
++                _T("-DHYDRA -DHYBRID -DTRIBLADEPROP -DMORPHEUS -DC3 -DDRACBLADE -DRAMBLADE -DASC -DCUSTOM"),
++                _T("You have multiple targets enabled - the resulting executable may be unusable..."));
++
++    m_Options.AddOption(_T("TRIBLADEPROP platform (must also specify CPU)"),
++                _T("-DTRIBLADEPROP"),
++                category,
++                _T("-DTRIBLADEPROP"),
++                true,
++                _T("-DHYDRA -DHYBRID -DDEMO -DMORPHEUS -DC3 -DDRACBLADE -DRAMBLADE -DASC -DCUSTOM"),
++                _T("You have multiple targets enabled - the resulting executable may be unusable..."));
++
++    m_Options.AddOption(_T("MORPHEUS platform (must also specify CPU)"),
++                _T("-DMORPHEUS"),
++                category,
++                _T("-DMORPHEUS"),
++                true,
++                _T("-DHYDRA -DHYBRID -DDEMO -DTRIBLADEPROP -DC3 -DDRACBLADE -DRAMBLADE -DASC -DCUSTOM"),
++                _T("You have multiple targets enabled - the resulting executable may be unusable..."));
++
++    m_Options.AddOption(_T("C3 platform"),
++                _T("-DC3"),
++                category,
++                _T("-DC3"),
++                true,
++                _T("-DHYDRA -DHYBRID -DDEMO -DTRIBLADEPROP -DMORPHEUS -DDRACBLADE -DRAMBLADE -DASC -DCUSTOM"),
++                _T("You have multiple targets enabled - the resulting executable may be unusable..."));
++
++    m_Options.AddOption(_T("DRACBLADE platform"),
++                _T("-DDRACBLADE"),
++                category,
++                _T("-DDRACBLADE"),
++                true,
++                _T("-DHYDRA -DHYBRID -DDEMO -DTRIBLADEPROP -DMORPHEUS -DC3 -DRAMBLADE -DASC -DCUSTOM"),
++                _T("You have multiple targets enabled - the resulting executable may be unusable..."));
++
++    m_Options.AddOption(_T("RAMBLADE platform"),
++                _T("-DRAMBLADE"),
++                category,
++                _T("-DRAMBLADE"),
++                true,
++                _T("-DHYDRA -DHYBRID -DDEMO -DTRIBLADEPROP -DMORPHEUS -DC3 -DDRACBLADE -DASC -DCUSTOM"),
++                _T("You have multiple targets enabled - the resulting executable may be unusable..."));
++
++    m_Options.AddOption(_T("ASC platform"),
++                _T("-DASC"),
++                category,
++                _T("-DASC"),
++                true,
++                _T("-DHYDRA -DHYBRID -DDEMO -DTRIBLADEPROP -DMORPHEUS -DC3 -DDRACBLADE -DRAMBLADE -DCUSTOM"),
++                _T("You have multiple targets enabled - the resulting executable may be unusable..."));
++
++    m_Options.AddOption(_T("CUSTOM platform (requires configuration in Catalina_Common.spin)"),
++                _T("-DCUSTOM"),
++                category,
++                _T("-DCUSTOM"),
++                true,
++                _T("-DHYDRA -DHYBRID -DDEMO -DTRIBLADEPROP -DMORPHEUS -DC3 -DDRACBLADE -DRAMBLADE -DASC"),
++                _T("You have multiple targets enabled - the resulting executable may be unusable..."));
++
++    m_Options.AddOption(_T("Other platform (specify in PLATFORM custom variable)"),
++                _T("-D$(PLATFORM)"),
++                category,
++                _T("-D$(PLATFORM)"),
++                true,
++                _T("-DHYDRA -DHYBRID -DDEMO -DTRIBLADEPROP -DMORPHEUS -DC3 -DDRACBLADE -DRAMBLADE -DASC -DCUSTOM"),
++                _T("You have multiple targets enabled - the resulting executable may be unusable..."));
++
++    category = _T("CPU Selection (only required for multi-CPU platforms)");
++
++    m_Options.AddOption(_T("CPU 1"),
++                _T("-DCPU_1"),
++                category,
++                _T("-DCPU_1"),
++                true,
++                _T("-DCPU_2 -DCPU_3"),
++                _T("You have multiple CPUs enabled - the resulting executable may be unusable..."));
++
++    m_Options.AddOption(_T("CPU 2"),
++                _T("-DCPU_2"),
++                category,
++                _T("-DCPU_2"),
++                true,
++                _T("-DCPU_1 -DCPU_3"),
++                _T("You have multiple CPUs enabled - the resulting executable may be unusable..."));
++
++    m_Options.AddOption(_T("CPU 3"),
++                _T("-DCPU_3"),
++                category,
++                _T("-DCPU_3"),
++                true,
++                _T("-DCPU_2 -DCPU_2"),
++                _T("You have multiple CPUs enabled - the resulting executable may be unusable..."));
++
++    category = _T("C Library Selection (default is libc)");
++
++    m_Options.AddOption(_T("libc (standard C library - stdin/stdout/stderr only)"),
++                _T(""),
++                category,
++                _T("-lc"),
++                true,
++                _T("-lci -lcx -lcix"),
++                _T("You have multiple C library variants selected - the resulting executable may be unusable ..."));
++
++    m_Options.AddOption(_T("libci (integer-only C library - stdin/stdout/stderr only)"),
++                _T(""),
++                category,
++                _T("-lci"),
++                true,
++                _T("-lc -lcx -lcix"),
++                _T("You have multiple C library variants selected - the resulting executable may be unusable ..."));
++
++    m_Options.AddOption(_T("libcx (extended C library - full file system support)"),
++                _T("-DSD"),
++                category,
++                _T("-lcx"),
++                true,
++                _T("-lc -lci -lcix"),
++                _T("You have multiple C library variants selected - the resulting executable may be unusable ..."));
++
++    m_Options.AddOption(_T("libcix (integer-only extended C library - full file system support)"),
++                _T("-DSD"),
++                category,
++                _T("libcix"),
++                true,
++                _T("-lc -lci -lcx"),
++                _T("You have multiple C library variants selected - the resulting executable may be unusable ..."));
++
++    category = _T("Other Library Selection (default is none)");
++
++    m_Options.AddOption(_T("libm (maths library implemented in C - uses no extra cogs)"),
++                _T(""),
++                category,
++                _T("-lm"),
++                true,
++                _T("-lma -lmb"),
++                _T("You have multiple maths library variants selected - the resulting executable may be unusable ..."));
++
++    m_Options.AddOption(_T("libma (maths library implemented in one dedicated PASM cog)"),
++                _T(""),
++                category,
++                _T("-lma"),
++                true,
++                _T("-lm -lmb"),
++                _T("You have multiple maths library variants selected - the resulting executable may be unusable ..."));
++
++    m_Options.AddOption(_T("libmb (maths library implemented in two dedicated PASM cogs)"),
++                _T(""),
++                category,
++                _T("-lmb"),
++                true,
++                _T("-lm -lma"),
++                _T("You have multiple maths library variants selected - the resulting executable may be unusable ..."));
++
++    m_Options.AddOption(_T("libthreads (thread library - also requires Multi-Threaded kernel selection)"),
++                _T(""),
++                category,
++                _T("-lthreads"));
++
++    m_Options.AddOption(_T("libgraphics (graphics library - also requires Graphics HMI option)"),
++                _T(""),
++                category,
++                _T("-lgraphics"));
++
++    category = _T("Memory Model, Size and Cache Options (default is TINY, no cache)");
++
++    m_Options.AddOption(_T("TINY (code, data and stack in Hub RAM)"),
++                _T("-DTINY"),
++                category,
++                _T("-DTINY"),
++                true,
++                _T("-DSMALL -DLARGE"),
++                _T("You have multiple memory models enabled - only the last will be used..."));
++
++    m_Options.AddOption(_T("SMALL (code in XMM RAM, data and stack in Hub RAM"),
++                _T("-DSMALL"),
++                category,
++                _T("-DSMALL"),
++                true,
++                _T("-DTINY -DLARGE"),
++                _T("You have multiple memory models enabled - only the last will be used..."));
++
++    m_Options.AddOption(_T("LARGE (code and data in XMM RAM, stack i Hub RAM"),
++                _T("-DLARGE"),
++                category,
++                _T("-DLARGE"),
++                true,
++                _T("-DTINY -DSMALL"),
++                _T("You have multiple memory models enabled - only the last will be used..."));
++
++    m_Options.AddOption(_T("1K Cache"),
++                _T("-DCACHED_1K"),
++                category,
++                _T("-DCACHED_1K"),
++                true,
++                _T("-DCACHED_2K, -DCACHED_4K, -DCACHED_8K"),
++                _T("You have multiple cache options enabled - only the last will be used..."));
++
++    m_Options.AddOption(_T("2K Cache"),
++                _T("-DCACHED_2K"),
++                category,
++                _T("-DCACHED_2K"),
++                true,
++                _T("-DCACHED_1K, -DCACHED_4K, -DCACHED_8K"),
++                _T("You have multiple cache options enabled - only the last will be used..."));
++
++    m_Options.AddOption(_T("4K Cache"),
++                _T("-DCACHED_4K"),
++                category,
++                _T("-DCACHED_4K"),
++                true,
++                _T("-DCACHED_2K, -DCACHED_1K, -DCACHED_8K"),
++                _T("You have multiple cache options enabled - only the last will be used..."));
++
++    m_Options.AddOption(_T("8K Cache"),
++                _T("-DCACHED_8K"),
++                category,
++                _T("-DCACHED_8K"),
++                true,
++                _T("-DCACHED_2K, -DCACHED_4K, -DCACHED_1K"),
++                _T("You have multiple cache options enabled - only the last will be used..."));
++
++    m_Options.AddOption(_T("Set memory size (specify in MEM_SIZE custom variable)"), _T(""), category, _T("-M$(MEM_SIZE)"));
++
++    m_Options.AddOption(_T("Set read-only base address (specify in RO_BASE custom variable)"), _T(""), category, _T("-R$(RO_BASE)"));
++
++    m_Options.AddOption(_T("Set read-write base address (specify in RW_BASE custom variable)"), _T(""), category,_T("-P$(RW_BASE)"));
++
++    category = _T("Special Load Options (default is no special loader)");
++
++    m_Options.AddOption(_T("SD Card Loader"),
++                _T("-DSDCARD"),
++                category,
++                _T("-DSDCARD"),
++                true,
++                _T("-DEEPROM -DFLASH"),
++                _T("You have multiple load options enabled - only the last will be used..."));
++
++    m_Options.AddOption(_T("FLASH Loader"),
++                _T("-DFLASH"),
++                category,
++                _T("-DFLASH"),
++                true,
++                _T("-DEEPROM -DSDCARD"),
++                _T("You have multiple load options enabled - only the last will be used..."));
++
++    m_Options.AddOption(_T("EEPROM Loader"),
++                _T("-DEEPROM"),
++                category,
++                _T("-DEEPROM"),
++                true,
++                _T("-DFLASH -DSDCARD"),
++                _T("You have multiple load options enabled - only the last will be used..."));
++
++    category = _T("HMI Driver Selection (default is platform dependent)");
++
++    m_Options.AddOption(_T("VGA (Low Resolution)"),
++                _T("-DLORES_VGA"),
++                category,
++                _T("-DLORES_VGA"),
++                true,
++                _T("-DHIRES_VGA -DLORES_TV -DHIRES_TV -D PC -DPROPTERM"),
++                _T("You have multiple screen drivers selected - only the last will be used..."));
++
++    m_Options.AddOption(_T("VGA (High Resolution)"),
++                _T("-DHIRES_VGA"),
++                category,
++                _T("-DHIRES_VGA"),
++                true,
++                _T("-DLORES_VGA -DLORES_TV -DHIRES_TV -D PC -DPROPTERM"),
++                _T("You have multiple screen drivers selected - only the last will be used..."));
++
++    m_Options.AddOption(_T("TV (Low Resolution)"),
++                _T("-DLORES_TV"),
++                category,
++                _T("-DLORES_TV"),
++                true,
++                _T("-DHIRES_VGA -DLORES_VGA -DHIRES_TV -D PC -DPROPTERM"),
++                _T("You have multiple screen drivers selected - only the last will be used..."));
++
++    m_Options.AddOption(_T("TV (High Resolution)"),
++                _T("-DHIRES_TV"),
++                category,
++                _T("-DHIRES_TV"),
++                true,
++                _T("-DHIRES_VGA -DLORES_VGA -DLORES_TV -D PC -DPROPTERM"),
++                _T("You have multiple screen drivers selected - only the last will be used..."));
++
++    m_Options.AddOption(_T("PC (Serial Terminal)"),
++                _T("-DPC"),
++                category,
++                _T("-DPC"),
++                true,
++                _T("-DHIRES_VGA -DLORES_VGA -DHIRES_TV -DLORES_TV -D PROPTERM"),
++                _T("You have multiple screen drivers selected - only the last will be used..."));
++
++    m_Options.AddOption(_T("PROPTERM (Prop Terminal)"),
++                _T("-DPROPTERM"),
++                category,
++                _T("-DPROPTERM"),
++                true,
++                _T("-DHIRES_VGA -DLORES_VGA -DHIRES_TV -DLORES_TV -D PC"),
++                _T("You have multiple screen drivers selected - only the last will be used..."));
++
++    m_Options.AddOption(_T("Disable Mouse Driver"),
++                _T("-DNO_MOUSE"),
++                category,
++                _T("-DNO_MOUSE"),
++                true,
++                _T("-DNO_HMI"),
++                _T("You have conflicting HMI driver options selected..."));
++
++    m_Options.AddOption(_T("Disable Keyboard Driver"),
++                _T("-DNO_KEYBOARD"),
++                category,
++                _T("-DNO_KEYBOARD"),
++                true,
++                _T("-DNO_HMI"),
++                _T("You have conflicting HMI driver options selected..."));
++
++    m_Options.AddOption(_T("Disable all HMI Drivers"),
++                _T("-DNO_HMI"),
++                category,
++                _T("-DNO_HMI"),
++                true,
++                _T("-DHIRES_VGA -DLORES_VGA -DHIRES_TV -DLORES_TV -D PC -D PROPTERMINAL"),
++                _T("You have conflicting HMI driver options selected..."));
++
++    category = _T("HMI Related Options (default is none)");
++
++    m_Options.AddOption(_T("NTSC (TV drivers only)"),
++                _T("-DNTSC"),
++                category,
++                _T("-DNTSC"),
++                true,
++                _T("-DHIRES_VGA -DLORES_VGA -DPC -DPROPTERM"),
++                _T("You have conflicting HMI driver options selected..."));
++
++    m_Options.AddOption(_T("Non Interlaced (TV drivers only)"),
++                _T("-DNO_INTERLACE"),
++                category,
++                _T("-DNO_INTERLACE"),
++                true,
++                _T("-DHIRES_VGA -DLORES_VGA -DPC -DPROPTERM"),
++                _T("You have conflicting HMI driver options selected..."));
++
++    m_Options.AddOption(_T("Graphics (TV drivers only)"),
++                _T("-DGRAPHICS"),
++                category,
++                _T("-DGRAPHICS"),
++                true,
++                _T("-DHIRES_VGA -DLORES_VGA -DPC -DPROPTERM"),
++                _T("You have conflicting HMI driver options selected..."));
++
++    m_Options.AddOption(_T("Enable automatic CR on LF (on output)"),
++                _T("-DCR_ON_LF"),
++                category,
++                _T("-DCR_ON_LF"));
++
++    m_Options.AddOption(_T("Disable automatic CR to LF translation (on input)"),
++                _T("-DNO_CR_TO_LF"),
++                category,
++                _T("-DNO_CR_TO_LF"));
++
++    m_Options.AddOption(_T("Non-ANSI behviour (legacy - not recommended)"),
++                _T("-DNON_ANSI_HMI"),
++                category,
++                _T("-DNON_ANSI_HMI"));
++
++    category = _T("Proxy Driver Selection (default is none)");
++
++    m_Options.AddOption(_T("Proxy Screen driver"),
++                _T("-DPROXY_SCREEN"),
++                category,
++                _T("-DPROXY_SCREEN"));
++
++    m_Options.AddOption(_T("Proxy Keyboard driver"),
++                _T("-DPROXY_KEYBOARD"),
++                category,
++                _T("-DPROXY_KEYBOARD"));
++
++    m_Options.AddOption(_T("Proxy Mouse driver"),
++                _T("-DPROXY_MOUSE"),
++                category,
++                _T("-DPROXY_MOUSE"));
++
++    m_Options.AddOption(_T("Proxy SD Card driver"),
++                _T("DPROXY_SD"),
++                category,
++                _T("-DPROXY_SD"));
++
++    category = _T("Kernel Options (default is none)");
++
++    m_Options.AddOption(_T("Use Alternate kernel"),
++                _T("-DALTERNATE"),
++                category,
++                _T("-DALTERNATE"));
++
++    m_Options.AddOption(_T("Use Multi-Threaded kernel (also requires thread library selection)"),
++                _T("-DTHREADED"),
++                category,
++                _T("-DTHREADED"));
++
++    category = _T("Debugging and Optimization Options (default is none)");
++
++    m_Options.AddOption(_T("Generate complete debug information (recommended)"), _T("-g3"), category, _T("-g3"));
++    m_Options.AddOption(_T("Generate minimal debug information (not recommended)"), _T("-g"), category, _T("-g"));
++
++    m_Options.AddOption(_T("Optimization level 1"), _T("-O1"), category, _T("-O1"));
++    m_Options.AddOption(_T("Optimization level 2"), _T("-O2"), category, _T("-O2"));
++    m_Options.AddOption(_T("Optimization level 3"), _T("-O3"), category, _T("-O3"));
++
++    category = _T("Listing and Output Options (default is none)");
++
++    m_Options.AddOption(_T("Generate Listing"), _T(""), category, _T("-y"));
++    m_Options.AddOption(_T("Generate .BINARY output format"), _T(""), category, _T("-b"));
++    m_Options.AddOption(_T("Generate .EEPROM output format"), _T(""), category, _T("-e"));
++    m_Options.AddOption(_T("Generate other output format (specify in FORMAT custom variable - e.g. INTEL)"), _T(""), category, _T("-F$(FORMAT)"));
++    m_Options.AddOption(_T("Verbose output (Catalina)"), _T("-v"), category, _T("-v"));
++    m_Options.AddOption(_T("Verbose output (LCC)"), _T("-W-v"), category, _T("-W-v"));
++    m_Options.AddOption(_T("Disable output of file size statistics"), _T(""), category, _T("-k"));
++    m_Options.AddOption(_T("Diagnostic output (very verbose!)"), _T("-d"), category, _T("-d"));
++    m_Options.AddOption(_T("Do not delete intermediate files"), _T("-u"), category, _T(""));
++
++    category = _T("Miscellaneous Options (default is none)");
++
++    m_Options.AddOption(_T("Clock driver"), _T("-DCLOCK"), category, _T("-DCLOCK"));
++    m_Options.AddOption(_T("Force inclusion of SD Card driver (normally included automatically)"), _T("-DSD"), category, _T("-DSD"));
++    m_Options.AddOption(_T("Disable Floating Point support"), _T("-DNO_FLOAT"), category, _T("-DNO_FLOAT"));
++    m_Options.AddOption(_T("Reserve cog(s) for non-Catalina usage)"), _T("-DRESERVE_COG"), category, _T("-DRESERVE_COG"));
++    m_Options.AddOption(_T("Disable command-line argument processing"), _T("-DNO_ARGS"), category, _T("-DNO_ARGS"));
++    m_Options.AddOption(_T("LCC Options (specify in LCC_OPT custom variable - no spaces allowed)"), _T("-W$(LCC_OPT)"), category, _T("-W$(LCC_OPT)"));
++    m_Options.AddOption(_T("Use a different target (specify path in TARGET custom variable)"), _T(""), category, _T("-T$(TARGET)"));
++    m_Options.AddOption(_T("Warn about non-ANSI usage"), _T("-W-A"), category, _T(""));
++
++
++    m_Commands[(int)ctCompileObjectCmd].push_back(CompilerTool(_T("$compiler $options $includes -c $file -o $object")));
++    m_Commands[(int)ctGenDependenciesCmd].push_back(CompilerTool(_T("")));
++    m_Commands[(int)ctCompileResourceCmd].push_back(CompilerTool(_T("")));
++    m_Commands[(int)ctLinkConsoleExeCmd].push_back(CompilerTool(_T("$linker $libdirs -o $exe_output $link_objects $link_options $libs")));
++    m_Commands[(int)ctLinkExeCmd].push_back(CompilerTool(_T("$linker $libdirs -o $exe_output $link_objects $link_options $libs")));
++    m_Commands[(int)ctLinkDynamicCmd].push_back(CompilerTool(_T("$linker $libdirs -o $exe_output $link_objects $link_options $libs")));
++    m_Commands[(int)ctLinkStaticCmd].push_back(CompilerTool(_T("$linker $libdirs -o $exe_output $link_objects $link_options $libs")));
++    m_Commands[(int)ctLinkNativeCmd] = m_Commands[(int)ctLinkConsoleExeCmd]; // unsupported currently
++
++    LoadDefaultRegExArray();
++
++    m_CompilerOptions.Clear();
++    m_LinkerOptions.Clear();
++    m_LinkLibs.Clear();
++    m_CmdsBefore.Clear();
++    m_CmdsAfter.Clear();
++}
++
++void CompilerCatalina::LoadDefaultRegExArray()
++{
++    m_RegExes.Clear();
++    m_RegExes.Add(RegExStruct(_T("Preprocessor error (Catalina)"), cltError, _T("cpp:[ ]*(") + FilePathWithSpaces + _T("):([0-9]+)[ ](.*)"), 3, 1, 2));
++    m_RegExes.Add(RegExStruct(_T("LCC Can't Find (Catalina)"), cltError, _T("lcc:[ ]*can't find[ ]*['`](") + FilePathWithSpaces + _T(")['`](.*)"), 2, 1));   
++    m_RegExes.Add(RegExStruct(_T("LCC Compiler error (Catalina)"), cltError, _T("lcc:[ ]*(") + FilePathWithSpaces + _T("):([0-9]*)[ ](.*)"), 3, 1, 2));
++    m_RegExes.Add(RegExStruct(_T("Symbol undefined (Catalina)"), cltError, _T("([ ]*)([0-9a-zA-Z_]*[ ]*undefined)(.*)"), 2, 3));
++    m_RegExes.Add(RegExStruct(_T("Symbol redefined (Catalina)"), cltError, _T("([ ]*)([0-9a-zA-Z_]*[ ]*redefined)(.*)"), 2, 3));
++    m_RegExes.Add(RegExStruct(_T("Too Many Libraries (Catalina)"), cltError, _T("([ ]*)(too many libraries specified)"), 2));
++    m_RegExes.Add(RegExStruct(_T("Too Many Input Files (Catalina)"), cltError, _T("([ ]*)(too many input files specified)"), 2));
++    m_RegExes.Add(RegExStruct(_T("Too Many Symbols (Catalina)"), cltError, _T("([ ]*)(too many symbols)"), 2));
++    m_RegExes.Add(RegExStruct(_T("Too Many [un]defines (Catalina)"), cltError, _T("([ ]*)(too many [u]*[n]*defines - option -[DU] ignored)"), 2));
++    m_RegExes.Add(RegExStruct(_T("Missing Argument (Catalina)"), cltError, _T("([ ]*)(option -[BDFUIlLMPRotWwxz] requires an argument)"), 2));
++    m_RegExes.Add(RegExStruct(_T("Unrecognized Switch (Catalina)"), cltError, _T("([ ]*)(unrecognized switch): .*)"), 2));
++    m_RegExes.Add(RegExStruct(_T("Cannot Open File (Catalina)"), cltError, _T("([ ]*)(cannot open) (.*)"), 2, 3));
++    m_RegExes.Add(RegExStruct(_T("Output Error (Catalina)"), cltError, _T("(formatted output file may be corrupt)"), 1));
++    m_RegExes.Add(RegExStruct(_T("Plugin Error (Catalina)"), cltError, _T("([ ]*)(ERROR : )(.*)"), 3));
++    m_RegExes.Add(RegExStruct(_T("Unknown Option (Catalina)"), cltError, _T("([ ]*)(Unknown option: .*)"), 2));
++    m_RegExes.Add(RegExStruct(_T("Image Size (Catalina)"), cltError, _T("([ ]*)(Compiled image exceeds[ ]*[0-9]*[ ]*bytes)"), 2));
++    m_RegExes.Add(RegExStruct(_T("Too Big (Catalina)"), cltError, _T("([ ]*)(Too big by[ ]*[0-9]*[ ]*longs)"), 2));
++    m_RegExes.Add(RegExStruct(_T("Preprocessor warning"), cltWarning, _T("(") + FilePathWithSpaces + _T("):([0-9]+):([0-9]+):[ ]([Ww]arning:[ ].*)"), 4, 1, 2));
++    m_RegExes.Add(RegExStruct(_T("Preprocessor error"), cltError, _T("(") + FilePathWithSpaces + _T("):([0-9]+):[0-9]+:[ ](.*)"), 3, 1, 2));
++    m_RegExes.Add(RegExStruct(_T("Compiler warning"), cltWarning, _T("(") + FilePathWithSpaces + _T("):([0-9]+):[ ]([Ww]arning:[ ].*)"), 3, 1, 2));
++    m_RegExes.Add(RegExStruct(_T("Compiler error"), cltError, _T("(") + FilePathWithSpaces + _T("):([0-9]+):[ ](.*)"), 3, 1, 2));
++    m_RegExes.Add(RegExStruct(_T("Linker error"), cltError, _T("(") + FilePathWithSpaces + _T("):([0-9]+):[0-9]+:[ ](.*)"), 3, 1, 2));
++    m_RegExes.Add(RegExStruct(_T("Undefined reference"), cltError, _T("(") + FilePathWithSpaces + _T("):[ ](undefined reference.*)"), 2, 1));
++    m_RegExes.Add(RegExStruct(_T("General warning"), cltWarning, _T("([Ww]arning:[ ].*)"), 1));
++}
++
++AutoDetectResult CompilerCatalina::AutoDetectInstallationDir()
++{
++    // use environment variable PATH if set
++    wxString pathValues;
++    AutoDetectResult ret;
++    wxString sep = wxFileName::GetPathSeparator();
++    wxGetEnv(_T("LCCDIR"), &pathValues);
++    if (pathValues.IsEmpty())
++    {
++    if (platform::windows)
++        m_MasterPath = _T("C:\\Program Files\\Catalina");
++    else
++        m_MasterPath = _T("/usr/local/lib/catalina");
++    }
++    else {
++        m_MasterPath = pathValues;
++    }
++    wxString BinPath = m_MasterPath + sep + _T("bin");
++    ret = wxFileExists(BinPath + sep + m_Programs.C) ? adrDetected : adrGuessed;
++    if (ret == adrDetected)
++    {
++       m_ExtraPaths.Add(BinPath);
++       wxString libPathValues;
++       wxGetEnv(_T("CATALINA_LIBRARY"), &libPathValues);
++       if (!libPathValues.IsEmpty())
++       {
++          AddLibDir(libPathValues);
++       }
++       wxString incPathValues;
++       wxGetEnv(_T("CATALINA_INCLUDE"), &incPathValues);
++       if (!incPathValues.IsEmpty())
++       {
++          AddIncludeDir(incPathValues);
++       }
++    }
++    return ret;
++} // end of AutoDetectInstallationDir
+Index: src/plugins/compilergcc/Makefile.am
+===================================================================
+--- src/plugins/compilergcc/Makefile.am	(revision 7254)
++++ src/plugins/compilergcc/Makefile.am	(working copy)
+@@ -30,6 +30,7 @@
+ 			compilerLDC.cpp \
+ 			compilerICC.cpp \
+ 			compilerLCC.cpp \
++			compilerCatalina.cpp \
+ 			compilermessages.cpp \
+ 			compilerMINGW.cpp \
+ 			compilerMINGWgenerator.cpp \
+@@ -59,6 +60,7 @@
+ 			compilerLDC.h \
+ 			compilerICC.h \
+ 			compilerLCC.h \
++			compilerCatalina.h \
+ 			compilermessages.h \
+ 			compilerMINGW.h \
+ 			compilerMINGWgenerator.h \
+Index: src/plugins/compilergcc/resources/manifest.xml
+===================================================================
+--- src/plugins/compilergcc/resources/manifest.xml	(revision 7254)
++++ src/plugins/compilergcc/resources/manifest.xml	(working copy)
+@@ -7,6 +7,7 @@
+         <Value description="This plugin is an interface to various compilers:
+ 
+ GNU GCC compiler
++Catalina C Compiler
+ Microsoft Visual C++ Free Toolkit 2003
+ Borland C++ Compiler 5.5" />
+         <Value author="Yiannis Mandravellos" />
+Index: src/plugins/scriptedwizard/resources/config.script
+===================================================================
+--- src/plugins/scriptedwizard/resources/config.script	(revision 7254)
++++ src/plugins/scriptedwizard/resources/config.script	(working copy)
+@@ -18,9 +18,6 @@
+     // project wizards
+     //
+     RegisterWizard(wizProject,     _T("empty"),        _T("Empty project"),         _T("Console"));
+-    RegisterWizard(wizProject,     _T("fortran/app"),  _T("Fortran application"),   _T("Fortran"));
+-    RegisterWizard(wizProject,     _T("fortran/lib"),  _T("Fortran library"),       _T("Fortran"));
+-    RegisterWizard(wizProject,     _T("fortran/dll"),  _T("Fortran DLL"),           _T("Fortran"));
+     RegisterWizard(wizProject,     _T("console"),      _T("Console application"),   _T("Console"));
+     RegisterWizard(wizProject,     _T("d"),            _T("D application"),         _T("D language"));
+     if (PLATFORM == PLATFORM_MSW)
+@@ -35,7 +32,8 @@
+     RegisterWizard(wizProject,     _T("gtk"),          _T("GTK+ project"),          _T("GUI"));
+     RegisterWizard(wizProject,     _T("irrlicht"),     _T("Irrlicht project"),      _T("2D/3D Graphics"));
+     RegisterWizard(wizProject,     _T("lf"),           _T("Lightfeather project"),  _T("2D/3D Graphics"));
+-    RegisterWizard(wizProject,     _T("matlab_csf"),   _T("Matlab project"),        _T("Console"));
++    if (PLATFORM == PLATFORM_MSW)
++        RegisterWizard(wizProject, _T("matlab_csf"),   _T("Matlab project"),        _T("Console"));
+     RegisterWizard(wizProject,     _T("opengl"),       _T("OpenGL project"),        _T("2D/3D Graphics"));
+     RegisterWizard(wizProject,     _T("ogre"),         _T("Ogre project"),          _T("2D/3D Graphics"));
+     RegisterWizard(wizProject,     _T("plugins"),      _T("Code::Blocks plugin"),   _T("Code::Blocks"));
+@@ -61,6 +59,7 @@
+         RegisterWizard(wizTarget,  _T("dll"),          _T("Dynamic Link Library"),  _T("Console"));
+     RegisterWizard(wizTarget,      _T("wxwidgets"),    _T("wxWidgets"),             _T("GUI"));
+ 
++    RegisterWizard(wizProject,     _T("catalina"),    _T("Catalina Project"),      _T("Embedded Systems"));
+     RegisterWizard(wizProject,     _T("arm"),          _T("ARM Project"),           _T("Embedded Systems"));
+     RegisterWizard(wizProject,     _T("avr"),          _T("AVR Project"),           _T("Embedded Systems"));
+     RegisterWizard(wizProject,     _T("tricore"),      _T("TriCore Project"),       _T("Embedded Systems"));
+@@ -71,7 +70,6 @@
+     RegisterWizard(wizFiles,       _T("empty_file"),   _T("Empty file"),            _T("C/C++"));
+     RegisterWizard(wizFiles,       _T("c_file"),       _T("C/C++ source"),          _T("C/C++"));
+     RegisterWizard(wizFiles,       _T("h_file"),       _T("C/C++ header"),          _T("C/C++"));
+-    RegisterWizard(wizFiles,       _T("fortran/file"), _T("Fortran source"),        _T("Fortran"));
+ }
+ 
+ function RegisterWizard(type, folder, title, category)
+Index: src/plugins/scriptedwizard/resources/catalina/files/main.c
+===================================================================
+--- src/plugins/scriptedwizard/resources/catalina/files/main.c	(revision 0)
++++ src/plugins/scriptedwizard/resources/catalina/files/main.c	(revision 0)
+@@ -0,0 +1,15 @@
++/*
++ * main.c - main program
++ */
++
++#include <stdio.h>
++
++int main(int argc, char *argv[])
++{
++
++    // insert your code here
++
++    while(1) ; // the propeller reboots on exit - this line prevents that
++
++    return 0;
++}
+Index: src/plugins/scriptedwizard/resources/catalina/wizard.script
+===================================================================
+--- src/plugins/scriptedwizard/resources/catalina/wizard.script	(revision 0)
++++ src/plugins/scriptedwizard/resources/catalina/wizard.script	(revision 0)
+@@ -0,0 +1,254 @@
++////////////////////////////////////////////////////////////////////////////////
++//
++// Code::Blocks new project wizard script
++//
++// Project: Catalina project
++// Author:  Ross Higson
++//
++//
++////////////////////////////////////////////////////////////////////////////////
++
++platform <- 0;
++library <- 0;
++model <- 0;
++function BeginWizard()
++{
++    local intro_msg = _T("Welcome to the new Catalina project wizard!\n\n" +
++                        "This wizard will guide you to create a new Catalina C project\n" +
++                        "and also set up some basic project configuration options.\n\n" +
++                        "Note that all options selected (plus more advanced options)\n" +
++                        "can be modified later, after the project has been created.\n\n" +
++                        "When you 're ready to proceed, please click \"Next\"...");
++
++    local Catalina_Platforms = _T(
++               "HYDRA;" +
++               "HYBRID;" +
++               "DEMO;" +
++               "TRIBLADEPROP (CPU_1);" +
++               "TRIBLADEPROP (CPU_2);" +
++               "TRIBLADEPROP (CPU_3);" +
++               "MORPHEUS (CPU_1);" +
++               "MORPHEUS (CPU_2);" +
++               "DRACBLADE;" +
++               "RAMBLADE;" +
++               "ASC;" +
++               "C3;" +
++               "CUSTOM;" +
++               "Other (requires manual congfiguration);"
++               );
++
++    local Catalina_Libraries = _T(
++               "Standard C Library (no maths or file system);" +
++               "Standard C Library and Maths Library (no file system);" +
++               "Intger-only C Library (no file system);" +
++               "Extended C Library (no maths, but file system support);" +
++               "Extended C Library and Maths Library (file system support);" +
++               "Integer-only Extended C Library (file system support);"
++               );
++
++    local Catalina_Memory_Model = _T(
++               "TINY (code, data and stack in Hub);" +
++               "SMALL (code in XMM, stack and data in Hub);" +
++               "LARGE (code and data in XMM, stack in Hub);"
++               );
++
++    // intro
++    Wizard.AddInfoPage(_T("CatalinaProjectIntro"), intro_msg);
++    // select project name and path
++    Wizard.AddProjectPathPage();
++    // select compiler and configurations
++    // args:
++    //  1) string: which compiler ID will be pre-selected (empty means default)
++    //  2) string: semi-colon separated list of allowed compiler ids. Use _T("*") for all. * and ? wildcards allowed.
++    //  3) boolean: if false, the compiler selection will be disabled
++    //  4) boolean: if false, the config targets will be disabled
++    Wizard.AddCompilerPage(_T("catalina"), _T("catalina"), true, true);
++    // select platform
++    Wizard.AddGenericSingleChoiceListPage(_T("CatalinaPlatform"), _T("Please select your Propeller platform\n" + 
++          "(and CPU on multi-CPU platforms)"), Catalina_Platforms , platform);
++    // select library
++    Wizard.AddGenericSingleChoiceListPage(_T("CatalinaLibrary"), _T("Please select the C library configuration to use"),
++          Catalina_Libraries , library);
++    // select memory model
++    Wizard.AddGenericSingleChoiceListPage(_T("CatalinaModel"), _T("Please select the memory model to use\n" + 
++          "(if your platform has no XMM memory, select TINY)"), Catalina_Memory_Model , model);
++}
++
++function GetFilesDir()
++{
++    return _T("propeller/files");
++}
++
++function OnLeave_CatalinaPlatform(fwd)
++{
++	if (fwd)
++	{
++		platform = Wizard.GetListboxSelection(_T("GenericChoiceList"));
++	}
++	return true;
++}
++
++function OnLeave_CatalinaLibrary(fwd)
++{
++	if (fwd)
++	{
++		library = Wizard.GetListboxSelection(_T("GenericChoiceList"));
++	}
++	return true;
++}
++
++function OnLeave_CatalinaModel(fwd)
++{
++	if (fwd)
++	{
++		model = Wizard.GetListboxSelection(_T("GenericChoiceList"));
++	}
++	return true;
++}
++
++function SetupProject(project)
++{
++    // enable compiler warnings (project-wide)
++    //WarningsOn(project, Wizard.GetCompilerID());
++
++    switch (platform)
++    {
++       case 0:// HYDRA
++          project.AddCompilerOption(_T("-DHYDRA"));
++          project.AddLinkerOption(_T("-DHYDRA"));
++          break;
++       case 1:// HYBRID
++          project.AddCompilerOption(_T("-DHYBRID"));
++          project.AddLinkerOption(_T("-DHYBRID"));
++          break;
++       case 2:// DEMO
++          project.AddCompilerOption(_T("-DDEMO"));
++          project.AddLinkerOption(_T("-DDEMO"));
++          break;
++       case 3:// TRIBLADEPROP
++          project.AddCompilerOption(_T("-DTRIBLADEPROP"));
++          project.AddLinkerOption(_T("-DTRIBLADEPROP"));
++          project.AddCompilerOption(_T("-DCPU_1"));
++          project.AddLinkerOption(_T("-DCPU_1"));
++          break;
++       case 4:// TRIBLADEPROP
++          project.AddCompilerOption(_T("-DTRIBLADEPROP"));
++          project.AddLinkerOption(_T("-DTRIBLADEPROP"));
++          project.AddCompilerOption(_T("-DCPU_2"));
++          project.AddLinkerOption(_T("-DCPU_2"));
++          break;
++       case 5:// TRIBLADEPROP
++          project.AddCompilerOption(_T("-DTRIBLADEPROP"));
++          project.AddLinkerOption(_T("-DTRIBLADEPROP"));
++          project.AddCompilerOption(_T("-DCPU_3"));
++          project.AddLinkerOption(_T("-DCPU_3"));
++          break;
++       case 6:// MORPHEUS
++          project.AddCompilerOption(_T("-DMORPHEUS"));
++          project.AddLinkerOption(_T("-DMORPHEUS"));
++          project.AddCompilerOption(_T("-DCPU_1"));
++          project.AddLinkerOption(_T("-DCPU_1"));
++          break;
++       case 7:// MORPHEUS
++          project.AddCompilerOption(_T("-DMORPHEUS"));
++          project.AddLinkerOption(_T("-DMORPHEUS"));
++          project.AddCompilerOption(_T("-DCPU_2"));
++          project.AddLinkerOption(_T("-DCPU_2"));
++          break;
++       case 8:// DRACBLADE
++          project.AddCompilerOption(_T("-DDRACBLADE"));
++          project.AddLinkerOption(_T("-DDRACBLADE"));
++          break;
++       case 9:// RAMBLADE
++          project.AddCompilerOption(_T("-DRAMBLADE"));
++          project.AddLinkerOption(_T("-DRAMBLADE"));
++          break;
++       case 10:// ASC
++          project.AddCompilerOption(_T("-DASC"));
++          project.AddLinkerOption(_T("-DASC"));
++          break;
++       case 11:// C3
++          project.AddCompilerOption(_T("-DC3"));
++          project.AddLinkerOption(_T("-DC3"));
++          break;
++       case 12:// CUSTOM
++          project.AddCompilerOption(_T("-DCUSTOM"));
++          project.AddLinkerOption(_T("-DCUSTOM"));
++          break;
++       default:// Other
++          break;
++    }
++
++    switch (library)
++    {
++       case 0:// lc
++          project.AddLinkerOption(_T("-lc"));
++          break;
++       case 1:// lc & lm
++          project.AddLinkerOption(_T("-lc"));
++          project.AddLinkerOption(_T("-lm"));
++          break;
++       case 2:// lci
++          project.AddLinkerOption(_T("-lci"));
++          break;
++       case 3:// lcx
++          project.AddCompilerOption(_T("-DSD"));
++          project.AddLinkerOption(_T("-lcx"));
++          break;
++       case 4:// lcx + lm
++          project.AddCompilerOption(_T("-DSD"));
++          project.AddLinkerOption(_T("-lcx"));
++          project.AddLinkerOption(_T("-lm"));
++          break;
++       case 5:// lcix
++          project.AddCompilerOption(_T("-DSD"));
++          project.AddLinkerOption(_T("-lcix"));
++          break;
++       default:// other
++          break;
++    }
++    switch (model)
++    {
++       case 0:// TINY
++          project.AddCompilerOption(_T("-DTINY"));
++          project.AddLinkerOption(_T("-DTINY"));
++          break;
++       case 1:// SMALL
++          project.AddCompilerOption(_T("-DSMALL"));
++          project.AddLinkerOption(_T("-DSMALL"));
++          break;
++       case 2:// LARGE
++          project.AddCompilerOption(_T("-DLARGE"));
++          project.AddLinkerOption(_T("-DLARGE"));
++          break;
++       default:// Other
++          break;
++    }
++
++    // Debug build target
++    local target = project.GetBuildTarget(Wizard.GetDebugName());
++    if (!IsNull(target))
++    {
++        target.SetTargetType(ttConsoleOnly);
++        //local s = Wizard.GetDebugOutputDir() + Wizard.GetProjectName();
++        target.SetTargetFilenameGenerationPolicy(tgfpPlatformDefault, tgfpNone);
++        target.SetOutputFilename(Wizard.GetDebugOutputDir() + Wizard.GetProjectName());
++        // enable debugging symbols for this target
++        DebugSymbolsOn(target, Wizard.GetCompilerID());
++    }
++
++    // Release build target
++    target = project.GetBuildTarget(Wizard.GetReleaseName());
++    if (!IsNull(target))
++    {
++        target.SetTargetType(ttConsoleOnly);
++        target.SetTargetFilenameGenerationPolicy(tgfpPlatformDefault, tgfpNone);
++        target.SetOutputFilename(Wizard.GetReleaseOutputDir() + Wizard.GetProjectName());
++        // enable optimizations for this target
++        // OptimizationsOn(target, Wizard.GetCompilerID());
++    }
++
++    return true;
++}
++
++
+Index: src/plugins/scriptedwizard/resources/catalina/logo.png
+===================================================================
+Cannot display: file marked as a binary type.
+svn:mime-type = application/octet-stream
+
+Property changes on: src/plugins/scriptedwizard/resources/catalina/logo.png
+___________________________________________________________________
+Added: svn:executable
+   + *
+Added: svn:mime-type
+   + application/octet-stream
+
+Index: src/plugins/scriptedwizard/resources/catalina/wizard.png
+===================================================================
+Cannot display: file marked as a binary type.
+svn:mime-type = application/octet-stream
+
+Property changes on: src/plugins/scriptedwizard/resources/catalina/wizard.png
+___________________________________________________________________
+Added: svn:executable
+   + *
+Added: svn:mime-type
+   + application/octet-stream
+
+Index: src/plugins/scriptedwizard/resources/catalina/Makefile.am
+===================================================================
+--- src/plugins/scriptedwizard/resources/catalina/Makefile.am	(revision 0)
++++ src/plugins/scriptedwizard/resources/catalina/Makefile.am	(revision 0)
+@@ -0,0 +1,10 @@
++pkgdatadir = $(datadir)/@PACKAGE@/templates/wizard/catalina
++
++dist_pkgdata_DATA = logo.png \
++					wizard.png \
++					wizard.script
++
++filesdir        = $(pkgdatadir)/files
++
++dist_files_DATA	= files/main.c
++
+Index: src/plugins/scriptedwizard/resources/common_functions.script
+===================================================================
+--- src/plugins/scriptedwizard/resources/common_functions.script	(revision 7254)
++++ src/plugins/scriptedwizard/resources/common_functions.script	(working copy)
+@@ -31,8 +31,7 @@
+         base.AddCompilerOption(_T("-Wall"));
+     }
+     else if (   GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("bcc*"))
+-             || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("dmd"))
+-             || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("ldc")) )
++             || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("dmd")) )
+     {
+         base.AddCompilerOption(_T("-w"));
+     }
+@@ -44,6 +43,10 @@
+     {
+         base.AddCompilerOption(_T("-w-"));
+     }
++    else if (   GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("catalina")))
++    {
++        base.AddCompilerOption(_T("-W-A"));
++    }
+     else
+     {
+         ShowWarning(_T("This wizard doesn't know how to setup warning flags for this compiler.\n"));
+@@ -69,7 +72,6 @@
+              || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("dmd"))
+              || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gcc"))
+              || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gdc"))
+-             || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("ldc"))
+              || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("tcc")) )
+     {
+         base.AddCompilerOption(_T("-g"));
+@@ -92,6 +94,11 @@
+     {
+         base.AddCompilerOption(_T("-d2")); // full symbolic debugging information
+     }
++    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("catalina")))
++    {
++        base.AddCompilerOption(_T("-g3"));
++        base.AddLinkerOption(_T("-g3"));
++    }
+     else
+     {
+         ShowWarning(_T("This wizard doesn't know how to setup debug flags for this compiler.\n"));
+@@ -104,11 +111,9 @@
+ {
+     if      (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("msvc*")))
+     {
+-        if (   !GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("msvc8"))
+-            && !GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("msvc10")) )
++        if (!GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("msvc8")))
+         {
+-
+-            base.AddCompilerOption(_T("/Og"));  // Deprecated in MSVC 8 and later (MSVC 10)
++            base.AddCompilerOption(_T("/Og"));  // Deprecated in MSVC 8
+         }
+         base.AddCompilerOption(_T("/Ox"));
+         base.AddCompilerOption(_T("/DNDEBUG"));
+@@ -119,8 +124,7 @@
+              || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gcc"))
+              || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("tricore*"))
+              || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("ppc*"))
+-             || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gdc"))
+-             || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("ldc")) )
++             || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gdc")) )
+     {
+         base.AddCompilerOption(_T("-O2"));
+ 
+@@ -152,6 +156,10 @@
+     {
+         base.AddCompilerOption(_T("-o"));
+     }
++    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("catalina")))
++    {
++        base.AddCompilerOption(_T("-O3"));
++    }
+     else
+     {
+         ShowWarning(_T("This wizard doesn't know how to setup optimisation flags for this compiler.\n"));
+Index: src/plugins/scriptedwizard/resources/Makefile.am
+===================================================================
+--- src/plugins/scriptedwizard/resources/Makefile.am	(revision 7254)
++++ src/plugins/scriptedwizard/resources/Makefile.am	(working copy)
+@@ -1,4 +1,4 @@
+-SUBDIRS = arm avr c_file console d directx dll empty empty_file fltk fortran glfw glut gtk h_file irrlicht lf matlab_csf ogre opengl plugins ppc qt4 sdl sfml smartwin staticlib stlport sharedlib sys tricore win32gui wxwidgets
++SUBDIRS = arm avr c_file catalina console d directx dll empty empty_file fltk fortran glfw glut gtk h_file irrlicht lf matlab_csf ogre opengl plugins ppc qt4 sdl sfml smartwin staticlib stlport sharedlib sys tricore win32gui wxwidgets
+ 
+ pkgdata_DATA = scriptedwizard.zip
+ CLEANFILES = $(pkgdata_DATA)

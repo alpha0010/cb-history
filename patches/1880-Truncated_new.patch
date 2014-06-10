@@ -1,0 +1,19 @@
+Index: src/plugins/scriptedwizard/wiz.cpp
+===================================================================
+--- src/plugins/scriptedwizard/wiz.cpp	(revision 3589)
++++ src/plugins/scriptedwizard/wiz.cpp	(working copy)
+@@ -1009,8 +1009,12 @@
+         wxWizardPageSimple::Chain(m_Pages[i - 1], m_Pages[i]);
+
+     // allow the wizard to size itself around the pages
+-    for (size_t i = 1; i < m_Pages.GetCount(); ++i)
+-        m_pWizard->GetPageAreaSizer()->Add(m_Pages[i]);
++    #if wxCHECK_VERSION(2, 8, 0)
++        m_pWizard->GetPageAreaSizer()->Add(m_Pages[0]);
++    #else
++        for (size_t i = 1; i < m_Pages.GetCount(); ++i)
++            m_pWizard->GetPageAreaSizer()->Add(m_Pages[i]);
++    #endif
+
+     m_pWizard->Fit();
+ }

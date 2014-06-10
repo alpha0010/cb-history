@@ -1,0 +1,25 @@
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 7010)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -490,16 +490,18 @@
+         wxString selectedText(m_pOwner->GetControl()->GetTextRange(a, b));
+ 
+         int eof = m_pOwner->m_pControl->GetLength();
+-        ConfigManager* cfg = Manager::Get()->GetConfigManager(_T("editor"));
+ 
+         // Set Styling:
+         // clear all style indications set in a previous run (is also done once after text gets unselected)
+         m_pOwner->GetControl()->IndicatorClearRange(0, eof);
+ 
++        if (a == b)
++            return;
++
++        ConfigManager* cfg = Manager::Get()->GetConfigManager(_T("editor"));
+         // check that feature is enabled,
+         // selected text has a minimal length of 3 and contains no spaces
+         if( cfg->ReadBool(_T("/highlight_occurrence/enabled"), true)
+-                && selectedText.Len() > 2        // if there is no text selected (a == b), it stops here and does not hog the cpu further
+                 && selectedText.Find(_T(' ')) == wxNOT_FOUND
+                 && selectedText.Find(_T('\t')) == wxNOT_FOUND
+                 && selectedText.Find(_T('\n')) == wxNOT_FOUND )

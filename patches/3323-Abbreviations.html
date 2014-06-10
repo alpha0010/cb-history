@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 3323 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #3323 <small>2012-08-23 20:15:43</small></h3>
+          <h4>p2rkw</h4>
+          Abbreviations auto-complete
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="3323-Abbreviations.patch">3323-Abbreviations.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::FeatureAdd</dd>
+            <dt>Status</dt><dd>Accepted</dd>
+            <dt>Close date</dt><dd>2012-11-07 09:58:15</dd>
+            <dt>Assigned to</dt><dd>mortenmacfly</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2012-10-28 05:38:40</div>
+        <div class="panel-body">
+          <p>Ok.</p>
+          <p>Do you mind to simply update the patch against trunk? I am a bit confused with what and where to update now.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">p2rkw 2012-08-26 13:08:35</div>
+        <div class="panel-body">
+          <p>- if keyword isn't complete abbreviation will display auto complete list with possible matches</p>
+          <p>- abbreviations now can be expandend even if cursor is inside keyword (not only at end)</p>
+          <p>topic on forum: <a href="http://forums.codeblocks.org/index.php/topic,16749.0.html">http://forums.codeblocks.org/index.php/topic,16749.0.html</a></p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2012-10-27 21:02:59</div>
+        <div class="panel-body">
+          <p>One question:</p>
+          <p>In Abbreviations::EditorEventHook, why did you move the event.Skip() outof the else - tree?This changes the logic of the methods and would raise multiple autocomp boxes in case another plugin shows one, too (i.e. CC).</p>
+          <p>Was there a particular reason to do so?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">p2rkw 2012-10-27 22:59:20</div>
+        <div class="panel-body">
+          <p>Hmm...  I don't remember right now, but you're right: that Skip() should be inside else block. Here's my current implementation of Abbreviations::EditorEventHook :</p>
+          <p>void Abbreviations::EditorEventHook(cbEditor* editor, wxScintillaEvent&amp; event)</p>
+          <p>{</p>
+          <p>cbStyledTextCtrl* control = editor-&gt;GetControl();</p>
+          <p>if( !IsAttached() || !m_IsAutoCompVisible )</p>
+          <p>{</p>
+          <p>event.Skip();</p>
+          <p>return;</p>
+          <p>}</p>
+          <p>if (event.GetEventType() == wxEVT_SCI_AUTOCOMP_SELECTION)</p>
+          <p>{</p>
+          <p>const wxString&amp; itemText = event.GetText();</p>
+          <p>int curPos = control-&gt;GetCurrentPos();</p>
+          <p>int startPos = control-&gt;WordStartPosition(curPos, true);</p>
+          <p>const int endPos = control-&gt;WordEndPosition(curPos, true);</p>
+          <p>control-&gt;BeginUndoAction();</p>
+          <p>control-&gt;SetTargetStart(startPos);</p>
+          <p>control-&gt;SetTargetEnd(endPos);</p>
+          <p>control-&gt;ReplaceTarget(itemText);</p>
+          <p>control-&gt;GotoPos(startPos + itemText.size() );</p>
+          <p>control-&gt;EndUndoAction();</p>
+          <p>DoAutoComplete(editor);</p>
+          <p>//prevent other plugins(CC mostly) from insertion this keyword</p>
+          <p>event.SetText( wxEmptyString );</p>
+          <p>event.SetEventType(wxEVT_NULL);</p>
+          <p>}</p>
+          <p>else  //here should be: else if( vent.GetEventType() == wxEVT_SCI_AUTOCOMP_CANCELLED)</p>
+          <p>{	//but this event doesn't occur.</p>
+          <p>m_IsAutoCompVisible = control-&gt;AutoCompActive();</p>
+          <p>if(!m_IsAutoCompVisible)</p>
+          <p>{</p>
+          <p>// allow others to handle this event</p>
+          <p>event.Skip();</p>
+          <p>}</p>
+          <p>}</p>
+          <p>}</p>
+          <p>As you can see I also added "event.SetEventType(wxEVT_NULL);" to prevent insertion event's text by CC.</p>
+          <p>Unfortunately, without this line CC still can handle this event, even when it's not skipped with event.Skip() call.</p>
+          <p>Boolean variable m_IsAutoCompVisible is set to true only when tooltip was opened by Abbreviations menu item or shortcut key. IMHO CC should also checks is auto complete tool-tip opened by itself. Then CC might call event.Skip() only on unwanted events( now its called on every single event).</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">p2rkw 2012-10-31 20:44:58</div>
+        <div class="panel-body">
+          <p>Patch updated.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

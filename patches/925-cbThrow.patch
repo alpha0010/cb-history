@@ -1,0 +1,60 @@
+Index: src/sdk/cbexception.cpp
+===================================================================
+--- src/sdk/cbexception.cpp	(revision 2191)
++++ src/sdk/cbexception.cpp	(working copy)
+@@ -16,17 +16,18 @@
+     #include "cbexception.h"
+ #endif
+ 
+-
+-
+ cbException::cbException(const wxString& msg, const wxString& file, int line)
+         : Message(msg),
+         File(file),
+         Line(line)
+-{}
++{
+ 
++}
++
+ cbException::~cbException()
+-{}
++{
+ 
++}
+ 
+ void cbException::ShowErrorMessage(bool safe)
+ {
+@@ -51,4 +52,15 @@
+         cbMessageBox(err, title, wxICON_ERROR);
+ }
+ 
++void cbThrow(const wxString& message)
++{
++    #ifdef wxUSE_UNICODE
+ 
++        throw cbException(message, cbC2U(__FILE__), __LINE__);
++
++    #else
++
++        throw cbException(message, __FILE__, __LINE__);
++
++    #endif
++}
+Index: src/sdk/cbexception.h
+===================================================================
+--- src/sdk/cbexception.h	(revision 2191)
++++ src/sdk/cbexception.h	(working copy)
+@@ -28,11 +28,7 @@
+ 		int Line;
+ };
+ 
+-#ifdef wxUSE_UNICODE
+-    #define cbThrow(message) throw cbException(message, cbC2U(__FILE__), __LINE__)
+-#else
+-    #define cbThrow(message) throw cbException(message, __FILE__, __LINE__)
+-#endif
++void cbThrow(const wxString& message);
+ 
+ #ifndef cbDEBUG
+     #define cbAssert(expr)

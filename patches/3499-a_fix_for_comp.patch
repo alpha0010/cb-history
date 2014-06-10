@@ -1,0 +1,105 @@
+Index: src/plugins/contrib/codesnippets/codesnippetsapp.cpp
+===================================================================
+--- src/plugins/contrib/codesnippets/codesnippetsapp.cpp	(revision 9374)
++++ src/plugins/contrib/codesnippets/codesnippetsapp.cpp	(working copy)
+@@ -95,7 +95,11 @@
+ END_EVENT_TABLE()
+ 
+ #ifdef __WXMAC__
+-    #include "wx/mac/corefoundation/cfstring.h"
++    #if wxCHECK_VERSION(2,9,0)
++        #include "wx/osx/core/cfstring.h"
++    #else
++        #include "wx/mac/corefoundation/cfstring.h"
++    #endif
+     #include "wx/intl.h"
+ 
+     #include <CoreFoundation/CFBundle.h>
+@@ -112,7 +116,11 @@
+         CFRelease(resourcesURL);
+         CFStringRef cfStrPath = CFURLCopyFileSystemPath(absoluteURL,kCFURLPOSIXPathStyle);
+         CFRelease(absoluteURL);
+-        return wxMacCFStringHolder(cfStrPath).AsString(wxLocale::GetSystemEncoding());
++        #if wxCHECK_VERSION(2,9,0)
++          return wxCFStringRef(cfStrPath).AsString(wxLocale::GetSystemEncoding());
++        #else
++          return wxMacCFStringHolder(cfStrPath).AsString(wxLocale::GetSystemEncoding());
++        #endif
+     }
+ #endif
+ 
+Index: src/plugins/contrib/wxContribItems/wxTreeList/src/treelistctrl.cpp
+===================================================================
+--- src/plugins/contrib/wxContribItems/wxTreeList/src/treelistctrl.cpp	(revision 9374)
++++ src/plugins/contrib/wxContribItems/wxTreeList/src/treelistctrl.cpp	(working copy)
+@@ -49,8 +49,12 @@
+ #include <wx/hashmap.h>
+ 
+ #ifdef __WXMAC__
++#if wxCHECK_VERSION(2,9,0)
++#include "wx/osx/private.h"
++#else
+ #include "wx/mac/private.h"
+ #endif
++#endif
+ 
+ #include "wx/treelistctrl.h"
+ 
+Index: src/sdk/configmanager.cpp
+===================================================================
+--- src/sdk/configmanager.cpp	(revision 9374)
++++ src/sdk/configmanager.cpp	(working copy)
+@@ -36,7 +36,11 @@
+ #endif
+ 
+ #ifdef __WXMAC__
++#if wxCHECK_VERSION(2,9,0)
++#include "wx/osx/core/cfstring.h"
++#else
+ #include "wx/mac/corefoundation/cfstring.h"
++#endif
+ #include "wx/intl.h"
+ 
+ #include <CoreFoundation/CFBundle.h>
+@@ -121,7 +125,11 @@
+             CFRelease(resourcesURL);
+             CFStringRef cfStrPath = CFURLCopyFileSystemPath(absoluteURL,kCFURLPOSIXPathStyle);
+             CFRelease(absoluteURL);
+-            wxString str = wxMacCFStringHolder(cfStrPath).AsString(wxLocale::GetSystemEncoding());
++            #if wxCHECK_VERSION(2,9,0)
++              wxString str = wxCFStringRef(cfStrPath).AsString(wxLocale::GetSystemEncoding());
++            #else
++              wxString str = wxMacCFStringHolder(cfStrPath).AsString(wxLocale::GetSystemEncoding());
++            #endif
+             if (!str.Contains(wxString(_T("/Resources"))))
+                return ::DetermineExecutablePath() + _T("/.."); // not a bundle, use relative path
+             return str;
+Index: src/src/app.cpp
+===================================================================
+--- src/src/app.cpp	(revision 9374)
++++ src/src/app.cpp	(working copy)
+@@ -273,7 +273,11 @@
+ END_EVENT_TABLE()
+ 
+ #ifdef __WXMAC__
++#if wxCHECK_VERSION(2,9,0)
++#include "wx/osx/core/cfstring.h"
++#else
+ #include "wx/mac/corefoundation/cfstring.h"
++#endif
+ #include "wx/intl.h"
+ 
+ #include <CoreFoundation/CFBundle.h>
+@@ -288,7 +292,11 @@
+     CFRelease(resourcesURL);
+     CFStringRef cfStrPath = CFURLCopyFileSystemPath(absoluteURL,kCFURLPOSIXPathStyle);
+     CFRelease(absoluteURL);
+-    return wxMacCFStringHolder(cfStrPath).AsString(wxLocale::GetSystemEncoding());
++    #if wxCHECK_VERSION(2,9,0)
++      return wxCFStringRef(cfStrPath).AsString(wxLocale::GetSystemEncoding());
++    #else
++      return wxMacCFStringHolder(cfStrPath).AsString(wxLocale::GetSystemEncoding());
++    #endif
+ }
+ #endif
+ 

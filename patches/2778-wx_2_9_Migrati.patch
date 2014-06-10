@@ -1,0 +1,1477 @@
+Index: src/plugins/contrib/wxSmithContribItems/wxchart/wxschart.cpp
+===================================================================
+--- src/plugins/contrib/wxSmithContribItems/wxchart/wxschart.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmithContribItems/wxchart/wxschart.cpp	(working copy)
+@@ -104,7 +104,11 @@
+             if ( StyleCode.IsEmpty() ) StyleCode = _T("0");
+             else                       StyleCode.RemoveLast();
+ 
++            #if wxCHECK_VERSION(2, 9, 0)
++            Codef(_T("%C(%W,%I,(STYLE)(%s),%P,%S,%T);\n"),StyleCode.wx_str());
++            #else
+             Codef(_T("%C(%W,%I,(STYLE)(%s),%P,%S,%T);\n"),StyleCode.c_str());
++            #endif
+ 
+             Codef(_T("{\n"));
+             for ( size_t i=0; i<m_ChartPointsDesc.Count(); i++ )
+@@ -129,15 +133,27 @@
+ 
+                 wxString VarStr = wxString::Format(_T("PointSet%d"),(int)i);
+ 
++                #if wxCHECK_VERSION(2, 9, 0)
++                Codef(_T("\twxChartPoints* %v = %s(%t);\n"),VarStr.wx_str(),GenStr.wx_str(),Desc->Name.wx_str());
++                #else
+                 Codef(_T("\twxChartPoints* %v = %s(%t);\n"),VarStr.c_str(),GenStr.c_str(),Desc->Name.c_str());
++                #endif
+ 
+                 for ( size_t j=0; j<Desc->Points.Count(); j++ )
+                 {
+                     wxString PointStr = wxString::Format(_T("%lf,%lf"),Desc->Points[j]->X,Desc->Points[j]->Y);
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    Codef(_T("\t%v->Add(%t,%s);\n"),VarStr.wx_str(),Desc->Points[j]->Name.wx_str(),PointStr.wx_str());
++                    #else
+                     Codef(_T("\t%v->Add(%t,%s);\n"),VarStr.c_str(),Desc->Points[j]->Name.c_str(),PointStr.c_str());
++                    #endif
+                 }
+ 
++                #if wxCHECK_VERSION(2, 9, 0)
++                Codef(_T("\t%AAdd(%v);\n"),VarStr.wx_str());
++                #else
+                 Codef(_T("\t%AAdd(%v);\n"),VarStr.c_str());
++                #endif
+             }
+             Codef(_T("}\n"));
+ 
+Index: src/plugins/contrib/wxSmithContribItems/wxflatnotebook/wxFlatNotebook/src/wxFlatNotebook/wxFlatNotebook.cpp
+===================================================================
+--- src/plugins/contrib/wxSmithContribItems/wxflatnotebook/wxFlatNotebook/src/wxFlatNotebook/wxFlatNotebook.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmithContribItems/wxflatnotebook/wxFlatNotebook/src/wxFlatNotebook/wxFlatNotebook.cpp	(working copy)
+@@ -488,7 +488,11 @@
+ 		if ( GetParent() )
+ 		{
+ 			event.SetCurrentFocus(this);
++			#if wxCHECK_VERSION(2, 9, 0)
++			GetParent()->GetEventHandler()->ProcessEvent(event);
++			#else
+ 			GetParent()->ProcessEvent(event);
++			#endif
+ 		}
+ 	}
+ }
+Index: src/plugins/contrib/wxSmithContribItems/wxflatnotebook/wxsFlatNotebook.cpp
+===================================================================
+--- src/plugins/contrib/wxSmithContribItems/wxflatnotebook/wxsFlatNotebook.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmithContribItems/wxflatnotebook/wxsFlatNotebook.cpp	(working copy)
+@@ -324,7 +324,11 @@
+             for ( int i=0; i<GetChildCount(); i++ )
+             {
+                 wxsFlatNotebookExtra* Extra = (wxsFlatNotebookExtra*)GetChildExtra(i);
++                #if wxCHECK_VERSION(2, 9, 0)
++                Codef(_T("%AAddPage(%o, %t, %b);\n"),i,Extra->m_Label.wx_str(),Extra->m_Selected);
++                #else
+                 Codef(_T("%AAddPage(%o, %t, %b);\n"),i,Extra->m_Label.c_str(),Extra->m_Selected);
++                #endif
+             }
+ 
+             break;
+Index: src/plugins/contrib/wxSmithContribItems/wxthings/wxscustombutton.cpp
+===================================================================
+--- src/plugins/contrib/wxSmithContribItems/wxthings/wxscustombutton.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmithContribItems/wxthings/wxscustombutton.cpp	(working copy)
+@@ -123,7 +123,11 @@
+                 Style = _T("0");
+             }
+ 
++            #if wxCHECK_VERSION(2, 9, 0)
++            Codef(_T("%C(%W,%I,%t,%i,%P,%S,%s,%V,%N);\n"),m_Label.wx_str(),&m_Bitmap,wxART_OTHER,Style.wx_str());
++            #else
+             Codef(_T("%C(%W,%I,%t,%i,%P,%S,%s,%V,%N);\n"),m_Label.c_str(),&m_Bitmap,wxART_OTHER,Style.c_str());
++            #endif
+ 
+             if ( !m_BitmapSelected.IsEmpty() )
+             {
+Index: src/plugins/contrib/wxSmithAui/wxAuiToolBar/wxsAuiToolBar.cpp
+===================================================================
+--- src/plugins/contrib/wxSmithAui/wxAuiToolBar/wxsAuiToolBar.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmithAui/wxAuiToolBar/wxsAuiToolBar.cpp	(working copy)
+@@ -309,16 +309,31 @@
+                     }
+ 
+                     Codef(_T("%AAddTool(%s, %t, %i, %i, %s, %t, %t, NULL);\n"),
++                        #if wxCHECK_VERSION(2, 9, 0)
++                        Child->GetIdName().wx_str(),
++                        Extra->m_Label.wx_str(),
++                        &Bitmap,_T("wxART_TOOLBAR"),
++                        &DisabledBitmap,_T("wxART_TOOLBAR"),
++                        ItemKind.wx_str(),
++                        Item->m_ShortHelp.wx_str(),
++                        Item->m_LongHelp.wx_str());
++                        #else
+                         Child->GetIdName().c_str(),
+                         Extra->m_Label.c_str(),
+                         &Bitmap,_T("wxART_TOOLBAR"),
+                         &DisabledBitmap,_T("wxART_TOOLBAR"),
+                         ItemKind.c_str(),
+                         Item->m_ShortHelp.c_str(),
+                         Item->m_LongHelp.c_str());
++                        #endif
+                     if ( Item->m_DropDown && (Item->m_ItemKind == wxITEM_NORMAL) )
+                     {
++                        #if wxCHECK_VERSION(2, 9, 0)
++                        Codef(_T("%ASetToolDropDown(%s, true);\n"),Item->GetIdName().wx_str());
++                        #else
+                         Codef(_T("%ASetToolDropDown(%s, true);\n"),Item->GetIdName().c_str());
++                        #endif
++
+                     }
+                 }
+                 else if ( ClassName == _T("wxAuiToolBarSeparator") )
+@@ -330,11 +345,20 @@
+                     wxsAuiToolBarLabel* Label = (wxsAuiToolBarLabel*) Child;
+                     if ( Label->m_IsDefault )
+                     {
++                        #if wxCHECK_VERSION(2, 9, 0)
++                        Codef(_T("%AAddLabel(%s, %t);\n"),Child->GetIdName().wx_str(),Extra->m_Label.wx_str());
++                        #else
+                         Codef(_T("%AAddLabel(%s, %t);\n"),Child->GetIdName().c_str(),Extra->m_Label.c_str());
++                        #endif
++
+                     }
+                     else
+                     {
++                        #if wxCHECK_VERSION(2, 9, 0)
++                        Codef(_T("%AAddLabel(%s, %t, %d);\n"),Child->GetIdName().wx_str(),Extra->m_Label.wx_str(),Label->m_Width);
++                        #else
+                         Codef(_T("%AAddLabel(%s, %t, %d);\n"),Child->GetIdName().c_str(),Extra->m_Label.c_str(),Label->m_Width);
++                        #endif
+                     }
+                 }
+                 else if ( ClassName == _T("wxAuiToolBarSpacer") )
+@@ -346,12 +370,21 @@
+                 else
+                 {
+                     // If child is not any of wxAuiToolBarItems, it is a wxControl
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    Codef(_T("%AAddControl(%o, %t);\n"),i,Extra->m_Label.wx_str());
++                    if ( !Extra->m_Enabled && Child->GetBaseProps()->m_Enabled ) Codef(_T("%s->Enable(false);\n"),Child->GetVarName().wx_str());
++                    #else
+                     Codef(_T("%AAddControl(%o, %t);\n"),i,Extra->m_Label.c_str());
+                     if ( !Extra->m_Enabled && Child->GetBaseProps()->m_Enabled ) Codef(_T("%s->Enable(false);\n"),Child->GetVarName().c_str());
++                    #endif
+                     continue;
+                 }
+ 
++                #if wxCHECK_VERSION(2, 9, 0)
++                if ( !Extra->m_Enabled ) Codef(_T("%AEnableTool(%s, false);\n"),Child->GetIdName().wx_str());
++                #else
+                 if ( !Extra->m_Enabled ) Codef(_T("%AEnableTool(%s, false);\n"),Child->GetIdName().c_str());
++                #endif
+             }
+ 
+             Codef(_T("%ARealize();\n"));
+Index: src/plugins/contrib/wxSmithAui/wxAuiManager/wxsAuiManager.cpp
+===================================================================
+--- src/plugins/contrib/wxSmithAui/wxAuiManager/wxsAuiManager.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmithAui/wxAuiManager/wxsAuiManager.cpp	(working copy)
+@@ -497,7 +497,11 @@
+                 {
+                     case wxsCPP:
+                     {
++                        #if wxCHECK_VERSION(2, 9, 0)
++                        Codef(_T("%AAddPane(%o, wxAuiPaneInfo()%s);\n"),i,Extra->AllParamsCode(GetCoderContext(),Child).wx_str());
++                        #else
+                         Codef(_T("%AAddPane(%o, wxAuiPaneInfo()%s);\n"),i,Extra->AllParamsCode(GetCoderContext(),Child).c_str());
++                        #endif
+                         break;
+                     }
+ 
+Index: src/plugins/contrib/wxSmithAui/wxAuiNotebook/wxsAuiNotebook.cpp
+===================================================================
+--- src/plugins/contrib/wxSmithAui/wxAuiNotebook/wxsAuiNotebook.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmithAui/wxAuiNotebook/wxsAuiNotebook.cpp	(working copy)
+@@ -327,15 +327,27 @@
+                 wxsAuiNotebookExtra* Extra = (wxsAuiNotebookExtra*)GetChildExtra(i);
+                 if ( !Extra->m_Icon.IsEmpty() )
+                 {
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    Codef(_T("%AAddPage(%o, %t, %b, %i);\n"),i,Extra->m_Label.wx_str(),Extra->m_Selected,&(Extra->m_Icon),_T("wxART_MENU"));
++                    #else
+                     Codef(_T("%AAddPage(%o, %t, %b, %i);\n"),i,Extra->m_Label.c_str(),Extra->m_Selected,&(Extra->m_Icon),_T("wxART_MENU"));
++                    #endif
+                 }
+                 else if ( Extra->m_Selected )
+                 {
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    Codef(_T("%AAddPage(%o, %t, %b);\n"),i,Extra->m_Label.wx_str(),Extra->m_Selected);
++                    #else
+                     Codef(_T("%AAddPage(%o, %t, %b);\n"),i,Extra->m_Label.c_str(),Extra->m_Selected);
++                    #endif
+                 }
+                 else
+                 {
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    Codef(_T("%AAddPage(%o, %t);\n"),i,Extra->m_Label.wx_str());
++                    #else
+                     Codef(_T("%AAddPage(%o, %t);\n"),i,Extra->m_Label.c_str());
++                    #endif
+                 }
+             }
+ 
+Index: src/plugins/contrib/wxSmith/wxscodinglang.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxscodinglang.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxscodinglang.cpp	(working copy)
+@@ -82,9 +82,17 @@
+     {
+         Manager::Get()->GetLogManager()->DebugLog(F(
+             _T("Unknown coding language %s (%d) in function %s"),
++            #if wxCHECK_VERSION(2, 9, 0)
++            Name(Lang).wx_str(),
++            #else
+             Name(Lang).c_str(),
++            #endif
+             (int)Lang,
++            #if wxCHECK_VERSION(2, 9, 0)
++            Function.wx_str()));
++            #else
+             Function.c_str()));
++            #endif
+     }
+ 
+     wxString String(wxsCodingLang Lang,const wxString& Source)
+Index: src/plugins/contrib/wxSmith/wxscoder.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxscoder.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxscoder.cpp	(working copy)
+@@ -247,7 +247,11 @@
+     {
+         if ( !cbSaveToFile(FixedFileName,Code,Encoding,UseBOM) )
+         {
++            #if wxCHECK_VERSION(2, 9, 0)
++            Manager::Get()->GetLogManager()->Log(F(_("wxSmith: Couldn't write file '%s'"),FixedFileName.wx_str()));
++            #else
+             Manager::Get()->GetLogManager()->Log(F(_("wxSmith: Couldn't write file '%s'"),FixedFileName.c_str()));
++            #endif
+         }
+     }
+ }
+@@ -286,7 +290,11 @@
+         EncodingDetector Detector(FileName);
+         if ( !Detector.IsOK() )
+         {
++            #if wxCHECK_VERSION(2, 9, 0)
++            Manager::Get()->GetLogManager()->Log(F(_("wxSmith: Couldn't open and properly read file '%s'"),FileName.wx_str()));
++            #else
+             Manager::Get()->GetLogManager()->Log(F(_("wxSmith: Couldn't open and properly read file '%s'"),FileName.c_str()));
++            #endif
+             return;
+         }
+         //Manager::Get()->GetLogManager()->DebugLog(F(_T("File read time: %d ms"),SW.Time()));
+@@ -306,7 +314,11 @@
+             //wxStopWatch SW;
+             if ( !cbSaveToFile(FileName,Content,Detector.GetFontEncoding(),Detector.GetBOMSizeInBytes()>0) )
+             {
++                #if wxCHECK_VERSION(2, 9, 0)
++                Manager::Get()->GetLogManager()->Log(F(_("wxSmith: Couldn't write data to file '%s'"),FileName.wx_str()));
++                #else
+                 Manager::Get()->GetLogManager()->Log(F(_("wxSmith: Couldn't write data to file '%s'"),FileName.c_str()));
++                #endif
+             }
+             //Manager::Get()->GetLogManager()->DebugLog(F(_T("File write time: %d ms"),SW.Time()));
+         }
+@@ -351,8 +363,13 @@
+ 	if ( Position == -1 )
+ 	{
+ 	    Manager::Get()->GetLogManager()->DebugLog(F(_("wxSmith: Couldn't find code with header:\n\t\"%s\"\nin file '%s'"),
++			#if wxCHECK_VERSION(2, 9, 0)
++			Header.wx_str(),
++			Editor->GetFilename().wx_str()));
++			#else
+ 			Header.c_str(),
+ 			Editor->GetFilename().c_str()));
++			#endif
+ 		return false;
+ 	}
+ 
+@@ -363,8 +380,13 @@
+     if ( EndPosition == -1 )
+     {
+         Manager::Get()->GetLogManager()->DebugLog(F(_("wxSmith: Unfinished block of auto-generated code with header:\n\t\"%s\"\nin file '%s'"),
++            #if wxCHECK_VERSION(2, 9, 0)
++            Header.wx_str(),
++            Editor->GetFilename().wx_str()));
++            #else
+             Header.c_str(),
+             Editor->GetFilename().c_str()));
++            #endif
+         return false;
+     }
+ 
+@@ -442,7 +464,11 @@
+ 
+     if ( Position == -1 )
+     {
++    	#if wxCHECK_VERSION(2, 9, 0)
++    	Manager::Get()->GetLogManager()->DebugLog(F(_("wxSmith: Couldn't find code with header:\n\t\"%s\""),Header.wx_str()));
++    	#else
+     	Manager::Get()->GetLogManager()->DebugLog(F(_("wxSmith: Couldn't find code with header:\n\t\"%s\""),Header.c_str()));
++    	#endif
+ 		return false;
+     }
+ 
+@@ -457,7 +483,11 @@
+     int EndPosition = Content.First(End);
+     if ( EndPosition == -1 )
+     {
++        #if wxCHECK_VERSION(2, 9, 0)
++        Manager::Get()->GetLogManager()->DebugLog(F(_("wxSmith: Unfinished block of auto-generated code with header:\n\t\"%s\""),Header.wx_str()));
++        #else
+         Manager::Get()->GetLogManager()->DebugLog(F(_("wxSmith: Unfinished block of auto-generated code with header:\n\t\"%s\""),Header.c_str()));
++        #endif
+         return false;
+     }
+ 
+Index: src/plugins/contrib/wxSmith/wxwidgets/wxssizer.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/wxssizer.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/wxssizer.cpp	(working copy)
+@@ -118,7 +118,11 @@
+                 {
+                     case wxsCPP:
+                     {
++                        #if wxCHECK_VERSION(2, 9, 0)
++                        Codef(_T("%AAdd(%o, %s);\n"),i,Extra->AllParamsCode(GetCoderContext()).wx_str());
++                        #else
+                         Codef(_T("%AAdd(%o, %s);\n"),i,Extra->AllParamsCode(GetCoderContext()).c_str());
++                        #endif
+                         break;
+                     }
+ 
+Index: src/plugins/contrib/wxSmith/wxwidgets/wxsitemeditorcontent.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/wxsitemeditorcontent.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/wxsitemeditorcontent.cpp	(working copy)
+@@ -1108,6 +1108,10 @@
+ 
+ void wxsItemEditorContent::OnKeyDown(wxKeyEvent& event)
+ {
++    #if wxCHECK_VERSION(2, 9, 0)
++    GetParent()->GetEventHandler()->ProcessEvent(event);
++    #else
+     GetParent()->ProcessEvent(event);
++    #endif
+ }
+ 
+Index: src/plugins/contrib/wxSmith/wxwidgets/wxscorrector.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/wxscorrector.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/wxscorrector.cpp	(working copy)
+@@ -333,7 +333,11 @@
+ 
+         if ( FirstChar.Find(Name.GetChar(0)) == -1 )
+         {
++            #if wxCHECK_VERSION(2, 9, 0)
++            Manager::Get()->GetLogManager()->DebugLog(F(_T("wxSmith: Variable name : \"%s\" is not a valid c++ identifier (invalid character \"%c\" at position %d)"),Name.wx_str(),wxChar(Name.GetChar(0)),0));
++            #else
+             Manager::Get()->GetLogManager()->DebugLog(F(_T("wxSmith: Variable name : \"%s\" is not a valid c++ identifier (invalid character \"%c\" at position %d)"),Name.c_str(),Name.GetChar(0),0));
++            #endif
+         }
+         else
+         {
+@@ -350,7 +354,11 @@
+         {
+             if ( NextChars.Find(Name.GetChar(i)) == -1 )
+             {
++                #if wxCHECK_VERSION(2, 9, 0)
++                Manager::Get()->GetLogManager()->DebugLog(F(_T("wxSmith: Variable name : \"%s\" is not a valid c++ identifier (invalid character \"%c\" at position %d)"),Name.wx_str(),wxChar(Name.GetChar(i)),i));
++                #else
+                 Manager::Get()->GetLogManager()->DebugLog(F(_T("wxSmith: Variable name : \"%s\" is not a valid c++ identifier (invalid character \"%c\" at position %d)"),Name.c_str(),Name.GetChar(i),i));
++                #endif
+             }
+             else
+             {
+Index: src/plugins/contrib/wxSmith/wxwidgets/wxstoolspace.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/wxstoolspace.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/wxstoolspace.cpp	(working copy)
+@@ -238,7 +238,11 @@
+ 
+ void wxsToolSpace::OnKeyDown(wxKeyEvent& event)
+ {
++    #if wxCHECK_VERSION(2, 9, 0)
++    GetParent()->GetEventHandler()->ProcessEvent(event);
++    #else
+     GetParent()->ProcessEvent(event);
++    #endif
+ }
+ 
+ void wxsToolSpace::RecalculateVirtualSize()
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstatictext.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstatictext.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstatictext.cpp	(working copy)
+@@ -58,7 +58,11 @@
+         case wxsCPP:
+         {
+             AddHeader(_T("<wx/stattext.h>"),GetInfo().ClassName,hfInPCH);
++            #if wxCHECK_VERSION(2, 9, 0)
++            Codef(_T("%C(%W, %I, %t, %P, %S, %T, %N);\n"),Label.wx_str());
++            #else
+             Codef(_T("%C(%W, %I, %t, %P, %S, %T, %N);\n"),Label.c_str());
++            #endif
+             BuildSetupWindowCode();
+             return;
+         }
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsflexgridsizer.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsflexgridsizer.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsflexgridsizer.cpp	(working copy)
+@@ -102,8 +102,13 @@
+         {
+             AddHeader(_T("<wx/sizer.h>"),GetInfo().ClassName,hfInPCH);
+             Codef(_T("%C(%d, %d, %s, %s);\n"),Rows,Cols,
++                 #if wxCHECK_VERSION(2, 9, 0)
++                 VGap.GetPixelsCode(GetCoderContext()).wx_str(),
++                 HGap.GetPixelsCode(GetCoderContext()).wx_str());
++                 #else
+                  VGap.GetPixelsCode(GetCoderContext()).c_str(),
+                  HGap.GetPixelsCode(GetCoderContext()).c_str());
++                 #endif
+ 
+             wxArrayInt Cols = GetArray(GrowableCols);
+             for ( size_t i=0; i<Cols.Count(); i++ )
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxscolourdialog.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxscolourdialog.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxscolourdialog.cpp	(working copy)
+@@ -51,19 +51,35 @@
+             {
+                 wxString ColourDataName = GetCoderContext()->GetUniqueName(_T("__ColourData"));
+ 
++                #if wxCHECK_VERSION(2, 9, 0)
++                Codef(_T("wxColourData %v;\n"),ColourDataName.wx_str());
++                #else
+                 Codef(_T("wxColourData %v;\n"),ColourDataName.c_str());
++                #endif
+ 
+                 if ( !m_ChooseFull )
+                 {
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    Codef(_T("%v.SetChooseFull(%b);\n"),ColourDataName.wx_str(),m_ChooseFull);
++                    #else
+                     Codef(_T("%v.SetChooseFull(%b);\n"),ColourDataName.c_str(),m_ChooseFull);
++                    #endif
+                 }
+ 
+                 if ( m_Colour.m_type != wxsCOLOUR_DEFAULT )
+                 {
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    Codef(_T("%v.SetColour(%l);\n"),ColourDataName.wx_str(),&m_Colour);
++                    #else
+                     Codef(_T("%v.SetColour(%l);\n"),ColourDataName.c_str(),&m_Colour);
++                    #endif
+                 }
+ 
++                #if wxCHECK_VERSION(2, 9, 0)
++                Codef(_T("%C(%W, &%v);\n"),ColourDataName.wx_str());
++                #else
+                 Codef(_T("%C(%W, &%v);\n"),ColourDataName.c_str());
++                #endif
+             }
+             else
+             {
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstddialogbuttonsizer.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstddialogbuttonsizer.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstddialogbuttonsizer.cpp	(working copy)
+@@ -173,7 +173,11 @@
+             {
+                 if ( m_Use[i] )
+                 {
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    Codef(_T("%AAddButton(new wxButton(%W, %v, %t));\n"),IdNames[i],m_Label[i].wx_str());
++                    #else
+                     Codef(_T("%AAddButton(new wxButton(%W, %v, %t));\n"),IdNames[i],m_Label[i].c_str());
++                    #endif
+                 }
+             }
+             Codef(_T("%ARealize();\n"));
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstaticbitmap.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstaticbitmap.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstaticbitmap.cpp	(working copy)
+@@ -85,7 +85,11 @@
+             wxString SizeCodeStr = SizeData.GetSizeCode(GetCoderContext());
+             wxString BmpCode = Bitmap.IsEmpty() ? _T("wxNullBitmap") : Bitmap.BuildCode(DontResize,SizeCodeStr,GetCoderContext(),_T("wxART_OTHER"));
+ 
++            #if wxCHECK_VERSION(2, 9, 0)
++            Codef(_T("%C(%W, %I, %s, %P, %S, %T, %N);\n"),BmpCode.wx_str());
++            #else
+             Codef(_T("%C(%W, %I, %s, %P, %S, %T, %N);\n"),BmpCode.c_str());
++            #endif
+             BuildSetupWindowCode();
+             return;
+         }
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxscheckbox.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxscheckbox.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxscheckbox.cpp	(working copy)
+@@ -59,7 +59,11 @@
+         case wxsCPP:
+         {
+             AddHeader(_T("<wx/checkbox.h>"),GetInfo().ClassName,hfInPCH);
++            #if wxCHECK_VERSION(2, 9, 0)
++            Codef(_T("%C(%W, %I, %t, %P, %S, %T, %V, %N);\n"),Label.wx_str());
++            #else
+             Codef(_T("%C(%W, %I, %t, %P, %S, %T, %V, %N);\n"),Label.c_str());
++            #endif
+             Codef(_T("%ASetValue(%b);\n"),IsChecked);
+             BuildSetupWindowCode();
+             return;
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxschoice.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxschoice.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxschoice.cpp	(working copy)
+@@ -64,7 +64,11 @@
+                 {
+                     Codef(_T("%ASetSelection( "));
+                 }
++                #if wxCHECK_VERSION(2, 9, 0)
++                Codef(_T("%AAppend(%t)"),ArrayChoices[i].wx_str());
++                #else
+                 Codef(_T("%AAppend(%t)"),ArrayChoices[i].c_str());
++                #endif
+                 if ( DefaultSelection == (int)i )
+                 {
+                     Codef(_T(" )"));
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsdirdialog.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsdirdialog.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsdirdialog.cpp	(working copy)
+@@ -50,7 +50,11 @@
+         case wxsCPP:
+         {
+             AddHeader(_T("<wx/dirdlg.h>"),GetInfo().ClassName,hfInPCH);
++            #if wxCHECK_VERSION(2, 9, 0)
++            Codef(_T("%C(%W, %t, %t, %T, %P, %S, %N);\n"),m_Message.wx_str(),m_DefaultPath.wx_str());
++            #else
+             Codef(_T("%C(%W, %t, %t, %T, %P, %S, %N);\n"),m_Message.c_str(),m_DefaultPath.c_str());
++            #endif
+             BuildSetupWindowCode();
+             return;
+         }
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsspinctrl.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsspinctrl.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsspinctrl.cpp	(working copy)
+@@ -64,8 +64,13 @@
+             AddHeader(_T("<wx/spinctrl.h>"),_T("wxSpinEvent"),0);
+             long ValueLong = 0;
+             Value.ToLong(&ValueLong);
++            #if wxCHECK_VERSION(2, 9, 0)
++            Codef(_T("%C(%W, %I, %n, %P, %S, %T, %d, %d, %d, %N);\n"),Value.wx_str(),Min,Max,ValueLong);
++            if ( !Value.empty() ) Codef(_T("%ASetValue(%n);\n"),Value.wx_str());
++            #else
+             Codef(_T("%C(%W, %I, %n, %P, %S, %T, %d, %d, %d, %N);\n"),Value.c_str(),Min,Max,ValueLong);
+             if ( !Value.empty() ) Codef(_T("%ASetValue(%n);\n"),Value.c_str());
++            #endif
+             BuildSetupWindowCode();
+             return;
+         }
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsgenericdirctrl.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsgenericdirctrl.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsgenericdirctrl.cpp	(working copy)
+@@ -59,7 +59,11 @@
+         case wxsCPP:
+         {
+             AddHeader(_T("<wx/dirctrl.h>"),GetInfo().ClassName,0);
++            #if wxCHECK_VERSION(2, 9, 0)
++            Codef(_T("%C(%W, %I, %n, %P, %S, %T, %n, %d, %N);\n"),DefaultFolder.wx_str(),Filter.wx_str(),DefaultFilter);
++            #else
+             Codef(_T("%C(%W, %I, %n, %P, %S, %T, %n, %d, %N);\n"),DefaultFolder.c_str(),Filter.c_str(),DefaultFilter);
++            #endif
+             BuildSetupWindowCode();
+             return;
+         }
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsgridsizer.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsgridsizer.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsgridsizer.cpp	(working copy)
+@@ -48,8 +48,13 @@
+         {
+             AddHeader(_T("<wx/sizer.h>"),GetInfo().ClassName,hfInPCH);
+             Codef(_T("%C(%d, %d, %s, %s);\n"),Rows,Cols,
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    VGap.GetPixelsCode(GetCoderContext()).wx_str(),
++                    HGap.GetPixelsCode(GetCoderContext()).wx_str());
++                    #else
+                     VGap.GetPixelsCode(GetCoderContext()).c_str(),
+                     HGap.GetPixelsCode(GetCoderContext()).c_str());
++                    #endif
+             return;
+         }
+ 
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenu.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenu.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenu.cpp	(working copy)
+@@ -215,7 +215,11 @@
+             }
+             if ( GetParent() && GetParent()->GetClassName()==_T("wxMenuBar") )
+             {
++                #if wxCHECK_VERSION(2, 9, 0)
++                Codef(_T("%MAppend(%O, %t);\n"),m_Label.wx_str());
++                #else
+                 Codef(_T("%MAppend(%O, %t);\n"),m_Label.c_str());
++                #endif
+             }
+             BuildSetupWindowCode();
+             break;
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxschoicebook.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxschoicebook.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxschoicebook.cpp	(working copy)
+@@ -275,7 +275,11 @@
+             for ( int i=0; i<GetChildCount(); i++ )
+             {
+                 wxsChoicebookExtra* Extra = (wxsChoicebookExtra*)GetChildExtra(i);
++                #if wxCHECK_VERSION(2, 9, 0)
++                Codef(_T("%AAddPage(%o, %t, %b);\n"),i,Extra->m_Label.wx_str(),Extra->m_Selected);
++                #else
+                 Codef(_T("%AAddPage(%o, %t, %b);\n"),i,Extra->m_Label.c_str(),Extra->m_Selected);
++                #endif
+             }
+ 
+             break;
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstatusbar.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstatusbar.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstatusbar.cpp	(working copy)
+@@ -57,14 +57,22 @@
+                 wxString WidthsVarName = GetCoderContext()->GetUniqueName(_T("__wxStatusBarWidths"));
+                 wxString StylesVarName = GetCoderContext()->GetUniqueName(_T("__wxStatusBarStyles"));
+ 
++                #if wxCHECK_VERSION(2, 9, 0)
++                Codef(_T("int %v[%d] = { "),WidthsVarName.wx_str(),m_Fields);
++                #else
+                 Codef(_T("int %v[%d] = { "),WidthsVarName.c_str(),m_Fields);
++                #endif
+                 for ( int i=0; i<m_Fields; i++ )
+                 {
+                     Codef( _T("%d%s"),
+                         m_VarWidth[i]?-m_Widths[i]:m_Widths[i],
+                         i==(m_Fields-1) ? _T(" };\n") : _T(", "));
+                 }
++                #if wxCHECK_VERSION(2, 9, 0)
++                Codef(_T("int %v[%d] = { "),StylesVarName.wx_str(),m_Fields);
++                #else
+                 Codef(_T("int %v[%d] = { "),StylesVarName.c_str(),m_Fields);
++                #endif
+                 for ( int i=0; i<m_Fields; i++ )
+                 {
+                     Codef(_T("%s%s"),
+@@ -73,8 +81,13 @@
+                                                      _T("wxSB_NORMAL"),
+                         i==(m_Fields-1) ? _T(" };\n") : _T(", "));
+                 }
++                #if wxCHECK_VERSION(2, 9, 0)
++                Codef(_T("%ASetFieldsCount(%d,%v);\n"),m_Fields,WidthsVarName.wx_str());
++                Codef(_T("%ASetStatusStyles(%d,%v);\n"),m_Fields,StylesVarName.wx_str());
++                #else
+                 Codef(_T("%ASetFieldsCount(%d,%v);\n"),m_Fields,WidthsVarName.c_str());
+                 Codef(_T("%ASetStatusStyles(%d,%v);\n"),m_Fields,StylesVarName.c_str());
++                #endif
+                 Codef(_T("SetStatusBar(%O);\n"));
+             }
+             BuildSetupWindowCode();
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstextctrl.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstextctrl.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstextctrl.cpp	(working copy)
+@@ -77,7 +77,11 @@
+         case wxsCPP:
+         {
+             AddHeader(_T("<wx/textctrl.h>"),GetInfo().ClassName,hfInPCH);
++            #if wxCHECK_VERSION(2, 9, 0)
++            Codef(_T("%C(%W, %I, %t, %P, %S, %T, %V, %N);\n"),Text.wx_str());
++            #else
+             Codef(_T("%C(%W, %I, %t, %P, %S, %T, %V, %N);\n"),Text.c_str());
++            #endif
+             if ( MaxLength > 0 ) Codef(_T("%ASetMaxLength(%d);\n"),MaxLength);
+             BuildSetupWindowCode();
+             return;
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstogglebutton.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstogglebutton.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstogglebutton.cpp	(working copy)
+@@ -57,7 +57,11 @@
+         case wxsCPP:
+         {
+             AddHeader(_T("<wx/tglbtn.h>"),GetInfo().ClassName,0);
++            #if wxCHECK_VERSION(2, 9, 0)
++            Codef(_T("%C(%W, %I, %t, %P, %S, %T, %V, %N);\n"),Label.wx_str());
++            #else
+             Codef(_T("%C(%W, %I, %t, %P, %S, %T, %V, %N);\n"),Label.c_str());
++            #endif
+             if ( IsChecked ) Codef(_T("%ASetValue(%b);\n"),true);
+             BuildSetupWindowCode();
+             return;
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsspacer.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsspacer.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsspacer.cpp	(working copy)
+@@ -103,18 +103,30 @@
+ 
+                 Codef(_T("wxSize %s = %z;\n")
+                       _T("%MAdd(%s.GetWidth(),%s.GetHeight(),%s);\n"),
++                         #if wxCHECK_VERSION(2, 9, 0)
++                         SizeName.wx_str(),
++                         &Size,
++                         SizeName.wx_str(),
++                         SizeName.wx_str(),
++                         Extra->AllParamsCode(GetCoderContext()).wx_str());
++                         #else
+                          SizeName.c_str(),
+                          &Size,
+                          SizeName.c_str(),
+                          SizeName.c_str(),
+                          Extra->AllParamsCode(GetCoderContext()).c_str());
++                         #endif
+             }
+             else
+             {
+                 Codef(_T("%MAdd(%d,%d,%s);\n"),
+                     (int)Size.X,
+                     (int)Size.Y,
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    Extra->AllParamsCode(GetCoderContext()).wx_str());
++                    #else
+                     Extra->AllParamsCode(GetCoderContext()).c_str());
++                    #endif
+             }
+ 
+             break;
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxssingleinstancechecker.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxssingleinstancechecker.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxssingleinstancechecker.cpp	(working copy)
+@@ -64,7 +64,11 @@
+             }
+             else
+             {
++                #if wxCHECK_VERSION(2, 9, 0)
++                Codef(_T("%C(%n + wxGetUserId() + _T(\"_Guard\"));\n"), ( AppName + _T("_") ).wx_str() );
++                #else
+                 Codef(_T("%C(%n + wxGetUserId() + _T(\"_Guard\"));\n"), ( AppName + _T("_") ).c_str() );
++                #endif
+             }
+             BuildSetupWindowCode();
+             break;
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxshtmlwindow.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxshtmlwindow.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxshtmlwindow.cpp	(working copy)
+@@ -56,9 +56,15 @@
+         {
+             AddHeader(_T("<wx/html/htmlwin.h>"),GetInfo().ClassName,0);
+             Codef(_T("%C(%W, %I, %P, %S, %T, %N);\n"));
++            #if wxCHECK_VERSION(2, 9, 0)
++            if ( Borders.Value ) Codef(_T("%ASetBorders(%s);\n"),Borders.GetPixelsCode(GetCoderContext()).wx_str());
++            if ( !Url.empty() ) Codef(_T("%ALoadPage(%t);\n"),Url.wx_str());
++            else if ( !HtmlCode.empty() ) Codef(_T("%ASetPage(%t);\n"),HtmlCode.wx_str());
++            #else
+             if ( Borders.Value ) Codef(_T("%ASetBorders(%s);\n"),Borders.GetPixelsCode(GetCoderContext()).c_str());
+             if ( !Url.empty() ) Codef(_T("%ALoadPage(%t);\n"),Url.c_str());
+             else if ( !HtmlCode.empty() ) Codef(_T("%ASetPage(%t);\n"),HtmlCode.c_str());
++            #endif
+             BuildSetupWindowCode();
+             break;
+         }
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsglcanvas.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsglcanvas.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsglcanvas.cpp	(working copy)
+@@ -114,7 +114,11 @@
+             wxString aname = GetCoderContext()->GetUniqueName( _T("GLCanvasAttribuets") );
+ 
+             // Generate attributes array
++            #if wxCHECK_VERSION(2, 9, 0)
++            Codef( _T("int %v[] = {\n" ), aname.wx_str() );
++            #else
+             Codef( _T("int %v[] = {\n" ), aname.c_str() );
++            #endif
+ 
+             if ( mRGBA )
+             {
+@@ -203,7 +207,11 @@
+             Codef( _T("\t0, 0 };\n") );
+ 
+             // Now we can create our window
++            #if wxCHECK_VERSION(2, 9, 0)
++            Codef(_T("%C(%W, %I, %P, %S, %T, %N, %v);\n"),aname.wx_str());
++            #else
+             Codef(_T("%C(%W, %I, %P, %S, %T, %N, %v);\n"),aname.c_str());
++            #endif
+ 
+             BuildSetupWindowCode();
+             break;
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsdialog.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsdialog.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsdialog.cpp	(working copy)
+@@ -72,7 +72,11 @@
+         case wxsCPP:
+         {
+             AddHeader(_T("<wx/dialog.h>"),GetInfo().ClassName,hfInPCH);
++            #if wxCHECK_VERSION(2, 9, 0)
++            Codef(_T("%C(%W, %I, %t, wxDefaultPosition, wxDefaultSize, %T, %N);\n"),Title.wx_str());
++            #else
+             Codef(_T("%C(%W, %I, %t, wxDefaultPosition, wxDefaultSize, %T, %N);\n"),Title.c_str());
++            #endif
+             if ( !GetBaseProps()->m_Size.IsDefault || (GetPropertiesFlags()&flSource && IsRootItem() && GetBaseProps()->m_SizeFromArg) )
+             {
+                 Codef(_T("%ASetClientSize(%S);\n"));
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsbutton.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsbutton.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsbutton.cpp	(working copy)
+@@ -58,7 +58,11 @@
+         case wxsCPP:
+         {
+             AddHeader(_T("<wx/button.h>"),GetInfo().ClassName,hfInPCH);
++            #if wxCHECK_VERSION(2, 9, 0)
++            Codef(_T("%C(%W, %I, %t, %P, %S, %T, %V, %N);\n"),Label.wx_str());
++            #else
+             Codef(_T("%C(%W, %I, %t, %P, %S, %T, %V, %N);\n"),Label.c_str());
++            #endif
+             if ( IsDefault ) Codef( _T("%ASetDefault();\n"));
+             BuildSetupWindowCode();
+             return;
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsnotebook.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsnotebook.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsnotebook.cpp	(working copy)
+@@ -288,7 +288,11 @@
+             for ( int i=0; i<GetChildCount(); i++ )
+             {
+                 wxsNotebookExtra* Extra = (wxsNotebookExtra*)GetChildExtra(i);
++                #if wxCHECK_VERSION(2, 9, 0)
++                Codef(_T("%AAddPage(%o, %t, %b);\n"),i,Extra->m_Label.wx_str(),Extra->m_Selected);
++                #else
+                 Codef(_T("%AAddPage(%o, %t, %b);\n"),i,Extra->m_Label.c_str(),Extra->m_Selected);
++                #endif
+             }
+ 
+             break;
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenuitem.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenuitem.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenuitem.cpp	(working copy)
+@@ -97,8 +97,13 @@
+                         // Many parameters are passed in wxMenu::Append, so we call this function
+                         // here, not in wxMenu
+                         Codef(_T("%MAppend(%I, %t, %O, %t)%s;\n"),
++                            #if wxCHECK_VERSION(2, 9, 0)
++                            m_Label.wx_str(),
++                            m_Help.wx_str(),
++                            #else
+                             m_Label.c_str(),
+                             m_Help.c_str(),
++                            #endif
+                             m_Enabled?_T(""):_T("->Enable(false)"));
+                         break;
+                     }
+@@ -125,8 +130,13 @@
+                     }
+ 
+                     Codef(_T("%C(%E, %I, %t, %t, %s);\n"),
++                        #if wxCHECK_VERSION(2, 9, 0)
++                        Text.wx_str(),
++                        m_Help.wx_str(),
++                        #else
+                         Text.c_str(),
+                         m_Help.c_str(),
++                        #endif
+                         ItemType);
+ 
+                     if ( !m_Bitmap.IsEmpty() )
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxslistbox.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxslistbox.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxslistbox.cpp	(working copy)
+@@ -67,7 +67,11 @@
+                 {
+                     Codef(_T("%ASetSelection( "));
+                 }
++                #if wxCHECK_VERSION(2, 9, 0)
++                Codef( _T("%AAppend(%t)"), ArrayChoices[i].wx_str());
++                #else
+                 Codef( _T("%AAppend(%t)"), ArrayChoices[i].c_str());
++                #endif
+                 if ( DefaultSelection == (int)i )
+                 {
+                     Codef(_T(" )"));
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsmultichoicedialog.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsmultichoicedialog.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsmultichoicedialog.cpp	(working copy)
+@@ -56,19 +56,34 @@
+             if ( m_Content.GetCount() > 0 )
+             {
+                 ChoicesName = GetCoderContext()->GetUniqueName(_T("__wxMultiChoiceDialogChoices"));
++                #if wxCHECK_VERSION(2, 9, 0)
++                Codef(_T("wxString %s[%d] = \n{\n"),ChoicesName.wx_str(),(int)m_Content.GetCount());
++                #else
+                 Codef(_T("wxString %s[%d] = \n{\n"),ChoicesName.c_str(),(int)m_Content.GetCount());
++                #endif
+                 for ( size_t i = 0; i < m_Content.GetCount(); ++i )
+                 {
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    Codef(_T("\t%t%s\n"),m_Content[i].wx_str(),((i!=m_Content.GetCount()-1)?_T(","):_T("")));
++                    #else
+                     Codef(_T("\t%t%s\n"),m_Content[i].c_str(),((i!=m_Content.GetCount()-1)?_T(","):_T("")));
++                    #endif
+                 }
+                 Codef(_T("};\n"));
+             }
+ 
+             Codef(_T("%C(%W, %t, %t, %d, %s, %T, %P);\n"),
++                #if wxCHECK_VERSION(2, 9, 0)
++                m_Message.wx_str(),
++                m_Caption.wx_str(),
++                (int)m_Content.GetCount(),
++                (m_Content.IsEmpty()?_T("0"):ChoicesName.wx_str()));
++                #else
+                 m_Message.c_str(),
+                 m_Caption.c_str(),
+                 (int)m_Content.GetCount(),
+                 (m_Content.IsEmpty()?_T("0"):ChoicesName.c_str()));
++                #endif
+ 
+             BuildSetupWindowCode();
+             return;
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsradiobutton.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsradiobutton.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsradiobutton.cpp	(working copy)
+@@ -58,7 +58,11 @@
+         case wxsCPP:
+         {
+             AddHeader(_T("<wx/radiobut.h>"),GetInfo().ClassName,hfInPCH);
++            #if wxCHECK_VERSION(2, 9, 0)
++            Codef(_T("%C(%W, %I, %t, %P, %S, %T, %V, %N);\n"),Label.wx_str());
++            #else
+             Codef(_T("%C(%W, %I, %t, %P, %S, %T, %V, %N);\n"),Label.c_str());
++            #endif
+             if ( IsSelected ) Codef( _T("%ASetValue(%b);\n"), true);
+             BuildSetupWindowCode();
+             return;
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsfiledialog.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsfiledialog.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsfiledialog.cpp	(working copy)
+@@ -58,17 +58,30 @@
+             if ( m_Wildcard.empty() )
+             {
+                 Codef(_T("%C(%W, %t, %t, %t, wxFileSelectorDefaultWildcardStr, %T, %P, %S, %N);\n"),
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    m_Message.wx_str(),
++                    m_DefaultDir.wx_str(),
++                    m_DefaultFile.wx_str());
++                    #else
+                     m_Message.c_str(),
+                     m_DefaultDir.c_str(),
+                     m_DefaultFile.c_str());
++                    #endif
+             }
+             else
+             {
+                 Codef(_T("%C(%W, %t, %t, %t, %t, %T, %P, %S, %N);\n"),
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    m_Message.wx_str(),
++                    m_DefaultDir.wx_str(),
++                    m_DefaultFile.wx_str(),
++                    m_Wildcard.wx_str());
++                    #else
+                     m_Message.c_str(),
+                     m_DefaultDir.c_str(),
+                     m_DefaultFile.c_str(),
+                     m_Wildcard.c_str());
++                    #endif
+             }
+             BuildSetupWindowCode();
+             return;
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstaticbox.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstaticbox.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstaticbox.cpp	(working copy)
+@@ -52,7 +52,11 @@
+         case wxsCPP:
+         {
+             AddHeader(_T("<wx/statbox.h>"),GetInfo().ClassName,hfInPCH);
++            #if wxCHECK_VERSION(2, 9, 0)
++            Codef(_T("%C(%W, %I, %t, %P, %S, %T, %N);\n"),Label.wx_str());
++            #else
+             Codef(_T("%C(%W, %I, %t, %P, %S, %T, %N);\n"),Label.c_str());
++            #endif
+             BuildSetupWindowCode();
+             return;
+         }
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsradiobox.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsradiobox.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsradiobox.cpp	(working copy)
+@@ -70,10 +70,18 @@
+             if ( ArrayChoices.GetCount() > 0 )
+             {
+                 ChoicesName = GetCoderContext()->GetUniqueName(_T("__wxRadioBoxChoices"));
++                #if wxCHECK_VERSION(2, 9, 0)
++                Codef(_T("wxString %s[%d] = \n{\n"),ChoicesName.wx_str(),(int)ArrayChoices.GetCount());
++                #else
+                 Codef(_T("wxString %s[%d] = \n{\n"),ChoicesName.c_str(),(int)ArrayChoices.GetCount());
++                #endif
+                 for ( size_t i = 0; i < ArrayChoices.GetCount(); ++i )
+                 {
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    Codef(_T("\t%t%s\n"),ArrayChoices[i].wx_str(),((i!=ArrayChoices.GetCount()-1)?_T(","):_T("")));
++                    #else
+                     Codef(_T("\t%t%s\n"),ArrayChoices[i].c_str(),((i!=ArrayChoices.GetCount()-1)?_T(","):_T("")));
++                    #endif
+                 }
+                 Codef(_T("};\n"));
+             }
+@@ -81,8 +89,13 @@
+             if ( Dimension < 1 ) Dimension = 1;
+ 
+             Codef(_T("%C(%W, %I, %t, %P, %S, %d, %s, %d, %T, %V, %N);\n"),
++                        #if wxCHECK_VERSION(2, 9, 0)
++                        Label.wx_str(),ArrayChoices.GetCount(),
++                        (ArrayChoices.IsEmpty()?_T("0"):ChoicesName.wx_str()),
++                        #else
+                         Label.c_str(),ArrayChoices.GetCount(),
+                         (ArrayChoices.IsEmpty()?_T("0"):ChoicesName.c_str()),
++                        #endif
+                         Dimension);
+ 
+             if ( DefaultSelection >= 0 && DefaultSelection < (int)ArrayChoices.GetCount() )
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxscombobox.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxscombobox.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxscombobox.cpp	(working copy)
+@@ -69,7 +69,11 @@
+                 {
+                     Codef(_T("%ASetSelection( "));;
+                 }
++                #if wxCHECK_VERSION(2, 9, 0)
++                Codef( _T("%AAppend(%t)"), ArrayChoices[i].wx_str());
++                #else
+                 Codef( _T("%AAppend(%t)"), ArrayChoices[i].c_str());
++                #endif
+                 if ( DefaultSelection == (int)i )
+                 {
+                     Codef(_T(" )"));
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxssinglechoicedialog.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxssinglechoicedialog.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxssinglechoicedialog.cpp	(working copy)
+@@ -56,19 +56,34 @@
+             if ( m_Content.GetCount() > 0 )
+             {
+                 ChoicesName = GetCoderContext()->GetUniqueName(_T("__wxSingleChoiceDialogChoices"));
++                #if wxCHECK_VERSION(2, 9, 0)
++                Codef(_T("wxString %s[%d] = \n{\n"),ChoicesName.wx_str(),(int)m_Content.GetCount());
++                #else
+                 Codef(_T("wxString %s[%d] = \n{\n"),ChoicesName.c_str(),(int)m_Content.GetCount());
++                #endif
+                 for ( size_t i = 0; i < m_Content.GetCount(); ++i )
+                 {
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    Codef(_T("\t%t%s\n"),m_Content[i].wx_str(),((i!=m_Content.GetCount()-1)?_T(","):_T("")));
++                    #else
+                     Codef(_T("\t%t%s\n"),m_Content[i].c_str(),((i!=m_Content.GetCount()-1)?_T(","):_T("")));
++                    #endif
+                 }
+                 Codef(_T("};\n"));
+             }
+ 
+             Codef(_T("%C(%W, %t, %t, %d, %s, 0, %T, %P);\n"),
++                #if wxCHECK_VERSION(2, 9, 0)
++                m_Message.wx_str(),
++                m_Caption.wx_str(),
++                (int)m_Content.GetCount(),
++                (m_Content.IsEmpty()?_T("0"):ChoicesName.wx_str()));
++                #else
+                 m_Message.c_str(),
+                 m_Caption.c_str(),
+                 (int)m_Content.GetCount(),
+                 (m_Content.IsEmpty()?_T("0"):ChoicesName.c_str()));
++                #endif
+ 
+             BuildSetupWindowCode();
+             return;
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstaticboxsizer.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstaticboxsizer.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstaticboxsizer.cpp	(working copy)
+@@ -50,7 +50,11 @@
+             AddHeader(_T("<wx/sizer.h>"),GetInfo().ClassName,hfInPCH);
+             Codef(_T("%C(%s, %W, %t);\n"),
+                     (Orient!=wxHORIZONTAL)?_T("wxVERTICAL"):_T("wxHORIZONTAL"),
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    Label.wx_str());
++                    #else
+                     Label.c_str());
++                    #endif
+             return;
+         }
+ 
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbaritem.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbaritem.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbaritem.cpp	(working copy)
+@@ -99,13 +99,23 @@
+                     if ( Bitmap2Code.IsEmpty() ) Bitmap2Code = _T("wxNullBitmap");
+ 
+                     Codef(_T("%v = %MAddTool(%I, %t, %i, %i, %s, %t, %t);\n"),
++                        #if wxCHECK_VERSION(2, 9, 0)
++                        GetVarName().wx_str(),
++                        m_Label.wx_str(),
++                        #else
+                         GetVarName().c_str(),
+                         m_Label.c_str(),
++                        #endif
+                         &m_Bitmap,_T("wxART_TOOLBAR"),
+                         &m_Bitmap2,_T("wxART_TOOLBAR"),
+                         ItemType,
++                        #if wxCHECK_VERSION(2, 9, 0)
++                        m_ToolTip.wx_str(),
++                        m_HelpText.wx_str());
++                        #else
+                         m_ToolTip.c_str(),
+                         m_HelpText.c_str());
++                        #endif
+                     break;
+                 }
+ 
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxschecklistbox.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxschecklistbox.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxschecklistbox.cpp	(working copy)
+@@ -73,7 +73,11 @@
+                 {
+                     Codef( _T("%ACheck("));
+                 }
++                #if wxCHECK_VERSION(2, 9, 0)
++                Codef( _T("%AAppend(%t)"), ArrayChoices[i].wx_str());
++                #else
+                 Codef( _T("%AAppend(%t)"), ArrayChoices[i].c_str());
++                #endif
+                 if ( ArrayChecks[i] )
+                 {
+                     Codef(_T(")"));
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsgrid.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsgrid.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsgrid.cpp	(working copy)
+@@ -100,26 +100,43 @@
+                     if (m_DefaultColSize  > 0) Codef(_T("%ASetDefaultColSize(%d, %b);\n"), m_DefaultColSize, true);
+ 
+                     wxString ss = m_LabelTextColour.BuildCode( GetCoderContext() );
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    if (ss.Len() > 0) Codef(_T("%ASetLabelTextColour(%s);\n"), ss.wx_str());
++                    #else
+                     if (ss.Len() > 0) Codef(_T("%ASetLabelTextColour(%s);\n"), ss.c_str());
++                    #endif
+ 
+                     ss = GetCoderContext()->GetUniqueName( _T("GridLabelFont") );
+                     wxString tt = m_LabelFont.BuildFontCode(ss, GetCoderContext());
+                     if (tt.Len() > 0)
+                     {
++                        #if wxCHECK_VERSION(2, 9, 0)
++                        Codef(_T("%s"), tt.wx_str());
++                        Codef(_T("%ASetLabelFont(%s);\n"), ss.wx_str());
++                        #else
+                         Codef(_T("%s"), tt.c_str());
+                         Codef(_T("%ASetLabelFont(%s);\n"), ss.c_str());
++                        #endif
+                     }
+ 
+                     int n = wxMin( (int)m_ColLabels.GetCount(), m_ColsCount );
+                     for ( int i=0; i<n; i++ )
+                     {
++                        #if wxCHECK_VERSION(2, 9, 0)
++                        Codef(_T("%ASetColLabelValue(%d, %t);\n"), i, m_ColLabels[i].wx_str());
++                        #else
+                         Codef(_T("%ASetColLabelValue(%d, %t);\n"), i, m_ColLabels[i].c_str());
++                        #endif
+                     }
+ 
+                     n = wxMin( (int)m_RowLabels.GetCount(), m_RowsCount );
+                     for ( int i=0; i<n; i++)
+                     {
++                        #if wxCHECK_VERSION(2, 9, 0)
++                        Codef(_T("%ASetRowLabelValue(%d, %t);\n"), i, m_RowLabels[i].wx_str());
++                        #else
+                         Codef(_T("%ASetRowLabelValue(%d, %t);\n"), i, m_RowLabels[i].c_str());
++                        #endif
+                     }
+ 
+                     n = (int)m_CellText.GetCount();
+@@ -128,7 +145,11 @@
+                     {
+                         for ( int k=0; k<m_ColsCount && i<n; k++, i++ )
+                         {
++                            #if wxCHECK_VERSION(2, 9, 0)
++                            Codef( _T("%ASetCellValue(%d, %d, %t);\n"), j, k, m_CellText[i].wx_str());
++                            #else
+                             Codef( _T("%ASetCellValue(%d, %d, %t);\n"), j, k, m_CellText[i].c_str());
++                            #endif
+                         }
+                     }
+ 
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxslistbook.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxslistbook.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxslistbook.cpp	(working copy)
+@@ -275,7 +275,11 @@
+             for ( int i=0; i<GetChildCount(); i++ )
+             {
+                 wxsListbookExtra* Extra = (wxsListbookExtra*)GetChildExtra(i);
++                #if wxCHECK_VERSION(2, 9, 0)
++                Codef(_T("%AAddPage(%o, %t, %b);\n"),i,Extra->m_Label.wx_str(),Extra->m_Selected);
++                #else
+                 Codef(_T("%AAddPage(%o, %t, %b);\n"),i,Extra->m_Label.c_str(),Extra->m_Selected);
++                #endif
+             }
+ 
+             break;
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsframe.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsframe.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsframe.cpp	(working copy)
+@@ -76,7 +76,11 @@
+         case wxsCPP:
+         {
+             AddHeader(_T("<wx/frame.h>"),GetInfo().ClassName,hfInPCH);
++            #if wxCHECK_VERSION(2, 9, 0)
++            Codef(_T("%C(%W, %I, %t, wxDefaultPosition, wxDefaultSize, %T, %N);\n"),Title.wx_str());
++            #else
+             Codef(_T("%C(%W, %I, %t, wxDefaultPosition, wxDefaultSize, %T, %N);\n"),Title.c_str());
++            #endif
+             if ( !GetBaseProps()->m_Size.IsDefault || (GetPropertiesFlags()&flSource && IsRootItem() && GetBaseProps()->m_SizeFromArg) )
+             {
+                 Codef(_T("%ASetClientSize(%S);\n"));
+Index: src/plugins/contrib/wxSmith/wxwidgets/wxscontainer.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/wxscontainer.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/wxscontainer.cpp	(working copy)
+@@ -212,10 +212,18 @@
+                     wxString ChildAccessPrefix = Child->GetAccessPrefix(GetLanguage());
+                     if ( GetBaseProps()->m_Size.IsDefault )
+                     {
++                        #if wxCHECK_VERSION(2, 9, 0)
++                        Codef(_T("%sFit(%O);\n"),ChildAccessPrefix.wx_str());
++                        #else
+                         Codef(_T("%sFit(%O);\n"),ChildAccessPrefix.c_str());
++                        #endif
+                     }
+ 
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    Codef(_T("%sSetSizeHints(%O);\n"),ChildAccessPrefix.wx_str());
++                    #else
+                     Codef(_T("%sSetSizeHints(%O);\n"),ChildAccessPrefix.c_str());
++                    #endif
+                 }
+             }
+ 
+Index: src/plugins/contrib/wxSmith/wxwidgets/wxsitem.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/wxsitem.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/wxsitem.cpp	(working copy)
+@@ -232,10 +232,18 @@
+             if ( PropertiesFlags&flColours )
+             {
+                 wxString FGCol = m_BaseProperties.m_Fg.BuildCode(GetCoderContext());
++                #if wxCHECK_VERSION(2, 9, 0)
++                if ( !FGCol.empty() ) Codef(_T("%ASetForegroundColour(%s);\n"),FGCol.wx_str());
++                #else
+                 if ( !FGCol.empty() ) Codef(_T("%ASetForegroundColour(%s);\n"),FGCol.c_str());
++                #endif
+ 
+                 wxString BGCol = m_BaseProperties.m_Bg.BuildCode(GetCoderContext());
++                #if wxCHECK_VERSION(2, 9, 0)
++                if ( !BGCol.empty() ) Codef(_T("%ASetBackgroundColour(%s);\n"),BGCol.wx_str());
++                #else
+                 if ( !BGCol.empty() ) Codef(_T("%ASetBackgroundColour(%s);\n"),BGCol.c_str());
++                #endif
+             }
+ 
+             if ( PropertiesFlags&flFont )
+@@ -243,12 +251,21 @@
+                 wxString FontVal = m_BaseProperties.m_Font.BuildFontCode(GetVarName() + _T("Font"), GetCoderContext());
+                 if ( !FontVal.empty() )
+                 {
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    Codef(_T("%s%ASetFont(%sFont);\n"),FontVal.wx_str(),GetVarName().wx_str());
++                    #else
+                     Codef(_T("%s%ASetFont(%sFont);\n"),FontVal.c_str(),GetVarName().c_str());
++                    #endif
+                 }
+             }
+ 
++            #if wxCHECK_VERSION(2, 9, 0)
++            if ( (PropertiesFlags&flToolTip)  && !m_BaseProperties.m_ToolTip.IsEmpty()  )   Codef(_T("%ASetToolTip(%t);\n"),m_BaseProperties.m_ToolTip.wx_str());
++            if ( (PropertiesFlags&flHelpText) && !m_BaseProperties.m_HelpText.IsEmpty() )   Codef(_T("%ASetHelpText(%t);\n"),m_BaseProperties.m_HelpText.wx_str());
++            #else
+             if ( (PropertiesFlags&flToolTip)  && !m_BaseProperties.m_ToolTip.IsEmpty()  )   Codef(_T("%ASetToolTip(%t);\n"),m_BaseProperties.m_ToolTip.c_str());
+             if ( (PropertiesFlags&flHelpText) && !m_BaseProperties.m_HelpText.IsEmpty() )   Codef(_T("%ASetHelpText(%t);\n"),m_BaseProperties.m_HelpText.c_str());
++            #endif
+             if ( (PropertiesFlags&flExtraCode) && !m_BaseProperties.m_ExtraCode.IsEmpty() )
+             {
+                 wxString& ExtraCode = m_BaseProperties.m_ExtraCode;
+@@ -265,7 +282,11 @@
+                 wxString ExStyleStr = m_BaseProperties.m_StyleSet->GetString(m_BaseProperties.m_ExStyleBits,true,wxsCPP);
+                 if ( ExStyleStr != _T("0") )
+                 {
++                    #if wxCHECK_VERSION(2, 9, 0)
++                    Codef(_T("%ASetExtraStyle( %AGetExtraStyle() | %s );\n"),ExStyleStr.wx_str());
++                    #else
+                     Codef(_T("%ASetExtraStyle( %AGetExtraStyle() | %s );\n"),ExStyleStr.c_str());
++                    #endif
+                 }
+             }
+ 
+@@ -917,7 +938,11 @@
+ 
+                         default:
+                         {
++                            #if wxCHECK_VERSION(2, 9, 0)
++                            Result.Append(*Fmt);
++                            #else
+                             *Result.Append(*Fmt);
++                            #endif
+                         }
+                     }
+                     Fmt++;
+Index: src/plugins/contrib/wxSmith/wxwidgets/properties/wxscolourproperty.h
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/properties/wxscolourproperty.h	(revision 5710)
++++ src/plugins/contrib/wxSmith/wxwidgets/properties/wxscolourproperty.h	(working copy)
+@@ -27,7 +27,11 @@
+ #include "../wxscodercontext.h"
+ 
+ #include <wx/dialog.h>
++#if wxCHECK_VERSION(2, 9, 0)
++#include <wx/propgrid/editors.h>
++#else
+ #include <wx/propgrid/propdev.h>
++#endif
+ #include <wx/propgrid/advprops.h>
+ 
+ #define wxsCOLOUR_DEFAULT   (wxPG_COLOUR_CUSTOM - 1)
+Index: src/plugins/contrib/wxSmith/properties/wxsflagsproperty.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/properties/wxsflagsproperty.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/properties/wxsflagsproperty.cpp	(working copy)
+@@ -56,7 +56,12 @@
+ {
+     if ( UpdateEnteries )
+     {
++        #if wxCHECK_VERSION(2, 9, 0)
++        wxPGChoices choices = Grid->GetGrid()->GetSelection()->GetChoices();  
++        choices.Set(Names,Values);
++        #else
+         Grid->GetPropertyChoices(Id).Set(Names,Values);
++        #endif
+     }
+     Grid->SetPropertyValue(Id,VALUE);
+     return true;
+Index: src/plugins/contrib/wxSmith/properties/wxsenumproperty.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/properties/wxsenumproperty.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/properties/wxsenumproperty.cpp	(working copy)
+@@ -54,7 +54,12 @@
+ {
+     if ( UpdateEnteries )
+     {
++        #if wxCHECK_VERSION(2, 9, 0)
++        wxPGChoices choices = Grid->GetGrid()->GetSelection()->GetChoices();  
++        choices.Set(Names,Values);
++        #else
+         Grid->GetPropertyChoices(Id).Set(Names,Values);
++        #endif
+     }
+     Grid->SetPropertyValue(Id,VALUE);
+     return true;
+Index: src/plugins/contrib/wxSmith/properties/wxspropertygridmanager.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/properties/wxspropertygridmanager.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/properties/wxspropertygridmanager.cpp	(working copy)
+@@ -34,7 +34,11 @@
+     const wxPoint& pos,
+     const wxSize& size,
+     long style,
++    #if wxCHECK_VERSION(2, 9, 0)
++    const char* name):
++    #else
+     const wxChar* name):
++    #endif
+         wxPropertyGridManager(parent,id,pos,size,style,name),
+         MainContainer(0)
+ {
+@@ -251,8 +255,13 @@
+ 
+     Data->m_PageIndex = GetSelectedPage();
+ 
++    #if wxCHECK_VERSION(2, 9, 0)
++    wxPGId Selected = GetSelection();
++    if ( Selected != NULL )
++    #else
+     wxPGId Selected = GetSelectedProperty();
+     if ( wxPGIdIsOk(Selected) )
++    #endif
+     {
+         Data->m_PropertyName = GetPropertyName(Selected);
+     }
+Index: src/plugins/contrib/wxSmith/properties/wxscustomeditorproperty.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/properties/wxscustomeditorproperty.cpp	(revision 5710)
++++ src/plugins/contrib/wxSmith/properties/wxscustomeditorproperty.cpp	(working copy)
+@@ -25,7 +25,9 @@
+ #include <wx/dialog.h>
+ #include <wx/bitmap.h>
+ #include <wx/propgrid/propgrid.h>
++#if !wxCHECK_VERSION(2, 9, 0)
+ #include <wx/propgrid/propdev.h>
++#endif
+ #include <wx/propgrid/advprops.h>
+ #include <wx/propgrid/manager.h>
+ 
+Index: src/plugins/contrib/wxSmith/properties/wxspropertygridmanager.h
+===================================================================
+--- src/plugins/contrib/wxSmith/properties/wxspropertygridmanager.h	(revision 5710)
++++ src/plugins/contrib/wxSmith/properties/wxspropertygridmanager.h	(working copy)
+@@ -33,6 +33,10 @@
+ #include <wx/propgrid/propgrid.h>
+ #include <wx/propgrid/manager.h>
+ 
++#if wxCHECK_VERSION(2, 9, 0)
++#define wxPGId                          wxPGProperty*
++#endif
++
+ class wxsPropertyContainer;
+ class wxsProperty;
+ 
+@@ -56,7 +60,11 @@
+             const wxPoint& pos = wxDefaultPosition,
+             const wxSize& size = wxDefaultSize,
+             long style = wxPGMAN_DEFAULT_STYLE,
++            #if wxCHECK_VERSION(2, 9, 0)
++            const char* name = wxPropertyGridManagerNameStr);
++            #else
+             const wxChar* name = wxPropertyGridManagerNameStr);
++            #endif
+ 
+         /** \brief Dctor */
+         virtual ~wxsPropertyGridManager();

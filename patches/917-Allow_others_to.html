@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 917 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #917 <small>2006-03-12 17:00:13</small></h3>
+          <h4>pecan</h4>
+          Allow others to Enable/Disable items on toolbar
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="917-Allow_others_to.patch">917-Allow_others_to.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>None</dd>
+            <dt>Status</dt><dd>Out of date</dd>
+            <dt>Close date</dt><dd>2007-04-12 11:29:14</dd>
+            <dt>Assigned to</dt><dd></dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2006-03-12 17:01:54</div>
+        <div class="panel-body">
+          <p>Since SetToolBar() cannot be used in CodeBlocks without</p>
+          <p>mangling the layout, this patch sets the MainFrame</p>
+          <p>toolbar address in Manager so a user/plugin can use</p>
+          <p>Manager::Get()-&gt;GetMainToolbar(). It allows the user</p>
+          <p>to enable/disable cut/copy/paste etc.</p>
+          <p>thanks</p>
+          <p>pecan</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2006-03-13 09:54:31</div>
+        <div class="panel-body">
+          <p>Plugins are not allowed to alter toolbar items not belonging to them.</p>
+          <p>What would this help you to achieve?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2006-03-13 15:07:49</div>
+        <div class="panel-body">
+          <p>I'm writing a plugin to copy/paste/drag/drop items to/from the project windows panel.  I'ts called ScrapList (using treeListCtrl like a scrap book), and holds items that can fall off the "recent" menu items.</p>
+          <p>In future, it will hold snippets of code dragged from the editors, file/project/workspace names copied/dragged from the project panels, and editor marks set by bookmark/debugger etc. These will all be reset by dragging/copying back into the project panels.</p>
+          <p>It needs to enable/disable copy/paste drag/drop from both the menu items (already done) and the toolbar items to be consistent. This is done by chaining drag/drop and handing them off to the MainFrame drag/drop target. MainFrame thinks the user did it from the menu/toolbar.</p>
+          <p>It seems to me that a printer plugin should be able to enable the printer icon on the tool bar; that a cut/paste plugin on any window should be able to set copy/paste etc.</p>
+          <p>I could put up a toolbar but I  think it'd look awfully dumb for plugins to put up multiple toolbars/menus with copy/paste on 'em.</p>
+          <p>thanks</p>
+          <p>pecan</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2006-03-13 21:22:11</div>
+        <div class="panel-body">
+          <p>Been playing in the CB debugger. It sure would be nice if the debugger would enable copy/paste so we could document some of our bugs. As it is now, I have to get out of the CB debugger and back into the command line GDB to copy/paste a backtrace.</p>
+          <p>The menu copy/paste and (most) tool bar items are used so ubiqitously that any serious plugin should be able to offer its services to the user.</p>
+          <p>It is going to be so confusing to the user to have to choose between toolbars for common actions.</p>
+          <p>If directly manipulating a "non-owned" windows toolbar is not acceptable, is there something that I could code up that would allow arbiter code to hide or show or grant requests to show/enable/disable items on the main toolbar?</p>
+          <p>thanks</p>
+          <p>pecan</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2006-03-13 21:56:39</div>
+        <div class="panel-body">
+          <p>How about an interface call from plugins to Manager that request enable/disabling the menu/tool bar cut/copy/paste/print/do/undo items.</p>
+          <p>Something like "Manager::Get-&gt;PleaseEnable(menucopyitem | toolbarpasteitem);"  Or Manager::Get-&gt;PleaseDisable...etc etc.</p>
+          <p>Manger could monitor the situation with reference counting like freeze/thaw. MainFrame::UpdateUI would look at the request flags kept by Manager and enable/disable as it sees fit.</p>
+          <p>Thanks</p>
+          <p>pecan</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2006-03-14 06:03:16</div>
+        <div class="panel-body">
+          <p>I have re-written the patch so that others can  *requests*  MainFrame::UpdateUI to enable/disable the menu/toolbar cut/copy/paste/undo/redo.</p>
+          <p>I hope this is more acceptable to the CB philosophy.</p>
+          <p>thanks</p>
+          <p>pecan</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2006-03-14 22:01:09</div>
+        <div class="panel-body">
+          <p>OK, I see your point, although I think your DragScroll plugin will "betray" you here since it auto-focuses the editor window ;)</p>
+          <p>Let me think it over. I 'd like to generalize this a bit...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

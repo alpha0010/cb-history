@@ -1,0 +1,31 @@
+Index: src/plugins/codecompletion/codecompletion.cpp
+===================================================================
+--- src/plugins/codecompletion/codecompletion.cpp	(revision 6195)
++++ src/plugins/codecompletion/codecompletion.cpp	(working copy)
+@@ -2106,6 +2106,26 @@
+             }
+         }
+     }
++     
++    if (event.GetEventType() == wxEVT_SCI_CHARADDED)
++    {
++        if (event.GetKey() == _T(':'))
++        {
++            if (control->AutoCompActive()) control->AutoCompCancel();
++            wxString text = control->GetCurLine().Trim(false);
++            text = text.Remove(text.Find(_T(':'), true));
++            text = text.Trim();
++            if (text == _T("public") || text == _T("protected") || text == _T("private"))
++            {
++                int curLine = control->GetCurrentLine();
++                control->GotoPos(control->GetLineIndentPosition(curLine));
++                control->BackTab();
++                control->GotoPos(control->GetLineEndPosition(curLine));
++                control->NewLine();
++                control->Tab();
++            }
++        }
++    }
+ 
+     Parser* parser = m_NativeParser.GetParserPtr();
+     if (   parser && parser->Options().whileTyping

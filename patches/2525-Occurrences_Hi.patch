@@ -1,0 +1,98 @@
+Index: sdk/cbeditor.cpp
+===================================================================
+--- sdk/cbeditor.cpp	(revision 5153)
++++ sdk/cbeditor.cpp	(working copy)
+@@ -271,6 +271,45 @@
+         }
+     }
+ 
++    void HighlightOccurrences()
++    {
++        wxString selectedText = m_pOwner->m_pControl->GetSelectedText();
++        int eof = m_pOwner->m_pControl->GetLength();
++        ConfigManager* cfg = Manager::Get()->GetConfigManager(_T("editor"));
++
++        // Set Styling:
++        m_pOwner->m_pControl->IndicatorSetStyle(0, wxSCI_INDIC_BOX);
++        m_pOwner->m_pControl->IndicatorSetForeground( 0, wxColour(0xff, 0x00, 0x00) );
++
++        // clear all style indications set in a previous run
++        m_pOwner->m_pControl->StartStyling( 0, 0x20 );
++        m_pOwner->m_pControl->SetStyling( eof, 0x00 );
++
++        // check that feature is enabled,
++        // selected text has a minimal length of 3 and contains no spaces
++        if( cfg->ReadBool(_T("/highlight_occurrences"), true)
++               && selectedText.Len() > 2
++               && selectedText.Find(_T(' ')) == wxNOT_FOUND
++               && selectedText.Find(_T('\t')) == wxNOT_FOUND
++               && selectedText.Find(_T('\n')) == wxNOT_FOUND
++        )
++        {
++            // search for every occurence
++            for ( int pos = m_pOwner->m_pControl->FindText(0, eof, selectedText);
++                pos != wxSCI_INVALID_POSITION ;
++                pos = m_pOwner->m_pControl->FindText(pos+=selectedText.Len(), eof, selectedText) )
++            {
++                // check that the found occurrence is not the same as the selected
++                if ( pos != m_pOwner->m_pControl->GetSelectionStart() )
++                {
++                    // highlight it
++                    m_pOwner->m_pControl->StartStyling(pos, 0x20);
++                    m_pOwner->m_pControl->SetStyling(selectedText.Len(), 0x20);
++                }
++            }
++        }
++    }
++
+     //vars
+     bool m_strip_trailing_spaces;
+     bool m_ensure_final_line_end;
+@@ -2416,6 +2455,7 @@
+     {
+         NotifyPlugins(cbEVT_EDITOR_UPDATE_UI);
+         HighlightBraces(); // brace highlighting
++        m_pData->HighlightOccurrences();
+     }
+     OnScintillaEvent(event);
+ }
+Index: sdk/editorconfigurationdlg.cpp
+===================================================================
+--- sdk/editorconfigurationdlg.cpp	(revision 5153)
++++ sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -121,6 +121,7 @@
+    	XRCCTRL(*this, "spnTabSize", wxSpinCtrl)->SetValue(cfg->ReadInt(_T("/tab_size"), 4));
+    	XRCCTRL(*this, "cmbViewWS", wxComboBox)->SetSelection(cfg->ReadInt(_T("/view_whitespace"), 0));
+    	XRCCTRL(*this, "rbTabText", wxRadioBox)->SetSelection(cfg->ReadBool(_T("/tab_text_relative"), true) ? 1 : 0);
++    XRCCTRL(*this, "chkHighlightOccurrences", wxCheckBox)->SetValue(cfg->ReadBool(_T("/highlight_occurrences"), true));
+ 
+     // NOTE: duplicate line in cbeditor.cpp (CreateEditor)
+     const int default_eol = platform::windows ? wxSCI_EOL_CRLF : wxSCI_EOL_LF; // Windows takes CR+LF, other platforms LF only
+@@ -857,6 +858,7 @@
+         cfg->Write(_T("/tab_size"),             XRCCTRL(*this, "spnTabSize", wxSpinCtrl)->GetValue());
+         cfg->Write(_T("/view_whitespace"),      XRCCTRL(*this, "cmbViewWS", wxComboBox)->GetSelection());
+         cfg->Write(_T("/tab_text_relative"),    XRCCTRL(*this, "rbTabText", wxRadioBox)->GetSelection() ? true : false);
++        cfg->Write(_T("/highlight_occurrences"),XRCCTRL(*this, "chkHighlightOccurrences", wxCheckBox)->GetValue());
+ 
+         // find & replace, regex searches
+ 
+Index: sdk/resources/editor_configuration.xrc
+===================================================================
+--- sdk/resources/editor_configuration.xrc	(revision 5153)
++++ sdk/resources/editor_configuration.xrc	(working copy)
+@@ -330,6 +330,15 @@
+ 															</object>
+ 															<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+ 														</object>
++														<object class="sizeritem">
++															<object class="wxCheckBox" name="chkHighlightOccurrences">
++																<label>Highlight occurrences</label>
++																<checked>1</checked>
++															</object>
++															<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++															<border>5</border>
++															<option>1</option>
++														</object>
+ 													</object>
+ 													<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+ 													<border>4</border>

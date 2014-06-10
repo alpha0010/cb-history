@@ -1,0 +1,405 @@
+Index: src/plugins/codecompletion/codecompletion.h
+===================================================================
+--- src/plugins/codecompletion/codecompletion.h	(revision 8646)
++++ src/plugins/codecompletion/codecompletion.h	(working copy)
+@@ -279,6 +279,7 @@
+     int                     m_ActiveCalltipsNest;
+ 
+     bool                    m_IsAutoPopup;
++    bool                    m_CompletePPOnly;
+     // The variables below were related to CC's toolbar
+     /** the CC's toolbar */
+     wxToolBar*              m_ToolBar;
+Index: src/plugins/codecompletion/codecompletion.cpp
+===================================================================
+--- src/plugins/codecompletion/codecompletion.cpp	(revision 8646)
++++ src/plugins/codecompletion/codecompletion.cpp	(working copy)
+@@ -380,6 +380,36 @@
+ "                ",
+ "                "};
+ 
++// bitmap for #include file listings
++/* XPM */
++static const char* header_file_xpm[] = {
++"16 16 9 1",
++"   c None",
++"+  c #D23E39",
++"$  c #CF0C0A",
++"@  c #CB524B",
++"&  c #E2D8D8",
++"#  c #C7C7C4",
++"_  c #E4B9B5",
++"-  c #F7F9F7",
++"=  c #EBE9E7",
++"  #########     ",
++"  #=-----####   ",
++"  #--------=##  ",
++"  #--------=-#  ",
++"  #--=@_-----#  ",
++"  #--=+_-----#  ",
++"  #--=++@_---#  ",
++"  #--&$@@$=--#  ",
++"  #--&$__$&=-#  ",
++"  #--&$__$&=-#  ",
++"  #--&$__$&=-#  ",
++"  #-==#=&#==-#  ",
++"  #-========-#  ",
++"  #----=====-#  ",
++"  ############  ",
++"                "};
++
+ // menu IDS
+ // just because we don't know other plugins' used identifiers,
+ // we use wxNewId() to generate a guaranteed unique ID ;), instead of enum
+@@ -469,6 +499,7 @@
+     m_LastEditor(0),
+     m_ActiveCalltipsNest(0),
+     m_IsAutoPopup(false),
++    m_CompletePPOnly(false),
+     m_ToolBar(0),
+     m_Function(0),
+     m_Scope(0),
+@@ -837,6 +868,9 @@
+ 
+ int CodeCompletion::CodeComplete()
+ {
++    const bool preprocessorOnly = m_CompletePPOnly;
++    m_CompletePPOnly = false;
++
+     if (!IsAttached() || !m_InitDone)
+         return -1;
+ 
+@@ -888,6 +922,9 @@
+                 if (unique_strings.find(token->m_Name) != unique_strings.end())
+                     continue;
+ 
++                if (preprocessorOnly && token->m_TokenKind != tkPreprocessor)
++                    continue;
++
+                 unique_strings.insert(token->m_Name);
+                 int iidx = m_NativeParser.GetTokenKindImage(token);
+                 if (already_registered.Index(iidx) == wxNOT_FOUND)
+@@ -919,7 +956,7 @@
+ 
+             CC_LOCKER_TRACK_TT_MTX_UNLOCK(s_TokenTreeMutex)
+ 
+-            if (m_NativeParser.LastAISearchWasGlobal())
++            if (m_NativeParser.LastAISearchWasGlobal() && !preprocessorOnly)
+             {
+                 // empty or partial search phrase: add theme keywords in search list
+                 if (s_DebugSmartSense)
+@@ -1095,9 +1132,19 @@
+         return;
+ 
+     cbStyledTextCtrl* control = ed->GetControl();
+-    const int curPos = control->GetCurrentPos();
+-    const int start = control->WordStartPosition(curPos, true);
+-    const int end = control->WordEndPosition(curPos, true);
++    if (control->GetLexer() != wxSCI_LEX_CPP)
++    {
++        const FileType fTp = FileTypeOf(ed->GetShortName());
++        if (   fTp != ftSource
++            && fTp != ftHeader
++            && fTp != ftResource )
++        {
++            return; // not C/C++
++        }
++    }
++    const int curPos    = control->GetCurrentPos();
++    const int start     = control->WordStartPosition(curPos, true);
++    const wxString text = control->GetTextRange(start, curPos);
+ 
+     wxArrayString tokens;
+     tokens.Add(_T("include"));
+@@ -1115,9 +1162,21 @@
+     tokens.Add(_T("error"));
+     tokens.Add(_T("line"));
+     tokens.Sort();
+-    ed->GetControl()->ClearRegisteredImages();
+-    ed->GetControl()->AutoCompSetIgnoreCase(false);
+-    ed->GetControl()->AutoCompShow(end - start, GetStringFromArray(tokens, _T(" ")));
++    control->ClearRegisteredImages();
++    for (int i = 0; i < (int)tokens.GetCount(); ++i)
++    {
++        if (!text.IsEmpty() && tokens[i][0] != text[0])
++        {
++            tokens.RemoveAt(i); // remove tokens that start with a different letter
++            --i;
++        }
++        else
++            tokens[i] += wxString::Format(wxT("?%d"), PARSER_IMG_PREPROCESSOR);
++    }
++    control->RegisterImage(PARSER_IMG_PREPROCESSOR,
++                           m_NativeParser.GetImageList()->GetBitmap(PARSER_IMG_PREPROCESSOR));
++    control->AutoCompSetIgnoreCase(false);
++    control->AutoCompShow(curPos - start, GetStringFromArray(tokens, _T(" ")));
+ }
+ 
+ // Do the code completion when we enter:
+@@ -1155,9 +1214,9 @@
+         return;
+ 
+     int keyPos = line.Find(_T('"'));
+-    if (keyPos == wxNOT_FOUND)
++    if (keyPos == wxNOT_FOUND || keyPos >= pos - lineStartPos)
+         keyPos = line.Find(_T('<'));
+-    if (keyPos == wxNOT_FOUND || keyPos > pos - lineStartPos)
++    if (keyPos == wxNOT_FOUND || keyPos >= pos - lineStartPos)
+         return;
+     ++keyPos;
+ 
+@@ -1167,6 +1226,10 @@
+     if (filename.Last() == _T('"') || filename.Last() == _T('>'))
+         filename.RemoveLast();
+ 
++    size_t maxFiles = m_CCMaxMatches;
++    if (filename.IsEmpty() && maxFiles > 3000)
++        maxFiles = 3000; // do not try to collect too many files if there is no context (prevent hang)
++
+     // fill a list of matching files
+     StringSet files;
+ 
+@@ -1184,9 +1247,15 @@
+                 {
+                     const wxString& file = *ss_it;
+                     if (file.StartsWith(filename))
++                    {
+                         files.insert(file);
++                        if (files.size() > maxFiles)
++                            break;
++                    }
+                 }
+             }
++            if (files.size() > maxFiles)
++                break;
+         }
+     }
+ 
+@@ -1226,6 +1295,8 @@
+                 {
+                     header.Replace(_T("\\"), _T("/"), true);
+                     files.insert(header);
++                    if (files.size() > maxFiles)
++                        break;
+                 }
+             }
+         }
+@@ -1235,6 +1306,7 @@
+     if (!files.empty())
+     {
+         control->ClearRegisteredImages();
++        control->RegisterImage(0, wxBitmap(header_file_xpm));
+         control->AutoCompSetIgnoreCase(false);
+         control->AutoCompSetCancelAtStart(true);
+         control->AutoCompSetFillUps(m_CCFillupChars);
+@@ -1242,7 +1314,7 @@
+         control->AutoCompSetAutoHide(true);
+         control->AutoCompSetDropRestOfWord(m_IsAutoPopup ? false : true);
+         wxString final_str;
+-        CodeCompletionHelper::GetStringFromSet(final_str, files, _T(" "));
++        CodeCompletionHelper::GetStringFromSet(final_str, files, _T("?0 "));
+         final_str.RemoveLast(); // remove last space
+         control->AutoCompShow(pos - lineStartPos - keyPos, final_str);
+         CCLogger::Get()->DebugLog(F(_T("Get include file count is %lu, use time is %ld"),
+@@ -1387,7 +1459,43 @@
+ 
+         if (control->IsPreprocessor(control->GetStyleAt(curPos)))
+         {
+-            control->DelLineRight();
++            curPos = control->GetLineEndPosition(control->GetCurrentLine()); // delete rest of line
++            bool addComment = (itemText == wxT("endif"));
++            for (int i = control->GetCurrentPos(); i < curPos; ++i)
++            {
++                if (control->IsComment(control->GetStyleAt(i)))
++                {
++                    curPos = i;
++                    if (wxIsspace(control->GetCharAt(i - 1)))
++                        --curPos;
++                    addComment = false;
++                    break;
++                }
++            }
++            if (addComment) // search backwards for the #if*
++            {
++                wxRegEx ppIf(wxT("^[ \t]*#[ \t]*if"));
++                wxRegEx ppEnd(wxT("^[ \t]*#[ \t]*endif"));
++                int depth = -1;
++                for (int ppLine = control->GetCurrentLine() - 1; ppLine >= 0; --ppLine)
++                {
++                    if (control->GetLine(ppLine).Find(wxT('#')) != wxNOT_FOUND) // limit testing due to performance cost
++                    {
++                        if (ppIf.Matches(control->GetLine(ppLine))) // ignore else's, elif's, ...
++                            ++depth;
++                        else if (ppEnd.Matches(control->GetLine(ppLine)))
++                            --depth;
++                    }
++                    if (depth == 0)
++                    {
++                        wxRegEx pp(wxT("^[ \t]*#[ \t]*[a-z]*([ \t]+([a-zA-Z0-9_]+)|())"));
++                        pp.Matches(control->GetLine(ppLine));
++                        if (!pp.GetMatch(control->GetLine(ppLine), 2).IsEmpty())
++                            itemText.Append(wxT(" // ") + pp.GetMatch(control->GetLine(ppLine), 2));
++                        break;
++                    }
++                }
++            }
+             needReparse = true;
+ 
+             int   pos = startPos;
+@@ -1414,11 +1522,12 @@
+             if (control->GetCharAt(curPos) != _T('('))
+                 addString += _T("()");
+ 
+-            control->ReplaceTarget(addString);
+-            control->GotoPos(control->GetCurrentPos() + itemText.size() + 2);
++            if (control->GetTextRange(startPos, curPos) != addString)
++                control->ReplaceTarget(addString);
++            control->GotoPos(startPos + itemText.size() + 2);
+             if ((*it).second != 0)
+             {
+-                control->GotoPos(control->GetCurrentPos() - 1);
++                control->CharLeft();
+                 control->EnableTabSmartJump();
+                 TRACE(_T("wxEVT_SCI_AUTOCOMP_SELECTION -> ShowCallTip"));
+                 ShowCallTip();
+@@ -1426,7 +1535,7 @@
+         }
+         else
+         {
+-            if (control->IsPreprocessor(control->GetStyleAt(curPos)))
++            if (control->IsPreprocessor(control->GetStyleAt(startPos)))
+             {
+                 const wxChar start = control->GetCharAt(startPos - 1);
+                 if (start == _T('"'))
+@@ -1435,7 +1544,8 @@
+                     itemText << _T('>');
+             }
+ 
+-            control->ReplaceTarget(itemText);
++            if (control->GetTextRange(startPos, curPos) != itemText)
++                control->ReplaceTarget(itemText);
+             control->GotoPos(startPos + itemText.Length());
+ 
+             if (needReparse)
+@@ -1444,6 +1554,7 @@
+                 m_TimerRealtimeParsing.Start(1, wxTIMER_ONE_SHOT);
+             }
+         }
++        control->ChooseCaretX();
+     }
+ 
+     if (event.GetEventType() == wxEVT_SCI_CHARADDED)
+@@ -1510,7 +1621,11 @@
+                  || (   (ch == _T('>')) // ->
+                      && (prevChar == _T('-')) )
+                  || (   (ch == _T(':')) // ::
+-                     && (prevChar == _T(':')) ) )
++                     && (prevChar == _T(':')) )
++                 || (   control->AutoCompActive() // refine listing:
++                     && (   ch == _T('/')         // for #include (reduce directories)
++                         || (pos - wordStartPos == m_CCAutoLaunchChars + 4)) ) // for more typed characters
++                                                                              )
+         {
+             int style = control->GetStyleAt(pos);
+             TRACE(_T("Style at %d is %d (char '%c')"), pos, style, ch);
+@@ -1525,6 +1640,7 @@
+             else
+             {
+                 if (   style != wxSCI_C_DEFAULT
++                    && style != wxSCI_C_PREPROCESSOR
+                     && style != wxSCI_C_OPERATOR
+                     && style != wxSCI_C_IDENTIFIER
+                     && style != wxSCI_C_WORD2
+@@ -2684,10 +2800,23 @@
+         const int end = control->WordEndPosition(lineIndentPos + 1, true);
+         const wxString str = control->GetTextRange(start, end);
+ 
+-        if (str == _T("include"))
++        if (str == _T("include") && pos > end)
+             CodeCompleteIncludes();
+-        else if (end >= pos)
++        else if (end >= pos && pos > lineIndentPos)
+             CodeCompletePreprocessor();
++        else if ( (   str == _T("define")
++                   || str == _T("if")
++                   || str == _T("ifdef")
++                   || str == _T("ifndef")
++                   || str == _T("elif")
++                   || str == _T("elifdef")
++                   || str == _T("elifndef")
++                   || str == _T("undef") )
++                 && pos > end )
++        {
++            m_CompletePPOnly = true;
++            CodeComplete();
++        }
+         return;
+     }
+     else if (curChar == _T('#'))
+@@ -2697,7 +2826,9 @@
+ 
+     if (   style != wxSCI_C_DEFAULT
+         && style != wxSCI_C_OPERATOR
+-        && style != wxSCI_C_IDENTIFIER )
++        && style != wxSCI_C_IDENTIFIER
++        && style != wxSCI_C_WORD2
++        && style != wxSCI_C_GLOBALCLASS )
+         return;
+ 
+     TRACE(_T("DoCodeComplete -> CodeComplete"));
+@@ -2979,7 +3110,7 @@
+             if         (best_func_line  < current_line)     // candidate: is before current line
+             {
+                 if (   (func_start_line < current_line  )   // another candidate
+-                    && (func_start_line > best_func_line) ) // decide which is more near
++                    && (func_start_line > best_func_line) ) // decide which is closer
+                 { best_func = idx_func; found_best_func = true; }
+             }
+             else if    (func_start_line < current_line)     // candidate: is before current line
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(revision 8646)
++++ src/src/main.cpp	(working copy)
+@@ -3100,8 +3100,13 @@
+ void MainFrame::OnEditUndo(cb_unused wxCommandEvent& event)
+ {
+     EditorBase* ed = Manager::Get()->GetEditorManager()->GetActiveEditor();
+-    if (ed)
++    if (ed && ed->CanUndo())
++    {
++        cbEditor* cbEd = Manager::Get()->GetEditorManager()->GetBuiltinEditor(ed);
++        if (cbEd && cbEd->GetControl()->AutoCompActive())
++            cbEd->GetControl()->AutoCompCancel();
+         ed->Undo();
++    }
+ }
+ 
+ void MainFrame::OnEditRedo(cb_unused wxCommandEvent& event)
+@@ -3333,7 +3338,12 @@
+     OnEditGotoLineEnd(event);
+     cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
+     if (ed)
+-        ed->GetControl()->NewLine();
++    {
++        cbStyledTextCtrl* stc = ed->GetControl();
++        if (stc->AutoCompActive())
++            stc->AutoCompCancel();
++        stc->NewLine();
++    }
+ }
+ 
+ void MainFrame::OnEditGotoLineEnd(cb_unused wxCommandEvent& event)
+@@ -3341,9 +3351,10 @@
+     cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
+     if (ed)
+     {
+-        cbStyledTextCtrl* control = ed->GetControl();
+-        const int pos = control->GetLineEndPosition(control->GetCurrentLine());
+-        control->GotoPos(pos);
++        cbStyledTextCtrl* stc = ed->GetControl();
++        if (stc->AutoCompActive())
++            stc->AutoCompCancel();
++        stc->LineEnd();
+     }
+ }
+ 

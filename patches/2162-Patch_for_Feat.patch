@@ -1,0 +1,179 @@
+Index: src/include/editormanager.h
+===================================================================
+--- src/include/editormanager.h	(Revision 5294)
++++ src/include/editormanager.h	(Arbeitskopie)
+@@ -136,6 +136,8 @@
+         void OnSwapHeaderSource(wxCommandEvent& event);
+         void OnTabPosition(wxCommandEvent& event);
+         void OnProperties(wxCommandEvent& event);
++        void OnAddFileToProject(wxCommandEvent& event);
++        void OnRemoveFileFromProject(wxCommandEvent& event);
+         void OnAppDoneStartup(wxCommandEvent& event);
+         void OnAppStartShutdown(wxCommandEvent& event);
+         void OnUpdateUI(wxUpdateUIEvent& event);
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(Revision 5294)
++++ src/sdk/cbeditor.cpp	(Arbeitskopie)
+@@ -398,6 +398,8 @@
+ const int idUnsplit = wxNewId();
+ const int idConfigureEditor = wxNewId();
+ const int idProperties = wxNewId();
++const int idAddFileToProject = wxNewId();
++const int idRemoveFileFromProject = wxNewId();
+ 
+ const int idBookmarkAdd = wxNewId();
+ const int idBookmarkRemove = wxNewId();
+@@ -431,6 +433,8 @@
+     EVT_MENU(idFoldingToggleCurrent, cbEditor::OnContextMenuEntry)
+     EVT_MENU(idConfigureEditor, cbEditor::OnContextMenuEntry)
+     EVT_MENU(idProperties, cbEditor::OnContextMenuEntry)
++    EVT_MENU(idAddFileToProject, cbEditor::OnContextMenuEntry)
++    EVT_MENU(idRemoveFileFromProject, cbEditor::OnContextMenuEntry)
+     EVT_MENU(idBookmarkAdd, cbEditor::OnContextMenuEntry)
+     EVT_MENU(idBookmarkRemove, cbEditor::OnContextMenuEntry)
+     EVT_MENU(idBreakpointAdd, cbEditor::OnContextMenuEntry)
+@@ -662,13 +666,13 @@
+         else
+             m_Shortname = m_pProjectFile->file.GetFullName();
+         SetEditorTitle(m_Shortname);
++
++        if (!wxFileExists(m_Filename))
++            m_pProjectFile->SetFileState(fvsMissing);
++        else if (!wxFile::Access(m_Filename.c_str(), wxFile::write)) // readonly
++            m_pProjectFile->SetFileState(fvsReadOnly);
+     }
+ 
+-    if (!wxFileExists(m_Filename))
+-        m_pProjectFile->SetFileState(fvsMissing);
+-    else if (!wxFile::Access(m_Filename.c_str(), wxFile::write)) // readonly
+-        m_pProjectFile->SetFileState(fvsReadOnly);
+-
+ #if 0
+     wxString dbg;
+     dbg << _T("[ed] Filename: ") << GetFilename() << _T('\n');
+@@ -1418,6 +1422,9 @@
+     fname.Assign(m_Filename);
+     m_Shortname = fname.GetFullName();
+     SetEditorTitle(m_Shortname);
++    // invalidate m_pProjectFile, because if kept, it would point to the ProjectFile with old name and
++    // cause ProjectManager::RemoveFileFromProject called via context menu to crash
++    SetProjectFile(0); 
+     //Manager::Get()->GetLogManager()->Log(mltDevDebug, "Filename=%s\nShort=%s", m_Filename.c_str(), m_Shortname.c_str());
+     m_IsOK = true;
+     SetModified(true);
+@@ -2239,6 +2246,15 @@
+             popup->Append(idConfigureEditor, _("Configure editor..."));
+         popup->Append(idProperties, _("Properties..."));
+ 
++        if (Manager::Get()->GetProjectManager()->GetActiveProject()) // project must be open
++        {
++            popup->AppendSeparator();
++
++            if (m_pProjectFile)
++                popup->Append(idRemoveFileFromProject, _("Remove file from project"));
++            else
++                popup->Append(idAddFileToProject, _("Add file to active project"));
++        }
+         // remove "Insert/Empty" if more than one entry
+         wxMenu* insert = 0;
+         wxMenuItem* insertitem = popup->FindItem(idInsert);
+@@ -2467,6 +2483,27 @@
+             dlg.ShowModal();
+         }
+     }
++    else if (id == idAddFileToProject)
++    {
++        cbProject *prj = Manager::Get()->GetProjectManager()->GetActiveProject();
++
++        wxArrayInt targets;
++        if (Manager::Get()->GetProjectManager()->AddFileToProject(m_Filename, prj, targets) != 0)
++        {
++            ProjectFile* pf = prj->GetFileByFilename(m_Filename, false);
++            SetProjectFile(pf);
++            Manager::Get()->GetProjectManager()->RebuildTree();
++        }
++    }
++    else if (id == idRemoveFileFromProject)
++    {
++        if (m_pProjectFile)
++        {
++            cbProject *prj = m_pProjectFile->GetParentProject();
++            Manager::Get()->GetProjectManager()->RemoveFileFromProject(m_pProjectFile, prj);
++            Manager::Get()->GetProjectManager()->RebuildTree();
++        }
++    }
+     else if (id == idBreakpointAdd)
+         AddBreakpoint(m_pData->m_LastMarginMenuLine);
+     else if (id == idBreakpointEdit)
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(Revision 5294)
++++ src/sdk/editormanager.cpp	(Arbeitskopie)
+@@ -105,6 +105,8 @@
+ static const int idNBTabTop = wxNewId();
+ static const int idNBTabBottom = wxNewId();
+ static const int idNBProperties = wxNewId();
++static const int idNBAddFileToProject = wxNewId();
++static const int idNBRemoveFileFromProject = wxNewId();
+ static const int idNB = wxNewId();
+ 
+ /** *******************************************************
+@@ -149,6 +151,8 @@
+     EVT_MENU(idNBTabSaveAll, EditorManager::OnSaveAll)
+     EVT_MENU(idNBSwapHeaderSource, EditorManager::OnSwapHeaderSource)
+     EVT_MENU(idNBProperties, EditorManager::OnProperties)
++    EVT_MENU(idNBAddFileToProject, EditorManager::OnAddFileToProject)
++    EVT_MENU(idNBRemoveFileFromProject, EditorManager::OnRemoveFileFromProject)
+     EVT_MENU(idEditorManagerCheckFiles, EditorManager::OnCheckForModifiedFiles)
+ END_EVENT_TABLE()
+ 
+@@ -2510,6 +2514,16 @@
+ 
+         pop->AppendSeparator();
+         pop->Append(-1, _("Split view"), splitMenu);
++
++        if (Manager::Get()->GetProjectManager()->GetActiveProject()) // project must be open
++        {
++            pop->AppendSeparator();
++
++            if (ed->GetProjectFile())
++                pop->Append(idNBRemoveFileFromProject, _("Remove file from project"));
++            else
++                pop->Append(idNBAddFileToProject, _("Add file to active project"));
++        }
+     }
+ 
+     bool any_modified = false;
+@@ -2589,6 +2603,31 @@
+     }
+ }
+ 
++void EditorManager::OnAddFileToProject(wxCommandEvent& event)
++{
++    cbProject *project = Manager::Get()->GetProjectManager()->GetActiveProject();
++    wxString fname = GetBuiltinActiveEditor()->GetFilename();
++
++    wxArrayInt targets;
++    if (Manager::Get()->GetProjectManager()->AddFileToProject(fname, project, targets) != 0)
++    {
++        ProjectFile* pf = project->GetFileByFilename(fname, false);
++        GetBuiltinActiveEditor()->SetProjectFile(pf);
++        Manager::Get()->GetProjectManager()->RebuildTree();
++    }
++}
++
++void EditorManager::OnRemoveFileFromProject(wxCommandEvent& event)
++{
++    ProjectFile* pf = GetBuiltinActiveEditor()->GetProjectFile();
++    if (pf) // should be in any case, otherwise something went wrong between popup menu creation and here
++    {
++        cbProject *project = pf->GetParentProject();
++        Manager::Get()->GetProjectManager()->RemoveFileFromProject(pf, project);
++        Manager::Get()->GetProjectManager()->RebuildTree();
++    }
++}
++
+ void EditorManager::OnAppDoneStartup(wxCommandEvent& event)
+ {
+     event.Skip(); // allow others to process it too

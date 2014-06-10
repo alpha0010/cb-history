@@ -1,0 +1,192 @@
+Index: sdk/cbeditor.cpp
+===================================================================
+--- sdk/cbeditor.cpp	(revision 5539)
++++ sdk/cbeditor.cpp	(working copy)
+@@ -221,6 +221,135 @@
+         return -1;
+     }
+ 
++    bool IsComment( int style )
++    {
++        cbStyledTextCtrl* control = m_pOwner->GetControl();
++        switch ( control->GetLexer() )
++        {
++            case wxSCI_LEX_CPP:
++                return  style == wxSCI_C_COMMENT ||
++                        style == wxSCI_C_COMMENTLINE ||
++                        style == wxSCI_C_COMMENTDOC ||
++                        style == wxSCI_C_COMMENTDOCKEYWORD ||
++                        style == wxSCI_C_COMMENTDOCKEYWORDERROR ||
++                        style == wxSCI_C_COMMENTLINEDOC;
++            case wxSCI_LEX_D:
++                return  style == wxSCI_D_COMMENT ||
++                        style == wxSCI_D_COMMENTLINE ||
++                        style == wxSCI_D_COMMENTDOC ||
++                        style == wxSCI_D_COMMENTDOCKEYWORD ||
++                        style == wxSCI_D_COMMENTDOCKEYWORDERROR ||
++                        style == wxSCI_D_COMMENTLINEDOC;
++            default:
++                return false;
++        }
++        return false;
++    }
++    bool IsPreprocessor( int style )
++    {
++        cbStyledTextCtrl* control = m_pOwner->GetControl();
++        if ( control->GetLexer() == wxSCI_LEX_CPP )
++            return  style == wxSCI_C_PREPROCESSOR;
++        return false;
++    }
++    bool IsCharacterOrString( int  style )
++    {
++        cbStyledTextCtrl* control = m_pOwner->GetControl();
++        switch ( control->GetLexer() )
++        {
++            case wxSCI_LEX_CPP:
++                return style == wxSCI_C_STRING || style == wxSCI_C_CHARACTER;
++            case wxSCI_LEX_D:
++                return style == wxSCI_D_STRING || style == wxSCI_D_CHARACTER;
++            default:
++                return false;
++        }
++        return false;
++    }
++    bool IsCharacter( int  style )
++    {
++        cbStyledTextCtrl* control = m_pOwner->GetControl();
++        switch ( control->GetLexer() )
++        {
++            case wxSCI_LEX_CPP:
++                return style == wxSCI_C_CHARACTER;
++            case wxSCI_LEX_D:
++                return style == wxSCI_D_CHARACTER;
++            default:
++                return false;
++        }
++        return false;
++    }
++    void DoBraceCompletion(const wxChar& ch)
++    {
++        cbStyledTextCtrl* control = m_pOwner->GetControl();
++        int pos = control->GetCurrentPos();
++        int style = control->GetStyleAt(pos);
++        if ( IsComment(style) || IsPreprocessor(style) )
++            return;
++        if ( ch == _T('\'') )
++        {
++            if ( control->GetCharAt(pos) == ch && pos > 1 && control->GetCharAt(pos-2) != _T('\\') )
++            {
++                control->DeleteBack();
++                control->GotoPos(pos);
++            }
++            else
++            {
++                if ( control->GetCharAt(pos-2) == _T('\\') || IsCharacterOrString(style) )
++                    return;
++                control->AddText(ch);
++                control->GotoPos(pos);
++            }
++            return;
++        }
++        if ( ch == _T('"') )
++        {
++            if (control->GetCharAt(pos) == ch && pos > 1 && control->GetCharAt(pos-2) != _T('\\') )
++            {
++                control->DeleteBack();
++                control->GotoPos(pos);
++            }
++            else
++            {
++                if ( control->GetCharAt(pos-2) == _T('\\') || IsCharacter(style) )
++                    return;
++                control->AddText(ch);
++                control->GotoPos(pos);
++            }
++            return;
++        }
++        if ( IsCharacterOrString(style) )
++            return;
++        wxString leftBrace(_T("([{"));
++        wxString rightBrace(_T(")]}"));
++        int index = leftBrace.find(ch);
++        if (index != wxNOT_FOUND)
++        {
++            control->AddText(rightBrace.GetChar(index));
++            control->GotoPos(pos);
++            if (ch == _T('{'))
++            {
++                control->NewLine();
++                control->GotoPos(pos);
++                return;
++            }
++        }
++        else
++        {
++            index = rightBrace.find(ch);
++            if (index != wxNOT_FOUND)
++            {
++                if (control->GetCharAt(pos) == ch)
++                {
++                    control->DeleteBack();
++                    control->GotoPos(pos);
++                    return;
++                }
++            }
++        }
++    }
++
+     /** Strip Trailing Blanks before saving */
+     void StripTrailingSpaces()
+     {
+@@ -2787,6 +2916,13 @@
+         }
+     }
+ 
++    bool braceCompletion = Manager::Get()->GetConfigManager(_T("editor"))->ReadBool(_T("/brace_completion"), true);
++    if ( braceCompletion )
++    {
++        if ( control->GetLexer() == wxSCI_LEX_CPP || control->GetLexer() == wxSCI_LEX_D )
++            m_pData->DoBraceCompletion( ch );
++    }
++
+     OnScintillaEvent(event);
+ }
+ 
+Index: sdk/editorconfigurationdlg.cpp
+===================================================================
+--- sdk/editorconfigurationdlg.cpp	(revision 5539)
++++ sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -106,6 +106,7 @@
+ 
+     XRCCTRL(*this, "chkAutoIndent", wxCheckBox)->SetValue(cfg->ReadBool(_T("/auto_indent"), true));
+     XRCCTRL(*this, "chkSmartIndent", wxCheckBox)->SetValue(cfg->ReadBool(_T("/smart_indent"), true));
++    XRCCTRL(*this, "chkBraceCompletion", wxCheckBox)->SetValue(cfg->ReadBool(_T("/brace_completion"), true));
+     XRCCTRL(*this, "chkUseTab", wxCheckBox)->SetValue(cfg->ReadBool(_T("/use_tab"), false));
+     m_EnableScrollWidthTracking = cfg->ReadBool(_T("/margin/scroll_width_tracking"), false);
+     XRCCTRL(*this, "chkScrollWidthTracking", wxCheckBox)->SetValue(m_EnableScrollWidthTracking);
+@@ -863,6 +864,7 @@
+ 
+         cfg->Write(_T("/auto_indent"),          XRCCTRL(*this, "chkAutoIndent", wxCheckBox)->GetValue());
+         cfg->Write(_T("/smart_indent"),         XRCCTRL(*this, "chkSmartIndent", wxCheckBox)->GetValue());
++        cfg->Write(_T("/brace_completion"),     XRCCTRL(*this, "chkBraceCompletion", wxCheckBox)->GetValue());
+         cfg->Write(_T("/use_tab"),              XRCCTRL(*this, "chkUseTab", wxCheckBox)->GetValue());
+         cfg->Write(_T("/show_indent_guides"),   XRCCTRL(*this, "chkShowIndentGuides", wxCheckBox)->GetValue());
+         cfg->Write(_T("/tab_indents"),          XRCCTRL(*this, "chkTabIndents", wxCheckBox)->GetValue());
+Index: sdk/resources/editor_configuration.xrc
+===================================================================
+--- sdk/resources/editor_configuration.xrc	(revision 5539)
++++ sdk/resources/editor_configuration.xrc	(working copy)
+@@ -275,6 +275,13 @@
+                               <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+                             </object>
+                             <object class="sizeritem">
++                              <object class="wxCheckBox" name="chkBraceCompletion">
++                                <label>Brace completion</label>
++                                <checked>1</checked>
++                              </object>
++                              <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                            </object>
++                            <object class="sizeritem">
+                               <object class="wxCheckBox" name="chkBackspaceUnindents">
+                                 <label>Backspace unindents</label>
+                                 <checked>1</checked>

@@ -1,0 +1,334 @@
+Index: plugins/contrib/wxSmith/properties/wxsstringproperty.h
+===================================================================
+--- plugins/contrib/wxSmith/properties/wxsstringproperty.h	(revision 4044)
++++ plugins/contrib/wxSmith/properties/wxsstringproperty.h	(working copy)
+@@ -54,7 +54,7 @@
+     { static wxsStringProperty _Property(PGName,DataName,wxsOFFSET(ClassName,VarName),false,XmlStoreEmpty,Default); \
+       Property(_Property); }
+ 
+-/** \brief Macro automatically declaring multiline wxString property with custom priority
++/** \brief Macro automatically declaring multiline wxString property
+  *  \param ClassName name of class holding this property
+  *  \param VarName name of variable inside class
+  *  \param PGName name used in property grid
+Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsdialog.cpp
+===================================================================
+--- plugins/contrib/wxSmith/wxwidgets/defitems/wxsdialog.cpp	(revision 4044)
++++ plugins/contrib/wxSmith/wxwidgets/defitems/wxsdialog.cpp	(working copy)
+@@ -67,7 +67,8 @@
+         Data,
+         &Reg.Info,
+         wxsDialogEvents,
+-        wxsDialogStyles),
++        wxsDialogStyles,
++        flContainer&~flExtraCode),
+     Title(_("Dialog")),
+     Centered(true)
+ {}
+Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsframe.cpp
+===================================================================
+--- plugins/contrib/wxSmith/wxwidgets/defitems/wxsframe.cpp	(revision 4044)
++++ plugins/contrib/wxSmith/wxwidgets/defitems/wxsframe.cpp	(working copy)
+@@ -74,7 +74,8 @@
+         Data,
+         &Reg.Info,
+         wxsFrameEvents,
+-        wxsFrameStyles),
++        wxsFrameStyles,
++        flContainer&~flExtraCode),
+     Title(_("Frame")),
+     Centered(false)
+ {}
+Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenu.cpp
+===================================================================
+--- plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenu.cpp	(revision 4044)
++++ plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenu.cpp	(working copy)
+@@ -63,7 +63,7 @@
+ }
+ 
+ wxsMenu::wxsMenu(wxsItemResData* Data):
+-    wxsTool(Data,&Reg.Info,NULL,NULL,flVariable|flSubclass)
++    wxsTool(Data,&Reg.Info,NULL,NULL,flVariable|flSubclass|flExtraCode)
+ {
+ }
+ 
+@@ -220,6 +220,7 @@
+                     GetVarName().c_str(),
+                     m_Label.c_str());
+             }
++            BuildSetupWindowCode(Code, WindowParent, Language);
+             break;
+ 
+         default:
+Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenubar.cpp
+===================================================================
+--- plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenubar.cpp	(revision 4044)
++++ plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenubar.cpp	(working copy)
+@@ -67,7 +67,7 @@
+         &Reg.Info,
+         NULL,
+         NULL,
+-        flVariable|flSubclass)
++        flVariable|flSubclass|flExtraCode)
+ {
+ }
+ 
+@@ -82,6 +82,7 @@
+                 GetChild(i)->BuildCreatingCode(Code,WindowParent,Language);
+             }
+             Code << Codef(Language,_T("SetMenuBar(%v);\n"),GetVarName().c_str());
++            BuildSetupWindowCode(Code, WindowParent, Language);
+             break;
+ 
+         default:
+Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.cpp
+===================================================================
+--- plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.cpp	(revision 4044)
++++ plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.cpp	(working copy)
+@@ -248,6 +248,7 @@
+         ChildItem->m_Type = wxsMenuItem::Normal;
+         ChildItem->m_Variable = ChildMenu->GetVarName();
+         ChildItem->m_IsMember = ChildMenu->GetIsMember();
++        ChildItem->m_ExtraCode = ChildMenu->GetExtraCode();
+         ChildItem->m_Label = ChildMenu->m_Label;
+         ChildItem->m_Enabled = true;
+         ChildItem->m_Checked = false;
+@@ -272,6 +273,7 @@
+     Parent->m_Type = Menu->m_Type;
+     Parent->m_Variable = Menu->GetVarName();
+     Parent->m_IsMember = Menu->GetIsMember();
++    Parent->m_ExtraCode = Menu->GetExtraCode();
+     Parent->m_Id = Menu->GetIdName();
+     Parent->m_Label = Menu->m_Label;
+     Parent->m_Accelerator = Menu->m_Accelerator;
+@@ -515,6 +517,7 @@
+                 NewMenu->m_Label = Item->m_Label;
+                 NewMenu->SetVarName(Item->m_Variable);
+                 NewMenu->SetIsMember(Item->m_IsMember);
++                NewMenu->SetExtraCode(Item->m_ExtraCode);
+                 m_MenuBar->AddChild(NewMenu);
+                 StoreDataCopyReq(NewMenu,Item->m_Child);
+             }
+@@ -549,6 +552,7 @@
+ 
+         Menu->SetVarName(Item->m_Variable);
+         Menu->SetIsMember(Item->m_IsMember);
++        Menu->SetExtraCode(Item->m_ExtraCode);
+         Menu->SetIdName(_T(""));
+         Menu->m_Label.Clear();
+         Menu->m_Accelerator.Clear();
+Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.h
+===================================================================
+--- plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.h	(revision 4044)
++++ plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.h	(working copy)
+@@ -54,6 +54,7 @@
+             wxString  m_Label;
+             wxString  m_Accelerator;
+             wxString  m_Help;
++            wxString  m_ExtraCode;
+             bool      m_Enabled;
+             bool      m_Checked;
+             wxString  m_HandlerFunction;
+Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenuitem.cpp
+===================================================================
+--- plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenuitem.cpp	(revision 4044)
++++ plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenuitem.cpp	(working copy)
+@@ -46,7 +46,7 @@
+         &Info,
+         BreakOrSeparator?NULL:wxsMenuItemEvents,
+         NULL,
+-        BreakOrSeparator?0:flVariable|flId),
++        BreakOrSeparator?0:flVariable|flId|flExtraCode),
+     m_Type(Normal),
+     m_Enabled(true),
+     m_Checked(false)
+@@ -133,6 +133,7 @@
+                 }
+ 
+             }
++            BuildSetupWindowCode(Code, WindowParent, Language);
+             break;
+ 
+         default:
+Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsstatusbar.cpp
+===================================================================
+--- plugins/contrib/wxSmith/wxwidgets/defitems/wxsstatusbar.cpp	(revision 4044)
++++ plugins/contrib/wxSmith/wxwidgets/defitems/wxsstatusbar.cpp	(working copy)
+@@ -38,7 +38,7 @@
+ }
+ 
+ wxsStatusBar::wxsStatusBar(wxsItemResData* Data):
+-    wxsTool(Data,&Reg.Info,NULL,wxsStatusBarStyles,flVariable|flId|flSubclass),
++    wxsTool(Data,&Reg.Info,NULL,wxsStatusBarStyles,flVariable|flId|flSubclass|flExtraCode),
+     m_Fields(1)
+ {
+     UpdateArraysSize(m_Fields);
+@@ -74,6 +74,7 @@
+                 Codef(_T("%ASetStatusStyles(%d,%v);\n"),m_Fields,StylesVarName.c_str());
+                 Codef(_T("SetStatusBar(%v);\n"),GetVarName().c_str());
+             }
++            BuildSetupWindowCode(Code, WindowParent, Language);
+             break;
+ 
+         default:
+Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxstimer.cpp
+===================================================================
+--- plugins/contrib/wxSmith/wxwidgets/defitems/wxstimer.cpp	(revision 4044)
++++ plugins/contrib/wxSmith/wxwidgets/defitems/wxstimer.cpp	(working copy)
+@@ -41,7 +41,7 @@
+         &Reg.Info,
+         wxsTimerEvents,
+         NULL,
+-        flVariable|flId|flSubclass)
++        flVariable|flId|flSubclass|flExtraCode)
+ {
+     m_Interval = 0;
+     m_OneShoot = false;
+@@ -55,6 +55,7 @@
+         {
+             Code << Codef(Language,_T("%ASetOwner(this,%I);\n"));
+             if ( m_Interval > 0 ) Code << Codef(Language,_T("%AStart(%d,%b);\n"),m_Interval,m_OneShoot);
++            BuildSetupWindowCode(Code, WindowParent, Language);
+             return;
+         }
+ 
+Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbar.cpp
+===================================================================
+--- plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbar.cpp	(revision 4044)
++++ plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbar.cpp	(working copy)
+@@ -84,7 +84,7 @@
+         &Reg.Info,
+         NULL,
+         wxsToolBarStyles,
+-        flVariable|flId|flSubclass),
++        flVariable|flId|flSubclass|flExtraCode),
+     m_Packing(-1),
+     m_Separation(-1)
+ {
+@@ -147,6 +147,7 @@
+                 {
+                     Codef(_T("SetToolBar(%v);\n"),GetVarName().c_str());
+                 }
++                BuildSetupWindowCode(Code, WindowParent, Language);
+             }
+             break;
+ 
+Index: plugins/contrib/wxSmith/wxwidgets/wxscontainer.h
+===================================================================
+--- plugins/contrib/wxSmith/wxwidgets/wxscontainer.h	(revision 4044)
++++ plugins/contrib/wxSmith/wxwidgets/wxscontainer.h	(working copy)
+@@ -13,7 +13,7 @@
+     public:
+ 
+         /** \brief Default properties flags used by widgets */
+-        static const long flContainer = flVariable|flId|flPosition|flSize|flEnabled|flFocused|flHidden|flColours|flToolTip|flFont|flHelpText|flSubclass|flMinMaxSize;
++        static const long flContainer = flVariable|flId|flPosition|flSize|flEnabled|flFocused|flHidden|flColours|flToolTip|flFont|flHelpText|flSubclass|flMinMaxSize|flExtraCode;
+ 
+         /** \brief Ctor
+          *  \param Data data managment object handling this item
+Index: plugins/contrib/wxSmith/wxwidgets/wxsitem.cpp
+===================================================================
+--- plugins/contrib/wxSmith/wxwidgets/wxsitem.cpp	(revision 4044)
++++ plugins/contrib/wxSmith/wxwidgets/wxsitem.cpp	(working copy)
+@@ -122,6 +122,7 @@
+         }
+         if ( Flags & flId )       WXS_SHORT_STRING_P(wxsItem,m_IdName,_("Identifier"),_T("identifier"),wxEmptyString,true,Priority);
+         if ( Flags & flSubclass ) WXS_SHORT_STRING_P(wxsItem,m_Subclass,_("Class name"),_T("subclass"),wxEmptyString,false,Priority);
++        if ( Flags & flExtraCode )WXS_STRING_P(wxsItem,m_ExtraCode,_("Extra code"),_T("extra_code"), wxEmptyString,true,Priority);
+     }
+ 
+     OnEnumItemProperties(Flags);
+@@ -169,6 +170,9 @@
+         m_VarName = cbC2U(Element->Attribute("variable"));
+         const char* MbrText = Element->Attribute("member");
+         m_IsMember = !MbrText || !strcmp(MbrText,"yes");
++        TiXmlElement* ExtraCodeElem = Element->FirstChildElement("extra_code");
++        if (ExtraCodeElem) m_ExtraCode = cbC2U(ExtraCodeElem->GetText());
++
+         m_Events.XmlLoadFunctions(Element);
+     }
+ 
+@@ -201,6 +205,11 @@
+             Element->SetAttribute("variable",cbU2C(m_VarName));
+             Element->SetAttribute("member",m_IsMember ? "yes" : "no" );
+         }
++        if ( GetPropertiesFlags() & flExtraCode && !m_ExtraCode.IsEmpty() )
++        {
++            Element->InsertEndChild(TiXmlElement("extra_code"))->
++                 InsertEndChild(TiXmlText(cbU2C(m_ExtraCode)));
++        }
+         m_Events.XmlSaveFunctions(Element);
+     }
+ 
+@@ -739,6 +748,12 @@
+ 
+             if ( (PropertiesFlags&flToolTip)  && !m_BaseProperties->m_ToolTip.IsEmpty()  ) Code << GetAccessPrefix(Language) << _T("SetToolTip(") << wxsCodeMarks::WxString(wxsCPP,m_BaseProperties->m_ToolTip) << _T(");\n");
+             if ( (PropertiesFlags&flHelpText) && !m_BaseProperties->m_HelpText.IsEmpty() ) Code << GetAccessPrefix(Language) << _T("SetHelpText(") << wxsCodeMarks::WxString(wxsCPP,m_BaseProperties->m_HelpText) << _T(");\n");
++            if ( (PropertiesFlags&flExtraCode) && !m_ExtraCode.IsEmpty())
++            {
++                Code << _T("//(Extra code(") << GetVarName() << _T(")\n");
++                Code << m_ExtraCode;
++                Code << _T("\n//)\n");
++            }
+             return;
+         }
+ 
+Index: plugins/contrib/wxSmith/wxwidgets/wxsitem.h
+===================================================================
+--- plugins/contrib/wxSmith/wxwidgets/wxsitem.h	(revision 4044)
++++ plugins/contrib/wxSmith/wxwidgets/wxsitem.h	(working copy)
+@@ -64,6 +64,7 @@
+         static const long flHelpText  = 0x002000;  ///< \brief Item is using help text
+         static const long flSubclass  = 0x004000;  ///< \brief Item is using subclassing
+         static const long flMinMaxSize= 0x008000;  ///< \brief Item is using SetMinSize / SetMaxSize functions
++        static const long flExtraCode = 0x010000;  ///< \brief Item is using extra item initialization code
+ 
+         // Flags used when generating preview
+         static const long pfExact     = 0x000001;   ///< \brief Notify to create exact preview (without any editor-like goodies)
+@@ -146,6 +147,12 @@
+         /** \brief Setting IsMember flag */
+         inline void SetIsMember(bool NewIsMember) { m_IsMember = NewIsMember; }
+ 
++        /** \brief Gettings extra code */
++        inline wxString GetExtraCode() { return m_ExtraCode; }
++
++        /** \brief Setting extra code */
++        inline void SetExtraCode(const wxString& ExtraCode) { m_ExtraCode = ExtraCode; }
++
+         /** \brief Getting parent item */
+         inline wxsParent* GetParent() { return m_Parent; }
+ 
+@@ -587,6 +594,7 @@
+                                                 ///         resource tree after change
+         wxsResourceItemId m_LastTreeId;         ///< \brief Last Tree item id generated from BuildItemTree
+         wxString m_WindowParent;                ///< \brief name of variable with window parent used while generating code
++        wxString m_ExtraCode;                   ///< \brief User's extra item initialization code
+ 
+         friend class wxsParent;
+ };
+Index: plugins/contrib/wxSmith/wxwidgets/wxstool.h
+===================================================================
+--- plugins/contrib/wxSmith/wxwidgets/wxstool.h	(revision 4044)
++++ plugins/contrib/wxSmith/wxwidgets/wxstool.h	(working copy)
+@@ -9,7 +9,7 @@
+     public:
+ 
+         /** \brief Default properties flags used by tools */
+-        static const long flTool = flVariable | flSubclass;
++        static const long flTool = flVariable|flSubclass|flExtraCode;
+ 
+         /** \brief Ctor */
+         wxsTool(
+Index: plugins/contrib/wxSmith/wxwidgets/wxswidget.h
+===================================================================
+--- plugins/contrib/wxSmith/wxwidgets/wxswidget.h	(revision 4044)
++++ plugins/contrib/wxSmith/wxwidgets/wxswidget.h	(working copy)
+@@ -22,7 +22,7 @@
+     public:
+ 
+         /** \brief Default properties flags used by widgets */
+-        static const long flWidget = flVariable|flId|flPosition|flSize|flEnabled|flFocused|flHidden|flColours|flToolTip|flFont|flHelpText|flSubclass|flMinMaxSize;
++        static const long flWidget = flVariable|flId|flPosition|flSize|flEnabled|flFocused|flHidden|flColours|flToolTip|flFont|flHelpText|flSubclass|flMinMaxSize|flExtraCode;
+ 
+         /** \brief Ctor
+          *  \param Data data managment object handling this item

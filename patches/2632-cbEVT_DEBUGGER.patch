@@ -1,0 +1,46 @@
+Index: src/plugins/debuggergdb/debuggergdb.cpp
+===================================================================
+--- src/plugins/debuggergdb/debuggergdb.cpp	(revision 5427)
++++ src/plugins/debuggergdb/debuggergdb.cpp	(working copy)
+@@ -1214,6 +1214,18 @@
+                                         m_pExamineMemoryDlg,
+                                         m_pThreadsDlg);
+ 
++    // Notify debugger plugins so they could start a GDB server process
++    PluginManager *plm = Manager::Get()->GetPluginManager();
++    CodeBlocksEvent evt(cbEVT_DEBUGGER_STARTED);
++    plm->NotifyPlugins(evt);
++    int nRet = evt.GetInt();
++    if (nRet < 0) {
++        cbMessageBox(_T("A plugin failed the debug process."));
++        msgMan->Log(_("Aborted by plugin"), m_PageIndex);
++        m_Canceled = true;
++        return -1;
++    }
++    // Continue
+ 
+     // create gdb launch command
+     wxString cmd;
+@@ -1916,6 +1928,10 @@
+                 Log(_("Failed."));
+         }
+     #endif
++    // Notify debugger plugins for end of debug session
++    PluginManager *plm = Manager::Get()->GetPluginManager();
++    CodeBlocksEvent evt(cbEVT_DEBUGGER_PAUSED);
++    plm->NotifyPlugins(evt);
+     }
+ }
+ 
+@@ -2378,6 +2394,11 @@
+                         wxICON_STOP);
+     }
+ 
++    // Notify debugger plugins for end of debug session
++    PluginManager *plm = Manager::Get()->GetPluginManager();
++    CodeBlocksEvent evt(cbEVT_DEBUGGER_FINISHED);
++    plm->NotifyPlugins(evt);
++
+     // switch to the user-defined layout when finished debugging
+     DoSwitchToPreviousLayout();
+ 

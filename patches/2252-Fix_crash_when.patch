@@ -1,0 +1,28 @@
+Index: src/sdk/editorbase.cpp
+===================================================================
+--- src/sdk/editorbase.cpp	(revision 4650)
++++ src/sdk/editorbase.cpp	(working copy)
+@@ -122,6 +122,11 @@
+ 
+ EditorBase::~EditorBase()
+ {
++    if (Manager::Get()->GetEditorManager()) // sanity check
++        Manager::Get()->GetEditorManager()->RemoveCustomEditor(this);
++
++	delete m_pData;
++
+     if (Manager::Get()->GetPluginManager())
+     {
+         CodeBlocksEvent event(cbEVT_EDITOR_CLOSE);
+@@ -130,11 +135,6 @@
+ 
+         Manager::Get()->GetPluginManager()->NotifyPlugins(event);
+     }
+-
+-    if (Manager::Get()->GetEditorManager()) // sanity check
+-        Manager::Get()->GetEditorManager()->RemoveCustomEditor(this);
+-
+-	delete m_pData;
+ }
+ 
+ const wxString& EditorBase::GetTitle()

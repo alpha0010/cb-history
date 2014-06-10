@@ -1,0 +1,130 @@
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 2487)
++++ src/sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -122,6 +122,7 @@
+    	XRCCTRL(*this, "chkWordWrap", wxCheckBox)->SetValue(cfg->ReadBool(_T("/word_wrap"), false));
+    	XRCCTRL(*this, "chkShowLineNumbers", wxCheckBox)->SetValue(cfg->ReadBool(_T("/show_line_numbers"), true));
+    	XRCCTRL(*this, "chkHighlightCaretLine", wxCheckBox)->SetValue(cfg->ReadBool(_T("/highlight_caret_line"), false));
++   	XRCCTRL(*this, "chkDynamicColumnWidth", wxCheckBox)->SetValue(cfg->ReadBool(_T("/dynamic_column_width"), false));
+    	XRCCTRL(*this, "spnTabSize", wxSpinCtrl)->SetValue(cfg->ReadInt(_T("/tab_size"), 4));
+    	XRCCTRL(*this, "cmbViewWS", wxComboBox)->SetSelection(cfg->ReadInt(_T("/view_whitespace"), 0));
+    	XRCCTRL(*this, "rbTabText", wxRadioBox)->SetSelection(cfg->ReadBool(_T("/tab_text_relative"), true) ? 1 : 0);
+@@ -817,6 +818,7 @@
+         cfg->Write(_T("/word_wrap"), 			XRCCTRL(*this, "chkWordWrap", wxCheckBox)->GetValue());
+         cfg->Write(_T("/show_line_numbers"), 	XRCCTRL(*this, "chkShowLineNumbers", wxCheckBox)->GetValue());
+         cfg->Write(_T("/highlight_caret_line"), XRCCTRL(*this, "chkHighlightCaretLine", wxCheckBox)->GetValue());
++        cfg->Write(_T("/dynamic_column_width"), XRCCTRL(*this, "chkDynamicColumnWidth", wxCheckBox)->GetValue());
+         cfg->Write(_T("/tab_size"),             XRCCTRL(*this, "spnTabSize", wxSpinCtrl)->GetValue());
+         cfg->Write(_T("/view_whitespace"),      XRCCTRL(*this, "cmbViewWS", wxComboBox)->GetSelection());
+         cfg->Write(_T("/tab_text_relative"),    XRCCTRL(*this, "rbTabText", wxRadioBox)->GetSelection() ? true : false);
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 2487)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -123,7 +123,8 @@
+         m_ensure_consistent_line_ends(true),
+         m_LastMarginMenuLine(-1),
+         m_LastDebugLine(-1),
+-        m_useByteOrderMark(false)
++        m_useByteOrderMark(false),
++        m_lineNumbersWidth(0)
+     {
+         m_encoding = wxLocale::GetSystemEncoding();
+     }
+@@ -248,6 +249,39 @@
+     	control->ConvertEOLs(control->GetEOLMode());
+     }
+ 
++    /** Set line number column width */
++    void SetLineNumberColWidth()
++    {
++        ConfigManager* cfg = Manager::Get()->GetConfigManager(_T("editor"));
++        int numberWidth = 0;
++        int dummy = 0;
++
++        // Gets the width of a '0' in pixels
++        m_pOwner->GetTextExtent(_T("0"), &numberWidth, &dummy);
++
++        int lineNumWidth = 1;
++        if(cfg->ReadBool(_T("/dynamic_column_width"), false))
++        {
++            int lineCount = m_pOwner->m_pControl->GetLineCount();
++
++            while (lineCount >= 10)
++            {
++                lineCount /= 10;
++                ++lineNumWidth;
++            }
++        }
++        else
++        {
++            lineNumWidth = 6;
++        }
++
++        if (lineNumWidth != m_lineNumbersWidth) {
++            int pixels = 5 + lineNumWidth * numberWidth;
++            m_pOwner->m_pControl->SetMarginWidth(0, pixels);
++            m_lineNumbersWidth = lineNumWidth;
++        }
++    }
++
+     //vars
+     bool m_strip_trailing_spaces;
+     bool m_ensure_final_line_end;
+@@ -259,6 +293,8 @@
+     wxFontEncoding m_encoding;
+     bool m_useByteOrderMark;
+ 
++    int m_lineNumbersWidth;
++
+ };
+ ////////////////////////////////////////////////////////////////////////////////
+ 
+@@ -350,8 +386,8 @@
+ //    Manager::Get()->GetMessageManager()->DebugLog(_T("ctor: Filename=%s\nShort=%s"), m_Filename.c_str(), m_Shortname.c_str());
+ 
+ 	CreateEditor();
++	m_IsOK = Open();
+ 	SetEditorStyle();
+-	m_IsOK = Open();
+ 
+     // if !m_IsOK then it's a new file, so set the modified flag ON
+     if (!m_IsOK && filename.IsEmpty())
+@@ -579,8 +615,7 @@
+     // line numbering
+     m_pControl->SetMarginType(0, wxSCI_MARGIN_NUMBER);
+    	if (mgr->ReadBool(_T("/show_line_numbers"), true))
+-    	m_pControl->SetMarginWidth(0, mgr->ReadInt(_T("/margin/width"), 48));
+-
++    	m_pData->SetLineNumberColWidth();
+ 	else
+ 		m_pControl->SetMarginWidth(0, 0);
+ 
+@@ -1871,6 +1906,9 @@
+ 
+             line = m_pControl->MarkerPrevious(line - 1, 1 << BREAKPOINT_MARKER);
+         }
++
++        // Adjust line numbers column
++        m_pData->SetLineNumberColWidth();
+     }
+ }
+ 
+Index: src/sdk/resources/editor_configuration.xrc
+===================================================================
+--- src/sdk/resources/editor_configuration.xrc	(revision 2487)
++++ src/sdk/resources/editor_configuration.xrc	(working copy)
+@@ -319,6 +319,12 @@
+                                 <checked>1</checked>
+                               </object>
+                             </object>
++                            <object class="sizeritem">
++                              <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                              <object class="wxCheckBox" name="chkDynamicColumnWidth">
++                                <label>Set Column Width Dynamic</label>
++                              </object>
++                            </object>
+                           </object>
+                         </object>
+                       </object>

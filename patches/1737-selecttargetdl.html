@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 1737 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #1737 <small>2006-12-19 00:12:01</small></h3>
+          <h4>stahta01</h4>
+          selecttargetdlg patch for wxWidgets 2.8
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="1737-selecttargetdl.patch">1737-selecttargetdl.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Refinement</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2007-01-02 10:44:49</dd>
+            <dt>Assigned to</dt><dd>killerbot</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">stahta01 2006-12-19 00:15:41</div>
+        <div class="panel-body">
+          <p>Change: wxDialog::OnCancel and wxDialog::OnOK no longer exists in wxWidgets 2.8.0.</p>
+          <p>Problem: SelectTargetDlg inherits wxDialog::OnOK.</p>
+          <p>Solution: Added void OnOK(wxCommandEvent&amp; event); to header for SelectTargetDlg and added code to support it.</p>
+          <p>Note: I am NOT sure if my code is correct way to implement OnOK.</p>
+          <p>Tim S</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">killerbot 2006-12-27 11:03:16</div>
+        <div class="panel-body">
+          <p>question : if it no longer exists, what's the use of implementing it, who will ever call it.</p>
+          <p>We have the EndModal() hook where we process retCode==wxID_OK.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">killerbot 2006-12-27 16:00:21</div>
+        <div class="panel-body">
+          <p>ok I just noted an event is mapped to it. Could we map that event to something else for wx 280 ?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">stahta01 2006-12-27 17:32:40</div>
+        <div class="panel-body">
+          <p>I really do NOT know wxWidgets events so I did the easiest solution of re-creating the missing method of OnOK. I have no idea how to fix it another way that keeps 2.6.3 working without adding a lot of #if wxCHECK_VERSION(2, 8, 0) blocks. Tim S</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2007-01-02 09:57:38</div>
+        <div class="panel-body">
+          <p>We just have to move the code from OnOK() to EndModal(), inside a "if (retCode == wxID_OK)" block and remove the OnOK() event and function. This will work with all wx versions...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">killerbot 2007-01-02 10:44:49</div>
+        <div class="panel-body">
+          <p>removed the double click entry -&gt; patch is no longer needed.</p>
+          <p>Explicitly clicking the OK button is now required.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

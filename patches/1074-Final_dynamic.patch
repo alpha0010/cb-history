@@ -1,0 +1,180 @@
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 2509)
++++ src/sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -93,6 +93,7 @@
+ 	EVT_LISTBOX(XRCID("lstAutoCompKeyword"),	EditorConfigurationDlg::OnAutoCompKeyword)
+ 	EVT_BUTTON(XRCID("btnAutoCompAdd"),	        EditorConfigurationDlg::OnAutoCompAdd)
+ 	EVT_BUTTON(XRCID("btnAutoCompDelete"),	    EditorConfigurationDlg::OnAutoCompDelete)
++	EVT_CHECKBOX(XRCID("chkDynamicWidth"),      EditorConfigurationDlg::OnDynamicCheck)
+ 
+     EVT_LISTBOOK_PAGE_CHANGED(XRCID("nbMain"), EditorConfigurationDlg::OnPageChanged)
+ END_EVENT_TABLE()
+@@ -162,7 +163,9 @@
+     XRCCTRL(*this, "spnGutterColumn", wxSpinCtrl)->SetValue(cfg->ReadInt(_T("/gutter/column"), 80));
+ 
+     //margin
+-    XRCCTRL(*this, "spnMarginWidth", wxSpinCtrl)->SetValue(cfg->ReadInt(_T("/margin/width"), 48));
++    XRCCTRL(*this, "spnMarginWidth", wxSpinCtrl)->SetValue(cfg->ReadInt(_T("/margin/width_chars"), 6));
++    XRCCTRL(*this, "chkDynamicWidth", wxCheckBox)->SetValue(cfg->ReadBool(_T("/margin/dynamic_width"), false));
++    XRCCTRL(*this, "spnMarginWidth", wxSpinCtrl)->Enable(!cfg->ReadBool(_T("/margin/dynamic_width"), false));
+     XRCCTRL(*this, "chkAddBPByLeftClick", wxCheckBox)->SetValue(cfg->ReadBool(_T("/margin_1_sensitive"), true));
+ 
+ 	// colour set
+@@ -801,6 +804,11 @@
+     m_LastAutoCompKeyword = lstKeyword->GetSelection();
+ }
+ 
++void EditorConfigurationDlg::OnDynamicCheck(wxCommandEvent& event)
++{
++    XRCCTRL(*this, "spnMarginWidth", wxSpinCtrl)->Enable(!event.IsChecked());
++}
++
+ void EditorConfigurationDlg::EndModal(int retCode)
+ {
+     if (retCode == wxID_OK)
+@@ -848,7 +856,8 @@
+         cfg->Write(_T("/gutter/column"), 		XRCCTRL(*this, "spnGutterColumn", wxSpinCtrl)->GetValue());
+ 
+         //margin
+-        cfg->Write(_T("/margin/width"), XRCCTRL(*this, "spnMarginWidth", wxSpinCtrl)->GetValue());
++        cfg->Write(_T("/margin/width_chars"), XRCCTRL(*this, "spnMarginWidth", wxSpinCtrl)->GetValue());
++        cfg->Write(_T("margin/dynamic_width"), XRCCTRL(*this, "chkDynamicWidth", wxCheckBox)->GetValue());
+         cfg->Write(_T("/margin_1_sensitive"), (bool)XRCCTRL(*this, "chkAddBPByLeftClick", wxCheckBox)->GetValue());
+ 
+ 		// default code : first update what's in the current txtCtrl,
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 2509)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -123,7 +123,8 @@
+         m_ensure_consistent_line_ends(true),
+         m_LastMarginMenuLine(-1),
+         m_LastDebugLine(-1),
+-        m_useByteOrderMark(false)
++        m_useByteOrderMark(false),
++        m_lineNumbersWidth(0)
+     {
+         m_encoding = wxLocale::GetSystemEncoding();
+     }
+@@ -248,6 +249,37 @@
+     	control->ConvertEOLs(control->GetEOLMode());
+     }
+ 
++    /** Set line number column width */
++    void SetLineNumberColWidth()
++    {
++        ConfigManager* cfg = Manager::Get()->GetConfigManager(_T("editor"));
++
++        int pixelWidth = m_pOwner->m_pControl->TextWidth(wxSCI_STYLE_LINENUMBER, _T("9"));
++
++        if(cfg->ReadBool(_T("/margin/dynamic_width"), false))
++        {
++            int lineNumWidth = 1;
++            int lineCount = m_pOwner->m_pControl->GetLineCount();
++
++            while (lineCount >= 10)
++            {
++                lineCount /= 10;
++                ++lineNumWidth;
++            }
++
++            if (lineNumWidth != m_lineNumbersWidth) {
++                m_pOwner->m_pControl->SetMarginWidth(0, 6 + lineNumWidth * pixelWidth);
++                m_lineNumbersWidth = lineNumWidth;
++            }
++        }
++        else
++        {
++            m_pOwner->m_pControl->SetMarginWidth(0, 6 + cfg->ReadInt(_T("/margin/width_chars"), 6) * pixelWidth);
++        }
++
++
++    }
++
+     //vars
+     bool m_strip_trailing_spaces;
+     bool m_ensure_final_line_end;
+@@ -259,6 +291,8 @@
+     wxFontEncoding m_encoding;
+     bool m_useByteOrderMark;
+ 
++    int m_lineNumbersWidth;
++
+ };
+ ////////////////////////////////////////////////////////////////////////////////
+ 
+@@ -350,8 +384,8 @@
+ //    Manager::Get()->GetMessageManager()->DebugLog(_T("ctor: Filename=%s\nShort=%s"), m_Filename.c_str(), m_Shortname.c_str());
+ 
+ 	CreateEditor();
++	m_IsOK = Open();
+ 	SetEditorStyle();
+-	m_IsOK = Open();
+ 
+     // if !m_IsOK then it's a new file, so set the modified flag ON
+     if (!m_IsOK && filename.IsEmpty())
+@@ -579,7 +613,7 @@
+     // line numbering
+     m_pControl->SetMarginType(0, wxSCI_MARGIN_NUMBER);
+    	if (mgr->ReadBool(_T("/show_line_numbers"), true))
+-    	m_pControl->SetMarginWidth(0, mgr->ReadInt(_T("/margin/width"), 48));
++    	m_pData->SetLineNumberColWidth();
+ 
+ 	else
+ 		m_pControl->SetMarginWidth(0, 0);
+@@ -1866,6 +1900,8 @@
+ 
+             line = m_pControl->MarkerPrevious(line - 1, 1 << BREAKPOINT_MARKER);
+         }
++
++        m_pData->SetLineNumberColWidth();
+     }
+ }
+ 
+Index: src/sdk/resources/editor_configuration.xrc
+===================================================================
+--- src/sdk/resources/editor_configuration.xrc	(revision 2509)
++++ src/sdk/resources/editor_configuration.xrc	(working copy)
+@@ -435,13 +435,26 @@
+                         <object class="sizeritem">
+                           <flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+                           <object class="wxStaticText">
+-                            <label>Width for line numbers:</label>
++                            <label>Width for line numbers (in chars):</label>
+                           </object>
+                         </object>
+                         <object class="sizeritem">
+                           <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                          <object class="wxSpinCtrl" name="spnMarginWidth">
+-                            <value>48</value>
++                          <object class="wxBoxSizer">
++                            <orient>wxHORIZONTAL</orient>
++                            <object class="sizeritem">
++                              <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                              <object class="wxSpinCtrl" name="spnMarginWidth">
++                                <value>48</value>
++                              </object>
++                            </object>
++                            <object class="sizeritem">
++                              <border>10</border>
++                              <flag>wxLEFT|wxALIGN_RIGHT|wxALIGN_CENTER_VERTICAL</flag>
++                              <object class="wxCheckBox" name="chkDynamicWidth">
++                                <label>Dynamic setting</label>
++                              </object>
++                            </object>
+                           </object>
+                         </object>
+                       </object>
+Index: src/sdk/editorconfigurationdlg.h
+===================================================================
+--- src/sdk/editorconfigurationdlg.h	(revision 2509)
++++ src/sdk/editorconfigurationdlg.h	(working copy)
+@@ -33,6 +33,7 @@
+ 		void OnAutoCompKeyword(wxCommandEvent& event);
+ 		void OnAutoCompAdd(wxCommandEvent& event);
+ 		void OnAutoCompDelete(wxCommandEvent& event);
++		void OnDynamicCheck(wxCommandEvent& event);
+ 		void UpdateSampleFont(bool askForNewFont);
+ 
+ 		void EndModal(int retCode);

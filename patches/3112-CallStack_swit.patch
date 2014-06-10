@@ -1,0 +1,34 @@
+Index: debian/changelog
+===================================================================
+--- debian/changelog	(revision 6906)
++++ debian/changelog	(working copy)
+@@ -1,4 +1,4 @@
+-codeblocks (10.05svn6787) unstable; urgency=low
++codeblocks (10.05svn6906) unstable; urgency=low
+ 
+   * New svn revision
+ 
+
+Index: src/plugins/debuggergdb/backtracedlg.cpp
+===================================================================
+--- src/plugins/debuggergdb/backtracedlg.cpp	(revision 6906)
++++ src/plugins/debuggergdb/backtracedlg.cpp	(working copy)
+@@ -125,6 +125,18 @@
+                                  wxLIST_NEXT_ALL,
+                                  wxLIST_STATE_SELECTED);
+ 
++    //Switch to the frame in the list
++    long realFrameNr;
++    if (lst->GetItemText(index).ToLong(&realFrameNr))
++    {
++        // switch to this frame
++        if (m_pDbg->GetState().HasDriver())
++            m_pDbg->GetState().GetDriver()->SwitchToFrame(realFrameNr);
++    }
++    else
++        cbMessageBox(_("Couldn't find out the frame number!"), _("Error"), wxICON_ERROR);
++
++	//Move the editor to frame's location in the code
+     wxListItem info;
+     info.m_itemId = index;
+     info.m_mask = wxLIST_MASK_TEXT;

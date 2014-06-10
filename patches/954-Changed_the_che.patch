@@ -1,0 +1,96 @@
+Index: plugins/compilergcc/compilergcc.h
+===================================================================
+--- plugins/compilergcc/compilergcc.h	(revision 2256)
++++ plugins/compilergcc/compilergcc.h	(working copy)
+@@ -157,7 +157,7 @@
+         wxString ProjectMakefile();
+         void AddOutputLine(const wxString& output, bool forceErrorColor = false);
+         void PrintBanner(cbProject* prj = 0, ProjectBuildTarget* target = 0);
+-        bool UseMake(ProjectBuildTarget* target = 0);
++        bool UseMake(cbProject* project = 0);
+ 		bool CompilerValid(ProjectBuildTarget* target = 0);
+ 		ProjectBuildTarget* GetBuildTargetForFile(ProjectFile* pf);
+ 		ProjectBuildTarget* GetBuildTargetForFile(const wxString& file);
+Index: plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- plugins/compilergcc/compilergcc.cpp	(revision 2256)
++++ plugins/compilergcc/compilergcc.cpp	(working copy)
+@@ -1171,14 +1171,19 @@
+     m_LastTempMakefile = _T("");
+ }
+ 
+-bool CompilerGCC::UseMake(ProjectBuildTarget* target)
++bool CompilerGCC::UseMake(cbProject* project)
+ {
+-    if (!m_Project)
++    if (!m_Project && !project)
+         return false;
+-    wxString idx = m_Project->GetCompilerID();
++
++    cbProject *prj = project;
++    if(!prj)
++        prj=m_Project;
++
++    wxString idx = prj->GetCompilerID();
+     if (CompilerFactory::GetCompiler(idx))
+     {
+-        if (m_Project->IsMakefileCustom())
++        if (prj->IsMakefileCustom())
+             return true;
+         else
+         {
+@@ -1564,7 +1569,7 @@
+         wxSetWorkingDirectory(m_Project->GetBasePath());
+     CompilerFactory::GetCompiler(m_CompilerId)->Init(m_Project);
+ 
+-    if (UseMake(target))
++    if (UseMake())
+     {
+         wxString cmd = GetMakeCommandFor(mcClean, target);
+         m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, m_Project, target));
+@@ -1618,7 +1623,7 @@
+         wxSetWorkingDirectory(m_Project->GetBasePath());
+     CompilerFactory::GetCompiler(m_CompilerId)->Init(m_Project);
+ 
+-    if (UseMake(target))
++    if (UseMake())
+     {
+         wxString cmd = GetMakeCommandFor(mcDistClean, target);
+         m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, m_Project, target));
+@@ -1980,8 +1985,7 @@
+ 
+ //	Manager::Get()->GetMacrosManager()->Reset();
+ 
+-    wxString cmd;
+-    if (UseMake(bt))
++    if (UseMake(prj))
+     {
+         wxString cmd = GetMakeCommandFor(mcBuild, bt);
+         m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, prj, bt));
+@@ -2068,7 +2072,7 @@
+ 	DoPrepareQueue();
+ 
+     ProjectBuildTarget* bt = m_Project->GetBuildTarget(target);
+-    if (UseMake(bt))
++    if (UseMake())
+     {
+         // make sure all project files are saved
+         if (m_Project && !m_Project->SaveAllFiles())
+@@ -2116,7 +2120,7 @@
+ 
+     CompilerFactory::GetCompiler(m_CompilerId)->Init(m_Project);
+ 
+-    if (UseMake(target))
++    if (UseMake())
+     {
+         wxString cmd = GetMakeCommandFor(mcClean, target);
+         m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, m_Project, target));
+@@ -2274,7 +2278,7 @@
+ 
+     ProjectFile* pf = m_Project ? m_Project->GetFileByFilename(file, true, false) : 0;
+     ProjectBuildTarget* bt = GetBuildTargetForFile(pf);
+-    bool useMake = UseMake(bt);
++    bool useMake = UseMake();
+ 
+     if (!pf)
+     {

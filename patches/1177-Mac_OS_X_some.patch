@@ -1,0 +1,63 @@
+Index: src/plugins/debuggergdb/gdb_driver.cpp
+===================================================================
+--- src/plugins/debuggergdb/gdb_driver.cpp	(revision 2626)
++++ src/plugins/debuggergdb/gdb_driver.cpp	(working copy)
+@@ -204,7 +204,7 @@
+     ResetCursor();
+ 
+     // under windows, 'start' segfaults with wx projects...
+-#ifdef __WXMSW__
++#if (defined( __WXMSW__) || defined(__WXMAC__))
+     m_BreakOnEntry = false;
+     m_ManualBreakOnEntry = false;
+     // start the process
+Index: src/sdk/propgrid/src/propgrid/propgrid.cpp
+===================================================================
+--- src/sdk/propgrid/src/propgrid/propgrid.cpp	(revision 2626)
++++ src/sdk/propgrid/src/propgrid/propgrid.cpp	(working copy)
+@@ -5890,6 +5890,8 @@
+     #endif
+ 
+         Refresh();
++        return res;
++
+     }
+ #else
+     // ** wxMAC Only **
+@@ -5901,7 +5903,6 @@
+     return false;
+ #endif
+ 
+-    return res;
+ }
+ 
+ // -----------------------------------------------------------------------
+Index: src/sdk/editorcolourset.cpp
+===================================================================
+--- src/sdk/editorcolourset.cpp	(revision 2626)
++++ src/sdk/editorcolourset.cpp	(working copy)
+@@ -676,7 +676,7 @@
+         wxChar c;
+         size_t len = 0;
+ 
+-        while(c = *src)
++        while((c = *src))
+         {
+             ++src;
+             if(c > _T(' '))
+Index: src/sdk/configmanager.cpp
+===================================================================
+--- src/sdk/configmanager.cpp	(revision 2626)
++++ src/sdk/configmanager.cpp	(working copy)
+@@ -1308,6 +1308,11 @@
+ bool ConfigManager::Unix() {return true;};
+ #endif
+ 
++#ifdef __WXMAC__
++bool ConfigManager::Windows() {return false;};
++bool ConfigManager::Unix() {return true;};
++#endif
++
+ bool ConfigManager::Linux() {return Unix();};
+ 
+  

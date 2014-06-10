@@ -1,0 +1,144 @@
+Index: src/plugins/codecompletion/codecompletion.cpp
+===================================================================
+--- src/plugins/codecompletion/codecompletion.cpp	(revision 4149)
++++ src/plugins/codecompletion/codecompletion.cpp	(working copy)
+@@ -109,6 +109,9 @@
+ int idGotoDeclaration = wxNewId();
+ int idGotoImplementation = wxNewId();
+ int idOpenIncludeFile = wxNewId();
++int idGotoDeclarationMenu = wxNewId();
++int idGotoImplementationMenu = wxNewId();
++int idOpenIncludeFileMenu = wxNewId();
+ int idStartParsingProjects = wxNewId();
+ int idCodeCompleteTimer = wxNewId();
+ int idFunctionsParsingTimer = wxNewId();
+@@ -128,7 +131,10 @@
+     EVT_MENU(idUnimplementedClassMethods, CodeCompletion::OnUnimplementedClassMethods)
+     EVT_MENU(idGotoDeclaration, CodeCompletion::OnGotoDeclaration)
+     EVT_MENU(idGotoImplementation, CodeCompletion::OnGotoDeclaration)
++    EVT_MENU(idGotoDeclarationMenu, CodeCompletion::OnGotoDeclarationMenu)
++    EVT_MENU(idGotoImplementationMenu, CodeCompletion::OnGotoDeclarationMenu)
+     EVT_MENU(idOpenIncludeFile, CodeCompletion::OnOpenIncludeFile)
++    EVT_MENU(idOpenIncludeFileMenu, CodeCompletion::OnOpenIncludeFileMenu)
+
+     EVT_MENU(idViewClassBrowser, CodeCompletion::OnViewClassBrowser)
+
+@@ -237,6 +243,8 @@
+         m_EditMenu->AppendSeparator();
+         m_EditMenu->Append(idMenuCodeComplete, _("Complete code\tCtrl-Space"));
+         m_EditMenu->Append(idMenuShowCallTip, _("Show call tip\tCtrl-Shift-Space"));
++        m_EditMenu->Append(idClassMethod, _("Insert class method declaration/implementation"));
++        m_EditMenu->Append(idUnimplementedClassMethods, _("Insert unimplemented class methods"));
+     }
+     else
+         Manager::Get()->GetMessageManager()->DebugLog(_T("Could not find Edit menu!"));
+@@ -247,6 +255,9 @@
+         m_SearchMenu->Append(idMenuGotoFunction, _("Goto function...\tCtrl-Alt-G"));
+         m_SearchMenu->Append(idMenuGotoPrevFunction, _("Goto previous function\tCtrl-PgUp"));
+         m_SearchMenu->Append(idMenuGotoNextFunction, _("Goto next function\tCtrl-PgDn"));
++        m_SearchMenu->Append(idGotoDeclarationMenu, _("Goto declaration"));
++        m_SearchMenu->Append(idGotoImplementationMenu, _("Goto implementation"));
++        m_SearchMenu->Append(idOpenIncludeFileMenu, _("Open include file"));
+     }
+     else
+         Manager::Get()->GetMessageManager()->DebugLog(_T("Could not find Search menu!"));
+@@ -402,12 +415,17 @@
+     {
+         m_EditMenu->Delete(idMenuCodeComplete);
+         m_EditMenu->Delete(idMenuShowCallTip);
++        m_EditMenu->Delete(idClassMethod);
++        m_EditMenu->Delete(idUnimplementedClassMethods);
+     }
+     if (m_SearchMenu)
+     {
+         m_SearchMenu->Delete(idMenuGotoFunction);
+         m_SearchMenu->Delete(idMenuGotoPrevFunction);
+         m_SearchMenu->Delete(idMenuGotoNextFunction);
++        m_SearchMenu->Delete(idGotoDeclarationMenu);
++        m_SearchMenu->Delete(idGotoImplementationMenu);
++        m_SearchMenu->Delete(idOpenIncludeFileMenu);
+     }
+ }
+
+@@ -1364,6 +1382,8 @@
+     {
+         m_EditMenu->Enable(idMenuCodeComplete, hasEd);
+         m_EditMenu->Enable(idMenuShowCallTip, hasEd);
++        m_EditMenu->Enable(idClassMethod, hasEd);
++        m_EditMenu->Enable(idUnimplementedClassMethods, hasEd);
+     }
+
+     if (m_SearchMenu)
+@@ -1371,6 +1391,9 @@
+         m_SearchMenu->Enable(idMenuGotoFunction,     hasEd);
+         m_SearchMenu->Enable(idMenuGotoPrevFunction, hasEd);
+         m_SearchMenu->Enable(idMenuGotoNextFunction, hasEd);
++        m_SearchMenu->Enable(idGotoDeclarationMenu, hasEd);
++        m_SearchMenu->Enable(idGotoImplementationMenu, hasEd);
++        m_SearchMenu->Enable(idOpenIncludeFileMenu, hasEd);
+     }
+
+     if (m_ViewMenu)
+@@ -1463,11 +1486,57 @@
+     DoAllMethodsImpl();
+ }
+
++void CodeCompletion::OnOpenIncludeFileMenu(wxCommandEvent& event)
++{
++    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
++    if (ed)
++    {
++        m_LastIncludeFileFrom = ed->GetFilename();
++        cbStyledTextCtrl* control = ed->GetControl();
++        int pos = control->GetCurrentPos();
++        wxString line = control->GetLine(control->LineFromPosition(pos));
++
++        wxRegEx reg(_T("^[ \t]*#[ \t]*include[ \t]+[\"<]([^\">]+)[\">]"));
++        wxString inc;
++        if (reg.Matches(line))
++            inc = reg.GetMatch(line, 1);
++        m_LastIncludeFile.Clear();
++        if (!inc.IsEmpty())
++        {
++            m_LastIncludeFile = inc;
++            OnOpenIncludeFile(event);
++        }
++    }
++}
++
++void CodeCompletion::OnGotoDeclarationMenu(wxCommandEvent& event)
++{
++    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
++    if (ed)
++    {
++        cbStyledTextCtrl* control = ed->GetControl();
++        int pos = control->GetCurrentPos();
++        int ws = control->WordStartPosition(pos, true);
++        int we = control->WordEndPosition(pos, true);
++        wxString txt = control->GetTextRange(ws, we);
++        m_LastKeyword.Clear();
++        if(!txt.IsEmpty())
++        {
++            m_LastKeyword = txt;
++            if(event.GetId()==idGotoDeclarationMenu)
++                event.SetId(idGotoDeclaration);
++            else
++                event.SetId(idGotoImplementation);
++            OnGotoDeclaration(event);
++        }
++    }
++}
++
+Index: src/plugins/codecompletion/codecompletion.h
+===================================================================
+--- src/plugins/codecompletion/codecompletion.h	(revision 4149)
++++ src/plugins/codecompletion/codecompletion.h	(working copy)
+@@ -70,6 +70,8 @@
+         void OnUnimplementedClassMethods(wxCommandEvent& event);
+         void OnGotoDeclaration(wxCommandEvent& event);
+         void OnOpenIncludeFile(wxCommandEvent& event);
++        void OnGotoDeclarationMenu(wxCommandEvent& event);
++        void OnOpenIncludeFileMenu(wxCommandEvent& event);
+         void OnAppDoneStartup(CodeBlocksEvent& event);
+         void OnStartParsingProjects(wxTimerEvent& event);
+         void OnCodeCompleteTimer(wxTimerEvent& event);

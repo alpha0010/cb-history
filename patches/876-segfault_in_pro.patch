@@ -1,0 +1,22 @@
+When using wxWidgets with WXDEBUG enabled, a segfault occurs at 
+projectoptionsdlg.cpp line 864 because validation of the wxWindow pointer
+returns NULL. Line 864 is asking for a "wxSpinButton" in the code, but the
+xrc file specifies a "wxButton". 
+
+Patch follows:
+
+C:\Usr\Proj\cbBeta\trunk>svn diff 
+Index: src/sdk/projectoptionsdlg.cpp
+===================================================================
+--- src/sdk/projectoptionsdlg.cpp	(revision 2092)
++++ src/sdk/projectoptionsdlg.cpp	(working copy)
+@@ -861,7 +861,8 @@
+     XRCCTRL(*this, "btnAddPreScripts", wxButton)->Enable(scrsel);
+     XRCCTRL(*this, "btnRemovePreScripts", wxButton)->Enable(scrsel && presel);
+     XRCCTRL(*this, "spnPreScripts", wxSpinButton)->Enable(scrsel && presel && lstPreScripts->GetCount() > 1);
+-    XRCCTRL(*this, "btnCheckScripts", wxSpinButton)->Enable(!customMake);
++    //-XRCCTRL(*this, "btnCheckScripts", wxSpinButton)->Enable(!customMake); //pecan 2006/2/28
++    XRCCTRL(*this, "btnCheckScripts", wxButton)->Enable(!customMake);        //pecan 2006/2/28
+ }
+ 
+ void ProjectOptionsDlg::EndModal(int retCode)

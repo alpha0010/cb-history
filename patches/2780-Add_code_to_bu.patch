@@ -1,0 +1,4286 @@
+Index: src/update.bat
+===================================================================
+--- src/update.bat	(revision 5680)
++++ src/update.bat	(working copy)
+@@ -64,9 +64,6 @@
+ %ZIPCMD% -0 -qu ..\..\..\%CB_DEVEL_RESDIR%\debugger.zip images\*.png images\16x16\*.png > nul
+ cd ..\..\..
+ 
+-echo Copying external exception handler
+-xcopy /D /y exchndl.dll output > nul
+-xcopy /D /y exchndl.dll devel > nul
+ echo Copying files
+ xcopy /D /y %CB_DEVEL_RESDIR%\*.zip %CB_OUTPUT_RESDIR% > nul
+ xcopy /D /y sdk\resources\lexers\lexer_* %CB_DEVEL_RESDIR%\lexers > nul
+Index: src/base/exchndl/include/demangle.h
+===================================================================
+--- src/base/exchndl/include/demangle.h	(revision 0)
++++ src/base/exchndl/include/demangle.h	(revision 0)
+@@ -0,0 +1,576 @@
++/* Defs for interface to demanglers.
++   Copyright 1992, 1993, 1994, 1995, 1996, 1997, 1998, 2000, 2001, 2002,
++   2003, 2004, 2005, 2007 Free Software Foundation, Inc.
++   
++   This program is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Library General Public License
++   as published by the Free Software Foundation; either version 2, or
++   (at your option) any later version.
++
++   In addition to the permissions in the GNU Library General Public
++   License, the Free Software Foundation gives you unlimited
++   permission to link the compiled version of this file into
++   combinations with other programs, and to distribute those
++   combinations without any restriction coming from the use of this
++   file.  (The Library Public License restrictions do apply in other
++   respects; for example, they cover modification of the file, and
++   distribution when not linked into a combined executable.)
++
++   This program is distributed in the hope that it will be useful, but
++   WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Library General Public License for more details.
++
++   You should have received a copy of the GNU Library General Public
++   License along with this program; if not, write to the Free Software
++   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston, MA
++   02110-1301, USA.  */
++
++
++#if !defined (DEMANGLE_H)
++#define DEMANGLE_H
++
++#include "libiberty.h"
++
++#ifdef __cplusplus
++extern "C" {
++#endif /* __cplusplus */
++
++/* Options passed to cplus_demangle (in 2nd parameter). */
++
++#define DMGL_NO_OPTS	 0		/* For readability... */
++#define DMGL_PARAMS	 (1 << 0)	/* Include function args */
++#define DMGL_ANSI	 (1 << 1)	/* Include const, volatile, etc */
++#define DMGL_JAVA	 (1 << 2)	/* Demangle as Java rather than C++. */
++#define DMGL_VERBOSE	 (1 << 3)	/* Include implementation details.  */
++#define DMGL_TYPES	 (1 << 4)	/* Also try to demangle type encodings.  */
++#define DMGL_RET_POSTFIX (1 << 5)       /* Print function return types (when
++                                           present) after function signature */
++
++#define DMGL_AUTO	 (1 << 8)
++#define DMGL_GNU	 (1 << 9)
++#define DMGL_LUCID	 (1 << 10)
++#define DMGL_ARM	 (1 << 11)
++#define DMGL_HP 	 (1 << 12)       /* For the HP aCC compiler;
++                                            same as ARM except for
++                                            template arguments, etc. */
++#define DMGL_EDG	 (1 << 13)
++#define DMGL_GNU_V3	 (1 << 14)
++#define DMGL_GNAT	 (1 << 15)
++
++/* If none of these are set, use 'current_demangling_style' as the default. */
++#define DMGL_STYLE_MASK (DMGL_AUTO|DMGL_GNU|DMGL_LUCID|DMGL_ARM|DMGL_HP|DMGL_EDG|DMGL_GNU_V3|DMGL_JAVA|DMGL_GNAT)
++
++/* Enumeration of possible demangling styles.
++
++   Lucid and ARM styles are still kept logically distinct, even though
++   they now both behave identically.  The resulting style is actual the
++   union of both.  I.E. either style recognizes both "__pt__" and "__rf__"
++   for operator "->", even though the first is lucid style and the second
++   is ARM style. (FIXME?) */
++
++extern enum demangling_styles
++{
++  no_demangling = -1,
++  unknown_demangling = 0,
++  auto_demangling = DMGL_AUTO,
++  gnu_demangling = DMGL_GNU,
++  lucid_demangling = DMGL_LUCID,
++  arm_demangling = DMGL_ARM,
++  hp_demangling = DMGL_HP,
++  edg_demangling = DMGL_EDG,
++  gnu_v3_demangling = DMGL_GNU_V3,
++  java_demangling = DMGL_JAVA,
++  gnat_demangling = DMGL_GNAT
++} current_demangling_style;
++
++/* Define string names for the various demangling styles. */
++
++#define NO_DEMANGLING_STYLE_STRING            "none"
++#define AUTO_DEMANGLING_STYLE_STRING	      "auto"
++#define GNU_DEMANGLING_STYLE_STRING    	      "gnu"
++#define LUCID_DEMANGLING_STYLE_STRING	      "lucid"
++#define ARM_DEMANGLING_STYLE_STRING	      "arm"
++#define HP_DEMANGLING_STYLE_STRING	      "hp"
++#define EDG_DEMANGLING_STYLE_STRING	      "edg"
++#define GNU_V3_DEMANGLING_STYLE_STRING        "gnu-v3"
++#define JAVA_DEMANGLING_STYLE_STRING          "java"
++#define GNAT_DEMANGLING_STYLE_STRING          "gnat"
++
++/* Some macros to test what demangling style is active. */
++
++#define CURRENT_DEMANGLING_STYLE current_demangling_style
++#define AUTO_DEMANGLING (((int) CURRENT_DEMANGLING_STYLE) & DMGL_AUTO)
++#define GNU_DEMANGLING (((int) CURRENT_DEMANGLING_STYLE) & DMGL_GNU)
++#define LUCID_DEMANGLING (((int) CURRENT_DEMANGLING_STYLE) & DMGL_LUCID)
++#define ARM_DEMANGLING (((int) CURRENT_DEMANGLING_STYLE) & DMGL_ARM)
++#define HP_DEMANGLING (((int) CURRENT_DEMANGLING_STYLE) & DMGL_HP)
++#define EDG_DEMANGLING (((int) CURRENT_DEMANGLING_STYLE) & DMGL_EDG)
++#define GNU_V3_DEMANGLING (((int) CURRENT_DEMANGLING_STYLE) & DMGL_GNU_V3)
++#define JAVA_DEMANGLING (((int) CURRENT_DEMANGLING_STYLE) & DMGL_JAVA)
++#define GNAT_DEMANGLING (((int) CURRENT_DEMANGLING_STYLE) & DMGL_GNAT)
++
++/* Provide information about the available demangle styles. This code is
++   pulled from gdb into libiberty because it is useful to binutils also.  */
++
++extern const struct demangler_engine
++{
++  const char *const demangling_style_name;
++  const enum demangling_styles demangling_style;
++  const char *const demangling_style_doc;
++} libiberty_demanglers[];
++
++extern char *
++cplus_demangle (const char *mangled, int options);
++
++extern int
++cplus_demangle_opname (const char *opname, char *result, int options);
++
++extern const char *
++cplus_mangle_opname (const char *opname, int options);
++
++/* Note: This sets global state.  FIXME if you care about multi-threading. */
++
++extern void
++set_cplus_marker_for_demangling (int ch);
++
++extern enum demangling_styles 
++cplus_demangle_set_style (enum demangling_styles style);
++
++extern enum demangling_styles 
++cplus_demangle_name_to_style (const char *name);
++
++/* Callback typedef for allocation-less demangler interfaces. */
++typedef void (*demangle_callbackref) (const char *, size_t, void *);
++
++/* V3 ABI demangling entry points, defined in cp-demangle.c.  Callback
++   variants return non-zero on success, zero on error.  char* variants
++   return a string allocated by malloc on success, NULL on error.  */
++extern int
++cplus_demangle_v3_callback (const char *mangled, int options,
++                            demangle_callbackref callback, void *opaque);
++
++extern char*
++cplus_demangle_v3 (const char *mangled, int options);
++
++extern int
++java_demangle_v3_callback (const char *mangled,
++                           demangle_callbackref callback, void *opaque);
++
++extern char*
++java_demangle_v3 (const char *mangled);
++
++enum gnu_v3_ctor_kinds {
++  gnu_v3_complete_object_ctor = 1,
++  gnu_v3_base_object_ctor,
++  gnu_v3_complete_object_allocating_ctor
++};
++
++/* Return non-zero iff NAME is the mangled form of a constructor name
++   in the G++ V3 ABI demangling style.  Specifically, return an `enum
++   gnu_v3_ctor_kinds' value indicating what kind of constructor
++   it is.  */
++extern enum gnu_v3_ctor_kinds
++	is_gnu_v3_mangled_ctor (const char *name);
++
++
++enum gnu_v3_dtor_kinds {
++  gnu_v3_deleting_dtor = 1,
++  gnu_v3_complete_object_dtor,
++  gnu_v3_base_object_dtor
++};
++
++/* Return non-zero iff NAME is the mangled form of a destructor name
++   in the G++ V3 ABI demangling style.  Specifically, return an `enum
++   gnu_v3_dtor_kinds' value, indicating what kind of destructor
++   it is.  */
++extern enum gnu_v3_dtor_kinds
++	is_gnu_v3_mangled_dtor (const char *name);
++
++/* The V3 demangler works in two passes.  The first pass builds a tree
++   representation of the mangled name, and the second pass turns the
++   tree representation into a demangled string.  Here we define an
++   interface to permit a caller to build their own tree
++   representation, which they can pass to the demangler to get a
++   demangled string.  This can be used to canonicalize user input into
++   something which the demangler might output.  It could also be used
++   by other demanglers in the future.  */
++
++/* These are the component types which may be found in the tree.  Many
++   component types have one or two subtrees, referred to as left and
++   right (a component type with only one subtree puts it in the left
++   subtree).  */
++
++enum demangle_component_type
++{
++  /* A name, with a length and a pointer to a string.  */
++  DEMANGLE_COMPONENT_NAME,
++  /* A qualified name.  The left subtree is a class or namespace or
++     some such thing, and the right subtree is a name qualified by
++     that class.  */
++  DEMANGLE_COMPONENT_QUAL_NAME,
++  /* A local name.  The left subtree describes a function, and the
++     right subtree is a name which is local to that function.  */
++  DEMANGLE_COMPONENT_LOCAL_NAME,
++  /* A typed name.  The left subtree is a name, and the right subtree
++     describes that name as a function.  */
++  DEMANGLE_COMPONENT_TYPED_NAME,
++  /* A template.  The left subtree is a template name, and the right
++     subtree is a template argument list.  */
++  DEMANGLE_COMPONENT_TEMPLATE,
++  /* A template parameter.  This holds a number, which is the template
++     parameter index.  */
++  DEMANGLE_COMPONENT_TEMPLATE_PARAM,
++  /* A constructor.  This holds a name and the kind of
++     constructor.  */
++  DEMANGLE_COMPONENT_CTOR,
++  /* A destructor.  This holds a name and the kind of destructor.  */
++  DEMANGLE_COMPONENT_DTOR,
++  /* A vtable.  This has one subtree, the type for which this is a
++     vtable.  */
++  DEMANGLE_COMPONENT_VTABLE,
++  /* A VTT structure.  This has one subtree, the type for which this
++     is a VTT.  */
++  DEMANGLE_COMPONENT_VTT,
++  /* A construction vtable.  The left subtree is the type for which
++     this is a vtable, and the right subtree is the derived type for
++     which this vtable is built.  */
++  DEMANGLE_COMPONENT_CONSTRUCTION_VTABLE,
++  /* A typeinfo structure.  This has one subtree, the type for which
++     this is the tpeinfo structure.  */
++  DEMANGLE_COMPONENT_TYPEINFO,
++  /* A typeinfo name.  This has one subtree, the type for which this
++     is the typeinfo name.  */
++  DEMANGLE_COMPONENT_TYPEINFO_NAME,
++  /* A typeinfo function.  This has one subtree, the type for which
++     this is the tpyeinfo function.  */
++  DEMANGLE_COMPONENT_TYPEINFO_FN,
++  /* A thunk.  This has one subtree, the name for which this is a
++     thunk.  */
++  DEMANGLE_COMPONENT_THUNK,
++  /* A virtual thunk.  This has one subtree, the name for which this
++     is a virtual thunk.  */
++  DEMANGLE_COMPONENT_VIRTUAL_THUNK,
++  /* A covariant thunk.  This has one subtree, the name for which this
++     is a covariant thunk.  */
++  DEMANGLE_COMPONENT_COVARIANT_THUNK,
++  /* A Java class.  This has one subtree, the type.  */
++  DEMANGLE_COMPONENT_JAVA_CLASS,
++  /* A guard variable.  This has one subtree, the name for which this
++     is a guard variable.  */
++  DEMANGLE_COMPONENT_GUARD,
++  /* A reference temporary.  This has one subtree, the name for which
++     this is a temporary.  */
++  DEMANGLE_COMPONENT_REFTEMP,
++  /* A hidden alias.  This has one subtree, the encoding for which it
++     is providing alternative linkage.  */
++  DEMANGLE_COMPONENT_HIDDEN_ALIAS,
++  /* A standard substitution.  This holds the name of the
++     substitution.  */
++  DEMANGLE_COMPONENT_SUB_STD,
++  /* The restrict qualifier.  The one subtree is the type which is
++     being qualified.  */
++  DEMANGLE_COMPONENT_RESTRICT,
++  /* The volatile qualifier.  The one subtree is the type which is
++     being qualified.  */
++  DEMANGLE_COMPONENT_VOLATILE,
++  /* The const qualifier.  The one subtree is the type which is being
++     qualified.  */
++  DEMANGLE_COMPONENT_CONST,
++  /* The restrict qualifier modifying a member function.  The one
++     subtree is the type which is being qualified.  */
++  DEMANGLE_COMPONENT_RESTRICT_THIS,
++  /* The volatile qualifier modifying a member function.  The one
++     subtree is the type which is being qualified.  */
++  DEMANGLE_COMPONENT_VOLATILE_THIS,
++  /* The const qualifier modifying a member function.  The one subtree
++     is the type which is being qualified.  */
++  DEMANGLE_COMPONENT_CONST_THIS,
++  /* A vendor qualifier.  The left subtree is the type which is being
++     qualified, and the right subtree is the name of the
++     qualifier.  */
++  DEMANGLE_COMPONENT_VENDOR_TYPE_QUAL,
++  /* A pointer.  The one subtree is the type which is being pointed
++     to.  */
++  DEMANGLE_COMPONENT_POINTER,
++  /* A reference.  The one subtree is the type which is being
++     referenced.  */
++  DEMANGLE_COMPONENT_REFERENCE,
++  /* A complex type.  The one subtree is the base type.  */
++  DEMANGLE_COMPONENT_COMPLEX,
++  /* An imaginary type.  The one subtree is the base type.  */
++  DEMANGLE_COMPONENT_IMAGINARY,
++  /* A builtin type.  This holds the builtin type information.  */
++  DEMANGLE_COMPONENT_BUILTIN_TYPE,
++  /* A vendor's builtin type.  This holds the name of the type.  */
++  DEMANGLE_COMPONENT_VENDOR_TYPE,
++  /* A function type.  The left subtree is the return type.  The right
++     subtree is a list of ARGLIST nodes.  Either or both may be
++     NULL.  */
++  DEMANGLE_COMPONENT_FUNCTION_TYPE,
++  /* An array type.  The left subtree is the dimension, which may be
++     NULL, or a string (represented as DEMANGLE_COMPONENT_NAME), or an
++     expression.  The right subtree is the element type.  */
++  DEMANGLE_COMPONENT_ARRAY_TYPE,
++  /* A pointer to member type.  The left subtree is the class type,
++     and the right subtree is the member type.  CV-qualifiers appear
++     on the latter.  */
++  DEMANGLE_COMPONENT_PTRMEM_TYPE,
++  /* An argument list.  The left subtree is the current argument, and
++     the right subtree is either NULL or another ARGLIST node.  */
++  DEMANGLE_COMPONENT_ARGLIST,
++  /* A template argument list.  The left subtree is the current
++     template argument, and the right subtree is either NULL or
++     another TEMPLATE_ARGLIST node.  */
++  DEMANGLE_COMPONENT_TEMPLATE_ARGLIST,
++  /* An operator.  This holds information about a standard
++     operator.  */
++  DEMANGLE_COMPONENT_OPERATOR,
++  /* An extended operator.  This holds the number of arguments, and
++     the name of the extended operator.  */
++  DEMANGLE_COMPONENT_EXTENDED_OPERATOR,
++  /* A typecast, represented as a unary operator.  The one subtree is
++     the type to which the argument should be cast.  */
++  DEMANGLE_COMPONENT_CAST,
++  /* A unary expression.  The left subtree is the operator, and the
++     right subtree is the single argument.  */
++  DEMANGLE_COMPONENT_UNARY,
++  /* A binary expression.  The left subtree is the operator, and the
++     right subtree is a BINARY_ARGS.  */
++  DEMANGLE_COMPONENT_BINARY,
++  /* Arguments to a binary expression.  The left subtree is the first
++     argument, and the right subtree is the second argument.  */
++  DEMANGLE_COMPONENT_BINARY_ARGS,
++  /* A trinary expression.  The left subtree is the operator, and the
++     right subtree is a TRINARY_ARG1.  */
++  DEMANGLE_COMPONENT_TRINARY,
++  /* Arguments to a trinary expression.  The left subtree is the first
++     argument, and the right subtree is a TRINARY_ARG2.  */
++  DEMANGLE_COMPONENT_TRINARY_ARG1,
++  /* More arguments to a trinary expression.  The left subtree is the
++     second argument, and the right subtree is the third argument.  */
++  DEMANGLE_COMPONENT_TRINARY_ARG2,
++  /* A literal.  The left subtree is the type, and the right subtree
++     is the value, represented as a DEMANGLE_COMPONENT_NAME.  */
++  DEMANGLE_COMPONENT_LITERAL,
++  /* A negative literal.  Like LITERAL, but the value is negated.
++     This is a minor hack: the NAME used for LITERAL points directly
++     to the mangled string, but since negative numbers are mangled
++     using 'n' instead of '-', we want a way to indicate a negative
++     number which involves neither modifying the mangled string nor
++     allocating a new copy of the literal in memory.  */
++  DEMANGLE_COMPONENT_LITERAL_NEG
++};
++
++/* Types which are only used internally.  */
++
++struct demangle_operator_info;
++struct demangle_builtin_type_info;
++
++/* A node in the tree representation is an instance of a struct
++   demangle_component.  Note that the field names of the struct are
++   not well protected against macros defined by the file including
++   this one.  We can fix this if it ever becomes a problem.  */
++
++struct demangle_component
++{
++  /* The type of this component.  */
++  enum demangle_component_type type;
++
++  union
++  {
++    /* For DEMANGLE_COMPONENT_NAME.  */
++    struct
++    {
++      /* A pointer to the name (which need not NULL terminated) and
++	 its length.  */
++      const char *s;
++      int len;
++    } s_name;
++
++    /* For DEMANGLE_COMPONENT_OPERATOR.  */
++    struct
++    {
++      /* Operator.  */
++      const struct demangle_operator_info *op;
++    } s_operator;
++
++    /* For DEMANGLE_COMPONENT_EXTENDED_OPERATOR.  */
++    struct
++    {
++      /* Number of arguments.  */
++      int args;
++      /* Name.  */
++      struct demangle_component *name;
++    } s_extended_operator;
++
++    /* For DEMANGLE_COMPONENT_CTOR.  */
++    struct
++    {
++      /* Kind of constructor.  */
++      enum gnu_v3_ctor_kinds kind;
++      /* Name.  */
++      struct demangle_component *name;
++    } s_ctor;
++
++    /* For DEMANGLE_COMPONENT_DTOR.  */
++    struct
++    {
++      /* Kind of destructor.  */
++      enum gnu_v3_dtor_kinds kind;
++      /* Name.  */
++      struct demangle_component *name;
++    } s_dtor;
++
++    /* For DEMANGLE_COMPONENT_BUILTIN_TYPE.  */
++    struct
++    {
++      /* Builtin type.  */
++      const struct demangle_builtin_type_info *type;
++    } s_builtin;
++
++    /* For DEMANGLE_COMPONENT_SUB_STD.  */
++    struct
++    {
++      /* Standard substitution string.  */
++      const char* string;
++      /* Length of string.  */
++      int len;
++    } s_string;
++
++    /* For DEMANGLE_COMPONENT_TEMPLATE_PARAM.  */
++    struct
++    {
++      /* Template parameter index.  */
++      long number;
++    } s_number;
++
++    /* For other types.  */
++    struct
++    {
++      /* Left (or only) subtree.  */
++      struct demangle_component *left;
++      /* Right subtree.  */
++      struct demangle_component *right;
++    } s_binary;
++
++  } u;
++};
++
++/* People building mangled trees are expected to allocate instances of
++   struct demangle_component themselves.  They can then call one of
++   the following functions to fill them in.  */
++
++/* Fill in most component types with a left subtree and a right
++   subtree.  Returns non-zero on success, zero on failure, such as an
++   unrecognized or inappropriate component type.  */
++
++extern int
++cplus_demangle_fill_component (struct demangle_component *fill,
++                               enum demangle_component_type,
++                               struct demangle_component *left,
++                               struct demangle_component *right);
++
++/* Fill in a DEMANGLE_COMPONENT_NAME.  Returns non-zero on success,
++   zero for bad arguments.  */
++
++extern int
++cplus_demangle_fill_name (struct demangle_component *fill,
++                          const char *, int);
++
++/* Fill in a DEMANGLE_COMPONENT_BUILTIN_TYPE, using the name of the
++   builtin type (e.g., "int", etc.).  Returns non-zero on success,
++   zero if the type is not recognized.  */
++
++extern int
++cplus_demangle_fill_builtin_type (struct demangle_component *fill,
++                                  const char *type_name);
++
++/* Fill in a DEMANGLE_COMPONENT_OPERATOR, using the name of the
++   operator and the number of arguments which it takes (the latter is
++   used to disambiguate operators which can be both binary and unary,
++   such as '-').  Returns non-zero on success, zero if the operator is
++   not recognized.  */
++
++extern int
++cplus_demangle_fill_operator (struct demangle_component *fill,
++                              const char *opname, int args);
++
++/* Fill in a DEMANGLE_COMPONENT_EXTENDED_OPERATOR, providing the
++   number of arguments and the name.  Returns non-zero on success,
++   zero for bad arguments.  */
++
++extern int
++cplus_demangle_fill_extended_operator (struct demangle_component *fill,
++                                       int numargs,
++                                       struct demangle_component *nm);
++
++/* Fill in a DEMANGLE_COMPONENT_CTOR.  Returns non-zero on success,
++   zero for bad arguments.  */
++
++extern int
++cplus_demangle_fill_ctor (struct demangle_component *fill,
++                          enum gnu_v3_ctor_kinds kind,
++                          struct demangle_component *name);
++
++/* Fill in a DEMANGLE_COMPONENT_DTOR.  Returns non-zero on success,
++   zero for bad arguments.  */
++
++extern int
++cplus_demangle_fill_dtor (struct demangle_component *fill,
++                          enum gnu_v3_dtor_kinds kind,
++                          struct demangle_component *name);
++
++/* This function translates a mangled name into a struct
++   demangle_component tree.  The first argument is the mangled name.
++   The second argument is DMGL_* options.  This returns a pointer to a
++   tree on success, or NULL on failure.  On success, the third
++   argument is set to a block of memory allocated by malloc.  This
++   block should be passed to free when the tree is no longer
++   needed.  */
++
++extern struct demangle_component *
++cplus_demangle_v3_components (const char *mangled, int options, void **mem);
++
++/* This function takes a struct demangle_component tree and returns
++   the corresponding demangled string.  The first argument is DMGL_*
++   options.  The second is the tree to demangle.  The third is a guess
++   at the length of the demangled string, used to initially allocate
++   the return buffer.  The fourth is a pointer to a size_t.  On
++   success, this function returns a buffer allocated by malloc(), and
++   sets the size_t pointed to by the fourth argument to the size of
++   the allocated buffer (not the length of the returned string).  On
++   failure, this function returns NULL, and sets the size_t pointed to
++   by the fourth argument to 0 for an invalid tree, or to 1 for a
++   memory allocation error.  */
++
++extern char *
++cplus_demangle_print (int options,
++                      const struct demangle_component *tree,
++                      int estimated_length,
++                      size_t *p_allocated_size);
++
++/* This function takes a struct demangle_component tree and passes back
++   a demangled string in one or more calls to a callback function.
++   The first argument is DMGL_* options.  The second is the tree to
++   demangle.  The third is a pointer to a callback function; on each call
++   this receives an element of the demangled string, its length, and an
++   opaque value.  The fourth is the opaque value passed to the callback.
++   The callback is called once or more to return the full demangled
++   string.  The demangled element string is always nul-terminated, though
++   its length is also provided for convenience.  In contrast to
++   cplus_demangle_print(), this function does not allocate heap memory
++   to grow output strings (except perhaps where alloca() is implemented
++   by malloc()), and so is normally safe for use where the heap has been
++   corrupted.  On success, this function returns 1; on failure, 0.  */
++
++extern int
++cplus_demangle_print_callback (int options,
++                               const struct demangle_component *tree,
++                               demangle_callbackref callback, void *opaque);
++
++#ifdef __cplusplus
++}
++#endif /* __cplusplus */
++
++#endif	/* DEMANGLE_H */
+
+Property changes on: src\base\exchndl\include\demangle.h
+___________________________________________________________________
+Added: svn:mime-type
+   + text/plain
+Added: svn:eol-style
+   + native
+
+Index: src/base/exchndl/include/libcoff.h
+===================================================================
+--- src/base/exchndl/include/libcoff.h	(revision 0)
++++ src/base/exchndl/include/libcoff.h	(revision 0)
+@@ -0,0 +1,936 @@
++/* DO NOT EDIT!  -*- buffer-read-only: t -*-  This file is automatically 
++   generated from "libcoff-in.h" and "coffcode.h".
++   Run "make headers" in your build bfd/ to regenerate.  */
++
++/* BFD COFF object file private structure.
++   Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
++   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007
++   Free Software Foundation, Inc.
++   Written by Cygnus Support.
++
++   This file is part of BFD, the Binary File Descriptor library.
++
++   This program is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 3 of the License, or
++   (at your option) any later version.
++
++   This program is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with this program; if not, write to the Free Software
++   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
++   MA 02110-1301, USA.  */
++
++#include "bfdlink.h"
++
++/* Object file tdata; access macros.  */
++
++#define coff_data(bfd)		      ((bfd)->tdata.coff_obj_data)
++#define exec_hdr(bfd)		      (coff_data (bfd)->hdr)
++#define obj_pe(bfd)                   (coff_data (bfd)->pe)
++#define obj_symbols(bfd)	      (coff_data (bfd)->symbols)
++#define	obj_sym_filepos(bfd)	      (coff_data (bfd)->sym_filepos)
++#define obj_relocbase(bfd)	      (coff_data (bfd)->relocbase)
++#define obj_raw_syments(bfd)	      (coff_data (bfd)->raw_syments)
++#define obj_raw_syment_count(bfd)     (coff_data (bfd)->raw_syment_count)
++#define obj_convert(bfd)	      (coff_data (bfd)->conversion_table)
++#define obj_conv_table_size(bfd)      (coff_data (bfd)->conv_table_size)
++#define obj_coff_external_syms(bfd)   (coff_data (bfd)->external_syms)
++#define obj_coff_keep_syms(bfd)	      (coff_data (bfd)->keep_syms)
++#define obj_coff_strings(bfd)	      (coff_data (bfd)->strings)
++#define obj_coff_keep_strings(bfd)    (coff_data (bfd)->keep_strings)
++#define obj_coff_sym_hashes(bfd)      (coff_data (bfd)->sym_hashes)
++#define obj_coff_strings_written(bfd) (coff_data (bfd)->strings_written)
++#define obj_coff_local_toc_table(bfd) (coff_data (bfd)->local_toc_sym_map)
++
++/* `Tdata' information kept for COFF files.  */
++
++typedef struct coff_tdata
++{
++  struct coff_symbol_struct *symbols;	/* Symtab for input bfd.  */
++  unsigned int *conversion_table;
++  int conv_table_size;
++  file_ptr sym_filepos;
++
++  struct coff_ptr_struct *raw_syments;
++  unsigned long raw_syment_count;
++
++  /* These are only valid once writing has begun.  */
++  long int relocbase;
++
++  /* These members communicate important constants about the symbol table
++     to GDB's symbol-reading code.  These `constants' unfortunately vary
++     from coff implementation to implementation...  */
++  unsigned local_n_btmask;
++  unsigned local_n_btshft;
++  unsigned local_n_tmask;
++  unsigned local_n_tshift;
++  unsigned local_symesz;
++  unsigned local_auxesz;
++  unsigned local_linesz;
++
++  /* The unswapped external symbols.  May be NULL.  Read by
++     _bfd_coff_get_external_symbols.  */
++  void * external_syms;
++  /* If this is TRUE, the external_syms may not be freed.  */
++  bfd_boolean keep_syms;
++
++  /* The string table.  May be NULL.  Read by
++     _bfd_coff_read_string_table.  */
++  char *strings;
++  /* If this is TRUE, the strings may not be freed.  */
++  bfd_boolean keep_strings;
++  /* If this is TRUE, the strings have been written out already.  */
++  bfd_boolean strings_written;
++
++  /* Is this a PE format coff file?  */
++  int pe;
++  /* Used by the COFF backend linker.  */
++  struct coff_link_hash_entry **sym_hashes;
++
++  /* Used by the pe linker for PowerPC.  */
++  int *local_toc_sym_map;
++
++  struct bfd_link_info *link_info;
++
++  /* Used by coff_find_nearest_line.  */
++  void * line_info;
++
++  /* A place to stash dwarf2 info for this bfd.  */
++  void * dwarf2_find_line_info;
++
++  /* The timestamp from the COFF file header.  */
++  long timestamp;
++
++  /* Copy of some of the f_flags bits in the COFF filehdr structure,
++     used by ARM code.  */
++  flagword flags;
++
++} coff_data_type;
++
++/* Tdata for pe image files.  */
++typedef struct pe_tdata
++{
++  coff_data_type coff;
++  struct internal_extra_pe_aouthdr pe_opthdr;
++  int dll;
++  int has_reloc_section;
++  bfd_boolean (*in_reloc_p) (bfd *, reloc_howto_type *);
++  flagword real_flags;
++  int target_subsystem;
++  bfd_boolean force_minimum_alignment;
++} pe_data_type;
++
++#define pe_data(bfd)		((bfd)->tdata.pe_obj_data)
++
++/* Tdata for XCOFF files.  */
++
++struct xcoff_tdata
++{
++  /* Basic COFF information.  */
++  coff_data_type coff;
++
++  /* TRUE if this is an XCOFF64 file. */
++  bfd_boolean xcoff64;
++
++  /* TRUE if a large a.out header should be generated.  */
++  bfd_boolean full_aouthdr;
++
++  /* TOC value.  */
++  bfd_vma toc;
++
++  /* Index of section holding TOC.  */
++  int sntoc;
++
++  /* Index of section holding entry point.  */
++  int snentry;
++
++  /* .text alignment from optional header.  */
++  int text_align_power;
++
++  /* .data alignment from optional header.  */
++  int data_align_power;
++
++  /* modtype from optional header.  */
++  short modtype;
++
++  /* cputype from optional header.  */
++  short cputype;
++
++  /* maxdata from optional header.  */
++  bfd_vma maxdata;
++
++  /* maxstack from optional header.  */
++  bfd_vma maxstack;
++
++  /* Used by the XCOFF backend linker.  */
++  asection **csects;
++  unsigned long *debug_indices;
++  unsigned int import_file_id;
++};
++
++#define xcoff_data(abfd) ((abfd)->tdata.xcoff_obj_data)
++
++/* We take the address of the first element of an asymbol to ensure that the
++   macro is only ever applied to an asymbol.  */
++#define coffsymbol(asymbol) ((coff_symbol_type *)(&((asymbol)->the_bfd)))
++
++/* The used_by_bfd field of a section may be set to a pointer to this
++   structure.  */
++
++struct coff_section_tdata
++{
++  /* The relocs, swapped into COFF internal form.  This may be NULL.  */
++  struct internal_reloc *relocs;
++  /* If this is TRUE, the relocs entry may not be freed.  */
++  bfd_boolean keep_relocs;
++  /* The section contents.  This may be NULL.  */
++  bfd_byte *contents;
++  /* If this is TRUE, the contents entry may not be freed.  */
++  bfd_boolean keep_contents;
++  /* Information cached by coff_find_nearest_line.  */
++  bfd_vma offset;
++  unsigned int i;
++  const char *function;
++  /* Optional information about a COMDAT entry; NULL if not COMDAT. */
++  struct coff_comdat_info *comdat;
++  int line_base;
++  /* A pointer used for .stab linking optimizations.  */
++  void * stab_info;
++  /* Available for individual backends.  */
++  void * tdata;
++};
++
++/* An accessor macro for the coff_section_tdata structure.  */
++#define coff_section_data(abfd, sec) \
++  ((struct coff_section_tdata *) (sec)->used_by_bfd)
++
++/* Tdata for sections in XCOFF files.  This is used by the linker.  */
++
++struct xcoff_section_tdata
++{
++  /* Used for XCOFF csects created by the linker; points to the real
++     XCOFF section which contains this csect.  */
++  asection *enclosing;
++  /* The lineno_count field for the enclosing section, because we are
++     going to clobber it there.  */
++  unsigned int lineno_count;
++  /* The first and one past the last symbol indices for symbols used
++     by this csect.  */
++  unsigned long first_symndx;
++  unsigned long last_symndx;
++};
++
++/* An accessor macro the xcoff_section_tdata structure.  */
++#define xcoff_section_data(abfd, sec) \
++  ((struct xcoff_section_tdata *) coff_section_data ((abfd), (sec))->tdata)
++
++/* Tdata for sections in PE files.  */
++
++struct pei_section_tdata
++{
++  /* The virtual size of the section.  */
++  bfd_size_type virt_size;
++  /* The PE section flags.  */
++  long pe_flags;
++};
++
++/* An accessor macro for the pei_section_tdata structure.  */
++#define pei_section_data(abfd, sec) \
++  ((struct pei_section_tdata *) coff_section_data ((abfd), (sec))->tdata)
++
++/* COFF linker hash table entries.  */
++
++struct coff_link_hash_entry
++{
++  struct bfd_link_hash_entry root;
++
++  /* Symbol index in output file.  Set to -1 initially.  Set to -2 if
++     there is a reloc against this symbol.  */
++  long indx;
++
++  /* Symbol type.  */
++  unsigned short type;
++
++  /* Symbol class.  */
++  unsigned char class;
++
++  /* Number of auxiliary entries.  */
++  char numaux;
++
++  /* BFD to take auxiliary entries from.  */
++  bfd *auxbfd;
++
++  /* Pointer to array of auxiliary entries, if any.  */
++  union internal_auxent *aux;
++
++  /* Flag word; legal values follow.  */
++  unsigned short coff_link_hash_flags;
++  /* Symbol is a PE section symbol.  */
++#define COFF_LINK_HASH_PE_SECTION_SYMBOL (01)
++};
++
++/* COFF linker hash table.  */
++
++struct coff_link_hash_table
++{
++  struct bfd_link_hash_table root;
++  /* A pointer to information used to link stabs in sections.  */
++  struct stab_info stab_info;
++};
++
++/* Look up an entry in a COFF linker hash table.  */
++
++#define coff_link_hash_lookup(table, string, create, copy, follow)	\
++  ((struct coff_link_hash_entry *)					\
++   bfd_link_hash_lookup (&(table)->root, (string), (create),		\
++			 (copy), (follow)))
++
++/* Traverse a COFF linker hash table.  */
++
++#define coff_link_hash_traverse(table, func, info)			\
++  (bfd_link_hash_traverse						\
++   (&(table)->root,							\
++    (bfd_boolean (*) (struct bfd_link_hash_entry *, void *)) (func), \
++    (info)))
++
++/* Get the COFF linker hash table from a link_info structure.  */
++
++#define coff_hash_table(p) ((struct coff_link_hash_table *) ((p)->hash))
++
++/* Functions in coffgen.c.  */
++extern const bfd_target *coff_object_p
++  (bfd *);
++extern struct bfd_section *coff_section_from_bfd_index
++  (bfd *, int);
++extern long coff_get_symtab_upper_bound
++  (bfd *);
++extern long coff_canonicalize_symtab
++  (bfd *, asymbol **);
++extern int coff_count_linenumbers
++  (bfd *);
++extern struct coff_symbol_struct *coff_symbol_from
++  (bfd *, asymbol *);
++extern bfd_boolean coff_renumber_symbols
++  (bfd *, int *);
++extern void coff_mangle_symbols
++  (bfd *);
++extern bfd_boolean coff_write_symbols
++  (bfd *);
++extern bfd_boolean coff_write_linenumbers
++  (bfd *);
++extern alent *coff_get_lineno
++  (bfd *, asymbol *);
++extern asymbol *coff_section_symbol
++  (bfd *, char *);
++extern bfd_boolean _bfd_coff_get_external_symbols
++  (bfd *);
++extern const char *_bfd_coff_read_string_table
++  (bfd *);
++extern bfd_boolean _bfd_coff_free_symbols
++  (bfd *);
++extern struct coff_ptr_struct *coff_get_normalized_symtab
++  (bfd *);
++extern long coff_get_reloc_upper_bound
++  (bfd *, sec_ptr);
++extern asymbol *coff_make_empty_symbol
++  (bfd *);
++extern void coff_print_symbol
++  (bfd *, void * filep, asymbol *, bfd_print_symbol_type);
++extern void coff_get_symbol_info
++  (bfd *, asymbol *, symbol_info *ret);
++extern bfd_boolean _bfd_coff_is_local_label_name
++  (bfd *, const char *);
++extern asymbol *coff_bfd_make_debug_symbol
++  (bfd *, void *, unsigned long);
++extern bfd_boolean coff_find_nearest_line
++  (bfd *, asection *, asymbol **, bfd_vma, const char **,
++   const char **, unsigned int *);
++extern bfd_boolean coff_find_inliner_info
++  (bfd *, const char **, const char **, unsigned int *);
++extern int coff_sizeof_headers
++  (bfd *, struct bfd_link_info *);
++extern bfd_boolean bfd_coff_reloc16_relax_section
++  (bfd *, asection *, struct bfd_link_info *, bfd_boolean *);
++extern bfd_byte *bfd_coff_reloc16_get_relocated_section_contents
++  (bfd *, struct bfd_link_info *, struct bfd_link_order *,
++   bfd_byte *, bfd_boolean, asymbol **);
++extern bfd_vma bfd_coff_reloc16_get_value
++  (arelent *, struct bfd_link_info *, asection *);
++extern void bfd_perform_slip
++  (bfd *, unsigned int, asection *, bfd_vma);
++
++/* Functions and types in cofflink.c.  */
++
++#define STRING_SIZE_SIZE 4
++
++/* We use a hash table to merge identical enum, struct, and union
++   definitions in the linker.  */
++
++/* Information we keep for a single element (an enum value, a
++   structure or union field) in the debug merge hash table.  */
++
++struct coff_debug_merge_element
++{
++  /* Next element.  */
++  struct coff_debug_merge_element *next;
++
++  /* Name.  */
++  const char *name;
++
++  /* Type.  */
++  unsigned int type;
++
++  /* Symbol index for complex type.  */
++  long tagndx;
++};
++
++/* A linked list of debug merge entries for a given name.  */
++
++struct coff_debug_merge_type
++{
++  /* Next type with the same name.  */
++  struct coff_debug_merge_type *next;
++
++  /* Class of type.  */
++  int class;
++
++  /* Symbol index where this type is defined.  */
++  long indx;
++
++  /* List of elements.  */
++  struct coff_debug_merge_element *elements;
++};
++
++/* Information we store in the debug merge hash table.  */
++
++struct coff_debug_merge_hash_entry
++{
++  struct bfd_hash_entry root;
++
++  /* A list of types with this name.  */
++  struct coff_debug_merge_type *types;
++};
++
++/* The debug merge hash table.  */
++
++struct coff_debug_merge_hash_table
++{
++  struct bfd_hash_table root;
++};
++
++/* Initialize a COFF debug merge hash table.  */
++
++#define coff_debug_merge_hash_table_init(table) \
++  (bfd_hash_table_init (&(table)->root, _bfd_coff_debug_merge_hash_newfunc, \
++			sizeof (struct coff_debug_merge_hash_entry)))
++
++/* Free a COFF debug merge hash table.  */
++
++#define coff_debug_merge_hash_table_free(table) \
++  (bfd_hash_table_free (&(table)->root))
++
++/* Look up an entry in a COFF debug merge hash table.  */
++
++#define coff_debug_merge_hash_lookup(table, string, create, copy) \
++  ((struct coff_debug_merge_hash_entry *) \
++   bfd_hash_lookup (&(table)->root, (string), (create), (copy)))
++
++/* Information we keep for each section in the output file when doing
++   a relocatable link.  */
++
++struct coff_link_section_info
++{
++  /* The relocs to be output.  */
++  struct internal_reloc *relocs;
++  /* For each reloc against a global symbol whose index was not known
++     when the reloc was handled, the global hash table entry.  */
++  struct coff_link_hash_entry **rel_hashes;
++};
++
++/* Information that we pass around while doing the final link step.  */
++
++struct coff_final_link_info
++{
++  /* General link information.  */
++  struct bfd_link_info *info;
++  /* Output BFD.  */
++  bfd *output_bfd;
++  /* Used to indicate failure in traversal routine.  */
++  bfd_boolean failed;
++  /* If doing "task linking" set only during the time when we want the
++     global symbol writer to convert the storage class of defined global
++     symbols from global to static. */
++  bfd_boolean global_to_static;
++  /* Hash table for long symbol names.  */
++  struct bfd_strtab_hash *strtab;
++  /* When doing a relocatable link, an array of information kept for
++     each output section, indexed by the target_index field.  */
++  struct coff_link_section_info *section_info;
++  /* Symbol index of last C_FILE symbol (-1 if none).  */
++  long last_file_index;
++  /* Contents of last C_FILE symbol.  */
++  struct internal_syment last_file;
++  /* Symbol index of first aux entry of last .bf symbol with an empty
++     endndx field (-1 if none).  */
++  long last_bf_index;
++  /* Contents of last_bf_index aux entry.  */
++  union internal_auxent last_bf;
++  /* Hash table used to merge debug information.  */
++  struct coff_debug_merge_hash_table debug_merge;
++  /* Buffer large enough to hold swapped symbols of any input file.  */
++  struct internal_syment *internal_syms;
++  /* Buffer large enough to hold sections of symbols of any input file.  */
++  asection **sec_ptrs;
++  /* Buffer large enough to hold output indices of symbols of any
++     input file.  */
++  long *sym_indices;
++  /* Buffer large enough to hold output symbols for any input file.  */
++  bfd_byte *outsyms;
++  /* Buffer large enough to hold external line numbers for any input
++     section.  */
++  bfd_byte *linenos;
++  /* Buffer large enough to hold any input section.  */
++  bfd_byte *contents;
++  /* Buffer large enough to hold external relocs of any input section.  */
++  bfd_byte *external_relocs;
++  /* Buffer large enough to hold swapped relocs of any input section.  */
++  struct internal_reloc *internal_relocs;
++};
++
++/* Most COFF variants have no way to record the alignment of a
++   section.  This struct is used to set a specific alignment based on
++   the name of the section.  */
++
++struct coff_section_alignment_entry
++{
++  /* The section name.  */
++  const char *name;
++
++  /* This is either (unsigned int) -1, indicating that the section
++     name must match exactly, or it is the number of letters which
++     must match at the start of the name.  */
++  unsigned int comparison_length;
++
++  /* These macros may be used to fill in the first two fields in a
++     structure initialization.  */
++#define COFF_SECTION_NAME_EXACT_MATCH(name) (name), ((unsigned int) -1)
++#define COFF_SECTION_NAME_PARTIAL_MATCH(name) (name), (sizeof (name) - 1)
++
++  /* Only use this entry if the default section alignment for this
++     target is at least that much (as a power of two).  If this field
++     is COFF_ALIGNMENT_FIELD_EMPTY, it should be ignored.  */
++  unsigned int default_alignment_min;
++
++  /* Only use this entry if the default section alignment for this
++     target is no greater than this (as a power of two).  If this
++     field is COFF_ALIGNMENT_FIELD_EMPTY, it should be ignored.  */
++  unsigned int default_alignment_max;
++
++#define COFF_ALIGNMENT_FIELD_EMPTY ((unsigned int) -1)
++
++  /* The desired alignment for this section (as a power of two).  */
++  unsigned int alignment_power;
++};
++
++extern struct bfd_hash_entry *_bfd_coff_link_hash_newfunc
++  (struct bfd_hash_entry *, struct bfd_hash_table *, const char *);
++extern bfd_boolean _bfd_coff_link_hash_table_init
++  (struct coff_link_hash_table *, bfd *,
++   struct bfd_hash_entry *(*) (struct bfd_hash_entry *,
++			       struct bfd_hash_table *,
++			       const char *),
++   unsigned int);
++extern struct bfd_link_hash_table *_bfd_coff_link_hash_table_create
++  (bfd *);
++extern const char *_bfd_coff_internal_syment_name
++  (bfd *, const struct internal_syment *, char *);
++extern bfd_boolean _bfd_coff_link_add_symbols
++  (bfd *, struct bfd_link_info *);
++extern bfd_boolean _bfd_coff_final_link
++  (bfd *, struct bfd_link_info *);
++extern struct internal_reloc *_bfd_coff_read_internal_relocs
++  (bfd *, asection *, bfd_boolean, bfd_byte *, bfd_boolean,
++   struct internal_reloc *);
++extern bfd_boolean _bfd_coff_generic_relocate_section
++  (bfd *, struct bfd_link_info *, bfd *, asection *, bfd_byte *,
++   struct internal_reloc *, struct internal_syment *, asection **);
++extern struct bfd_hash_entry *_bfd_coff_debug_merge_hash_newfunc
++  (struct bfd_hash_entry *, struct bfd_hash_table *, const char *);
++extern bfd_boolean _bfd_coff_write_global_sym
++  (struct coff_link_hash_entry *, void *);
++extern bfd_boolean _bfd_coff_write_task_globals
++  (struct coff_link_hash_entry *, void *);
++extern bfd_boolean _bfd_coff_link_input_bfd
++  (struct coff_final_link_info *, bfd *);
++extern bfd_boolean _bfd_coff_reloc_link_order
++  (bfd *, struct coff_final_link_info *, asection *,
++   struct bfd_link_order *);
++
++
++#define coff_get_section_contents_in_window \
++  _bfd_generic_get_section_contents_in_window
++
++/* Functions in xcofflink.c.  */
++
++extern long _bfd_xcoff_get_dynamic_symtab_upper_bound
++  (bfd *);
++extern long _bfd_xcoff_canonicalize_dynamic_symtab
++  (bfd *, asymbol **);
++extern long _bfd_xcoff_get_dynamic_reloc_upper_bound
++  (bfd *);
++extern long _bfd_xcoff_canonicalize_dynamic_reloc
++  (bfd *, arelent **, asymbol **);
++extern struct bfd_link_hash_table *_bfd_xcoff_bfd_link_hash_table_create
++  (bfd *);
++extern void _bfd_xcoff_bfd_link_hash_table_free
++  (struct bfd_link_hash_table *);
++extern bfd_boolean _bfd_xcoff_bfd_link_add_symbols
++  (bfd *, struct bfd_link_info *);
++extern bfd_boolean _bfd_xcoff_bfd_final_link
++  (bfd *, struct bfd_link_info *);
++extern bfd_boolean _bfd_ppc_xcoff_relocate_section
++  (bfd *, struct bfd_link_info *, bfd *, asection *, bfd_byte *,
++   struct internal_reloc *, struct internal_syment *, asection **);
++
++/* Functions in coff-ppc.c.  FIXME: These are called be pe.em in the
++   linker, and so should start with bfd and be declared in bfd.h.  */
++
++extern bfd_boolean ppc_allocate_toc_section
++  (struct bfd_link_info *);
++extern bfd_boolean ppc_process_before_allocation
++  (bfd *, struct bfd_link_info *);
++
++/* Extracted from coffcode.h.  */
++typedef struct coff_ptr_struct
++{
++  /* Remembers the offset from the first symbol in the file for
++     this symbol. Generated by coff_renumber_symbols. */
++  unsigned int offset;
++
++  /* Should the value of this symbol be renumbered.  Used for
++     XCOFF C_BSTAT symbols.  Set by coff_slurp_symbol_table.  */
++  unsigned int fix_value : 1;
++
++  /* Should the tag field of this symbol be renumbered.
++     Created by coff_pointerize_aux. */
++  unsigned int fix_tag : 1;
++
++  /* Should the endidx field of this symbol be renumbered.
++     Created by coff_pointerize_aux. */
++  unsigned int fix_end : 1;
++
++  /* Should the x_csect.x_scnlen field be renumbered.
++     Created by coff_pointerize_aux. */
++  unsigned int fix_scnlen : 1;
++
++  /* Fix up an XCOFF C_BINCL/C_EINCL symbol.  The value is the
++     index into the line number entries.  Set by coff_slurp_symbol_table.  */
++  unsigned int fix_line : 1;
++
++  /* The container for the symbol structure as read and translated
++     from the file. */
++  union
++  {
++    union internal_auxent auxent;
++    struct internal_syment syment;
++  } u;
++} combined_entry_type;
++
++
++/* Each canonical asymbol really looks like this: */
++
++typedef struct coff_symbol_struct
++{
++  /* The actual symbol which the rest of BFD works with */
++  asymbol symbol;
++
++  /* A pointer to the hidden information for this symbol */
++  combined_entry_type *native;
++
++  /* A pointer to the linenumber information for this symbol */
++  struct lineno_cache_entry *lineno;
++
++  /* Have the line numbers been relocated yet ? */
++  bfd_boolean done_lineno;
++} coff_symbol_type;
++/* COFF symbol classifications.  */
++
++enum coff_symbol_classification
++{
++  /* Global symbol.  */
++  COFF_SYMBOL_GLOBAL,
++  /* Common symbol.  */
++  COFF_SYMBOL_COMMON,
++  /* Undefined symbol.  */
++  COFF_SYMBOL_UNDEFINED,
++  /* Local symbol.  */
++  COFF_SYMBOL_LOCAL,
++  /* PE section symbol.  */
++  COFF_SYMBOL_PE_SECTION
++};
++
++typedef struct
++{
++  void (*_bfd_coff_swap_aux_in)
++    (bfd *, void *, int, int, int, int, void *);
++
++  void (*_bfd_coff_swap_sym_in)
++    (bfd *, void *, void *);
++
++  void (*_bfd_coff_swap_lineno_in)
++    (bfd *, void *, void *);
++
++  unsigned int (*_bfd_coff_swap_aux_out)
++    (bfd *, void *, int, int, int, int, void *);
++
++  unsigned int (*_bfd_coff_swap_sym_out)
++    (bfd *, void *, void *);
++
++  unsigned int (*_bfd_coff_swap_lineno_out)
++    (bfd *, void *, void *);
++
++  unsigned int (*_bfd_coff_swap_reloc_out)
++    (bfd *, void *, void *);
++
++  unsigned int (*_bfd_coff_swap_filehdr_out)
++    (bfd *, void *, void *);
++
++  unsigned int (*_bfd_coff_swap_aouthdr_out)
++    (bfd *, void *, void *);
++
++  unsigned int (*_bfd_coff_swap_scnhdr_out)
++    (bfd *, void *, void *);
++
++  unsigned int _bfd_filhsz;
++  unsigned int _bfd_aoutsz;
++  unsigned int _bfd_scnhsz;
++  unsigned int _bfd_symesz;
++  unsigned int _bfd_auxesz;
++  unsigned int _bfd_relsz;
++  unsigned int _bfd_linesz;
++  unsigned int _bfd_filnmlen;
++  bfd_boolean _bfd_coff_long_filenames;
++  bfd_boolean _bfd_coff_long_section_names;
++  unsigned int _bfd_coff_default_section_alignment_power;
++  bfd_boolean _bfd_coff_force_symnames_in_strings;
++  unsigned int _bfd_coff_debug_string_prefix_length;
++
++  void (*_bfd_coff_swap_filehdr_in)
++    (bfd *, void *, void *);
++
++  void (*_bfd_coff_swap_aouthdr_in)
++    (bfd *, void *, void *);
++
++  void (*_bfd_coff_swap_scnhdr_in)
++    (bfd *, void *, void *);
++
++  void (*_bfd_coff_swap_reloc_in)
++    (bfd *abfd, void *, void *);
++
++  bfd_boolean (*_bfd_coff_bad_format_hook)
++    (bfd *, void *);
++
++  bfd_boolean (*_bfd_coff_set_arch_mach_hook)
++    (bfd *, void *);
++
++  void * (*_bfd_coff_mkobject_hook)
++    (bfd *, void *, void *);
++
++  bfd_boolean (*_bfd_styp_to_sec_flags_hook)
++    (bfd *, void *, const char *, asection *, flagword *);
++
++  void (*_bfd_set_alignment_hook)
++    (bfd *, asection *, void *);
++
++  bfd_boolean (*_bfd_coff_slurp_symbol_table)
++    (bfd *);
++
++  bfd_boolean (*_bfd_coff_symname_in_debug)
++    (bfd *, struct internal_syment *);
++
++  bfd_boolean (*_bfd_coff_pointerize_aux_hook)
++    (bfd *, combined_entry_type *, combined_entry_type *,
++            unsigned int, combined_entry_type *);
++
++  bfd_boolean (*_bfd_coff_print_aux)
++    (bfd *, FILE *, combined_entry_type *, combined_entry_type *,
++            combined_entry_type *, unsigned int);
++
++  void (*_bfd_coff_reloc16_extra_cases)
++    (bfd *, struct bfd_link_info *, struct bfd_link_order *, arelent *,
++           bfd_byte *, unsigned int *, unsigned int *);
++
++  int (*_bfd_coff_reloc16_estimate)
++    (bfd *, asection *, arelent *, unsigned int,
++            struct bfd_link_info *);
++
++  enum coff_symbol_classification (*_bfd_coff_classify_symbol)
++    (bfd *, struct internal_syment *);
++
++  bfd_boolean (*_bfd_coff_compute_section_file_positions)
++    (bfd *);
++
++  bfd_boolean (*_bfd_coff_start_final_link)
++    (bfd *, struct bfd_link_info *);
++
++  bfd_boolean (*_bfd_coff_relocate_section)
++    (bfd *, struct bfd_link_info *, bfd *, asection *, bfd_byte *,
++            struct internal_reloc *, struct internal_syment *, asection **);
++
++  reloc_howto_type *(*_bfd_coff_rtype_to_howto)
++    (bfd *, asection *, struct internal_reloc *,
++            struct coff_link_hash_entry *, struct internal_syment *,
++            bfd_vma *);
++
++  bfd_boolean (*_bfd_coff_adjust_symndx)
++    (bfd *, struct bfd_link_info *, bfd *, asection *,
++            struct internal_reloc *, bfd_boolean *);
++
++  bfd_boolean (*_bfd_coff_link_add_one_symbol)
++    (struct bfd_link_info *, bfd *, const char *, flagword,
++            asection *, bfd_vma, const char *, bfd_boolean, bfd_boolean,
++            struct bfd_link_hash_entry **);
++
++  bfd_boolean (*_bfd_coff_link_output_has_begun)
++    (bfd *, struct coff_final_link_info *);
++
++  bfd_boolean (*_bfd_coff_final_link_postscript)
++    (bfd *, struct coff_final_link_info *);
++
++} bfd_coff_backend_data;
++
++#define coff_backend_info(abfd) \
++  ((bfd_coff_backend_data *) (abfd)->xvec->backend_data)
++
++#define bfd_coff_swap_aux_in(a,e,t,c,ind,num,i) \
++  ((coff_backend_info (a)->_bfd_coff_swap_aux_in) (a,e,t,c,ind,num,i))
++
++#define bfd_coff_swap_sym_in(a,e,i) \
++  ((coff_backend_info (a)->_bfd_coff_swap_sym_in) (a,e,i))
++
++#define bfd_coff_swap_lineno_in(a,e,i) \
++  ((coff_backend_info ( a)->_bfd_coff_swap_lineno_in) (a,e,i))
++
++#define bfd_coff_swap_reloc_out(abfd, i, o) \
++  ((coff_backend_info (abfd)->_bfd_coff_swap_reloc_out) (abfd, i, o))
++
++#define bfd_coff_swap_lineno_out(abfd, i, o) \
++  ((coff_backend_info (abfd)->_bfd_coff_swap_lineno_out) (abfd, i, o))
++
++#define bfd_coff_swap_aux_out(a,i,t,c,ind,num,o) \
++  ((coff_backend_info (a)->_bfd_coff_swap_aux_out) (a,i,t,c,ind,num,o))
++
++#define bfd_coff_swap_sym_out(abfd, i,o) \
++  ((coff_backend_info (abfd)->_bfd_coff_swap_sym_out) (abfd, i, o))
++
++#define bfd_coff_swap_scnhdr_out(abfd, i,o) \
++  ((coff_backend_info (abfd)->_bfd_coff_swap_scnhdr_out) (abfd, i, o))
++
++#define bfd_coff_swap_filehdr_out(abfd, i,o) \
++  ((coff_backend_info (abfd)->_bfd_coff_swap_filehdr_out) (abfd, i, o))
++
++#define bfd_coff_swap_aouthdr_out(abfd, i,o) \
++  ((coff_backend_info (abfd)->_bfd_coff_swap_aouthdr_out) (abfd, i, o))
++
++#define bfd_coff_filhsz(abfd) (coff_backend_info (abfd)->_bfd_filhsz)
++#define bfd_coff_aoutsz(abfd) (coff_backend_info (abfd)->_bfd_aoutsz)
++#define bfd_coff_scnhsz(abfd) (coff_backend_info (abfd)->_bfd_scnhsz)
++#define bfd_coff_symesz(abfd) (coff_backend_info (abfd)->_bfd_symesz)
++#define bfd_coff_auxesz(abfd) (coff_backend_info (abfd)->_bfd_auxesz)
++#define bfd_coff_relsz(abfd)  (coff_backend_info (abfd)->_bfd_relsz)
++#define bfd_coff_linesz(abfd) (coff_backend_info (abfd)->_bfd_linesz)
++#define bfd_coff_filnmlen(abfd) (coff_backend_info (abfd)->_bfd_filnmlen)
++#define bfd_coff_long_filenames(abfd) \
++  (coff_backend_info (abfd)->_bfd_coff_long_filenames)
++#define bfd_coff_long_section_names(abfd) \
++  (coff_backend_info (abfd)->_bfd_coff_long_section_names)
++#define bfd_coff_default_section_alignment_power(abfd) \
++  (coff_backend_info (abfd)->_bfd_coff_default_section_alignment_power)
++#define bfd_coff_swap_filehdr_in(abfd, i,o) \
++  ((coff_backend_info (abfd)->_bfd_coff_swap_filehdr_in) (abfd, i, o))
++
++#define bfd_coff_swap_aouthdr_in(abfd, i,o) \
++  ((coff_backend_info (abfd)->_bfd_coff_swap_aouthdr_in) (abfd, i, o))
++
++#define bfd_coff_swap_scnhdr_in(abfd, i,o) \
++  ((coff_backend_info (abfd)->_bfd_coff_swap_scnhdr_in) (abfd, i, o))
++
++#define bfd_coff_swap_reloc_in(abfd, i, o) \
++  ((coff_backend_info (abfd)->_bfd_coff_swap_reloc_in) (abfd, i, o))
++
++#define bfd_coff_bad_format_hook(abfd, filehdr) \
++  ((coff_backend_info (abfd)->_bfd_coff_bad_format_hook) (abfd, filehdr))
++
++#define bfd_coff_set_arch_mach_hook(abfd, filehdr)\
++  ((coff_backend_info (abfd)->_bfd_coff_set_arch_mach_hook) (abfd, filehdr))
++#define bfd_coff_mkobject_hook(abfd, filehdr, aouthdr)\
++  ((coff_backend_info (abfd)->_bfd_coff_mkobject_hook)\
++   (abfd, filehdr, aouthdr))
++
++#define bfd_coff_styp_to_sec_flags_hook(abfd, scnhdr, name, section, flags_ptr)\
++  ((coff_backend_info (abfd)->_bfd_styp_to_sec_flags_hook)\
++   (abfd, scnhdr, name, section, flags_ptr))
++
++#define bfd_coff_set_alignment_hook(abfd, sec, scnhdr)\
++  ((coff_backend_info (abfd)->_bfd_set_alignment_hook) (abfd, sec, scnhdr))
++
++#define bfd_coff_slurp_symbol_table(abfd)\
++  ((coff_backend_info (abfd)->_bfd_coff_slurp_symbol_table) (abfd))
++
++#define bfd_coff_symname_in_debug(abfd, sym)\
++  ((coff_backend_info (abfd)->_bfd_coff_symname_in_debug) (abfd, sym))
++
++#define bfd_coff_force_symnames_in_strings(abfd)\
++  (coff_backend_info (abfd)->_bfd_coff_force_symnames_in_strings)
++
++#define bfd_coff_debug_string_prefix_length(abfd)\
++  (coff_backend_info (abfd)->_bfd_coff_debug_string_prefix_length)
++
++#define bfd_coff_print_aux(abfd, file, base, symbol, aux, indaux)\
++  ((coff_backend_info (abfd)->_bfd_coff_print_aux)\
++   (abfd, file, base, symbol, aux, indaux))
++
++#define bfd_coff_reloc16_extra_cases(abfd, link_info, link_order,\
++                                     reloc, data, src_ptr, dst_ptr)\
++  ((coff_backend_info (abfd)->_bfd_coff_reloc16_extra_cases)\
++   (abfd, link_info, link_order, reloc, data, src_ptr, dst_ptr))
++
++#define bfd_coff_reloc16_estimate(abfd, section, reloc, shrink, link_info)\
++  ((coff_backend_info (abfd)->_bfd_coff_reloc16_estimate)\
++   (abfd, section, reloc, shrink, link_info))
++
++#define bfd_coff_classify_symbol(abfd, sym)\
++  ((coff_backend_info (abfd)->_bfd_coff_classify_symbol)\
++   (abfd, sym))
++
++#define bfd_coff_compute_section_file_positions(abfd)\
++  ((coff_backend_info (abfd)->_bfd_coff_compute_section_file_positions)\
++   (abfd))
++
++#define bfd_coff_start_final_link(obfd, info)\
++  ((coff_backend_info (obfd)->_bfd_coff_start_final_link)\
++   (obfd, info))
++#define bfd_coff_relocate_section(obfd,info,ibfd,o,con,rel,isyms,secs)\
++  ((coff_backend_info (ibfd)->_bfd_coff_relocate_section)\
++   (obfd, info, ibfd, o, con, rel, isyms, secs))
++#define bfd_coff_rtype_to_howto(abfd, sec, rel, h, sym, addendp)\
++  ((coff_backend_info (abfd)->_bfd_coff_rtype_to_howto)\
++   (abfd, sec, rel, h, sym, addendp))
++#define bfd_coff_adjust_symndx(obfd, info, ibfd, sec, rel, adjustedp)\
++  ((coff_backend_info (abfd)->_bfd_coff_adjust_symndx)\
++   (obfd, info, ibfd, sec, rel, adjustedp))
++#define bfd_coff_link_add_one_symbol(info, abfd, name, flags, section,\
++                                     value, string, cp, coll, hashp)\
++  ((coff_backend_info (abfd)->_bfd_coff_link_add_one_symbol)\
++   (info, abfd, name, flags, section, value, string, cp, coll, hashp))
++
++#define bfd_coff_link_output_has_begun(a,p) \
++  ((coff_backend_info (a)->_bfd_coff_link_output_has_begun) (a, p))
++#define bfd_coff_final_link_postscript(a,p) \
++  ((coff_backend_info (a)->_bfd_coff_final_link_postscript) (a, p))
++
+
+Property changes on: src\base\exchndl\include\libcoff.h
+___________________________________________________________________
+Added: svn:mime-type
+   + text/plain
+Added: svn:eol-style
+   + native
+
+Index: src/base/exchndl/include/libiberty.h
+===================================================================
+--- src/base/exchndl/include/libiberty.h	(revision 0)
++++ src/base/exchndl/include/libiberty.h	(revision 0)
+@@ -0,0 +1,653 @@
++/* Function declarations for libiberty.
++
++   Copyright 2001, 2002, 2005 Free Software Foundation, Inc.
++   
++   Note - certain prototypes declared in this header file are for
++   functions whoes implementation copyright does not belong to the
++   FSF.  Those prototypes are present in this file for reference
++   purposes only and their presence in this file should not construed
++   as an indication of ownership by the FSF of the implementation of
++   those functions in any way or form whatsoever.
++
++   This program is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2, or (at your option)
++   any later version.
++
++   This program is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with this program; if not, write to the Free Software
++   Foundation, Inc., 51 Franklin Street - Fifth Floor,
++   Boston, MA 02110-1301, USA.
++   
++   Written by Cygnus Support, 1994.
++
++   The libiberty library provides a number of functions which are
++   missing on some operating systems.  We do not declare those here,
++   to avoid conflicts with the system header files on operating
++   systems that do support those functions.  In this file we only
++   declare those functions which are specific to libiberty.  */
++
++#ifndef LIBIBERTY_H
++#define LIBIBERTY_H
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++#include "ansidecl.h"
++
++/* Get a definition for size_t.  */
++#include <stddef.h>
++/* Get a definition for va_list.  */
++#include <stdarg.h>
++
++#include <stdio.h>
++
++/* If the OS supports it, ensure that the supplied stream is setup to
++   avoid any multi-threaded locking.  Otherwise leave the FILE pointer
++   unchanged.  If the stream is NULL do nothing.  */
++
++extern void unlock_stream (FILE *);
++
++/* If the OS supports it, ensure that the standard I/O streams, stdin,
++   stdout and stderr are setup to avoid any multi-threaded locking.
++   Otherwise do nothing.  */
++
++extern void unlock_std_streams (void);
++
++/* Open and return a FILE pointer.  If the OS supports it, ensure that
++   the stream is setup to avoid any multi-threaded locking.  Otherwise
++   return the FILE pointer unchanged.  */
++
++extern FILE *fopen_unlocked (const char *, const char *);
++extern FILE *fdopen_unlocked (int, const char *);
++extern FILE *freopen_unlocked (const char *, const char *, FILE *);
++
++/* Build an argument vector from a string.  Allocates memory using
++   malloc.  Use freeargv to free the vector.  */
++
++extern char **buildargv (const char *) ATTRIBUTE_MALLOC;
++
++/* Free a vector returned by buildargv.  */
++
++extern void freeargv (char **);
++
++/* Duplicate an argument vector. Allocates memory using malloc.  Use
++   freeargv to free the vector.  */
++
++extern char **dupargv (char **) ATTRIBUTE_MALLOC;
++
++/* Expand "@file" arguments in argv.  */
++
++extern void expandargv PARAMS ((int *, char ***));
++
++/* Write argv to an @-file, inserting necessary quoting.  */
++
++extern int writeargv PARAMS ((char **, FILE *));
++
++/* Return the last component of a path name.  Note that we can't use a
++   prototype here because the parameter is declared inconsistently
++   across different systems, sometimes as "char *" and sometimes as
++   "const char *" */
++
++/* HAVE_DECL_* is a three-state macro: undefined, 0 or 1.  If it is
++   undefined, we haven't run the autoconf check so provide the
++   declaration without arguments.  If it is 0, we checked and failed
++   to find the declaration so provide a fully prototyped one.  If it
++   is 1, we found it so don't provide any declaration at all.  */
++#if !HAVE_DECL_BASENAME
++#if defined (__GNU_LIBRARY__ ) || defined (__linux__) || defined (__FreeBSD__) || defined (__OpenBSD__) || defined(__NetBSD__) || defined (__CYGWIN__) || defined (__CYGWIN32__) || defined (__MINGW32__) || defined (HAVE_DECL_BASENAME)
++extern char *basename (const char *);
++#else
++/* Do not allow basename to be used if there is no prototype seen.  We
++   either need to use the above prototype or have one from
++   autoconf which would result in HAVE_DECL_BASENAME being set.  */
++#define basename basename_cannot_be_used_without_a_prototype
++#endif
++#endif
++
++/* A well-defined basename () that is always compiled in.  */
++
++extern const char *lbasename (const char *);
++
++/* A well-defined realpath () that is always compiled in.  */
++
++extern char *lrealpath (const char *);
++
++/* Concatenate an arbitrary number of strings.  You must pass NULL as
++   the last argument of this function, to terminate the list of
++   strings.  Allocates memory using xmalloc.  */
++
++extern char *concat (const char *, ...) ATTRIBUTE_MALLOC ATTRIBUTE_SENTINEL;
++
++/* Concatenate an arbitrary number of strings.  You must pass NULL as
++   the last argument of this function, to terminate the list of
++   strings.  Allocates memory using xmalloc.  The first argument is
++   not one of the strings to be concatenated, but if not NULL is a
++   pointer to be freed after the new string is created, similar to the
++   way xrealloc works.  */
++
++extern char *reconcat (char *, const char *, ...) ATTRIBUTE_MALLOC ATTRIBUTE_SENTINEL;
++
++/* Determine the length of concatenating an arbitrary number of
++   strings.  You must pass NULL as the last argument of this function,
++   to terminate the list of strings.  */
++
++extern unsigned long concat_length (const char *, ...) ATTRIBUTE_SENTINEL;
++
++/* Concatenate an arbitrary number of strings into a SUPPLIED area of
++   memory.  You must pass NULL as the last argument of this function,
++   to terminate the list of strings.  The supplied memory is assumed
++   to be large enough.  */
++
++extern char *concat_copy (char *, const char *, ...) ATTRIBUTE_SENTINEL;
++
++/* Concatenate an arbitrary number of strings into a GLOBAL area of
++   memory.  You must pass NULL as the last argument of this function,
++   to terminate the list of strings.  The supplied memory is assumed
++   to be large enough.  */
++
++extern char *concat_copy2 (const char *, ...) ATTRIBUTE_SENTINEL;
++
++/* This is the global area used by concat_copy2.  */
++
++extern char *libiberty_concat_ptr;
++
++/* Concatenate an arbitrary number of strings.  You must pass NULL as
++   the last argument of this function, to terminate the list of
++   strings.  Allocates memory using alloca.  The arguments are
++   evaluated twice!  */
++#define ACONCAT(ACONCAT_PARAMS) \
++  (libiberty_concat_ptr = (char *) alloca (concat_length ACONCAT_PARAMS + 1), \
++   concat_copy2 ACONCAT_PARAMS)
++
++/* Check whether two file descriptors refer to the same file.  */
++
++extern int fdmatch (int fd1, int fd2);
++
++/* Return the position of the first bit set in the argument.  */
++/* Prototypes vary from system to system, so we only provide a
++   prototype on systems where we know that we need it.  */
++#if defined (HAVE_DECL_FFS) && !HAVE_DECL_FFS
++extern int ffs(int);
++#endif
++
++/* Get the working directory.  The result is cached, so don't call
++   chdir() between calls to getpwd().  */
++
++extern char * getpwd (void);
++
++/* Get the current time.  */
++/* Prototypes vary from system to system, so we only provide a
++   prototype on systems where we know that we need it.  */
++#ifdef __MINGW32__
++/* Forward declaration to avoid #include <sys/time.h>.   */
++struct timeval;
++extern int gettimeofday (struct timeval *, void *); 
++#endif
++
++/* Get the amount of time the process has run, in microseconds.  */
++
++extern long get_run_time (void);
++
++/* Generate a relocated path to some installation directory.  Allocates
++   return value using malloc.  */
++
++extern char *make_relative_prefix (const char *, const char *,
++                                   const char *) ATTRIBUTE_MALLOC;
++
++/* Generate a relocated path to some installation directory without
++   attempting to follow any soft links.  Allocates
++   return value using malloc.  */
++
++extern char *make_relative_prefix_ignore_links (const char *, const char *,
++						const char *) ATTRIBUTE_MALLOC;
++
++/* Choose a temporary directory to use for scratch files.  */
++
++extern char *choose_temp_base (void) ATTRIBUTE_MALLOC;
++
++/* Return a temporary file name or NULL if unable to create one.  */
++
++extern char *make_temp_file (const char *) ATTRIBUTE_MALLOC;
++
++/* Remove a link to a file unless it is special. */
++
++extern int unlink_if_ordinary (const char *);
++
++/* Allocate memory filled with spaces.  Allocates using malloc.  */
++
++extern const char *spaces (int count);
++
++/* Return the maximum error number for which strerror will return a
++   string.  */
++
++extern int errno_max (void);
++
++/* Return the name of an errno value (e.g., strerrno (EINVAL) returns
++   "EINVAL").  */
++
++extern const char *strerrno (int);
++
++/* Given the name of an errno value, return the value.  */
++
++extern int strtoerrno (const char *);
++
++/* ANSI's strerror(), but more robust.  */
++
++extern char *xstrerror (int);
++
++/* Return the maximum signal number for which strsignal will return a
++   string.  */
++
++extern int signo_max (void);
++
++/* Return a signal message string for a signal number
++   (e.g., strsignal (SIGHUP) returns something like "Hangup").  */
++/* This is commented out as it can conflict with one in system headers.
++   We still document its existence though.  */
++
++/*extern const char *strsignal (int);*/
++
++/* Return the name of a signal number (e.g., strsigno (SIGHUP) returns
++   "SIGHUP").  */
++
++extern const char *strsigno (int);
++
++/* Given the name of a signal, return its number.  */
++
++extern int strtosigno (const char *);
++
++/* Register a function to be run by xexit.  Returns 0 on success.  */
++
++extern int xatexit (void (*fn) (void));
++
++/* Exit, calling all the functions registered with xatexit.  */
++
++extern void xexit (int status) ATTRIBUTE_NORETURN;
++
++/* Set the program name used by xmalloc.  */
++
++extern void xmalloc_set_program_name (const char *);
++
++/* Report an allocation failure.  */
++extern void xmalloc_failed (size_t) ATTRIBUTE_NORETURN;
++
++/* Allocate memory without fail.  If malloc fails, this will print a
++   message to stderr (using the name set by xmalloc_set_program_name,
++   if any) and then call xexit.  */
++
++extern void *xmalloc (size_t) ATTRIBUTE_MALLOC;
++
++/* Reallocate memory without fail.  This works like xmalloc.  Note,
++   realloc type functions are not suitable for attribute malloc since
++   they may return the same address across multiple calls. */
++
++extern void *xrealloc (void *, size_t);
++
++/* Allocate memory without fail and set it to zero.  This works like
++   xmalloc.  */
++
++extern void *xcalloc (size_t, size_t) ATTRIBUTE_MALLOC;
++
++/* Copy a string into a memory buffer without fail.  */
++
++extern char *xstrdup (const char *) ATTRIBUTE_MALLOC;
++
++/* Copy at most N characters from string into a buffer without fail.  */
++
++extern char *xstrndup (const char *, size_t) ATTRIBUTE_MALLOC;
++
++/* Copy an existing memory buffer to a new memory buffer without fail.  */
++
++extern void *xmemdup (const void *, size_t, size_t) ATTRIBUTE_MALLOC;
++
++/* Physical memory routines.  Return values are in BYTES.  */
++extern double physmem_total (void);
++extern double physmem_available (void);
++
++
++/* These macros provide a K&R/C89/C++-friendly way of allocating structures
++   with nice encapsulation.  The XDELETE*() macros are technically
++   superfluous, but provided here for symmetry.  Using them consistently
++   makes it easier to update client code to use different allocators such
++   as new/delete and new[]/delete[].  */
++
++/* Scalar allocators.  */
++
++#define XNEW(T)			((T *) xmalloc (sizeof (T)))
++#define XCNEW(T)		((T *) xcalloc (1, sizeof (T)))
++#define XDELETE(P)		free ((void*) (P))
++
++/* Array allocators.  */
++
++#define XNEWVEC(T, N)		((T *) xmalloc (sizeof (T) * (N)))
++#define XCNEWVEC(T, N)		((T *) xcalloc ((N), sizeof (T)))
++#define XRESIZEVEC(T, P, N)	((T *) xrealloc ((void *) (P), sizeof (T) * (N)))
++#define XDELETEVEC(P)		free ((void*) (P))
++
++/* Allocators for variable-sized structures and raw buffers.  */
++
++#define XNEWVAR(T, S)		((T *) xmalloc ((S)))
++#define XCNEWVAR(T, S)		((T *) xcalloc (1, (S)))
++#define XRESIZEVAR(T, P, S)	((T *) xrealloc ((P), (S)))
++
++/* Type-safe obstack allocator.  */
++
++#define XOBNEW(O, T)		((T *) obstack_alloc ((O), sizeof (T)))
++#define XOBFINISH(O, T)         ((T) obstack_finish ((O)))
++
++/* hex character manipulation routines */
++
++#define _hex_array_size 256
++#define _hex_bad	99
++extern const unsigned char _hex_value[_hex_array_size];
++extern void hex_init (void);
++#define hex_p(c)	(hex_value (c) != _hex_bad)
++/* If you change this, note well: Some code relies on side effects in
++   the argument being performed exactly once.  */
++#define hex_value(c)	((unsigned int) _hex_value[(unsigned char) (c)])
++
++/* Flags for pex_init.  These are bits to be or'ed together.  */
++
++/* Record subprocess times, if possible.  */
++#define PEX_RECORD_TIMES	0x1
++
++/* Use pipes for communication between processes, if possible.  */
++#define PEX_USE_PIPES		0x2
++
++/* Save files used for communication between processes.  */
++#define PEX_SAVE_TEMPS		0x4
++
++/* Prepare to execute one or more programs, with standard output of
++   each program fed to standard input of the next.
++   FLAGS	As above.
++   PNAME	The name of the program to report in error messages.
++   TEMPBASE	A base name to use for temporary files; may be NULL to
++   		use a random name.
++   Returns NULL on error.  */
++
++extern struct pex_obj *pex_init (int flags, const char *pname,
++				 const char *tempbase);
++
++/* Flags for pex_run.  These are bits to be or'ed together.  */
++
++/* Last program in pipeline.  Standard output of program goes to
++   OUTNAME, or, if OUTNAME is NULL, to standard output of caller.  Do
++   not set this if you want to call pex_read_output.  After this is
++   set, pex_run may no longer be called with the same struct
++   pex_obj.  */
++#define PEX_LAST		0x1
++
++/* Search for program in executable search path.  */
++#define PEX_SEARCH		0x2
++
++/* OUTNAME is a suffix.  */
++#define PEX_SUFFIX		0x4
++
++/* Send program's standard error to standard output.  */
++#define PEX_STDERR_TO_STDOUT	0x8
++
++/* Input file should be opened in binary mode.  This flag is ignored
++   on Unix.  */
++#define PEX_BINARY_INPUT	0x10
++
++/* Output file should be opened in binary mode.  This flag is ignored
++   on Unix.  For proper behaviour PEX_BINARY_INPUT and
++   PEX_BINARY_OUTPUT have to match appropriately--i.e., a call using
++   PEX_BINARY_OUTPUT should be followed by a call using
++   PEX_BINARY_INPUT.  */
++#define PEX_BINARY_OUTPUT	0x20
++
++/* Capture stderr to a pipe.  The output can be read by
++   calling pex_read_err and reading from the returned
++   FILE object.  This flag may be specified only for
++   the last program in a pipeline.  
++
++   This flag is supported only on Unix and Windows.  */
++#define PEX_STDERR_TO_PIPE	0x40
++
++/* Capture stderr in binary mode.  This flag is ignored
++   on Unix.  */
++#define PEX_BINARY_ERROR	0x80
++
++
++/* Execute one program.  Returns NULL on success.  On error returns an
++   error string (typically just the name of a system call); the error
++   string is statically allocated.
++
++   OBJ		Returned by pex_init.
++
++   FLAGS	As above.
++
++   EXECUTABLE	The program to execute.
++
++   ARGV		NULL terminated array of arguments to pass to the program.
++
++   OUTNAME	Sets the output file name as follows:
++
++		PEX_SUFFIX set (OUTNAME may not be NULL):
++		  TEMPBASE parameter to pex_init not NULL:
++		    Output file name is the concatenation of TEMPBASE
++		    and OUTNAME.
++		  TEMPBASE is NULL:
++		    Output file name is a random file name ending in
++		    OUTNAME.
++		PEX_SUFFIX not set:
++		  OUTNAME not NULL:
++		    Output file name is OUTNAME.
++		  OUTNAME NULL, TEMPBASE not NULL:
++		    Output file name is randomly chosen using
++		    TEMPBASE.
++		  OUTNAME NULL, TEMPBASE NULL:
++		    Output file name is randomly chosen.
++
++		If PEX_LAST is not set, the output file name is the
++   		name to use for a temporary file holding stdout, if
++   		any (there will not be a file if PEX_USE_PIPES is set
++   		and the system supports pipes).  If a file is used, it
++   		will be removed when no longer needed unless
++   		PEX_SAVE_TEMPS is set.
++
++		If PEX_LAST is set, and OUTNAME is not NULL, standard
++   		output is written to the output file name.  The file
++   		will not be removed.  If PEX_LAST and PEX_SUFFIX are
++   		both set, TEMPBASE may not be NULL.
++
++   ERRNAME	If not NULL, this is the name of a file to which
++		standard error is written.  If NULL, standard error of
++		the program is standard error of the caller.
++
++   ERR		On an error return, *ERR is set to an errno value, or
++   		to 0 if there is no relevant errno.
++*/
++
++extern const char *pex_run (struct pex_obj *obj, int flags,
++			    const char *executable, char * const *argv,
++			    const char *outname, const char *errname,
++			    int *err);
++
++/* As for pex_run (), but takes an extra parameter to enable the
++   environment for the child process to be specified.
++
++   ENV		The environment for the child process, specified as
++		an array of character pointers.  Each element of the
++		array should point to a string of the form VAR=VALUE,
++                with the exception of the last element which must be
++                a null pointer.
++*/
++
++extern const char *pex_run_in_environment (struct pex_obj *obj, int flags,
++			                   const char *executable,
++                                           char * const *argv,
++                                           char * const *env,
++              	          		   const char *outname,
++					   const char *errname, int *err);
++
++/* Return a stream for a temporary file to pass to the first program
++   in the pipeline as input.  The file name is chosen as for pex_run.
++   pex_run closes the file automatically; don't close it yourself.  */
++
++extern FILE *pex_input_file (struct pex_obj *obj, int flags,
++                             const char *in_name);
++
++/* Return a stream for a pipe connected to the standard input of the
++   first program in the pipeline.  You must have passed
++   `PEX_USE_PIPES' to `pex_init'.  Close the returned stream
++   yourself.  */
++
++extern FILE *pex_input_pipe (struct pex_obj *obj, int binary);
++
++/* Read the standard output of the last program to be executed.
++   pex_run can not be called after this.  BINARY should be non-zero if
++   the file should be opened in binary mode; this is ignored on Unix.
++   Returns NULL on error.  Don't call fclose on the returned FILE; it
++   will be closed by pex_free.  */
++
++extern FILE *pex_read_output (struct pex_obj *, int binary);
++
++/* Read the standard error of the last program to be executed.
++   pex_run can not be called after this.  BINARY should be non-zero if
++   the file should be opened in binary mode; this is ignored on Unix.
++   Returns NULL on error.  Don't call fclose on the returned FILE; it
++   will be closed by pex_free.  */
++
++extern FILE *pex_read_err (struct pex_obj *, int binary);
++
++/* Return exit status of all programs in VECTOR.  COUNT indicates the
++   size of VECTOR.  The status codes in the vector are in the order of
++   the calls to pex_run.  Returns 0 on error, 1 on success.  */
++
++extern int pex_get_status (struct pex_obj *, int count, int *vector);
++
++/* Return times of all programs in VECTOR.  COUNT indicates the size
++   of VECTOR.  struct pex_time is really just struct timeval, but that
++   is not portable to all systems.  Returns 0 on error, 1 on
++   success.  */
++
++struct pex_time
++{
++  unsigned long user_seconds;
++  unsigned long user_microseconds;
++  unsigned long system_seconds;
++  unsigned long system_microseconds;
++};
++
++extern int pex_get_times (struct pex_obj *, int count,
++			  struct pex_time *vector);
++
++/* Clean up a pex_obj.  */
++
++extern void pex_free (struct pex_obj *);
++
++/* Just execute one program.  Return value is as for pex_run.
++   FLAGS	Combination of PEX_SEARCH and PEX_STDERR_TO_STDOUT.
++   EXECUTABLE	As for pex_run.
++   ARGV		As for pex_run.
++   PNAME	As for pex_init.
++   OUTNAME	As for pex_run when PEX_LAST is set.
++   ERRNAME	As for pex_run.
++   STATUS	Set to exit status on success.
++   ERR		As for pex_run.
++*/
++
++extern const char *pex_one (int flags, const char *executable,
++			    char * const *argv, const char *pname,
++			    const char *outname, const char *errname,
++			    int *status, int *err);
++
++/* pexecute and pwait are the old pexecute interface, still here for
++   backward compatibility.  Don't use these for new code.  Instead,
++   use pex_init/pex_run/pex_get_status/pex_free, or pex_one.  */
++
++/* Definitions used by the pexecute routine.  */
++
++#define PEXECUTE_FIRST   1
++#define PEXECUTE_LAST    2
++#define PEXECUTE_ONE     (PEXECUTE_FIRST + PEXECUTE_LAST)
++#define PEXECUTE_SEARCH  4
++#define PEXECUTE_VERBOSE 8
++
++/* Execute a program.  */
++
++extern int pexecute (const char *, char * const *, const char *,
++                     const char *, char **, char **, int);
++
++/* Wait for pexecute to finish.  */
++
++extern int pwait (int, int *, int);
++
++#if !HAVE_DECL_ASPRINTF
++/* Like sprintf but provides a pointer to malloc'd storage, which must
++   be freed by the caller.  */
++
++extern int asprintf (char **, const char *, ...) ATTRIBUTE_PRINTF_2;
++#endif
++
++#if !HAVE_DECL_VASPRINTF
++/* Like vsprintf but provides a pointer to malloc'd storage, which
++   must be freed by the caller.  */
++
++extern int vasprintf (char **, const char *, va_list) ATTRIBUTE_PRINTF(2,0);
++#endif
++
++#if defined(HAVE_DECL_SNPRINTF) && !HAVE_DECL_SNPRINTF
++/* Like sprintf but prints at most N characters.  */
++extern int snprintf (char *, size_t, const char *, ...) ATTRIBUTE_PRINTF_3;
++#endif
++
++#if defined(HAVE_DECL_VSNPRINTF) && !HAVE_DECL_VSNPRINTF
++/* Like vsprintf but prints at most N characters.  */
++extern int vsnprintf (char *, size_t, const char *, va_list) ATTRIBUTE_PRINTF(3,0);
++#endif
++
++#if defined(HAVE_DECL_STRVERSCMP) && !HAVE_DECL_STRVERSCMP
++/* Compare version strings.  */
++extern int strverscmp (const char *, const char *);
++#endif
++
++#define ARRAY_SIZE(a) (sizeof (a) / sizeof ((a)[0]))
++
++/* Drastically simplified alloca configurator.  If we're using GCC,
++   we use __builtin_alloca; otherwise we use the C alloca.  The C
++   alloca is always available.  You can override GCC by defining
++   USE_C_ALLOCA yourself.  The canonical autoconf macro C_ALLOCA is
++   also set/unset as it is often used to indicate whether code needs
++   to call alloca(0).  */
++extern void *C_alloca (size_t) ATTRIBUTE_MALLOC;
++#undef alloca
++#if GCC_VERSION >= 2000 && !defined USE_C_ALLOCA
++# define alloca(x) __builtin_alloca(x)
++# undef C_ALLOCA
++# define ASTRDUP(X) \
++  (__extension__ ({ const char *const libiberty_optr = (X); \
++   const unsigned long libiberty_len = strlen (libiberty_optr) + 1; \
++   char *const libiberty_nptr = (char *const) alloca (libiberty_len); \
++   (char *) memcpy (libiberty_nptr, libiberty_optr, libiberty_len); }))
++#else
++# define alloca(x) C_alloca(x)
++# undef USE_C_ALLOCA
++# define USE_C_ALLOCA 1
++# undef C_ALLOCA
++# define C_ALLOCA 1
++extern const char *libiberty_optr;
++extern char *libiberty_nptr;
++extern unsigned long libiberty_len;
++# define ASTRDUP(X) \
++  (libiberty_optr = (X), \
++   libiberty_len = strlen (libiberty_optr) + 1, \
++   libiberty_nptr = (char *) alloca (libiberty_len), \
++   (char *) memcpy (libiberty_nptr, libiberty_optr, libiberty_len))
++#endif
++
++#ifdef __cplusplus
++}
++#endif
++
++
++#endif /* ! defined (LIBIBERTY_H) */
+
+Property changes on: src\base\exchndl\include\libiberty.h
+___________________________________________________________________
+Added: svn:mime-type
+   + text/plain
+Added: svn:eol-style
+   + native
+
+Index: src/base/exchndl/include/coff/internal.h
+===================================================================
+--- src/base/exchndl/include/coff/internal.h	(revision 0)
++++ src/base/exchndl/include/coff/internal.h	(revision 0)
+@@ -0,0 +1,813 @@
++/* Internal format of COFF object file data structures, for GNU BFD.
++   This file is part of BFD, the Binary File Descriptor library.
++   
++   Copyright 1999, 2000, 2001, 2002, 2003, 2004. 2005, 2006, 2007
++   Free Software Foundation, Inc.
++
++   This program is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++   
++   This program is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++   
++   You should have received a copy of the GNU General Public License
++   along with this program; if not, write to the Free Software
++   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston, MA 02110-1301, USA.  */
++
++#ifndef GNU_COFF_INTERNAL_H
++#define GNU_COFF_INTERNAL_H 1
++
++/* First, make "signed char" work, even on old compilers. */
++#ifndef signed
++#ifndef __STDC__
++#define	signed			/**/
++#endif
++#endif
++
++/********************** FILE HEADER **********************/
++
++/* extra stuff in a PE header. */
++
++struct internal_extra_pe_filehdr
++{
++  /* DOS header data follows for PE stuff */
++  unsigned short e_magic;	/* Magic number, 0x5a4d */
++  unsigned short e_cblp;	/* Bytes on last page of file, 0x90 */
++  unsigned short e_cp;		/* Pages in file, 0x3 */
++  unsigned short e_crlc;	/* Relocations, 0x0 */
++  unsigned short e_cparhdr;	/* Size of header in paragraphs, 0x4 */
++  unsigned short e_minalloc;	/* Minimum extra paragraphs needed, 0x0 */
++  unsigned short e_maxalloc;	/* Maximum extra paragraphs needed, 0xFFFF */
++  unsigned short e_ss;		/* Initial (relative) SS value, 0x0 */
++  unsigned short e_sp;		/* Initial SP value, 0xb8 */
++  unsigned short e_csum;	/* Checksum, 0x0 */
++  unsigned short e_ip;		/* Initial IP value, 0x0 */
++  unsigned short e_cs;		/* Initial (relative) CS value, 0x0 */
++  unsigned short e_lfarlc;	/* File address of relocation table, 0x40 */
++  unsigned short e_ovno;	/* Overlay number, 0x0 */
++  unsigned short e_res[4];	/* Reserved words, all 0x0 */
++  unsigned short e_oemid;	/* OEM identifier (for e_oeminfo), 0x0 */
++  unsigned short e_oeminfo;	/* OEM information; e_oemid specific, 0x0 */
++  unsigned short e_res2[10];	/* Reserved words, all 0x0 */
++  bfd_vma  e_lfanew;		/* File address of new exe header, 0x80 */
++  unsigned long dos_message[16]; /* text which always follows dos header */
++  bfd_vma  nt_signature;   	/* required NT signature, 0x4550 */ 
++};
++
++struct internal_filehdr
++{
++  struct internal_extra_pe_filehdr pe;
++
++  /* Standard coff internal info.  */
++  unsigned short f_magic;	/* magic number			*/
++  unsigned short f_nscns;	/* number of sections		*/
++  long f_timdat;		/* time & date stamp		*/
++  bfd_vma f_symptr;		/* file pointer to symtab	*/
++  long f_nsyms;			/* number of symtab entries	*/
++  unsigned short f_opthdr;	/* sizeof(optional hdr)		*/
++  unsigned short f_flags;	/* flags			*/
++  unsigned short f_target_id;	/* (TI COFF specific)		*/
++};
++
++
++/* Bits for f_flags:
++ 	F_RELFLG	relocation info stripped from file
++ 	F_EXEC		file is executable (no unresolved external references)
++ 	F_LNNO		line numbers stripped from file
++ 	F_LSYMS		local symbols stripped from file
++ 	F_AR16WR	file is 16-bit little-endian
++ 	F_AR32WR	file is 32-bit little-endian
++ 	F_AR32W		file is 32-bit big-endian
++ 	F_DYNLOAD	rs/6000 aix: dynamically loadable w/imports & exports
++ 	F_SHROBJ	rs/6000 aix: file is a shared object
++        F_DLL           PE format DLL.  */
++
++#define	F_RELFLG	(0x0001)
++#define	F_EXEC		(0x0002)
++#define	F_LNNO		(0x0004)
++#define	F_LSYMS		(0x0008)
++#define	F_AR16WR	(0x0080)
++#define	F_AR32WR	(0x0100)
++#define	F_AR32W     	(0x0200)
++#define	F_DYNLOAD	(0x1000)
++#define	F_SHROBJ	(0x2000)
++#define F_DLL           (0x2000)
++
++/* Extra structure which is used in the optional header.  */
++#ifndef _WINNT_H
++typedef struct _IMAGE_DATA_DIRECTORY 
++{
++  bfd_vma VirtualAddress;
++  long    Size;
++}  IMAGE_DATA_DIRECTORY;
++#endif
++#define PE_EXPORT_TABLE			0
++#define PE_IMPORT_TABLE			1
++#define PE_RESOURCE_TABLE		2
++#define PE_EXCEPTION_TABLE		3
++#define PE_CERTIFICATE_TABLE		4
++#define PE_BASE_RELOCATION_TABLE	5
++#define PE_DEBUG_DATA			6
++#define PE_ARCHITECTURE			7
++#define PE_GLOBAL_PTR			8
++#define PE_TLS_TABLE			9
++#define PE_LOAD_CONFIG_TABLE		10
++#define PE_BOUND_IMPORT_TABLE		11
++#define PE_IMPORT_ADDRESS_TABLE		12
++#define PE_DELAY_IMPORT_DESCRIPTOR	13
++#define PE_CLR_RUNTIME_HEADER		14
++/* DataDirectory[15] is currently reserved, so no define. */
++#define IMAGE_NUMBEROF_DIRECTORY_ENTRIES  16
++
++/* Default image base for NT.  */
++#define NT_EXE_IMAGE_BASE 0x400000
++#define NT_DLL_IMAGE_BASE 0x10000000
++
++/* Default image base for BeOS. */
++#define BEOS_EXE_IMAGE_BASE 0x80000000
++#define BEOS_DLL_IMAGE_BASE 0x10000000
++
++/* Extra stuff in a PE aouthdr */
++
++#define PE_DEF_SECTION_ALIGNMENT 0x1000
++#ifndef PE_DEF_FILE_ALIGNMENT
++# define PE_DEF_FILE_ALIGNMENT 0x200
++#endif
++
++struct internal_extra_pe_aouthdr 
++{
++  /* FIXME: The following entries are in AOUTHDR.  But they aren't
++     available internally in bfd.  We add them here so that objdump
++     can dump them.  */
++  /* The state of the image file  */
++  short Magic;
++  /* Linker major version number */
++  char MajorLinkerVersion;
++  /* Linker minor version number  */
++  char MinorLinkerVersion;	
++  /* Total size of all code sections  */
++  long SizeOfCode;
++  /* Total size of all initialized data sections  */
++  long SizeOfInitializedData;
++  /* Total size of all uninitialized data sections  */
++  long SizeOfUninitializedData;
++  /* Address of entry point relative to image base.  */
++  bfd_vma AddressOfEntryPoint;
++  /* Address of the first code section relative to image base.  */
++  bfd_vma BaseOfCode;
++  /* Address of the first data section relative to image base.  */
++  bfd_vma BaseOfData;
++ 
++  /* PE stuff  */
++  bfd_vma ImageBase;		/* address of specific location in memory that
++				   file is located, NT default 0x10000 */
++
++  bfd_vma SectionAlignment;	/* section alignment default 0x1000 */
++  bfd_vma FileAlignment;	/* file alignment default 0x200 */
++  short   MajorOperatingSystemVersion; /* minimum version of the operating */
++  short   MinorOperatingSystemVersion; /* system req'd for exe, default to 1*/
++  short   MajorImageVersion;	/* user defineable field to store version of */
++  short   MinorImageVersion;	/* exe or dll being created, default to 0 */ 
++  short   MajorSubsystemVersion; /* minimum subsystem version required to */
++  short   MinorSubsystemVersion; /* run exe; default to 3.1 */
++  long    Reserved1;		/* seems to be 0 */
++  long    SizeOfImage;		/* size of memory to allocate for prog */
++  long    SizeOfHeaders;	/* size of PE header and section table */
++  long    CheckSum;		/* set to 0 */
++  short   Subsystem;	
++
++  /* type of subsystem exe uses for user interface,
++     possible values:
++     1 - NATIVE   Doesn't require a subsystem
++     2 - WINDOWS_GUI runs in Windows GUI subsystem
++     3 - WINDOWS_CUI runs in Windows char sub. (console app)
++     5 - OS2_CUI runs in OS/2 character subsystem
++     7 - POSIX_CUI runs in Posix character subsystem */
++  short   DllCharacteristics;	/* flags for DLL init, use 0 */
++  bfd_vma SizeOfStackReserve;	/* amount of memory to reserve  */
++  bfd_vma SizeOfStackCommit;	/* amount of memory initially committed for 
++				   initial thread's stack, default is 0x1000 */
++  bfd_vma SizeOfHeapReserve;	/* amount of virtual memory to reserve and */
++  bfd_vma SizeOfHeapCommit;	/* commit, don't know what to defaut it to */
++  long    LoaderFlags;		/* can probably set to 0 */
++  long    NumberOfRvaAndSizes;	/* number of entries in next entry, 16 */
++  IMAGE_DATA_DIRECTORY DataDirectory[IMAGE_NUMBEROF_DIRECTORY_ENTRIES];
++};
++
++/********************** AOUT "OPTIONAL HEADER" **********************/
++struct internal_aouthdr
++{
++  short magic;			/* type of file				*/
++  short vstamp;			/* version stamp			*/
++  bfd_vma tsize;		/* text size in bytes, padded to FW bdry*/
++  bfd_vma dsize;		/* initialized data "  "		*/
++  bfd_vma bsize;		/* uninitialized data "   "		*/
++  bfd_vma entry;		/* entry pt.				*/
++  bfd_vma text_start;		/* base of text used for this file */
++  bfd_vma data_start;		/* base of data used for this file */
++
++  /* i960 stuff */
++  unsigned long tagentries;	/* number of tag entries to follow */
++
++  /* RS/6000 stuff */
++  bfd_vma o_toc;		/* address of TOC			*/
++  short o_snentry;		/* section number for entry point */
++  short o_sntext;		/* section number for text	*/
++  short o_sndata;		/* section number for data	*/
++  short o_sntoc;		/* section number for toc	*/
++  short o_snloader;		/* section number for loader section */
++  short o_snbss;		/* section number for bss	*/
++  short o_algntext;		/* max alignment for text	*/
++  short o_algndata;		/* max alignment for data	*/
++  short o_modtype;		/* Module type field, 1R,RE,RO	*/
++  short o_cputype;		/* Encoded CPU type		*/
++  bfd_vma o_maxstack;	/* max stack size allowed.	*/
++  bfd_vma o_maxdata;	/* max data size allowed.	*/
++
++  /* ECOFF stuff */
++  bfd_vma bss_start;		/* Base of bss section.		*/
++  bfd_vma gp_value;		/* GP register value.		*/
++  unsigned long gprmask;	/* General registers used.	*/
++  unsigned long cprmask[4];	/* Coprocessor registers used.	*/
++  unsigned long fprmask;	/* Floating pointer registers used.  */
++
++  /* Apollo stuff */
++  long o_inlib;			/* inlib data */
++  long o_sri;			/* Static Resource Information */
++  long vid[2];			/* Version id */
++
++  struct internal_extra_pe_aouthdr pe;
++};
++
++/********************** STORAGE CLASSES **********************/
++
++/* This used to be defined as -1, but now n_sclass is unsigned.  */
++#define C_EFCN		0xff	/* physical end of function	*/
++#define C_NULL		0
++#define C_AUTO		1	/* automatic variable		*/
++#define C_EXT		2	/* external symbol		*/
++#define C_STAT		3	/* static			*/
++#define C_REG		4	/* register variable		*/
++#define C_EXTDEF	5	/* external definition		*/
++#define C_LABEL		6	/* label			*/
++#define C_ULABEL	7	/* undefined label		*/
++#define C_MOS		8	/* member of structure		*/
++#define C_ARG		9	/* function argument		*/
++#define C_STRTAG	10	/* structure tag		*/
++#define C_MOU		11	/* member of union		*/
++#define C_UNTAG		12	/* union tag			*/
++#define C_TPDEF		13	/* type definition		*/
++#define C_USTATIC	14	/* undefined static		*/
++#define C_ENTAG		15	/* enumeration tag		*/
++#define C_MOE		16	/* member of enumeration	*/
++#define C_REGPARM	17	/* register parameter		*/
++#define C_FIELD		18	/* bit field			*/
++#define C_AUTOARG	19	/* auto argument		*/
++#define C_LASTENT	20	/* dummy entry (end of block)	*/
++#define C_BLOCK		100	/* ".bb" or ".eb"		*/
++#define C_FCN		101	/* ".bf" or ".ef"		*/
++#define C_EOS		102	/* end of structure		*/
++#define C_FILE		103	/* file name			*/
++#define C_LINE		104	/* line # reformatted as symbol table entry */
++#define C_ALIAS	 	105	/* duplicate tag		*/
++#define C_HIDDEN	106	/* ext symbol in dmert public lib */
++
++#if defined _AIX52 || defined AIX_WEAK_SUPPORT
++#define C_WEAKEXT	111	/* weak symbol -- AIX standard.  */
++#else
++#define C_WEAKEXT	127	/* weak symbol -- GNU extension.  */
++#endif
++
++/* New storage classes for TI COFF */
++#define C_UEXT		19	/* Tentative external definition */
++#define C_STATLAB	20	/* Static load time label */
++#define C_EXTLAB	21	/* External load time label */
++#define C_SYSTEM	23	/* System Wide variable */
++
++/* New storage classes for WINDOWS_NT   */
++#define C_SECTION       104     /* section name */
++#define C_NT_WEAK	105	/* weak external */
++
++ /* New storage classes for 80960 */
++
++/* C_LEAFPROC is obsolete.  Use C_LEAFEXT or C_LEAFSTAT */
++#define C_LEAFPROC	108	/* Leaf procedure, "call" via BAL */
++
++#define C_SCALL		107	/* Procedure reachable via system call */
++#define C_LEAFEXT       108	/* External leaf */
++#define C_LEAFSTAT      113	/* Static leaf */
++#define C_OPTVAR	109	/* Optimized variable		*/
++#define C_DEFINE	110	/* Preprocessor #define		*/
++#define C_PRAGMA	111	/* Advice to compiler or linker	*/
++#define C_SEGMENT	112	/* 80960 segment name		*/
++
++  /* Storage classes for m88k */
++#define C_SHADOW        107     /* shadow symbol                */
++#define C_VERSION       108     /* coff version symbol          */
++
++ /* New storage classes for RS/6000 */
++#define C_HIDEXT        107	/* Un-named external symbol */
++#define C_BINCL         108	/* Marks beginning of include file */
++#define C_EINCL         109	/* Marks ending of include file */
++
++ /* storage classes for stab symbols for RS/6000 */
++#define C_GSYM          (0x80)
++#define C_LSYM          (0x81)
++#define C_PSYM          (0x82)
++#define C_RSYM          (0x83)
++#define C_RPSYM         (0x84)
++#define C_STSYM         (0x85)
++#define C_TCSYM         (0x86)
++#define C_BCOMM         (0x87)
++#define C_ECOML         (0x88)
++#define C_ECOMM         (0x89)
++#define C_DECL          (0x8c)
++#define C_ENTRY         (0x8d)
++#define C_FUN           (0x8e)
++#define C_BSTAT         (0x8f)
++#define C_ESTAT         (0x90)
++
++/* Storage classes for Thumb symbols */
++#define C_THUMBEXT      (128 + C_EXT)		/* 130 */
++#define C_THUMBSTAT     (128 + C_STAT)		/* 131 */
++#define C_THUMBLABEL    (128 + C_LABEL)		/* 134 */
++#define C_THUMBEXTFUNC  (C_THUMBEXT  + 20)	/* 150 */
++#define C_THUMBSTATFUNC (C_THUMBSTAT + 20)	/* 151 */
++
++/********************** SECTION HEADER **********************/
++
++#define SCNNMLEN (8)
++
++struct internal_scnhdr
++{
++  char s_name[SCNNMLEN];	/* section name			*/
++
++  /* Physical address, aliased s_nlib.
++     In the pei format, this field is the virtual section size
++     (the size of the section after being loaded int memory),
++     NOT the physical address.  */
++  bfd_vma s_paddr;
++
++  bfd_vma s_vaddr;		/* virtual address		*/
++  bfd_vma s_size;		/* section size			*/
++  bfd_vma s_scnptr;		/* file ptr to raw data for section */
++  bfd_vma s_relptr;		/* file ptr to relocation	*/
++  bfd_vma s_lnnoptr;		/* file ptr to line numbers	*/
++  unsigned long s_nreloc;	/* number of relocation entries	*/
++  unsigned long s_nlnno;	/* number of line number entries*/
++  long s_flags;			/* flags			*/
++  long s_align;			/* used on I960			*/
++  unsigned char s_page;         /* TI COFF load page            */
++};
++
++/* s_flags "type".  */
++#define STYP_REG	 (0x0000)	/* "regular": allocated, relocated, loaded */
++#define STYP_DSECT	 (0x0001)	/* "dummy":  relocated only*/
++#define STYP_NOLOAD	 (0x0002)	/* "noload": allocated, relocated, not loaded */
++#define STYP_GROUP	 (0x0004)	/* "grouped": formed of input sections */
++#define STYP_PAD	 (0x0008)	/* "padding": not allocated, not relocated, loaded */
++#define STYP_COPY	 (0x0010)	/* "copy": for decision function used by field update;  not allocated, not relocated,
++									     loaded; reloc & lineno entries processed normally */
++#define STYP_TEXT	 (0x0020)	/* section contains text only */
++#define S_SHRSEG	 (0x0020)	/* In 3b Update files (output of ogen), sections which appear in SHARED segments of the Pfile
++									     will have the S_SHRSEG flag set by ogen, to inform dufr that updating 1 copy of the proc. will
++									     update all process invocations. */
++#define STYP_DATA	 (0x0040)	/* section contains data only */
++#define STYP_BSS	 (0x0080)	/* section contains bss only */
++#define S_NEWFCN	 (0x0100)	/* In a minimal file or an update file, a new function (as compared with a replaced function) */
++#define STYP_INFO	 (0x0200)	/* comment: not allocated not relocated, not loaded */
++#define STYP_OVER	 (0x0400)	/* overlay: relocated not allocated or loaded */
++#define STYP_LIB	 (0x0800)	/* for .lib: same as INFO */
++#define STYP_MERGE	 (0x2000)	/* merge section -- combines with text, data or bss sections only */
++#define STYP_REVERSE_PAD (0x4000)	/* section will be padded with no-op instructions
++					   wherever padding is necessary and there is a
++					   word of contiguous bytes beginning on a word
++					   boundary. */
++
++#define STYP_LIT	0x8020	/* Literal data (like STYP_TEXT) */
++
++
++/********************** LINE NUMBERS **********************/
++
++/* 1 line number entry for every "breakpointable" source line in a section.
++   Line numbers are grouped on a per function basis; first entry in a function
++   grouping will have l_lnno = 0 and in place of physical address will be the
++   symbol table index of the function name.  */
++
++struct internal_lineno
++{
++  union
++  {
++    bfd_signed_vma l_symndx;		/* function name symbol index, iff l_lnno == 0*/
++    bfd_signed_vma l_paddr;		/* (physical) address of line number	*/
++  }     l_addr;
++  unsigned long l_lnno;		/* line number		*/
++};
++
++/********************** SYMBOLS **********************/
++
++#define SYMNMLEN	8	/* # characters in a symbol name	*/
++#define FILNMLEN	14	/* # characters in a file name		*/
++#define DIMNUM		4	/* # array dimensions in auxiliary entry */
++
++struct internal_syment
++{
++  union
++  {
++    char _n_name[SYMNMLEN];	/* old COFF version		*/
++    struct
++    {
++      bfd_hostptr_t _n_zeroes;	/* new == 0			*/
++      bfd_hostptr_t _n_offset;	/* offset into string table	*/
++    }      _n_n;
++    char *_n_nptr[2];		/* allows for overlaying	*/
++  }     _n;
++  bfd_vma n_value;		/* value of symbol		*/
++  short n_scnum;		/* section number		*/
++  unsigned short n_flags;	/* copy of flags from filhdr	*/
++  unsigned short n_type;	/* type and derived type	*/
++  unsigned char n_sclass;	/* storage class		*/
++  unsigned char n_numaux;	/* number of aux. entries	*/
++};
++
++#define n_name		_n._n_name
++#define n_zeroes	_n._n_n._n_zeroes
++#define n_offset	_n._n_n._n_offset
++
++/* Relocatable symbols have number of the section in which they are defined,
++   or one of the following:  */
++
++#define N_UNDEF	((short)0)	/* undefined symbol */
++#define N_ABS	((short)-1)	/* value of symbol is absolute */
++#define N_DEBUG	((short)-2)	/* debugging symbol -- value is meaningless */
++#define N_TV	((short)-3)	/* indicates symbol needs preload transfer vector */
++#define P_TV	((short)-4)	/* indicates symbol needs postload transfer vector*/
++
++/* Type of a symbol, in low N bits of the word.  */
++
++#define T_NULL		0
++#define T_VOID		1	/* function argument (only used by compiler) */
++#define T_CHAR		2	/* character		*/
++#define T_SHORT		3	/* short integer	*/
++#define T_INT		4	/* integer		*/
++#define T_LONG		5	/* long integer		*/
++#define T_FLOAT		6	/* floating point	*/
++#define T_DOUBLE	7	/* double word		*/
++#define T_STRUCT	8	/* structure 		*/
++#define T_UNION		9	/* union 		*/
++#define T_ENUM		10	/* enumeration 		*/
++#define T_MOE		11	/* member of enumeration*/
++#define T_UCHAR		12	/* unsigned character	*/
++#define T_USHORT	13	/* unsigned short	*/
++#define T_UINT		14	/* unsigned integer	*/
++#define T_ULONG		15	/* unsigned long	*/
++#define T_LNGDBL	16	/* long double		*/
++
++/* Derived types, in n_type.  */
++
++#define DT_NON		(0)	/* no derived type */
++#define DT_PTR		(1)	/* pointer */
++#define DT_FCN		(2)	/* function */
++#define DT_ARY		(3)	/* array */
++
++#ifndef _WINNT_H
++#define BTYPE(x)	((x) & N_BTMASK)
++#define DTYPE(x)	(((x) & N_TMASK) >> N_BTSHFT)
++
++#define ISPTR(x) \
++  (((unsigned long) (x) & N_TMASK) == ((unsigned long) DT_PTR << N_BTSHFT))
++#define ISFCN(x) \
++  (((unsigned long) (x) & N_TMASK) == ((unsigned long) DT_FCN << N_BTSHFT))
++#define ISARY(x) \
++  (((unsigned long) (x) & N_TMASK) == ((unsigned long) DT_ARY << N_BTSHFT))
++#define ISTAG(x) \
++  ((x) == C_STRTAG || (x) == C_UNTAG || (x) == C_ENTAG)
++#define DECREF(x) \
++  ((((x) >> N_TSHIFT) & ~ N_BTMASK) | ((x) & N_BTMASK))
++#endif
++
++union internal_auxent
++{
++  struct
++  {
++
++    union
++    {
++      long l;			/* str, un, or enum tag indx */
++      struct coff_ptr_struct *p;
++    }     x_tagndx;
++
++    union
++    {
++      struct
++      {
++	unsigned short x_lnno;	/* declaration line number */
++	unsigned short x_size;	/* str/union/array size */
++      }      x_lnsz;
++      long x_fsize;		/* size of function */
++    }     x_misc;
++
++    union
++    {
++      struct
++      {				/* if ISFCN, tag, or .bb */
++	bfd_signed_vma x_lnnoptr;		/* ptr to fcn line # */
++	union
++	{			/* entry ndx past block end */
++	  long l;
++	  struct coff_ptr_struct *p;
++	}     x_endndx;
++      }      x_fcn;
++
++      struct
++      {				/* if ISARY, up to 4 dimen. */
++	unsigned short x_dimen[DIMNUM];
++      }      x_ary;
++    }     x_fcnary;
++
++    unsigned short x_tvndx;	/* tv index */
++  }      x_sym;
++
++  union
++  {
++    char x_fname[FILNMLEN];
++    struct
++    {
++      long x_zeroes;
++      long x_offset;
++    }      x_n;
++  }     x_file;
++
++  struct
++  {
++    long x_scnlen;		/* section length */
++    unsigned short x_nreloc;	/* # relocation entries */
++    unsigned short x_nlinno;	/* # line numbers */
++    unsigned long x_checksum;	/* section COMDAT checksum for PE */
++    unsigned short x_associated; /* COMDAT associated section index for PE */
++    unsigned char x_comdat;	/* COMDAT selection number for PE */
++  }      x_scn;
++
++  struct
++  {
++    long x_tvfill;		/* tv fill value */
++    unsigned short x_tvlen;	/* length of .tv */
++    unsigned short x_tvran[2];	/* tv range */
++  }      x_tv;			/* info about .tv section (in auxent of symbol .tv)) */
++
++  /******************************************
++   * RS/6000-specific auxent - last auxent for every external symbol
++   ******************************************/
++  struct
++  {
++    union
++      {				/* csect length or enclosing csect */
++	bfd_signed_vma l;
++	struct coff_ptr_struct *p;
++      } x_scnlen;
++    long x_parmhash;		/* parm type hash index */
++    unsigned short x_snhash;	/* sect num with parm hash */
++    unsigned char x_smtyp;	/* symbol align and type */
++    /* 0-4 - Log 2 of alignment */
++    /* 5-7 - symbol type */
++    unsigned char x_smclas;	/* storage mapping class */
++    long x_stab;		/* dbx stab info index */
++    unsigned short x_snstab;	/* sect num with dbx stab */
++  }      x_csect;		/* csect definition information */
++
++/* x_smtyp values:  */
++
++#define	SMTYP_ALIGN(x)	((x) >> 3)	/* log2 of alignment */
++#define	SMTYP_SMTYP(x)	((x) & 0x7)	/* symbol type */
++/* Symbol type values:  */
++#define	XTY_ER	0		/* External reference */
++#define	XTY_SD	1		/* Csect definition */
++#define	XTY_LD	2		/* Label definition */
++#define XTY_CM	3		/* .BSS */
++#define	XTY_EM	4		/* Error message */
++#define	XTY_US	5		/* "Reserved for internal use" */
++
++/* x_smclas values:  */
++
++#define	XMC_PR	0		/* Read-only program code */
++#define	XMC_RO	1		/* Read-only constant */
++#define	XMC_DB	2		/* Read-only debug dictionary table */
++#define	XMC_TC	3		/* Read-write general TOC entry */
++#define	XMC_UA	4		/* Read-write unclassified */
++#define	XMC_RW	5		/* Read-write data */
++#define	XMC_GL	6		/* Read-only global linkage */
++#define	XMC_XO	7		/* Read-only extended operation */
++#define	XMC_SV	8		/* Read-only supervisor call */
++#define	XMC_BS	9		/* Read-write BSS */
++#define	XMC_DS	10		/* Read-write descriptor csect */
++#define	XMC_UC	11		/* Read-write unnamed Fortran common */
++#define	XMC_TI	12		/* Read-only traceback index csect */
++#define	XMC_TB	13		/* Read-only traceback table csect */
++/* 		14	??? */
++#define	XMC_TC0	15		/* Read-write TOC anchor */
++#define XMC_TD	16		/* Read-write data in TOC */
++
++  /******************************************
++   *  I960-specific *2nd* aux. entry formats
++   ******************************************/
++  struct
++  {
++    /* This is a very old typo that keeps getting propagated. */
++#define x_stdindx x_stindx
++    long x_stindx;		/* sys. table entry */
++  }      x_sc;			/* system call entry */
++
++  struct
++  {
++    unsigned long x_balntry;	/* BAL entry point */
++  }      x_bal;			/* BAL-callable function */
++
++  struct
++  {
++    unsigned long x_timestamp;	/* time stamp */
++    char x_idstring[20];	/* producer identity string */
++  }      x_ident;		/* Producer ident info */
++
++};
++
++/********************** RELOCATION DIRECTIVES **********************/
++
++struct internal_reloc
++{
++  bfd_vma r_vaddr;		/* Virtual address of reference */
++  long r_symndx;		/* Index into symbol table	*/
++  unsigned short r_type;	/* Relocation type		*/
++  unsigned char r_size;		/* Used by RS/6000 and ECOFF	*/
++  unsigned char r_extern;	/* Used by ECOFF		*/
++  unsigned long r_offset;	/* Used by Alpha ECOFF, SPARC, others */
++};
++
++/* X86-64 relocations.  */
++#define R_AMD64_ABS 		 0 /* Reference is absolute, no relocation is necessary.  */
++#define R_AMD64_DIR64		 1 /* 64-bit address (VA).  */
++#define R_AMD64_DIR32		 2 /* 32-bit address (VA) R_DIR32.  */
++#define R_AMD64_IMAGEBASE	 3 /* 32-bit absolute ref w/o base R_IMAGEBASE.  */
++#define R_AMD64_PCRLONG		 4 /* 32-bit relative address from byte following reloc R_PCRLONG.  */
++#define R_AMD64_PCRLONG_1	 5 /* 32-bit relative address from byte distance 1 from reloc.  */
++#define R_AMD64_PCRLONG_2	 6 /* 32-bit relative address from byte distance 2 from reloc.  */
++#define R_AMD64_PCRLONG_3	 7 /* 32-bit relative address from byte distance 3 from reloc.  */
++#define R_AMD64_PCRLONG_4	 8 /* 32-bit relative address from byte distance 4 from reloc.  */
++#define R_AMD64_PCRLONG_5	 9 /* 32-bit relative address from byte distance 5 from reloc.  */
++#define R_AMD64_SECTION		10 /* Section index.  */
++#define R_AMD64_SECREL		11 /* 32 bit offset from base of section containing target R_SECREL.  */
++#define R_AMD64_SECREL7		12 /* 7 bit unsigned offset from base of section containing target.  */
++#define R_AMD64_TOKEN		13 /* 32 bit metadata token.  */
++#define R_AMD64_PCRQUAD		14 /* Pseude PC64 relocation - Note: not specified by MS/AMD but need for gas pc-relative 64bit wide relocation generated by ELF.  */
++
++/* i386 Relocations.  */
++
++#define R_DIR16 	 1
++#define R_REL24          5
++#define R_DIR32 	 6
++#define R_IMAGEBASE	 7
++#define R_SECREL32	11
++#define R_RELBYTE	15
++#define R_RELWORD	16
++#define R_RELLONG	17
++#define R_PCRBYTE	18
++#define R_PCRWORD	19
++#define R_PCRLONG	20
++#define R_PCR24         21
++#define R_IPRSHORT	24
++#define R_IPRLONG	26
++#define R_GETSEG	29
++#define R_GETPA 	30
++#define R_TAGWORD	31
++#define R_JUMPTARG	32	/* strange 29k 00xx00xx reloc */
++#define R_PARTLS16      32
++#define R_PARTMS8       33
++
++#define R_PCR16L       128
++#define R_PCR26L       129
++#define R_VRT16        130
++#define R_HVRT16       131
++#define R_LVRT16       132
++#define R_VRT32        133
++
++
++/* This reloc identifies mov.b instructions with a 16bit absolute
++   address.  The linker tries to turn insns with this reloc into
++   an absolute 8-bit address.  */
++#define R_MOV16B1    	0x41
++
++/* This reloc identifies mov.b instructions which had a 16bit
++   absolute address which have been shortened into a 8-bit
++   absolute address.  */
++#define R_MOV16B2 	0x42
++
++/* This reloc identifies jmp insns with a 16bit target address;
++   the linker tries to turn these insns into bra insns with
++   an 8bit pc-relative target.  */
++#define R_JMP1     	0x43
++
++/* This reloc identifies a bra with an 8-bit pc-relative
++   target that was formerly a jmp insn with a 16bit target.  */
++#define R_JMP2 		0x44
++
++/* ??? */
++#define R_RELLONG_NEG  	0x45
++
++/* This reloc identifies jmp insns with a 24bit target address;
++   the linker tries to turn these insns into bra insns with
++   an 8bit pc-relative target.  */
++#define R_JMPL1     	0x46
++
++/* This reloc identifies a bra with an 8-bit pc-relative
++   target that was formerly a jmp insn with a 24bit target.  */
++#define R_JMPL2		0x47
++
++/* This reloc identifies mov.b instructions with a 24bit absolute
++   address.  The linker tries to turn insns with this reloc into
++   an absolute 8-bit address.  */
++
++#define R_MOV24B1    	0x48
++
++/* This reloc identifies mov.b instructions which had a 24bit
++   absolute address which have been shortened into a 8-bit
++   absolute address.  */
++#define R_MOV24B2 	0x49
++
++/* An h8300 memory indirect jump/call.  Forces the address of the jump/call
++   target into the function vector (in page zero), and the address of the
++   vector entry to be placed in the jump/call instruction.  */
++#define R_MEM_INDIRECT	0x4a
++
++/* This reloc identifies a 16bit pc-relative branch target which was
++   shortened into an 8bit pc-relative branch target.  */
++#define R_PCRWORD_B	0x4b
++
++/* This reloc identifies mov.[wl] instructions with a 32/24 bit
++   absolute address; the linker may turn this into a mov.[wl]
++   insn with a 16bit absolute address.  */
++#define R_MOVL1    	0x4c
++
++/* This reloc identifies mov.[wl] insns which formerly had
++   a 32/24bit absolute address and now have a 16bit absolute address.  */
++#define R_MOVL2 	0x4d
++
++/* This reloc identifies a bCC:8 which will have it's condition
++   inverted and its target redirected to the target of the branch
++   in the following insn.  */
++#define R_BCC_INV	0x4e
++
++/* This reloc identifies a jmp instruction that has been deleted.  */
++#define R_JMP_DEL	0x4f
++
++/* Z8k modes */
++#define R_IMM16   0x01		/* 16 bit abs */
++#define R_JR	  0x02		/* jr  8 bit disp */
++#define R_IMM4L   0x23		/* low nibble */
++#define R_IMM8    0x22		/* 8 bit abs */
++#define R_IMM32   R_RELLONG	/* 32 bit abs */
++#define R_CALL    R_DA		/* Absolute address which could be a callr */
++#define R_JP	  R_DA		/* Absolute address which could be a jp */
++#define R_REL16   0x04		/* 16 bit PC rel */
++#define R_CALLR	  0x05		/* callr 12 bit disp */
++#define R_SEG     0x10		/* set if in segmented mode */
++#define R_IMM4H   0x24		/* high nibble */
++#define R_DISP7   0x25          /* djnz displacement */
++
++/* Z80 modes */
++#define R_OFF8    0x32		/* 8 bit signed abs, for (i[xy]+d) */
++#define R_IMM24   0x33          /* 24 bit abs */
++/* R_JR, R_IMM8, R_IMM16, R_IMM32 - as for Z8k */
++
++/* H8500 modes */
++
++#define R_H8500_IMM8  	1		/*  8 bit immediate 	*/
++#define R_H8500_IMM16 	2		/* 16 bit immediate	*/
++#define R_H8500_PCREL8 	3		/*  8 bit pcrel 	*/
++#define R_H8500_PCREL16 4		/* 16 bit pcrel 	*/
++#define R_H8500_HIGH8  	5		/* high 8 bits of 24 bit address */
++#define R_H8500_LOW16 	7		/* low 16 bits of 24 bit immediate */
++#define R_H8500_IMM24	6		/* 24 bit immediate */
++#define R_H8500_IMM32   8               /* 32 bit immediate */
++#define R_H8500_HIGH16  9		/* high 16 bits of 32 bit immediate */
++
++/* W65 modes */
++
++#define R_W65_ABS8	1  /* addr & 0xff 		*/
++#define R_W65_ABS16	2  /* addr & 0xffff 		*/
++#define R_W65_ABS24	3  /* addr & 0xffffff 		*/
++
++#define R_W65_ABS8S8    4  /* (addr >> 8) & 0xff 	*/
++#define R_W65_ABS8S16   5  /* (addr >> 16) & 0xff 	*/
++
++#define R_W65_ABS16S8   6  /* (addr >> 8) & 0ffff 	*/
++#define R_W65_ABS16S16  7  /* (addr >> 16) & 0ffff 	*/
++
++#define R_W65_PCR8	8
++#define R_W65_PCR16	9
++
++#define R_W65_DP       10  /* direct page 8 bits only   */
++
++#endif /* GNU_COFF_INTERNAL_H */
+
+Property changes on: src\base\exchndl\include\coff\internal.h
+___________________________________________________________________
+Added: svn:mime-type
+   + text/plain
+Added: svn:eol-style
+   + native
+
+Index: src/base/exchndl/exchndl.c
+===================================================================
+--- src/base/exchndl/exchndl.c	(revision 0)
++++ src/base/exchndl/exchndl.c	(revision 0)
+@@ -0,0 +1,1169 @@
++/*
++ * exchndl.c
++ *
++ * Author:
++ *   José Fonseca <j_r_fonseca@yahoo.co.uk>
++ *
++ * Originally based on Matt Pietrek's MSJEXHND.CPP in Microsoft Systems
++ * Journal, April 1997.
++ */
++
++#include <assert.h>
++#include <windows.h>
++#include <tchar.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <malloc.h>
++
++
++#define HAVE_BFD	1
++
++
++// Declare the static variables
++static TCHAR szLogFileName[MAX_PATH] = _T("");
++static LPTOP_LEVEL_EXCEPTION_FILTER prevExceptionFilter = NULL;
++static HANDLE hReportFile;
++
++static
++int __cdecl rprintf(const TCHAR * format, ...)
++{
++	TCHAR szBuff[4096];
++	int retValue;
++	DWORD cbWritten;
++	va_list argptr;
++
++	va_start(argptr, format);
++	retValue = wvsprintf(szBuff, format, argptr);
++	va_end(argptr);
++
++	WriteFile(hReportFile, szBuff, retValue * sizeof(TCHAR), &cbWritten, 0);
++
++	return retValue;
++}
++
++// The GetModuleBase function retrieves the base address of the module that contains the specified address.
++static
++DWORD GetModuleBase(DWORD dwAddress)
++{
++	MEMORY_BASIC_INFORMATION Buffer;
++
++	return VirtualQuery((LPCVOID) dwAddress, &Buffer, sizeof(Buffer)) ? (DWORD) Buffer.AllocationBase : 0;
++}
++
++
++#ifdef HAVE_BFD
++
++#include <bfd.h>
++#include <demangle.h>
++#include "coff/internal.h"
++#include "libcoff.h"
++
++// Read in the symbol table.
++static bfd_boolean
++slurp_symtab (bfd *abfd, asymbol ***syms, long *symcount)
++{
++	long storage;
++
++	if ((bfd_get_file_flags (abfd) & HAS_SYMS) == 0)
++		return FALSE;
++
++	storage = bfd_get_symtab_upper_bound (abfd);
++	if (storage < 0)
++		return FALSE;
++
++	if((*syms = (asymbol **) malloc (storage)) == NULL)
++		return FALSE;
++
++	if((*symcount = bfd_canonicalize_symtab (abfd, *syms)) < 0)
++		return FALSE;
++
++	return TRUE;
++}
++
++// This stucture is used to pass information between translate_addresses and find_address_in_section.
++struct find_handle
++{
++	asymbol **syms;
++	bfd_vma pc;
++	const char *filename;
++	const char *functionname;
++	unsigned int line;
++	bfd_boolean found;
++};
++
++// Look for an address in a section.  This is called via  bfd_map_over_sections.
++static void find_address_in_section (bfd *abfd, asection *section, PTR data)
++{
++	struct find_handle *info = (struct find_handle *) data;
++	bfd_vma vma;
++	bfd_size_type size;
++
++	if (info->found)
++		return;
++
++	if ((bfd_get_section_flags (abfd, section) & SEC_ALLOC) == 0)
++		return;
++
++	vma = bfd_get_section_vma (abfd, section);
++	if (info->pc < vma)
++		return;
++
++	size = bfd_get_section_size (section);
++	if (info->pc >= vma + size)
++		return;
++
++	info->found = bfd_find_nearest_line (abfd, section, info->syms, info->pc - vma, &info->filename, &info->functionname, &info->line);
++}
++
++static
++BOOL BfdDemangleSymName(LPCTSTR lpName, LPTSTR lpDemangledName, DWORD nSize)
++{
++	char *res;
++
++	assert(lpName != NULL);
++
++	if((res = cplus_demangle(lpName, DMGL_ANSI /*| DMGL_PARAMS*/)) == NULL)
++	{
++		lstrcpyn(lpDemangledName, lpName, nSize);
++		return FALSE;
++	}
++	else
++	{
++		lstrcpyn(lpDemangledName, res, nSize);
++		free (res);
++		return TRUE;
++	}
++}
++
++static
++BOOL BfdGetSymFromAddr(bfd *abfd, asymbol **syms, long symcount, DWORD dwAddress, LPTSTR lpSymName, DWORD nSize)
++{
++	HMODULE hModule;
++	struct find_handle info;
++
++	if(!(hModule = (HMODULE) GetModuleBase(dwAddress)))
++		return FALSE;
++
++	info.pc = dwAddress;
++
++	if(!(bfd_get_file_flags (abfd) & HAS_SYMS) || !symcount)
++		return FALSE;
++	info.syms = syms;
++
++	info.found = FALSE;
++	bfd_map_over_sections (abfd, find_address_in_section, (PTR) &info);
++	if (info.found == FALSE || info.line == 0)
++		return FALSE;
++
++	assert(lpSymName);
++
++	if(info.functionname == NULL || *info.functionname == '\0')
++		return FALSE;
++
++	lstrcpyn(lpSymName, info.functionname, nSize);
++
++	return TRUE;
++}
++
++static
++BOOL BfdGetLineFromAddr(bfd *abfd, asymbol **syms, long symcount, DWORD dwAddress,  LPTSTR lpFileName, DWORD nSize, LPDWORD lpLineNumber)
++{
++	HMODULE hModule;
++	struct find_handle info;
++
++	if(!(hModule = (HMODULE) GetModuleBase(dwAddress)))
++		return FALSE;
++
++	info.pc = dwAddress;
++
++	if(!(bfd_get_file_flags (abfd) & HAS_SYMS) || !symcount)
++		return FALSE;
++
++	info.syms = syms;
++
++	info.found = FALSE;
++	bfd_map_over_sections (abfd, find_address_in_section, (PTR) &info);
++	if (info.found == FALSE || info.line == 0)
++		return FALSE;
++
++	assert(lpFileName && lpLineNumber);
++
++	lstrcpyn(lpFileName, info.filename, nSize);
++	*lpLineNumber = info.line;
++
++	return TRUE;
++}
++
++#endif /* HAVE_BFD */
++
++#include <imagehlp.h>
++
++static BOOL bSymInitialized = FALSE;
++
++static HMODULE hModule_Imagehlp = NULL;
++
++typedef BOOL (WINAPI *PFNSYMINITIALIZE)(HANDLE, LPSTR, BOOL);
++static PFNSYMINITIALIZE pfnSymInitialize = NULL;
++
++static
++BOOL WINAPI j_SymInitialize(HANDLE hProcess, PSTR UserSearchPath, BOOL fInvadeProcess)
++{
++	if(
++		(hModule_Imagehlp || (hModule_Imagehlp = LoadLibrary(_T("IMAGEHLP.DLL")))) &&
++		(pfnSymInitialize || (pfnSymInitialize = (PFNSYMINITIALIZE) GetProcAddress(hModule_Imagehlp, "SymInitialize")))
++	)
++		return pfnSymInitialize(hProcess, UserSearchPath, fInvadeProcess);
++	else
++		return FALSE;
++}
++
++typedef BOOL (WINAPI *PFNSYMCLEANUP)(HANDLE);
++static PFNSYMCLEANUP pfnSymCleanup = NULL;
++
++static
++BOOL WINAPI j_SymCleanup(HANDLE hProcess)
++{
++	if(
++		(hModule_Imagehlp || (hModule_Imagehlp = LoadLibrary(_T("IMAGEHLP.DLL")))) &&
++		(pfnSymCleanup || (pfnSymCleanup = (PFNSYMCLEANUP) GetProcAddress(hModule_Imagehlp, "SymCleanup")))
++	)
++		return pfnSymCleanup(hProcess);
++	else
++		return FALSE;
++}
++
++typedef DWORD (WINAPI *PFNSYMSETOPTIONS)(DWORD);
++static PFNSYMSETOPTIONS pfnSymSetOptions = NULL;
++
++static
++DWORD WINAPI j_SymSetOptions(DWORD SymOptions)
++{
++	if(
++		(hModule_Imagehlp || (hModule_Imagehlp = LoadLibrary(_T("IMAGEHLP.DLL")))) &&
++		(pfnSymSetOptions || (pfnSymSetOptions = (PFNSYMSETOPTIONS) GetProcAddress(hModule_Imagehlp, "SymSetOptions")))
++	)
++		return pfnSymSetOptions(SymOptions);
++	else
++		return FALSE;
++}
++
++typedef BOOL (WINAPI *PFNSYMUNDNAME)(PIMAGEHLP_SYMBOL, PSTR, DWORD);
++static PFNSYMUNDNAME pfnSymUnDName = NULL;
++
++static
++BOOL WINAPI j_SymUnDName(PIMAGEHLP_SYMBOL Symbol, PSTR UnDecName, DWORD UnDecNameLength)
++{
++	if(
++		(hModule_Imagehlp || (hModule_Imagehlp = LoadLibrary(_T("IMAGEHLP.DLL")))) &&
++		(pfnSymUnDName || (pfnSymUnDName = (PFNSYMUNDNAME) GetProcAddress(hModule_Imagehlp, "SymUnDName")))
++	)
++		return pfnSymUnDName(Symbol, UnDecName, UnDecNameLength);
++	else
++		return FALSE;
++}
++
++typedef PFUNCTION_TABLE_ACCESS_ROUTINE PFNSYMFUNCTIONTABLEACCESS;
++static PFNSYMFUNCTIONTABLEACCESS pfnSymFunctionTableAccess = NULL;
++
++static
++PVOID WINAPI j_SymFunctionTableAccess(HANDLE hProcess, DWORD AddrBase)
++{
++	if(
++		(hModule_Imagehlp || (hModule_Imagehlp = LoadLibrary(_T("IMAGEHLP.DLL")))) &&
++		(pfnSymFunctionTableAccess || (pfnSymFunctionTableAccess = (PFNSYMFUNCTIONTABLEACCESS) GetProcAddress(hModule_Imagehlp, "SymFunctionTableAccess")))
++	)
++		return pfnSymFunctionTableAccess(hProcess, AddrBase);
++	else
++		return NULL;
++}
++
++typedef PGET_MODULE_BASE_ROUTINE PFNSYMGETMODULEBASE;
++static PFNSYMGETMODULEBASE pfnSymGetModuleBase = NULL;
++
++static
++DWORD WINAPI j_SymGetModuleBase(HANDLE hProcess, DWORD dwAddr)
++{
++	if(
++		(hModule_Imagehlp || (hModule_Imagehlp = LoadLibrary(_T("IMAGEHLP.DLL")))) &&
++		(pfnSymGetModuleBase || (pfnSymGetModuleBase = (PFNSYMGETMODULEBASE) GetProcAddress(hModule_Imagehlp, "SymGetModuleBase")))
++	)
++		return pfnSymGetModuleBase(hProcess, dwAddr);
++	else
++		return 0;
++}
++
++typedef BOOL (WINAPI *PFNSTACKWALK)(DWORD, HANDLE, HANDLE, LPSTACKFRAME, LPVOID, PREAD_PROCESS_MEMORY_ROUTINE, PFUNCTION_TABLE_ACCESS_ROUTINE, PGET_MODULE_BASE_ROUTINE, PTRANSLATE_ADDRESS_ROUTINE);
++static PFNSTACKWALK pfnStackWalk = NULL;
++
++static
++BOOL WINAPI j_StackWalk(
++	DWORD MachineType,
++	HANDLE hProcess,
++	HANDLE hThread,
++	LPSTACKFRAME StackFrame,
++	PVOID ContextRecord,
++	PREAD_PROCESS_MEMORY_ROUTINE ReadMemoryRoutine,
++	PFUNCTION_TABLE_ACCESS_ROUTINE FunctionTableAccessRoutine,
++	PGET_MODULE_BASE_ROUTINE GetModuleBaseRoutine,
++	PTRANSLATE_ADDRESS_ROUTINE TranslateAddress
++)
++{
++	if(
++		(hModule_Imagehlp || (hModule_Imagehlp = LoadLibrary(_T("IMAGEHLP.DLL")))) &&
++		(pfnStackWalk || (pfnStackWalk = (PFNSTACKWALK) GetProcAddress(hModule_Imagehlp, "StackWalk")))
++	)
++		return pfnStackWalk(
++			MachineType,
++			hProcess,
++			hThread,
++			StackFrame,
++			ContextRecord,
++			ReadMemoryRoutine,
++			FunctionTableAccessRoutine,
++			GetModuleBaseRoutine,
++			TranslateAddress
++		);
++	else
++		return FALSE;
++}
++
++typedef BOOL (WINAPI *PFNSYMGETSYMFROMADDR)(HANDLE, DWORD, LPDWORD, PIMAGEHLP_SYMBOL);
++static PFNSYMGETSYMFROMADDR pfnSymGetSymFromAddr = NULL;
++
++static
++BOOL WINAPI j_SymGetSymFromAddr(HANDLE hProcess, DWORD Address, PDWORD Displacement, PIMAGEHLP_SYMBOL Symbol)
++{
++	if(
++		(hModule_Imagehlp || (hModule_Imagehlp = LoadLibrary(_T("IMAGEHLP.DLL")))) &&
++		(pfnSymGetSymFromAddr || (pfnSymGetSymFromAddr = (PFNSYMGETSYMFROMADDR) GetProcAddress(hModule_Imagehlp, "SymGetSymFromAddr")))
++	)
++		return pfnSymGetSymFromAddr(hProcess, Address, Displacement, Symbol);
++	else
++		return FALSE;
++}
++
++typedef BOOL (WINAPI *PFNSYMGETLINEFROMADDR)(HANDLE, DWORD, LPDWORD, PIMAGEHLP_LINE);
++static PFNSYMGETLINEFROMADDR pfnSymGetLineFromAddr = NULL;
++
++static
++BOOL WINAPI j_SymGetLineFromAddr(HANDLE hProcess, DWORD dwAddr, PDWORD pdwDisplacement, PIMAGEHLP_LINE Line)
++{
++	if(
++		(hModule_Imagehlp || (hModule_Imagehlp = LoadLibrary(_T("IMAGEHLP.DLL")))) &&
++		(pfnSymGetLineFromAddr || (pfnSymGetLineFromAddr = (PFNSYMGETLINEFROMADDR) GetProcAddress(hModule_Imagehlp, "SymGetLineFromAddr")))
++	)
++		return pfnSymGetLineFromAddr(hProcess, dwAddr, pdwDisplacement, Line);
++	else
++		return FALSE;
++}
++
++static
++BOOL ImagehlpDemangleSymName(LPCTSTR lpName, LPTSTR lpDemangledName, DWORD nSize)
++{
++	BYTE symbolBuffer[sizeof(IMAGEHLP_SYMBOL) + 512];
++	PIMAGEHLP_SYMBOL pSymbol = (PIMAGEHLP_SYMBOL) symbolBuffer;
++
++	memset( symbolBuffer, 0, sizeof(symbolBuffer) );
++
++	pSymbol->SizeOfStruct = sizeof(symbolBuffer);
++	pSymbol->MaxNameLength = 512;
++
++	lstrcpyn(pSymbol->Name, lpName, pSymbol->MaxNameLength);
++
++	if(!j_SymUnDName(pSymbol, lpDemangledName, nSize))
++		return FALSE;
++
++	return TRUE;
++}
++
++static
++BOOL ImagehlpGetSymFromAddr(HANDLE hProcess, DWORD dwAddress, LPTSTR lpSymName, DWORD nSize)
++{
++	// IMAGEHLP is wacky, and requires you to pass in a pointer to a
++	// IMAGEHLP_SYMBOL structure.  The problem is that this structure is
++	// variable length.  That is, you determine how big the structure is
++	// at runtime.  This means that you can't use sizeof(struct).
++	// So...make a buffer that's big enough, and make a pointer
++	// to the buffer.  We also need to initialize not one, but TWO
++	// members of the structure before it can be used.
++
++	BYTE symbolBuffer[sizeof(IMAGEHLP_SYMBOL) + 512];
++	PIMAGEHLP_SYMBOL pSymbol = (PIMAGEHLP_SYMBOL) symbolBuffer;
++	DWORD dwDisplacement = 0;  // Displacement of the input address, relative to the start of the symbol
++
++	pSymbol->SizeOfStruct = sizeof(symbolBuffer);
++	pSymbol->MaxNameLength = 512;
++
++	assert(bSymInitialized);
++
++	if(!j_SymGetSymFromAddr(hProcess, dwAddress, &dwDisplacement, pSymbol))
++		return FALSE;
++
++	lstrcpyn(lpSymName, pSymbol->Name, nSize);
++
++	return TRUE;
++}
++
++static
++BOOL ImagehlpGetLineFromAddr(HANDLE hProcess, DWORD dwAddress,  LPTSTR lpFileName, DWORD nSize, LPDWORD lpLineNumber)
++{
++	IMAGEHLP_LINE Line;
++	DWORD dwDisplacement = 0;  // Displacement of the input address, relative to the start of the symbol
++
++	// Do the source and line lookup.
++	memset(&Line, 0, sizeof(IMAGEHLP_LINE));
++	Line.SizeOfStruct = sizeof(IMAGEHLP_LINE);
++
++	assert(bSymInitialized);
++
++#if 1
++	{
++		// The problem is that the symbol engine only finds those source
++		//  line addresses (after the first lookup) that fall exactly on
++		//  a zero displacement.  I will walk backwards 100 bytes to
++		//  find the line and return the proper displacement.
++		DWORD dwTempDisp = 0 ;
++		while (dwTempDisp < 100 && !j_SymGetLineFromAddr(hProcess, dwAddress - dwTempDisp, &dwDisplacement, &Line))
++			++dwTempDisp;
++
++		if(dwTempDisp >= 100)
++			return FALSE;
++
++		// It was found and the source line information is correct so
++		//  change the displacement if it was looked up multiple times.
++		if (dwTempDisp < 100 && dwTempDisp != 0 )
++			dwDisplacement = dwTempDisp;
++	}
++#else
++	if(!j_SymGetLineFromAddr(hProcess, dwAddress, &dwDisplacement, &Line))
++		return FALSE;
++#endif
++
++	assert(lpFileName && lpLineNumber);
++
++	lstrcpyn(lpFileName, Line.FileName, nSize);
++	*lpLineNumber = Line.LineNumber;
++
++	return TRUE;
++}
++
++static
++BOOL PEGetSymFromAddr(HANDLE hProcess, DWORD dwAddress, LPTSTR lpSymName, DWORD nSize)
++{
++	HMODULE hModule;
++	PIMAGE_NT_HEADERS pNtHdr;
++	IMAGE_NT_HEADERS NtHdr;
++	PIMAGE_SECTION_HEADER pSection;
++	DWORD dwNearestAddress = 0, dwNearestName;
++	int i;
++
++	if(!(hModule = (HMODULE) GetModuleBase(dwAddress)))
++		return FALSE;
++
++	{
++		PIMAGE_DOS_HEADER pDosHdr;
++		LONG e_lfanew;
++
++		// Point to the DOS header in memory
++		pDosHdr = (PIMAGE_DOS_HEADER)hModule;
++
++		// From the DOS header, find the NT (PE) header
++		if(!ReadProcessMemory(hProcess, &pDosHdr->e_lfanew, &e_lfanew, sizeof(e_lfanew), NULL))
++			return FALSE;
++
++		pNtHdr = (PIMAGE_NT_HEADERS)((DWORD)hModule + (DWORD)e_lfanew);
++
++		if(!ReadProcessMemory(hProcess, pNtHdr, &NtHdr, sizeof(IMAGE_NT_HEADERS), NULL))
++			return FALSE;
++	}
++
++	pSection = (PIMAGE_SECTION_HEADER) ((DWORD)pNtHdr + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER) + NtHdr.FileHeader.SizeOfOptionalHeader);
++
++	// Look for export section
++	for (i = 0; i < NtHdr.FileHeader.NumberOfSections; i++, pSection++)
++	{
++		IMAGE_SECTION_HEADER Section;
++		PIMAGE_EXPORT_DIRECTORY pExportDir = NULL;
++		BYTE ExportSectionName[IMAGE_SIZEOF_SHORT_NAME] = {'.', 'e', 'd', 'a', 't', 'a', '\0', '\0'};
++
++		if(!ReadProcessMemory(hProcess, pSection, &Section, sizeof(IMAGE_SECTION_HEADER), NULL))
++			return FALSE;
++
++		if(memcmp(Section.Name, ExportSectionName, IMAGE_SIZEOF_SHORT_NAME) == 0)
++			pExportDir = (PIMAGE_EXPORT_DIRECTORY) Section.VirtualAddress;
++		else if ((NtHdr.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress >= Section.VirtualAddress) && (NtHdr.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress < (Section.VirtualAddress + Section.SizeOfRawData)))
++			pExportDir = (PIMAGE_EXPORT_DIRECTORY) NtHdr.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
++
++		if(pExportDir)
++		{
++			IMAGE_EXPORT_DIRECTORY ExportDir;
++
++			if(!ReadProcessMemory(hProcess, (PVOID)((DWORD)hModule + (DWORD)pExportDir), &ExportDir, sizeof(IMAGE_EXPORT_DIRECTORY), NULL))
++				return FALSE;
++
++			{
++				PDWORD *AddressOfFunctions = alloca(ExportDir.NumberOfFunctions*sizeof(PDWORD));
++				int j;
++
++				if(!ReadProcessMemory(hProcess, (PVOID)((DWORD)hModule + (DWORD)ExportDir.AddressOfFunctions), AddressOfFunctions, ExportDir.NumberOfFunctions*sizeof(PDWORD), NULL))
++						return FALSE;
++
++				for(j = 0; j < ExportDir.NumberOfNames; ++j)
++				{
++					DWORD pFunction = (DWORD)hModule + (DWORD)AddressOfFunctions[j];
++					//ReadProcessMemory(hProcess, (DWORD) hModule + (DWORD) (&ExportDir.AddressOfFunctions[j]), &pFunction, sizeof(pFunction), NULL);
++
++					if(pFunction <= dwAddress && pFunction > dwNearestAddress)
++					{
++						dwNearestAddress = pFunction;
++
++						if(!ReadProcessMemory(hProcess, (PVOID)((DWORD)hModule + ExportDir.AddressOfNames + j*sizeof(DWORD)), &dwNearestName, sizeof(dwNearestName), NULL))
++							return FALSE;
++
++						dwNearestName = (DWORD) hModule + dwNearestName;
++					}
++				}
++			}
++		}
++    }
++
++	if(!dwNearestAddress)
++		return FALSE;
++
++	if(!ReadProcessMemory(hProcess, (PVOID)dwNearestName, lpSymName, nSize, NULL))
++		return FALSE;
++	lpSymName[nSize - 1] = 0;
++
++	return TRUE;
++}
++
++static
++BOOL WINAPI IntelStackWalk(
++	DWORD MachineType,
++	HANDLE hProcess,
++	HANDLE hThread,
++	LPSTACKFRAME StackFrame,
++	PCONTEXT ContextRecord,
++	PREAD_PROCESS_MEMORY_ROUTINE ReadMemoryRoutine,
++	PFUNCTION_TABLE_ACCESS_ROUTINE FunctionTableAccessRoutine,
++	PGET_MODULE_BASE_ROUTINE GetModuleBaseRoutine,
++	PTRANSLATE_ADDRESS_ROUTINE TranslateAddress
++)
++{
++	assert(MachineType == IMAGE_FILE_MACHINE_I386);
++
++	if(ReadMemoryRoutine == NULL)
++		ReadMemoryRoutine = ReadProcessMemory;
++
++	if(!StackFrame->Reserved[0])
++	{
++		StackFrame->Reserved[0] = 1;
++
++		StackFrame->AddrPC.Mode = AddrModeFlat;
++		StackFrame->AddrPC.Offset = ContextRecord->Eip;
++		StackFrame->AddrStack.Mode = AddrModeFlat;
++		StackFrame->AddrStack.Offset = ContextRecord->Esp;
++		StackFrame->AddrFrame.Mode = AddrModeFlat;
++		StackFrame->AddrFrame.Offset = ContextRecord->Ebp;
++
++		StackFrame->AddrReturn.Mode = AddrModeFlat;
++		if(!ReadMemoryRoutine(hProcess, (LPCVOID) (StackFrame->AddrFrame.Offset + sizeof(DWORD)), &StackFrame->AddrReturn.Offset, sizeof(DWORD), NULL))
++			return FALSE;
++	}
++	else
++	{
++		StackFrame->AddrPC.Offset = StackFrame->AddrReturn.Offset;
++		//AddrStack = AddrFrame + 2*sizeof(DWORD);
++		if(!ReadMemoryRoutine(hProcess, (LPCVOID) StackFrame->AddrFrame.Offset, &StackFrame->AddrFrame.Offset, sizeof(DWORD), NULL))
++			return FALSE;
++		if(!ReadMemoryRoutine(hProcess, (LPCVOID) (StackFrame->AddrFrame.Offset + sizeof(DWORD)), &StackFrame->AddrReturn.Offset, sizeof(DWORD), NULL))
++			return FALSE;
++	}
++
++	ReadMemoryRoutine(hProcess, (LPCVOID) (StackFrame->AddrFrame.Offset + 2*sizeof(DWORD)), StackFrame->Params, sizeof(StackFrame->Params), NULL);
++
++	return TRUE;
++}
++
++static
++BOOL StackBackTrace(HANDLE hProcess, HANDLE hThread, PCONTEXT pContext)
++{
++	STACKFRAME StackFrame;
++
++	HMODULE hModule = NULL;
++	TCHAR szModule[MAX_PATH];
++
++#ifdef HAVE_BFD
++	bfd *abfd = NULL;
++	asymbol **syms = NULL;	// The symbol table.
++	long symcount = 0;	// Number of symbols in `syms'.
++#endif /* HAVE_BFD */
++
++	assert(!bSymInitialized);
++
++	j_SymSetOptions(/* SYMOPT_UNDNAME | */ SYMOPT_LOAD_LINES);
++	if(j_SymInitialize(hProcess, NULL, TRUE))
++		bSymInitialized = TRUE;
++
++	memset( &StackFrame, 0, sizeof(StackFrame) );
++
++	// Initialize the STACKFRAME structure for the first call.  This is only
++	// necessary for Intel CPUs, and isn't mentioned in the documentation.
++	StackFrame.AddrPC.Offset = pContext->Eip;
++	StackFrame.AddrPC.Mode = AddrModeFlat;
++	StackFrame.AddrStack.Offset = pContext->Esp;
++	StackFrame.AddrStack.Mode = AddrModeFlat;
++	StackFrame.AddrFrame.Offset = pContext->Ebp;
++	StackFrame.AddrFrame.Mode = AddrModeFlat;
++
++	rprintf( _T("Call stack:\r\n") );
++
++	if(0)
++		rprintf( _T("AddrPC     AddrReturn AddrFrame  AddrStack\r\n") );
++
++	while ( 1 )
++	{
++		BOOL bSuccess = FALSE;
++		HMODULE hPrevModule = hModule;
++		TCHAR szSymName[512] = _T("");
++		TCHAR szFileName[MAX_PATH] = _T("");
++		DWORD LineNumber = 0;
++
++		if(bSymInitialized)
++		{
++			if(!j_StackWalk(
++					IMAGE_FILE_MACHINE_I386,
++					hProcess,
++					hThread,
++					&StackFrame,
++					pContext,
++					NULL,
++					j_SymFunctionTableAccess,
++					j_SymGetModuleBase,
++					NULL
++				)
++			)
++				break;
++		}
++		else
++		{
++			if(!IntelStackWalk(
++					IMAGE_FILE_MACHINE_I386,
++					hProcess,
++					hThread,
++					&StackFrame,
++					pContext,
++					NULL,
++					NULL,
++					NULL,
++					NULL
++				)
++			)
++				break;
++		}
++
++		// Basic sanity check to make sure  the frame is OK.  Bail if not.
++		if ( 0 == StackFrame.AddrFrame.Offset )
++			break;
++
++		if(0)
++		{
++			rprintf(
++				_T("%08lX   %08lX   %08lX   %08lX\r\n"),
++				StackFrame.AddrPC.Offset,
++				StackFrame.AddrReturn.Offset,
++				StackFrame.AddrFrame.Offset,
++				StackFrame.AddrStack.Offset
++			);
++			rprintf(
++				_T("%08lX   %08lX   %08lX   %08lX\r\n"),
++				StackFrame.Params[0],
++				StackFrame.Params[1],
++				StackFrame.Params[2],
++				StackFrame.Params[3]
++			);
++		}
++
++		rprintf( _T("%08lX"), StackFrame.AddrPC.Offset);
++
++		if((hModule = (HMODULE) GetModuleBase(StackFrame.AddrPC.Offset)) && GetModuleFileName(hModule, szModule, sizeof(szModule)))
++		{
++#ifndef HAVE_BFD
++			rprintf( _T("  %s:ModulBase %08lX"), szModule, hModule);
++#else /* HAVE_BFD */
++			rprintf( _T("  %s:%08lX"), szModule, StackFrame.AddrPC.Offset);
++
++			if(hModule != hPrevModule)
++			{
++				if(syms)
++				{
++					free(syms);
++					syms = NULL;
++					symcount = 0;
++				}
++
++				if(abfd)
++					bfd_close(abfd);
++
++				if((abfd = bfd_openr (szModule, NULL)))
++					if(bfd_check_format(abfd, bfd_object))
++					{
++						bfd_vma adjust_section_vma = 0;
++
++						/* If we are adjusting section VMA's, change them all now.  Changing
++						the BFD information is a hack.  However, we must do it, or
++						bfd_find_nearest_line will not do the right thing.  */
++						if ((adjust_section_vma = (bfd_vma) hModule - pe_data(abfd)->pe_opthdr.ImageBase))
++						{
++							asection *s;
++
++							for (s = abfd->sections; s != NULL; s = s->next)
++							{
++								s->vma += adjust_section_vma;
++								s->lma += adjust_section_vma;
++							}
++						}
++
++						if(bfd_get_file_flags(abfd) & HAS_SYMS)
++							/* Read in the symbol table.  */
++							slurp_symtab(abfd, &syms, &symcount);
++					}
++			}
++
++			if(!bSuccess && abfd && syms && symcount)
++				if((bSuccess = BfdGetSymFromAddr(abfd, syms, symcount, StackFrame.AddrPC.Offset, szSymName, 512)))
++				{
++					/*
++					framepointer = StackFrame.AddrFrame.Offset;
++					hprocess = hProcess;
++					*/
++
++					BfdDemangleSymName(szSymName, szSymName, 512);
++
++					rprintf( _T("  %s"), szSymName);
++
++					if(BfdGetLineFromAddr(abfd, syms, symcount, StackFrame.AddrPC.Offset, szFileName, MAX_PATH, &LineNumber))
++						rprintf( _T("  %s:%ld"), szFileName, LineNumber);
++				}
++#endif /* HAVE_BFD */
++
++			if(!bSuccess && bSymInitialized)
++				if((bSuccess = ImagehlpGetSymFromAddr(hProcess, StackFrame.AddrPC.Offset, szSymName, 512)))
++				{
++					rprintf( _T("  %s"), szSymName);
++
++					ImagehlpDemangleSymName(szSymName, szSymName, 512);
++
++					if(ImagehlpGetLineFromAddr(hProcess, StackFrame.AddrPC.Offset, szFileName, MAX_PATH, &LineNumber))
++						rprintf( _T("  %s:%ld"), szFileName, LineNumber);
++				}
++
++			if(!bSuccess)
++				if((bSuccess = PEGetSymFromAddr(hProcess, StackFrame.AddrPC.Offset, szSymName, 512)))
++					rprintf( _T("  %s"), szSymName);
++		}
++
++		rprintf(_T("\r\n"));
++	}
++
++#ifdef HAVE_BFD
++	if(syms)
++	{
++		free(syms);
++		syms = NULL;
++		symcount = 0;
++	}
++
++	if(abfd)
++		bfd_close(abfd);
++#endif /* HAVE_BFD */
++
++	if(bSymInitialized)
++	{
++		if(!j_SymCleanup(hProcess))
++			assert(0);
++
++		bSymInitialized = FALSE;
++	}
++
++	return TRUE;
++}
++
++static
++void GenerateExceptionReport(PEXCEPTION_POINTERS pExceptionInfo)
++{
++	PEXCEPTION_RECORD pExceptionRecord = pExceptionInfo->ExceptionRecord;
++	TCHAR szModule[MAX_PATH];
++	HMODULE hModule;
++	PCONTEXT pContext;
++
++	// Start out with a banner
++	rprintf(_T("-------------------\r\n\r\n"));
++
++	{
++		TCHAR *lpDayOfWeek[] = {
++			_T("Sunday"),
++			_T("Monday"),
++			_T("Tuesday"),
++			_T("Wednesday"),
++			_T("Thursday"),
++			_T("Friday"),
++			_T("Saturday")
++		};
++		TCHAR *lpMonth[] = {
++			NULL,
++			_T("January"),
++			_T("February"),
++			_T("March"),
++			_T("April"),
++			_T("May"),
++			_T("June"),
++			_T("July"),
++			_T("August"),
++			_T("September"),
++			_T("October"),
++			_T("November"),
++			_T("December")
++		};
++		SYSTEMTIME SystemTime;
++
++		GetLocalTime(&SystemTime);
++		rprintf(_T("Error occured on %s, %s %i, %i at %02i:%02i:%02i.\r\n\r\n"),
++			lpDayOfWeek[SystemTime.wDayOfWeek],
++			lpMonth[SystemTime.wMonth],
++			SystemTime.wDay,
++			SystemTime.wYear,
++			SystemTime.wHour,
++			SystemTime.wMinute,
++			SystemTime.wSecond
++		);
++	}
++
++	// First print information about the type of fault
++	rprintf(_T("%s caused "),  GetModuleFileName(NULL, szModule, MAX_PATH) ? szModule : "Application");
++	switch(pExceptionRecord->ExceptionCode)
++	{
++		case EXCEPTION_ACCESS_VIOLATION:
++			rprintf(_T("an Access Violation"));
++			break;
++
++		case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
++			rprintf(_T("an Array Bound Exceeded"));
++			break;
++
++		case EXCEPTION_BREAKPOINT:
++			rprintf(_T("a Breakpoint"));
++			break;
++
++		case EXCEPTION_DATATYPE_MISALIGNMENT:
++			rprintf(_T("a Datatype Misalignment"));
++			break;
++
++		case EXCEPTION_FLT_DENORMAL_OPERAND:
++			rprintf(_T("a Float Denormal Operand"));
++			break;
++
++		case EXCEPTION_FLT_DIVIDE_BY_ZERO:
++			rprintf(_T("a Float Divide By Zero"));
++			break;
++
++		case EXCEPTION_FLT_INEXACT_RESULT:
++			rprintf(_T("a Float Inexact Result"));
++			break;
++
++		case EXCEPTION_FLT_INVALID_OPERATION:
++			rprintf(_T("a Float Invalid Operation"));
++			break;
++
++		case EXCEPTION_FLT_OVERFLOW:
++			rprintf(_T("a Float Overflow"));
++			break;
++
++		case EXCEPTION_FLT_STACK_CHECK:
++			rprintf(_T("a Float Stack Check"));
++			break;
++
++		case EXCEPTION_FLT_UNDERFLOW:
++			rprintf(_T("a Float Underflow"));
++			break;
++
++		case EXCEPTION_GUARD_PAGE:
++			rprintf(_T("a Guard Page"));
++			break;
++
++		case EXCEPTION_ILLEGAL_INSTRUCTION:
++			rprintf(_T("an Illegal Instruction"));
++			break;
++
++		case EXCEPTION_IN_PAGE_ERROR:
++			rprintf(_T("an In Page Error"));
++			break;
++
++		case EXCEPTION_INT_DIVIDE_BY_ZERO:
++			rprintf(_T("an Integer Divide By Zero"));
++			break;
++
++		case EXCEPTION_INT_OVERFLOW:
++			rprintf(_T("an Integer Overflow"));
++			break;
++
++		case EXCEPTION_INVALID_DISPOSITION:
++			rprintf(_T("an Invalid Disposition"));
++			break;
++
++		case EXCEPTION_INVALID_HANDLE:
++			rprintf(_T("an Invalid Handle"));
++			break;
++
++		case EXCEPTION_NONCONTINUABLE_EXCEPTION:
++			rprintf(_T("a Noncontinuable Exception"));
++			break;
++
++		case EXCEPTION_PRIV_INSTRUCTION:
++			rprintf(_T("a Privileged Instruction"));
++			break;
++
++		case EXCEPTION_SINGLE_STEP:
++			rprintf(_T("a Single Step"));
++			break;
++
++		case EXCEPTION_STACK_OVERFLOW:
++			rprintf(_T("a Stack Overflow"));
++			break;
++
++		case DBG_CONTROL_C:
++			rprintf(_T("a Control+C"));
++			break;
++
++		case DBG_CONTROL_BREAK:
++			rprintf(_T("a Control+Break"));
++			break;
++
++		case DBG_TERMINATE_THREAD:
++			rprintf(_T("a Terminate Thread"));
++			break;
++
++		case DBG_TERMINATE_PROCESS:
++			rprintf(_T("a Terminate Process"));
++			break;
++
++		case RPC_S_UNKNOWN_IF:
++			rprintf(_T("an Unknown Interface"));
++			break;
++
++		case RPC_S_SERVER_UNAVAILABLE:
++			rprintf(_T("a Server Unavailable"));
++			break;
++
++		default:
++			/*
++			static TCHAR szBuffer[512] = { 0 };
++
++			// If not one of the "known" exceptions, try to get the string
++			// from NTDLL.DLL's message table.
++
++			FormatMessage(FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
++							GetModuleHandle(_T("NTDLL.DLL")),
++							dwCode, 0, szBuffer, sizeof(szBuffer), 0);
++			*/
++
++			rprintf(_T("an Unknown [0x%lX] Exception"), pExceptionRecord->ExceptionCode);
++			break;
++	}
++
++	// Now print information about where the fault occured
++	rprintf(_T(" at location %08x"), (DWORD) pExceptionRecord->ExceptionAddress);
++	if((hModule = (HMODULE) GetModuleBase((DWORD) pExceptionRecord->ExceptionAddress)) && GetModuleFileName(hModule, szModule, sizeof(szModule)))
++		rprintf(_T(" in module %s"), szModule);
++
++	// If the exception was an access violation, print out some additional information, to the error log and the debugger.
++	if(pExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && pExceptionRecord->NumberParameters >= 2)
++		rprintf(" %s location %08x", pExceptionRecord->ExceptionInformation[0] ? "Writing to" : "Reading from", pExceptionRecord->ExceptionInformation[1]);
++
++	rprintf(".\r\n\r\n");
++
++	pContext = pExceptionInfo->ContextRecord;
++
++	#ifdef _M_IX86	// Intel Only!
++
++	// Show the registers
++	rprintf(_T("Registers:\r\n"));
++	if(pContext->ContextFlags & CONTEXT_INTEGER)
++		rprintf(
++			_T("eax=%08lx ebx=%08lx ecx=%08lx edx=%08lx esi=%08lx edi=%08lx\r\n"),
++			pContext->Eax,
++			pContext->Ebx,
++			pContext->Ecx,
++			pContext->Edx,
++			pContext->Esi,
++			pContext->Edi
++		);
++	if(pContext->ContextFlags & CONTEXT_CONTROL)
++		rprintf(
++			_T("eip=%08lx esp=%08lx ebp=%08lx iopl=%1lx %s %s %s %s %s %s %s %s %s %s\r\n"),
++			pContext->Eip,
++			pContext->Esp,
++			pContext->Ebp,
++			(pContext->EFlags >> 12) & 3,	//  IOPL level value
++			pContext->EFlags & 0x00100000 ? "vip" : "   ",	//  VIP (virtual interrupt pending)
++			pContext->EFlags & 0x00080000 ? "vif" : "   ",	//  VIF (virtual interrupt flag)
++			pContext->EFlags & 0x00000800 ? "ov" : "nv",	//  VIF (virtual interrupt flag)
++			pContext->EFlags & 0x00000400 ? "dn" : "up",	//  OF (overflow flag)
++			pContext->EFlags & 0x00000200 ? "ei" : "di",	//  IF (interrupt enable flag)
++			pContext->EFlags & 0x00000080 ? "ng" : "pl",	//  SF (sign flag)
++			pContext->EFlags & 0x00000040 ? "zr" : "nz",	//  ZF (zero flag)
++			pContext->EFlags & 0x00000010 ? "ac" : "na",	//  AF (aux carry flag)
++			pContext->EFlags & 0x00000004 ? "po" : "pe",	//  PF (parity flag)
++			pContext->EFlags & 0x00000001 ? "cy" : "nc"	//  CF (carry flag)
++		);
++	if(pContext->ContextFlags & CONTEXT_SEGMENTS)
++	{
++		rprintf(
++			_T("cs=%04lx  ss=%04lx  ds=%04lx  es=%04lx  fs=%04lx  gs=%04lx"),
++			pContext->SegCs,
++			pContext->SegSs,
++			pContext->SegDs,
++			pContext->SegEs,
++			pContext->SegFs,
++			pContext->SegGs,
++			pContext->EFlags
++		);
++		if(pContext->ContextFlags & CONTEXT_CONTROL)
++			rprintf(
++				_T("             efl=%08lx"),
++				pContext->EFlags
++			);
++	}
++	else
++		if(pContext->ContextFlags & CONTEXT_CONTROL)
++			rprintf(
++				_T("                                                                       efl=%08lx"),
++				pContext->EFlags
++			);
++	rprintf(_T("\r\n\r\n"));
++
++	#endif
++
++	StackBackTrace(GetCurrentProcess(), GetCurrentThread(), pContext);
++
++	rprintf(_T("\r\n\r\n"));
++}
++
++#include <stdio.h>
++#include <fcntl.h>
++#include <io.h>
++
++
++// Entry point where control comes on an unhandled exception
++static
++LONG WINAPI TopLevelExceptionFilter(PEXCEPTION_POINTERS pExceptionInfo)
++{
++	static BOOL bBeenHere = FALSE;
++
++	if(!bBeenHere)
++	{
++		UINT fuOldErrorMode;
++
++		bBeenHere = TRUE;
++
++		fuOldErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
++
++		hReportFile = CreateFile(
++			szLogFileName,
++			GENERIC_WRITE,
++			0,
++			0,
++			OPEN_ALWAYS,
++			FILE_FLAG_WRITE_THROUGH,
++			0
++		);
++
++#ifdef HAVE_BFD
++		bfd_set_error_handler((bfd_error_handler_type) rprintf);
++#endif /* HAVE_BFD */
++
++		if (hReportFile)
++		{
++			SetFilePointer(hReportFile, 0, 0, FILE_END);
++
++			GenerateExceptionReport(pExceptionInfo);
++
++			CloseHandle(hReportFile);
++			hReportFile = 0;
++		}
++
++		if(fuOldErrorMode & SEM_NOGPFAULTERRORBOX)
++		{
++			TCHAR szBuffer[4196];
++
++			wsprintf(szBuffer, _T("An unhandled exception ocurred\r\nSee %s for more details\r\n"), szLogFileName);
++
++			MessageBox(
++				NULL,
++				szBuffer,
++				_T("Error"),
++				MB_OK | MB_ICONERROR
++			);
++		}
++
++		SetErrorMode(fuOldErrorMode);
++	}
++
++	if(prevExceptionFilter)
++		return prevExceptionFilter(pExceptionInfo);
++	else
++		return EXCEPTION_CONTINUE_SEARCH;
++}
++
++static void OnStartup(void) __attribute__((constructor));
++
++void OnStartup(void)
++{
++	// Install the unhandled exception filter function
++	prevExceptionFilter = SetUnhandledExceptionFilter(TopLevelExceptionFilter);
++
++	// Figure out what the report file will be named, and store it away
++	if(GetModuleFileName(NULL, szLogFileName, MAX_PATH))
++	{
++		LPTSTR lpszDot;
++
++		// Look for the '.' before the "EXE" extension.  Replace the extension
++		// with "RPT"
++		if((lpszDot = _tcsrchr(szLogFileName, _T('.'))))
++		{
++			lpszDot++;	// Advance past the '.'
++			_tcscpy(lpszDot, _T("RPT"));	// "RPT" -> "Report"
++		}
++		else
++			_tcscat(szLogFileName, _T(".RPT"));
++	}
++	else if(GetWindowsDirectory(szLogFileName, MAX_PATH))
++	{
++		_tcscat(szLogFileName, _T("EXCHNDL.RPT"));
++	}
++}
++
++static void OnExit(void) __attribute__((destructor));
++
++void OnExit(void)
++{
++	SetUnhandledExceptionFilter(prevExceptionFilter);
++}
++
++#if 0
++BOOL APIENTRY DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved)
++{
++	switch (dwReason)
++	{
++		case DLL_PROCESS_ATTACH:
++			OnStartup();
++			break;
++
++		case DLL_PROCESS_DETACH:
++			OnExit();
++			break;
++	}
++
++	return TRUE;
++}
++#endif
+
+Property changes on: src\base\exchndl\exchndl.c
+___________________________________________________________________
+Added: svn:mime-type
+   + text/plain
+Added: svn:eol-style
+   + native
+
+Index: src/CodeBlocks.cbp
+===================================================================
+--- src/CodeBlocks.cbp	(revision 5680)
++++ src/CodeBlocks.cbp	(working copy)
+@@ -7,6 +7,19 @@
+ 		<Option default_target="src" />
+ 		<Option compiler="gcc" />
+ 		<Build>
++			<Target title="exchndl">
++				<Option output="devel\exchndl" prefix_auto="0" extension_auto="1" />
++				<Option working_dir="devel" />
++				<Option type="3" />
++				<Option compiler="gcc" />
++				<Compiler>
++					<Add directory="base\exchndl\include" />
++				</Compiler>
++				<Linker>
++					<Add library="bfd" />
++					<Add library="iberty" />
++				</Linker>
++			</Target>
+ 			<Target title="tinyXML">
+ 				<Option output="base\tinyxml\libtxml.a" prefix_auto="0" extension_auto="0" />
+ 				<Option working_dir="" />
+@@ -480,9 +493,9 @@
+ 			</Environment>
+ 		</Build>
+ 		<VirtualTargets>
+-			<Add alias="All" targets="tinyXML;AutoRevision;ConsoleRunner;Squirrel;Squirrel std lib;SqPlus;scintilla;wxFlatNotebook;sdk;wxAUI;src;AStyle;Compiler depslib;Compiler;Debugger;Code-completion;Class wizard;Default MIME handler;Open files list;Scripted wizard;To-do;Autosave;XP look &amp; feel;Projects-workspaces importer;" />
+-			<Add alias="Core app &amp; plugins" targets="sdk;src;AStyle;Compiler;Debugger;Code-completion;Class wizard;Default MIME handler;Scripted wizard;To-do;Autosave;XP look &amp; feel;" />
+-			<Add alias="Third-party libs" targets="tinyXML;AutoRevision;ConsoleRunner;Squirrel;Squirrel std lib;SqPlus;scintilla;wxFlatNotebook;wxAUI;Compiler depslib;" />
++			<Add alias="All" targets="exchndl;tinyXML;AutoRevision;ConsoleRunner;Squirrel;Squirrel std lib;SqPlus;scintilla;wxFlatNotebook;sdk;wxAUI;src;AStyle;Compiler depslib;Compiler;Debugger;Code-completion;Class wizard;Default MIME handler;Open files list;Scripted wizard;To-do;Autosave;XP look &amp; feel;Projects-workspaces importer;" />
++			<Add alias="Core app &amp; plugins" targets="sdk;src;AStyle;Compiler;Debugger;Code-completion;Class wizard;Default MIME handler;Scripted wizard;To-do;XP look &amp; feel;Autosave;" />
++			<Add alias="Third-party libs" targets="exchndl;tinyXML;AutoRevision;ConsoleRunner;Squirrel;Squirrel std lib;SqPlus;scintilla;wxFlatNotebook;wxAUI;Compiler depslib;" />
+ 		</VirtualTargets>
+ 		<Compiler>
+ 			<Add option="-Wall" />
+@@ -512,6 +525,22 @@
+ 			<Add directory="base\tinyxml" />
+ 			<Add directory="$(#WX.lib)\gcc_dll$(WX_CFG)" />
+ 		</Linker>
++		<Unit filename="base\exchndl\exchndl.c">
++			<Option compilerVar="CC" />
++			<Option target="exchndl" />
++		</Unit>
++		<Unit filename="base\exchndl\include\coff\internal.h">
++			<Option target="exchndl" />
++		</Unit>
++		<Unit filename="base\exchndl\include\demangle.h">
++			<Option target="exchndl" />
++		</Unit>
++		<Unit filename="base\exchndl\include\libcoff.h">
++			<Option target="exchndl" />
++		</Unit>
++		<Unit filename="base\exchndl\include\libiberty.h">
++			<Option target="exchndl" />
++		</Unit>
+ 		<Unit filename="base\tinyxml\tinystr.cpp">
+ 			<Option target="tinyXML" />
+ 		</Unit>

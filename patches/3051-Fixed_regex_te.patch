@@ -1,0 +1,263 @@
+Index: src/plugins/contrib/regex_testbed/regexdlg.cpp
+===================================================================
+--- src/plugins/contrib/regex_testbed/regexdlg.cpp	(revision 6539)
++++ src/plugins/contrib/regex_testbed/regexdlg.cpp	(working copy)
+@@ -109,32 +109,32 @@
+ {
+     static wxString regex;
+     static wxString text;
+-    static bool nocase;
+-    static bool newlines;
+-    static int library;
++    static bool nocase;
++    static bool newlines;
++    static int library;
+ 
+ //    if(event.GetId() == XRCID("ID_NOCASE") || event.GetId() == XRCID("ID_NEWLINES"))
+-//        regex = _T("$^"); // bullshit
+-//    all UI elements send events quite often (on linux on every mouse mouve, if the parent window
+-//    has the focus, on windows even without any user action). So we can not use the event Id to force a new
+-//    run of GetBuiltinMatches(), because every time the value of m_quoted and m_output gets upadeted a selection of text in m_quoted
+-//    will be reset and therefore the user can not copy it's content (linux) and m_output jumps to the top, so that the user
+-//    cannot scroll the text (windows and linux).
++//        regex = _T("$^"); // bullshit
++//    all UI elements send events quite often (on linux on every mouse move, if the parent window
++//    has the focus, on windows even without any user action). So we can not use the event Id to force a new
++//    run of GetBuiltinMatches(), because every time the value of m_quoted and m_output gets upadeted a selection of text in m_quoted
++//    will be reset and therefore the user can not copy it's content (linux) and m_output jumps to the top, so that the user
++//    cannot scroll the text (windows and linux).
+ //
+ 
+-    if( regex == m_regex->GetValue() &&
+-        text == m_text->GetValue() &&
+-        nocase == m_nocase->GetValue() &&
+-        newlines == m_newlines->GetValue() &&
+-        library == m_library->GetSelection())
+-        {
+-            return;
++    if( regex == m_regex->GetValue() &&
++        text == m_text->GetValue() &&
++        nocase == m_nocase->GetValue() &&
++        newlines == m_newlines->GetValue() &&
++        library == m_library->GetSelection())
++        {
++            return;
+         }
+ 
+     regex = m_regex->GetValue();
+     text = m_text->GetValue();
+     nocase = m_nocase->GetValue();
+-    newlines = m_newlines->GetValue();
++    newlines = m_newlines->GetValue();
+     library = m_library->GetSelection();
+ 
+     wxString tmp(regex);
+@@ -201,7 +201,7 @@
+         return ret;
+ 
+     for(size_t i = 0; i < m_wxre.GetMatchCount(); ++i)
+-        if(!!m_wxre.GetMatch(text, i))
++        if(m_wxre.GetMatch(text, i))
+             ret.Add(m_wxre.GetMatch(text, i));
+ 
+     return ret;
+Index: src/plugins/contrib/regex_testbed/regexdlg.xrc
+===================================================================
+--- src/plugins/contrib/regex_testbed/regexdlg.xrc	(revision 6539)
++++ src/plugins/contrib/regex_testbed/regexdlg.xrc	(working copy)
+@@ -1,93 +1,104 @@
+ <resource>
+-    <object class="wxScrollingDialog" name="regex_dialog">
+-        <title>Regular expression utility</title>
+-        <centered>1</centered>
+-        <style>wxSTAY_ON_TOP|wxDEFAULT_DIALOG_STYLE</style>
+-        <object class="wxFlexGridSizer">
+-            <cols>1</cols>
+-            <growablecols>0</growablecols>
+-            <growablerows>4</growablerows>
+-            <object class="sizeritem">
+-                <object class="wxStaticText" name="ID_3">
+-                    <label>Regular expression:</label>
+-                </object>
+-                <flag>wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+-                <border>10</border>
+-            </object>
+-            <object class="sizeritem">
+-                <object class="wxTextCtrl" name="ID_REGEX">
+-                    <size>80,-1</size>
+-                </object>
+-                <flag>wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+-                <border>10</border>
+-            </object>
+-            <object class="sizeritem">
+-                <object class="wxTextCtrl" name="ID_QUOTED">
+-                    <size>80,-1</size>
+-                </object>
+-                <flag>wxTOP|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+-                <border>10</border>
+-            </object>
+-            <object class="sizeritem">
+-                <object class="wxBoxSizer">
+-                    <object class="sizeritem">
+-                        <object class="wxStaticText" name="ID_1">
+-                            <label>Regex library:</label>
+-                        </object>
+-                        <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
+-                        <border>10</border>
+-                    </object>
+-                    <object class="sizeritem">
+-                        <object class="wxChoice" name="ID_LIBRARY">
+-                            <content>
+-                                <item>wxWidgets (wxRE_EXTENDED)</item>
+-                                <item>wxWidgets (wxRE_ADVANCED)</item>
+-                                <item>wxWidgets (wxRE_BASIC)</item>
+-                            </content>
+-                        </object>
+-                        <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+-                        <border>10</border>
+-                    </object>
+-                    <object class="sizeritem">
+-                        <object class="wxCheckBox" name="ID_NOCASE">
+-                            <label>Case insensitive</label>
+-                        </object>
+-                        <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
+-                        <border>10</border>
+-                    </object>
+-                    <object class="sizeritem">
+-                        <object class="wxCheckBox" name="ID_NEWLINES">
+-                            <label>Match newlines</label>
+-                        </object>
+-                        <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
+-                        <border>10</border>
+-                    </object>
+-                </object>
+-                <flag>wxTOP|wxBOTTOM|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+-                <border>5</border>
+-            </object>
+-            <object class="sizeritem">
+-                <object class="wxStaticText" name="ID_STATICTEXT1">
+-                    <label>Text:</label>
+-                </object>
+-                <flag>wxTOP|wxLEFT|wxRIGHT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+-                <border>10</border>
+-            </object>
+-            <object class="sizeritem">
+-                <object class="wxTextCtrl" name="ID_TEXT">
+-                    <style>wxTE_MULTILINE</style>
+-                    <size>600,60</size>
+-                </object>
+-                <flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+-                <border>10</border>
+-            </object>
+-            <object class="sizeritem">
+-                <object class="wxHtmlWindow" name="ID_OUT">
+-                    <size>80,200</size>
+-                </object>
+-                <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+-                <border>10</border>
+-            </object>
+-        </object>
+-    </object>
++	<object class="wxScrollingDialog" name="regex_dialog">
++		<title>Regular Expression Utility</title>
++		<centered>1</centered>
++		<style>wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER</style>
++		<object class="wxFlexGridSizer">
++			<cols>1</cols>
++			<rows>1</rows>
++			<growablecols>0</growablecols>
++			<growablerows>4</growablerows>
++			<object class="sizeritem">
++				<object class="wxStaticText" name="ID_3">
++					<label>Regular expression:</label>
++				</object>
++				<flag>wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++				<border>10</border>
++			</object>
++			<object class="sizeritem">
++				<object class="wxTextCtrl" name="ID_REGEX">
++					<size>80,-1</size>
++				</object>
++				<flag>wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++				<border>10</border>
++			</object>
++			<object class="sizeritem">
++				<object class="wxTextCtrl" name="ID_QUOTED">
++					<size>80,-1</size>
++				</object>
++				<flag>wxTOP|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++				<border>10</border>
++			</object>
++			<object class="sizeritem">
++				<object class="wxBoxSizer">
++					<object class="sizeritem">
++						<object class="wxStaticText" name="ID_1">
++							<label>Regex library:</label>
++						</object>
++						<flag>wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++						<border>10</border>
++					</object>
++					<object class="sizeritem">
++						<object class="wxChoice" name="ID_LIBRARY">
++							<content>
++								<item>wxWidgets (wxRE_EXTENDED)</item>
++								<item>wxWidgets (wxRE_ADVANCED)</item>
++								<item>wxWidgets (wxRE_BASIC)</item>
++							</content>
++						</object>
++						<flag>wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++						<border>10</border>
++					</object>
++					<object class="sizeritem">
++						<object class="wxCheckBox" name="ID_NOCASE">
++							<label>Case insensitive</label>
++						</object>
++						<flag>wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++						<border>10</border>
++					</object>
++					<object class="sizeritem">
++						<object class="wxCheckBox" name="ID_NEWLINES">
++							<label>Match newlines</label>
++						</object>
++						<flag>wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++						<border>10</border>
++					</object>
++				</object>
++				<flag>wxTOP|wxBOTTOM|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++				<border>5</border>
++			</object>
++			<object class="sizeritem">
++				<object class="wxBoxSizer">
++					<orient>wxVERTICAL</orient>
++					<object class="sizeritem">
++						<object class="wxStaticText" name="ID_STATICTEXT1">
++							<label>Text:</label>
++						</object>
++						<flag>wxTOP|wxLEFT|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++						<border>10</border>
++					</object>
++					<object class="sizeritem">
++						<object class="wxTextCtrl" name="ID_TEXT">
++							<size>600,60</size>
++							<style>wxTE_MULTILINE</style>
++						</object>
++						<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++						<border>10</border>
++						<option>1</option>
++					</object>
++					<object class="sizeritem">
++						<object class="wxHtmlWindow" name="ID_OUT">
++							<size>80,200</size>
++						</object>
++						<flag>wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++						<border>10</border>
++						<option>3</option>
++					</object>
++				</object>
++				<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_BOTTOM</flag>
++				<border>5</border>
++				<option>1</option>
++			</object>
++		</object>
++	</object>
+ </resource>

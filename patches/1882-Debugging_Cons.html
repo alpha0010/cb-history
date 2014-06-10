@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 1882 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #1882 <small>2007-02-11 20:20:52</small></h3>
+          <h4>pecan</h4>
+          Debugging Console for Linux 
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="1882-Debugging_Cons.patch">1882-Debugging_Cons.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>None</dd>
+            <dt>Status</dt><dd>Accepted</dd>
+            <dt>Close date</dt><dd>2007-04-12 11:21:52</dd>
+            <dt>Assigned to</dt><dd></dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2007-02-11 20:22:38</div>
+        <div class="panel-body">
+          <p>This patch provides a debugging console facility for Linux.</p>
+          <p>The user should also apply Patch 1881 to avoid crashes when the program is killed with the stop button.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2007-02-11 21:01:59</div>
+        <div class="panel-body">
+          <p>Corrected Patch. The previous patch had two extra lines from path 1881 in it by mistake</p>
+          <p>Index: debuggergdb.cpp</p>
+          <p>===================================================================</p>
+          <p>--- debuggergdb.cpp	(revision 3590)</p>
+          <p>+++ debuggergdb.cpp	(working copy)</p>
+          <p>@@ -233,6 +233,11 @@</p>
+          <p>{</p>
+          <p>NotifyMissingFile(_T("debugger.zip"));</p>
+          <p>}</p>
+          <p>+    // vars for Linux console //(pecan 2007/2/06)</p>
+          <p>+    m_bIsConsole = false;</p>
+          <p>+    m_nConsolePid = 0;</p>
+          <p>+    m_ConsoleTty = wxEmptyString;</p>
+          <p>+</p>
+          <p>}</p>
+          <p>DebuggerGDB::~DebuggerGDB()</p>
+          <p>@@ -1021,6 +1026,21 @@</p>
+          <p>m_State.GetDriver()-&gt;Prepare(target &amp;&amp; target-&gt;GetTargetType() == ttConsoleOnly);</p>
+          <p>m_State.ApplyBreakpoints();</p>
+          <p>+   #ifdef __WXGTK__    //(pecan 2007/2/05)</p>
+          <p>+    // create xterm and issue tty "/dev/pts/#" to GDB where</p>
+          <p>+    // # is the tty for the newly created xterm</p>
+          <p>+    m_bIsConsole = (target &amp;&amp; target-&gt;GetTargetType() == ttConsoleOnly);</p>
+          <p>+    if (m_bIsConsole)</p>
+          <p>+    {</p>
+          <p>+        if (RunNixConsole() &gt; 0 )</p>
+          <p>+        {   wxString gdbTtyCmd;</p>
+          <p>+            gdbTtyCmd &lt;&lt; wxT("tty ") &lt;&lt; m_ConsoleTty;</p>
+          <p>+            m_State.GetDriver()-&gt;QueueCommand(new DebuggerCmd(m_State.GetDriver(), gdbTtyCmd, true));</p>
+          <p>+            DebugLog(wxString::Format( _("Queued:[%s]"), gdbTtyCmd.c_str()) );</p>
+          <p>+        }</p>
+          <p>+    }//if</p>
+          <p>+   #endif//def __WXGTK__</p>
+          <p>+</p>
+          <p>// Don't issue 'run' if attaching to a process (Bug #1391904)</p>
+          <p>if (m_PidToAttach == 0)</p>
+          <p>m_State.GetDriver()-&gt;Start(m_BreakOnEntry);</p>
+          <p>@@ -1503,12 +1523,21 @@</p>
+          <p>void DebuggerGDB::Stop()</p>
+          <p>{</p>
+          <p>+    // m_Process is PipedProcess I/O; m_Pid is debugger pid</p>
+          <p>if (m_pProcess &amp;&amp; m_Pid)</p>
+          <p>{</p>
+          <p>if (IsStopped())</p>
+          <p>{</p>
+          <p>RunCommand(CMD_STOP);</p>
+          <p>m_pProcess-&gt;CloseOutput();</p>
+          <p>+           #ifdef __WXGTK__</p>
+          <p>+            // kill any linux console //(pecan 2007/2/06)</p>
+          <p>+            if ( m_bIsConsole &amp;&amp; (m_nConsolePid &gt; 0) )</p>
+          <p>+            {</p>
+          <p>+                ::wxKill(m_nConsolePid);</p>
+          <p>+                m_nConsolePid = 0;</p>
+          <p>+            }</p>
+          <p>+           #endif</p>
+          <p>}</p>
+          <p>else</p>
+          <p>{</p>
+          <p>@@ -1521,7 +1550,8 @@</p>
+          <p>_("Debug"), wxOK | wxICON_EXCLAMATION);</p>
+          <p>else</p>
+          <p>#endif</p>
+          <p>-            wxKill(pid, wxSIGINT);</p>
+          <p>+            if (pid &gt; 0)</p>
+          <p>+                wxKill(pid, wxSIGINT);</p>
+          <p>#else</p>
+          <p>m_pProcess-&gt;CloseOutput();</p>
+          <p>wxKillError err = m_pProcess-&gt;Kill(m_Pid, wxSIGKILL);</p>
+          <p>@@ -2198,3 +2228,95 @@</p>
+          <p>{</p>
+          <p>Configure();</p>
+          <p>}</p>
+          <p>+// ----------------------------------------------------------------------------</p>
+          <p>+int DebuggerGDB::RunNixConsole()</p>
+          <p>+// ----------------------------------------------------------------------------</p>
+          <p>+{</p>
+          <p>+    // start the xterm and put the shell to sleep with -e sleep 80000</p>
+          <p>+    // fetch the xterm tty so we can issue to gdb a "tty /dev/pts/#"</p>
+          <p>+    // redirecting program stdin/stdout/stderr to the xterm console.</p>
+          <p>+</p>
+          <p>+  #ifndef __WXMSW__</p>
+          <p>+    wxString cmd;</p>
+          <p>+    wxString title = wxT("Program Console");</p>
+          <p>+    m_nConsolePid = 0;</p>
+          <p>+    // for non-win platforms, use m_ConsoleTerm to run the console app</p>
+          <p>+    wxString term = Manager::Get()-&gt;GetConfigManager(_T("app"))-&gt;Read(_T("/console_terminal"), DEFAULT_CONSOLE_TERM);</p>
+          <p>+    //term.Replace(_T("$TITLE"), _T("'") + _T("*nixConsole") + _T("'"));</p>
+          <p>+    term.Replace(_T("$TITLE"), _T("'") + title + _T("'"));</p>
+          <p>+    cmd &lt;&lt; term &lt;&lt; _T(" ");</p>
+          <p>+    cmd &lt;&lt; wxT("sleep ");</p>
+          <p>+    cmd &lt;&lt; 80000 + ::wxGetProcessId(); //make a unique sleep command</p>
+          <p>+</p>
+          <p>+    Manager::Get()-&gt;GetMacrosManager()-&gt;ReplaceEnvVars(cmd);</p>
+          <p>+    //Manager::Get()-&gt;GetMessageManager()-&gt;Log(m_PageIndex, _("Executing: %s"), cmd.c_str() );</p>
+          <p>+    DebugLog(wxString::Format( _("Executing: %s"), cmd.c_str()) );</p>
+          <p>+    //start xterm -e sleep {some unique # of seconds}</p>
+          <p>+    m_nConsolePid = wxExecute(cmd, wxEXEC_ASYNC);</p>
+          <p>+    if (m_nConsolePid &lt;= 0) return -1;</p>
+          <p>+</p>
+          <p>+    // Issue the PS command with to get the /dev/tty device name</p>
+          <p>+    // First, wait for the xterm to settle down, else PS won't see the sleep task</p>
+          <p>+    Manager::Yield();</p>
+          <p>+    ::wxSleep(1);</p>
+          <p>+    m_ConsoleTty = GetConsoleTty(m_nConsolePid);</p>
+          <p>+    if (not m_ConsoleTty.IsEmpty() )</p>
+          <p>+        return m_nConsolePid;</p>
+          <p>+    // failed to find the console tty</p>
+          <p>+    DebugLog( wxT("Console Execution error:failed to find console tty."));</p>
+          <p>+    ::wxKill(m_nConsolePid);</p>
+          <p>+    m_nConsolePid = 0;</p>
+          <p>+  #endif//ndef __WWXMSW__</p>
+          <p>+    return -1;</p>
+          <p>+}</p>
+          <p>+// ----------------------------------------------------------------------------</p>
+          <p>+wxString DebuggerGDB::GetConsoleTty(int ConsolePid)</p>
+          <p>+// ----------------------------------------------------------------------------</p>
+          <p>+{</p>
+          <p>+    // execute the ps -x command  and read PS output to get the /dev/tty field</p>
+          <p>+</p>
+          <p>+	unsigned long ConsPid = ConsolePid;</p>
+          <p>+	wxString psCmd;</p>
+          <p>+	wxArrayString psOutput;</p>
+          <p>+	wxArrayString psErrors;</p>
+          <p>+</p>
+          <p>+	psCmd &lt;&lt; wxT("ps x");</p>
+          <p>+    DebugLog(wxString::Format( _("Executing: %s"), psCmd.c_str()) );</p>
+          <p>+	int result = wxExecute(psCmd, psOutput, psErrors, wxEXEC_SYNC);</p>
+          <p>+	psCmd.Clear();</p>
+          <p>+	if (result != 0)</p>
+          <p>+	{   psCmd &lt;&lt; wxT("Result of ps x:") &lt;&lt; result;</p>
+          <p>+        DebugLog(wxString::Format( _("Execution Error:"), psCmd.c_str()) );</p>
+          <p>+        return wxEmptyString;</p>
+          <p>+	}</p>
+          <p>+</p>
+          <p>+    wxString ConsTtyStr;</p>
+          <p>+    wxString ConsPidStr;</p>
+          <p>+    ConsPidStr &lt;&lt; ConsPid;</p>
+          <p>+    //find task with our unique sleep time</p>
+          <p>+    wxString uniqueSleepTimeStr;</p>
+          <p>+    uniqueSleepTimeStr &lt;&lt; wxT("sleep ") &lt;&lt; 80000 + ::wxGetProcessId();</p>
+          <p>+    // search the output of "ps pid" command</p>
+          <p>+    int knt = psOutput.GetCount();</p>
+          <p>+    for (int i=knt-1; i&gt;-1; --i)</p>
+          <p>+    {   psCmd = psOutput.Item(i);</p>
+          <p>+        DebugLog(wxString::Format( _("PS result: %s"), psCmd.c_str()) );</p>
+          <p>+        // find the pts/# or tty/# or whatever it's called</p>
+          <p>+        // by seaching the output or out "ps x" command.</p>
+          <p>+        // The output of ps looks like:</p>
+          <p>+        //   PID TTY      STAT   TIME COMMAND</p>
+          <p>+        // 8779 pts/3    Ss+    0:00 sleep 600000</p>
+          <p>+        //if (psCmd.Contains(ConsPidStr))</p>
+          <p>+        if (psCmd.Contains(uniqueSleepTimeStr))</p>
+          <p>+        {   ConsTtyStr = psCmd.Mid( ConsPidStr.Length()+2);</p>
+          <p>+            ConsTtyStr = wxT("/dev/")+ConsTtyStr.BeforeFirst(' ');</p>
+          <p>+            DebugLog(wxString::Format( _("TTY is[%s]"), ConsTtyStr.c_str()) );</p>
+          <p>+            return ConsTtyStr;</p>
+          <p>+        }//if</p>
+          <p>+    }//for</p>
+          <p>+</p>
+          <p>+    knt = psErrors.GetCount();</p>
+          <p>+    for (int i=0; i&lt;knt; ++i)</p>
+          <p>+        DebugLog(wxString::Format( _("PS Error:%s"), psErrors.Item(i).c_str()) );</p>
+          <p>+    return wxEmptyString;</p>
+          <p>+}</p>
+          <p>Index: debuggergdb.h</p>
+          <p>===================================================================</p>
+          <p>--- debuggergdb.h	(revision 3590)</p>
+          <p>+++ debuggergdb.h	(working copy)</p>
+          <p>@@ -205,6 +205,13 @@</p>
+          <p>int m_HookId; // project loader hook ID</p>
+          <p>+        // Linux console support</p>
+          <p>+        int      RunNixConsole();</p>
+          <p>+        wxString GetConsoleTty(int ConsolePid);</p>
+          <p>+        bool     m_bIsConsole;</p>
+          <p>+        int      m_nConsolePid;</p>
+          <p>+        wxString m_ConsoleTty;</p>
+          <p>+</p>
+          <p>DECLARE_EVENT_TABLE()</p>
+          <p>};</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2007-03-09 15:14:31</div>
+        <div class="panel-body">
+          <p>Uploaded corrections to patch, especially for SlackWare</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2007-03-02 18:23:29</div>
+        <div class="panel-body">
+          <p>Update Linux Console patch for SVN 3536</p>
+          <p>Index: debuggergdb.cpp</p>
+          <p>===================================================================</p>
+          <p>--- debuggergdb.cpp	(revision 3659)</p>
+          <p>+++ debuggergdb.cpp	(working copy)</p>
+          <p>@@ -233,6 +233,10 @@</p>
+          <p>{</p>
+          <p>NotifyMissingFile(_T("debugger.zip"));</p>
+          <p>}</p>
+          <p>+    // vars for Linux console //(pecan 2007/2/06)</p>
+          <p>+    m_bIsConsole = false;</p>
+          <p>+    m_nConsolePid = 0;</p>
+          <p>+    m_ConsoleTty = wxEmptyString;</p>
+          <p>}</p>
+          <p>DebuggerGDB::~DebuggerGDB()</p>
+          <p>@@ -1021,6 +1025,21 @@</p>
+          <p>m_State.GetDriver()-&gt;Prepare(target &amp;&amp; target-&gt;GetTargetType() == ttConsoleOnly);</p>
+          <p>m_State.ApplyBreakpoints();</p>
+          <p>+   #ifdef __WXGTK__    //(pecan 2007/2/05)</p>
+          <p>+    // create xterm and issue tty "/dev/pts/#" to GDB where</p>
+          <p>+    // # is the tty for the newly created xterm</p>
+          <p>+    m_bIsConsole = (target &amp;&amp; target-&gt;GetTargetType() == ttConsoleOnly);</p>
+          <p>+    if (m_bIsConsole)</p>
+          <p>+    {</p>
+          <p>+        if (RunNixConsole() &gt; 0 )</p>
+          <p>+        {   wxString gdbTtyCmd;</p>
+          <p>+            gdbTtyCmd &lt;&lt; wxT("tty ") &lt;&lt; m_ConsoleTty;</p>
+          <p>+            m_State.GetDriver()-&gt;QueueCommand(new DebuggerCmd(m_State.GetDriver(), gdbTtyCmd, true));</p>
+          <p>+            DebugLog(wxString::Format( _("Queued:[%s]"), gdbTtyCmd.c_str()) );</p>
+          <p>+        }</p>
+          <p>+    }//if</p>
+          <p>+   #endif//def __WXGTK__</p>
+          <p>+</p>
+          <p>// Don't issue 'run' if attaching to a process (Bug #1391904)</p>
+          <p>if (m_PidToAttach == 0)</p>
+          <p>m_State.GetDriver()-&gt;Start(m_BreakOnEntry);</p>
+          <p>@@ -1503,12 +1522,21 @@</p>
+          <p>void DebuggerGDB::Stop()</p>
+          <p>{</p>
+          <p>+    // m_Process is PipedProcess I/O; m_Pid is debugger pid</p>
+          <p>if (m_pProcess &amp;&amp; m_Pid)</p>
+          <p>{</p>
+          <p>if (IsStopped())</p>
+          <p>{</p>
+          <p>RunCommand(CMD_STOP);</p>
+          <p>m_pProcess-&gt;CloseOutput();</p>
+          <p>+           #ifdef __WXGTK__</p>
+          <p>+            // kill any linux console //(pecan 2007/2/06)</p>
+          <p>+            if ( m_bIsConsole &amp;&amp; (m_nConsolePid &gt; 0) )</p>
+          <p>+            {</p>
+          <p>+                ::wxKill(m_nConsolePid);</p>
+          <p>+                m_nConsolePid = 0;</p>
+          <p>+            }</p>
+          <p>+           #endif</p>
+          <p>}</p>
+          <p>else</p>
+          <p>{</p>
+          <p>@@ -2196,3 +2224,101 @@</p>
+          <p>{</p>
+          <p>Configure();</p>
+          <p>}</p>
+          <p>+// ----------------------------------------------------------------------------</p>
+          <p>+int DebuggerGDB::RunNixConsole()</p>
+          <p>+// ----------------------------------------------------------------------------</p>
+          <p>+{</p>
+          <p>+    // start the xterm and put the shell to sleep with -e sleep 80000</p>
+          <p>+    // fetch the xterm tty so we can issue to gdb a "tty /dev/pts/#"</p>
+          <p>+    // redirecting program stdin/stdout/stderr to the xterm console.</p>
+          <p>+</p>
+          <p>+  #ifndef __WXMSW__</p>
+          <p>+    wxString cmd;</p>
+          <p>+    wxString title = wxT("Program Console");</p>
+          <p>+    m_nConsolePid = 0;</p>
+          <p>+    // for non-win platforms, use m_ConsoleTerm to run the console app</p>
+          <p>+    wxString term = Manager::Get()-&gt;GetConfigManager(_T("app"))-&gt;Read(_T("/console_terminal"), DEFAULT_CONSOLE_TERM);</p>
+          <p>+    //term.Replace(_T("$TITLE"), _T("'") + _T("*nixConsole") + _T("'"));</p>
+          <p>+    term.Replace(_T("$TITLE"), _T("'") + title + _T("'"));</p>
+          <p>+    cmd &lt;&lt; term &lt;&lt; _T(" ");</p>
+          <p>+    cmd &lt;&lt; wxT("sleep ");</p>
+          <p>+    cmd &lt;&lt; 80000 + ::wxGetProcessId(); //make a unique sleep command</p>
+          <p>+</p>
+          <p>+    Manager::Get()-&gt;GetMacrosManager()-&gt;ReplaceEnvVars(cmd);</p>
+          <p>+    //Manager::Get()-&gt;GetMessageManager()-&gt;Log(m_PageIndex, _("Executing: %s"), cmd.c_str() );</p>
+          <p>+    DebugLog(wxString::Format( _("Executing: %s"), cmd.c_str()) );</p>
+          <p>+    //start xterm -e sleep {some unique # of seconds}</p>
+          <p>+    m_nConsolePid = wxExecute(cmd, wxEXEC_ASYNC);</p>
+          <p>+    if (m_nConsolePid &lt;= 0) return -1;</p>
+          <p>+</p>
+          <p>+    // Issue the PS command to get the /dev/tty device name</p>
+          <p>+    // First, wait for the xterm to settle down, else PS won't see the sleep task</p>
+          <p>+    Manager::Yield();</p>
+          <p>+    ::wxSleep(1);</p>
+          <p>+    m_ConsoleTty = GetConsoleTty(m_nConsolePid);</p>
+          <p>+    if (not m_ConsoleTty.IsEmpty() )</p>
+          <p>+        return m_nConsolePid;</p>
+          <p>+    // failed to find the console tty</p>
+          <p>+    DebugLog( wxT("Console Execution error:failed to find console tty."));</p>
+          <p>+    ::wxKill(m_nConsolePid);</p>
+          <p>+    m_nConsolePid = 0;</p>
+          <p>+  #endif//ndef __WWXMSW__</p>
+          <p>+    return -1;</p>
+          <p>+}</p>
+          <p>+// ----------------------------------------------------------------------------</p>
+          <p>+wxString DebuggerGDB::GetConsoleTty(int ConsolePid)</p>
+          <p>+// ----------------------------------------------------------------------------</p>
+          <p>+{</p>
+          <p>+    // execute the ps -xo command  and read PS output to get the /dev/tty field</p>
+          <p>+</p>
+          <p>+	unsigned long ConsPid = ConsolePid;</p>
+          <p>+	wxString psCmd;</p>
+          <p>+	wxArrayString psOutput;</p>
+          <p>+	wxArrayString psErrors;</p>
+          <p>+</p>
+          <p>+	psCmd &lt;&lt; wxT("ps x -o tty,pid,command");</p>
+          <p>+    DebugLog(wxString::Format( _("Executing: %s"), psCmd.c_str()) );</p>
+          <p>+	int result = wxExecute(psCmd, psOutput, psErrors, wxEXEC_SYNC);</p>
+          <p>+	psCmd.Clear();</p>
+          <p>+	if (result != 0)</p>
+          <p>+	{   psCmd &lt;&lt; wxT("Result of ps x:") &lt;&lt; result;</p>
+          <p>+        DebugLog(wxString::Format( _("Execution Error:"), psCmd.c_str()) );</p>
+          <p>+        return wxEmptyString;</p>
+          <p>+	}</p>
+          <p>+</p>
+          <p>+    wxString ConsTtyStr;</p>
+          <p>+    wxString ConsPidStr;</p>
+          <p>+    ConsPidStr &lt;&lt; ConsPid;</p>
+          <p>+    //find task with our unique sleep time</p>
+          <p>+    wxString uniqueSleepTimeStr;</p>
+          <p>+    uniqueSleepTimeStr &lt;&lt; wxT("sleep ") &lt;&lt; 80000 + ::wxGetProcessId();</p>
+          <p>+    // search the output of "ps pid" command</p>
+          <p>+    int knt = psOutput.GetCount();</p>
+          <p>+    for (int i=knt-1; i&gt;-1; --i)</p>
+          <p>+    {   psCmd = psOutput.Item(i);</p>
+          <p>+        DebugLog(wxString::Format( _("PS result: %s"), psCmd.c_str()) );</p>
+          <p>+        // find the pts/# or tty/# or whatever it's called</p>
+          <p>+        // by seaching the output or out "ps x" command.</p>
+          <p>+        // The output of ps looks like:</p>
+          <p>+        // TT       PID   COMMAND</p>
+          <p>+        // pts/0    13342 /bin/sh ./run.sh</p>
+          <p>+        // pts/0    13343 /home/pecan/devel/trunk/src/devel/codeblocks</p>
+          <p>+        // pts/0    13361 /usr/bin/gdb -nx -fullname -quiet -args ./conio</p>
+          <p>+        // pts/0    13362 xterm -font -*-*-*-*-*-*-20-*-*-*-*-*-*-* -T Program Console -e sleep 93343</p>
+          <p>+        // pts/2    13363 sleep 93343</p>
+          <p>+        // ?        13365 /home/pecan/proj/conio/conio</p>
+          <p>+        // pts/1    13370 ps x -o tty,pid,command</p>
+          <p>+</p>
+          <p>+        if (psCmd.Contains(uniqueSleepTimeStr))</p>
+          <p>+        {   // found sleep 93343 string, extract tty field</p>
+          <p>+            ConsTtyStr = wxT("/dev/") + psCmd.BeforeFirst(' ');</p>
+          <p>+            DebugLog(wxString::Format( _("TTY is[%s]"), ConsTtyStr.c_str()) );</p>
+          <p>+            return ConsTtyStr;</p>
+          <p>+        }//if</p>
+          <p>+    }//for</p>
+          <p>+</p>
+          <p>+    knt = psErrors.GetCount();</p>
+          <p>+    for (int i=0; i&lt;knt; ++i)</p>
+          <p>+        DebugLog(wxString::Format( _("PS Error:%s"), psErrors.Item(i).c_str()) );</p>
+          <p>+    return wxEmptyString;</p>
+          <p>+}</p>
+          <p>Index: debuggergdb.h</p>
+          <p>===================================================================</p>
+          <p>--- debuggergdb.h	(revision 3659)</p>
+          <p>+++ debuggergdb.h	(working copy)</p>
+          <p>@@ -205,6 +205,13 @@</p>
+          <p>int m_HookId; // project loader hook ID</p>
+          <p>+        // Linux console support</p>
+          <p>+        int      RunNixConsole();</p>
+          <p>+        wxString GetConsoleTty(int ConsolePid);</p>
+          <p>+        bool     m_bIsConsole;</p>
+          <p>+        int      m_nConsolePid;</p>
+          <p>+        wxString m_ConsoleTty;</p>
+          <p>+</p>
+          <p>DECLARE_EVENT_TABLE()</p>
+          <p>};</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2007-04-12 11:21:52</div>
+        <div class="panel-body">
+          <p>Patch applied.</p>
+          <p>One thing to note though: the user can manually close the terminal and the debugger plugin does not know about it. This contains the risk of killing the wrong process when the debugger ends because the terminal's PID might be used by a different process by then...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

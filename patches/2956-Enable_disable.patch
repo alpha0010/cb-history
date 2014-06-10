@@ -1,0 +1,48 @@
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(revision 6195)
++++ src/sdk/editormanager.cpp	(working copy)
+@@ -2555,6 +2555,11 @@
+     pop->AppendSeparator();
+     pop->Append(idNBTabTop, _("Tabs at top"));
+     pop->Append(idNBTabBottom, _("Tabs at bottom"));
++    // Cryogen 24/3/10 Enable/disable tab position menu items appropriately.
++    if (Manager::Get()->GetConfigManager(_T("app"))->ReadBool(_T("/environment/editor_tabs_bottom"), false))
++    	pop->FindItem(idNBTabBottom)->Enable(false);
++    else
++    	pop->FindItem(idNBTabTop)->Enable(false);
+ 
+     cbEditor* ed = GetBuiltinEditor(event.GetSelection());
+     if (ed)
+Index: src/sdk/projectmanager.cpp
+===================================================================
+--- src/sdk/projectmanager.cpp	(revision 6195)
++++ src/sdk/projectmanager.cpp	(working copy)
+@@ -1664,6 +1664,11 @@
+     wxMenu* NBmenu = new wxMenu();
+     NBmenu->Append(idNB_TabTop, _("Tabs at top"));
+     NBmenu->Append(idNB_TabBottom, _("Tabs at bottom"));
++    // Cryogen 24/3/10 Enable/disable tab position menu items appropriately.
++    if (Manager::Get()->GetConfigManager(_T("app"))->ReadBool(_T("/environment/project_tabs_bottom"), false))
++    	NBmenu->FindItem(idNB_TabBottom)->Enable(false);
++    else
++    	NBmenu->FindItem(idNB_TabTop)->Enable(false);
+     m_pNotebook->PopupMenu(NBmenu);
+     delete NBmenu;
+ }
+Index: src/src/infopane.cpp
+===================================================================
+--- src/src/infopane.cpp	(revision 6195)
++++ src/src/infopane.cpp	(working copy)
+@@ -200,6 +198,11 @@
+     wxMenu* view = new wxMenu;
+     menu.Append(idNB_TabTop, _("Tabs at top"));
+     menu.Append(idNB_TabBottom, _("Tabs at bottom"));
++    // Cryogen 24/3/10 Enable/disable tab position menu items appropriately.
++    if (Manager::Get()->GetConfigManager(_T("app"))->ReadBool(_T("/environment/infopane_tabs_bottom"), false))
++    	menu.FindItem(idNB_TabBottom)->Enable(false);
++    else
++    	menu.FindItem(idNB_TabTop)->Enable(false);
+     bool any_nonloggers = false;
+ 
+     if (page[GetPageIndexByWindow(GetPage(GetSelection()))].islogger)

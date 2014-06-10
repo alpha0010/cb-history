@@ -1,0 +1,320 @@
+Index: src/plugins/codecompletion/insertclassmethoddlg.cpp
+===================================================================
+--- src/plugins/codecompletion/insertclassmethoddlg.cpp	(revision 4993)
++++ src/plugins/codecompletion/insertclassmethoddlg.cpp	(working copy)
+@@ -78,6 +78,7 @@
+     wxListBox* lb = XRCCTRL(*this, "lstClasses", wxListBox);
+     lb->Freeze();
+     lb->Clear();
++
+     TokensTree* tree = m_pParser->GetTokens();
+     for (size_t i = 0; i < tree->size(); ++i)
+     {
+@@ -85,8 +86,29 @@
+         //Manager::Get()->GetLogManager()->DebugLog("m_Filename=%s, token=%s", m_Filename.c_str(), token->m_Filename.c_str());
+         if (token && (token->m_TokenKind & (tkClass | tkTypedef))) //&&
+             //token->m_Filename == UnixFilename(m_Filename))
++		{
+             // TODO: check against file's pair too
+-            lb->Append(token->m_Name, token);
++            // Make sure we actually have something to implement
++			TokensTree* treeChildren = token->GetTree();
++            if (treeChildren)
++            {
++            	bool valid = false;
++				for (TokenIdxSet::iterator it = token->m_Children.begin(); it != token->m_Children.end(); ++it)
++				{
++					int idx = *it;
++					const Token* tokenChild = treeChildren->at(idx);
++					if (!tokenChild)
++						continue;
++					if (tokenChild->m_TokenKind & (tkFunction | tkConstructor | tkDestructor))
++					{
++						valid = true;
++						break;
++					}
++				}
++				if (valid)
++					lb->Append(token->m_Name, token);
++			}
++		}
+     }
+     lb->Thaw();
+     FillMethods();
+Index: src/plugins/codecompletion/resources/insert_class_method.xrc
+===================================================================
+--- src/plugins/codecompletion/resources/insert_class_method.xrc	(revision 4993)
++++ src/plugins/codecompletion/resources/insert_class_method.xrc	(working copy)
+@@ -1,140 +1,135 @@
+ <?xml version="1.0" ?>
+ <resource>
+-  <object class="wxDialog" name="dlgInsertClassMethod">
+-    <title>Insert class method...</title>
+-    <centered>1</centered>
+-    <object class="wxBoxSizer">
+-      <orient>wxVERTICAL</orient>
+-      <object class="sizeritem">
+-        <object class="wxFlexGridSizer">
+-          <cols>2</cols>
+-          <rows>2</rows>
+-          <vgap>4</vgap>
+-          <hgap>8</hgap>
+-          <growablecols>1</growablecols>
+-          <growablerows>1</growablerows>
+-          <object class="sizeritem">
+-            <object class="wxStaticText">
+-              <label>Known classes:</label>
+-            </object>
+-          </object>
+-          <object class="sizeritem">
+-            <object class="wxStaticText">
+-              <label>Class methods:</label>
+-            </object>
+-          </object>
+-          <object class="sizeritem">
+-            <object class="wxListBox" name="lstClasses">
+-              <content/>
+-            </object>
+-            <flag>wxEXPAND</flag>
+-            <minsize>196,-1</minsize>
+-          </object>
+-          <object class="sizeritem">
+-            <object class="wxBoxSizer">
+-              <orient>wxVERTICAL</orient>
+-              <object class="sizeritem">
+-                <object class="wxCheckListBox" name="chklstMethods">
+-                  <content/>
+-                </object>
+-                <option>1</option>
+-                <flag>wxEXPAND</flag>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxBoxSizer">
+-                  <orient>wxHORIZONTAL</orient>
+-                  <object class="sizeritem">
+-                    <object class="wxRadioBox" name="rbCode">
+-                      <label>Code output</label>
+-                      <content>
+-                        <item>Declaration</item>
+-                        <item>Implementation</item>
+-                      </content>
+-                      <dimension>1</dimension>
+-                      <style>wxRA_SPECIFY_COLS</style>
+-                    </object>
+-                    <flag>wxRIGHT</flag>
+-                    <border>8</border>
+-                  </object>
+-                  <object class="sizeritem">
+-                    <object class="wxStaticBoxSizer">
+-                      <label>Filter methods</label>
+-                      <orient>wxHORIZONTAL</orient>
+-                      <object class="sizeritem">
+-                        <object class="wxCheckBox" name="chkPrivate">
+-                          <label>Private</label>
+-                          <checked>0</checked>
+-                        </object>
+-                        <flag>wxALIGN_CENTRE_VERTICAL|wxLEFT</flag>
+-                        <border>8</border>
+-                      </object>
+-                      <object class="sizeritem">
+-                        <object class="wxCheckBox" name="chkProtected">
+-                          <label>Protected</label>
+-                          <checked>1</checked>
+-                        </object>
+-                        <flag>wxALIGN_CENTRE_VERTICAL|wxLEFT</flag>
+-                        <border>8</border>
+-                      </object>
+-                      <object class="sizeritem">
+-                        <object class="wxCheckBox" name="chkPublic">
+-                          <label>Public</label>
+-                          <checked>1</checked>
+-                        </object>
+-                        <flag>wxALIGN_CENTRE_VERTICAL|wxLEFT</flag>
+-                        <border>8</border>
+-                      </object>
+-                    </object>
+-                    <option>1</option>
+-                    <flag>wxEXPAND</flag>
+-                  </object>
+-                </object>
+-                <flag>wxEXPAND</flag>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxCheckBox" name="chkAddDoc">
+-                  <label>Add &amp;documentation block above method</label>
+-                  <checked>1</checked>
+-                </object>
+-                <flag>wxTOP</flag>
+-                <border>4</border>
+-              </object>
+-            </object>
+-            <option>1</option>
+-            <flag>wxEXPAND</flag>
+-            <minsize>320, 240</minsize>
+-          </object>
+-        </object>
+-        <option>1</option>
+-        <flag>wxTOP|wxLEFT|wxRIGHT|wxEXPAND</flag>
+-        <border>8</border>
+-      </object>
+-      <object class="sizeritem">
+-        <object class="wxStaticLine"/>
+-        <flag>wxALL|wxEXPAND</flag>
+-        <border>8</border>
+-      </object>
+-      <object class="sizeritem">
+-        <object class="wxBoxSizer">
+-          <orient>wxHORIZONTAL</orient>
+-          <object class="sizeritem">
+-            <object class="wxButton" name="wxID_OK">
+-              <label>&amp;Insert</label>
+-              <default>1</default>
+-            </object>
+-            <flag>wxRIGHT</flag>
+-            <border>8</border>
+-          </object>
+-          <object class="sizeritem">
+-            <object class="wxButton" name="wxID_CANCEL">
+-              <label>&amp;Cancel</label>
+-            </object>
+-          </object>
+-        </object>
+-        <flag>wxBOTTOM|wxALIGN_CENTRE_HORIZONTAL</flag>
+-        <border>8</border>
+-      </object>
+-    </object>
+-    <style>wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxRESIZE_BOX</style>
+-  </object>
++	<object class="wxDialog" name="dlgInsertClassMethod">
++		<title>Insert class method...</title>
++		<centered>1</centered>
++		<style>wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER</style>
++		<object class="wxBoxSizer">
++			<orient>wxVERTICAL</orient>
++			<object class="sizeritem">
++				<object class="wxFlexGridSizer">
++					<cols>2</cols>
++					<rows>2</rows>
++					<vgap>4</vgap>
++					<hgap>8</hgap>
++					<growablecols>1</growablecols>
++					<growablerows>1</growablerows>
++					<object class="sizeritem">
++						<object class="wxStaticText" name="ID_STATICTEXT1">
++							<label>Known classes:</label>
++						</object>
++						<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++					</object>
++					<object class="sizeritem">
++						<object class="wxStaticText" name="ID_STATICTEXT2">
++							<label>Class methods:</label>
++						</object>
++						<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++					</object>
++					<object class="sizeritem">
++						<object class="wxListBox" name="lstClasses">
++							<size>250,-1</size>
++							<style>wxLB_HSCROLL|wxLB_NEEDED_SB|wxLB_SORT</style>
++						</object>
++						<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++					</object>
++					<object class="sizeritem">
++						<object class="wxBoxSizer">
++							<orient>wxVERTICAL</orient>
++							<object class="sizeritem">
++								<object class="wxCheckListBox" name="chklstMethods" />
++								<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++								<option>1</option>
++							</object>
++							<object class="sizeritem">
++								<object class="wxBoxSizer">
++									<object class="sizeritem">
++										<object class="wxRadioBox" name="rbCode">
++											<label>Code output</label>
++											<content>
++												<item>Declaration</item>
++												<item>Implementation</item>
++											</content>
++											<style>wxRA_SPECIFY_COLS</style>
++										</object>
++										<flag>wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++										<border>8</border>
++									</object>
++									<object class="sizeritem">
++										<object class="wxStaticBoxSizer">
++											<label>Filter methods</label>
++											<object class="sizeritem">
++												<object class="wxCheckBox" name="chkPrivate">
++													<label>Private</label>
++												</object>
++												<flag>wxLEFT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++												<border>8</border>
++											</object>
++											<object class="sizeritem">
++												<object class="wxCheckBox" name="chkProtected">
++													<label>Protected</label>
++													<checked>1</checked>
++												</object>
++												<flag>wxLEFT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++												<border>8</border>
++											</object>
++											<object class="sizeritem">
++												<object class="wxCheckBox" name="chkPublic">
++													<label>Public</label>
++													<checked>1</checked>
++												</object>
++												<flag>wxLEFT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++												<border>8</border>
++											</object>
++										</object>
++										<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++										<option>1</option>
++									</object>
++								</object>
++								<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++							</object>
++							<object class="sizeritem">
++								<object class="wxCheckBox" name="chkAddDoc">
++									<label>Add &amp;documentation block above method</label>
++									<checked>1</checked>
++								</object>
++								<flag>wxTOP|wxALIGN_LEFT|wxALIGN_TOP</flag>
++								<border>4</border>
++							</object>
++						</object>
++						<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++						<option>1</option>
++					</object>
++				</object>
++				<flag>wxTOP|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++				<border>8</border>
++				<option>1</option>
++			</object>
++			<object class="sizeritem">
++				<object class="wxStaticLine" name="ID_STATICLINE1" />
++				<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++				<border>8</border>
++			</object>
++			<object class="sizeritem">
++				<object class="wxBoxSizer">
++					<object class="sizeritem">
++						<object class="wxButton" name="wxID_OK">
++							<label>&amp;Insert</label>
++							<default>1</default>
++						</object>
++						<flag>wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++						<border>8</border>
++					</object>
++					<object class="sizeritem">
++						<object class="wxButton" name="wxID_CANCEL">
++							<label>&amp;Cancel</label>
++						</object>
++						<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++					</object>
++				</object>
++				<flag>wxBOTTOM|wxALIGN_TOP|wxALIGN_CENTER_HORIZONTAL</flag>
++				<border>8</border>
++			</object>
++		</object>
++	</object>
+ </resource>

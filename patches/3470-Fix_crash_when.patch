@@ -1,0 +1,87 @@
+Index: sdk/projectmanager.cpp
+===================================================================
+--- sdk/projectmanager.cpp	(revision 9122)
++++ sdk/projectmanager.cpp	(working copy)
+@@ -195,6 +195,7 @@
+     m_IsClosingProject(false),
+     m_IsClosingWorkspace(false),
+     m_InitialDir(_T("")),
++    m_IsDraggingSelection( false ),
+     m_isCheckingForExternallyModifiedProjects(false),
+     m_CanSendWorkspaceChanged(false),
+     m_RunningPlugin(NULL)
+@@ -1782,11 +1783,14 @@
+ 
+ void ProjectManager::OnTreeBeginDrag(wxTreeEvent& event)
+ {
+-    size_t count = m_pTree->GetSelections(m_DraggingSelection);
++    m_IsDraggingSelection = true;
++
++    wxArrayTreeItemIds selection;
++    size_t count = m_pTree->GetSelections( selection );
+     for (size_t i = 0; i < count; i++)
+     {
+         //what item do we start dragging?
+-        wxTreeItemId id = m_DraggingSelection[i];
++        wxTreeItemId id = selection[i];
+ 
+         if (!id.IsOk())
+             return;
+@@ -1814,6 +1818,7 @@
+ void ProjectManager::OnTreeEndDrag(wxTreeEvent& event)
+ {
+     wxTreeItemId to = event.GetItem();
++    m_IsDraggingSelection = false;
+ 
+     // is the drag target valid?
+     if (!to.IsOk())
+@@ -1829,10 +1834,11 @@
+     if (!prjTo)
+         return;
+ 
+-    size_t count = m_DraggingSelection.Count();
++    wxArrayTreeItemIds selection;
++    size_t count = m_pTree->GetSelections( selection );
+     for (size_t i = 0; i < count; i++)
+     {
+-        wxTreeItemId from = m_DraggingSelection[i];
++        wxTreeItemId from = selection[i];
+ 
+         // is the item valid?
+         if (!from.IsOk())
+@@ -1850,7 +1856,7 @@
+     }
+ 
+     // allow only if the project approves
+-    if (!prjTo->NodeDragged(m_pTree, m_DraggingSelection, to))
++    if (!prjTo->NodeDragged(m_pTree, selection, to))
+         return;
+ 
+     event.Allow();
+@@ -3334,10 +3340,9 @@
+     const wxKeyEvent& key_event = event.GetKeyEvent();
+ 
+     cbProject* project = GetActiveProject();
+-    if (    project
+-        && (project->GetCurrentlyCompilingTarget() == 0)
+-        && (   key_event.GetKeyCode() == WXK_DELETE
+-            || key_event.GetKeyCode() == WXK_NUMPAD_DELETE ) )
++    int key = key_event.GetKeyCode();
++    if ( project && ( project->GetCurrentlyCompilingTarget() == 0 ) &&
++         ( key == WXK_DELETE || key == WXK_NUMPAD_DELETE ) && !m_IsDraggingSelection )
+     {
+         wxCommandEvent command(0, idMenuRemoveFilePopup);
+         OnRemoveFileFromProject(command);
+Index: include/projectmanager.h
+===================================================================
+--- include/projectmanager.h	(revision 9122)
++++ include/projectmanager.h	(working copy)
+@@ -538,7 +538,7 @@
+         bool                 m_IsClosingProject;
+         bool                 m_IsClosingWorkspace;
+         wxString             m_InitialDir;
+-        wxArrayTreeItemIds   m_DraggingSelection;
++        bool                 m_IsDraggingSelection;
+         wxTreeItemId         m_RightClickItem;
+         bool                 m_isCheckingForExternallyModifiedProjects;
+         bool                 m_CanSendWorkspaceChanged;

@@ -1,0 +1,39 @@
+Index: parserthread.cpp
+===================================================================
+--- parserthread.cpp	(revision 5696)
++++ parserthread.cpp	(working copy)
+@@ -978,14 +978,30 @@
+     // BLAH_BLAH
+     if (!token.IsEmpty())
+     {
+-        // skip the rest of the #define
+-        wxString defVal = token + m_Tokenizer.ReadToEOL();
+-
++                // skip the rest of the #define
++       wxString defVal = token + m_Tokenizer.ReadToEOL();
++        wxString para(_T(""));
++        size_t start = defVal.find('(');
++        size_t end = defVal.find(')');
++        //Manager::Get()->GetLogManager()->DebugLog(F(_T("Saving nesting level: %d,%d"), start, end));
+         // make sure preprocessor definitions are not going under namespaces or classes!
++        if (start != wxString::npos && end != wxString::npos)
++        {
++            para = defVal.Mid(start, end-start+1);
++            m_Str = defVal.Mid(end + 1);
++            m_Str.Trim(false);
++        }
++        else
++        {
++            m_Str = defVal.substr(token.length());
++            m_Str.Trim(false);
++            //defVal = _T("");
++        }
+         Token* oldParent = m_pLastParent;
+         m_pLastParent = 0L;
+-        DoAddToken(tkPreprocessor, token, lineNr, lineNr, m_Tokenizer.GetLineNumber(), defVal, false, true);
++        DoAddToken(tkPreprocessor, token, lineNr, lineNr, m_Tokenizer.GetLineNumber(), para, false, true);
+         m_pLastParent = oldParent;
++        m_Str.Clear();
+     }
+ }
+ 

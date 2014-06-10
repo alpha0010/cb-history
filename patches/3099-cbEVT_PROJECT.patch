@@ -1,0 +1,51 @@
+Index: src/sdk/sdk_events.cpp
+===================================================================
+--- src/sdk/sdk_events.cpp	(revision 6892)
++++ src/sdk/sdk_events.cpp	(working copy)
+@@ -87,6 +87,7 @@
+ const wxEventType cbEVT_EDITOR_BREAKPOINT_DELETE = wxNewEventType();
+ const wxEventType cbEVT_EDITOR_UPDATE_UI = wxNewEventType();
+ // project events
++const wxEventType cbEVT_PROJECT_NEW = wxNewEventType();
+ const wxEventType cbEVT_PROJECT_CLOSE = wxNewEventType();
+ const wxEventType cbEVT_PROJECT_OPEN = wxNewEventType();
+ const wxEventType cbEVT_PROJECT_SAVE = wxNewEventType();
+Index: src/include/sdk_events.h
+===================================================================
+--- src/include/sdk_events.h	(revision 6892)
++++ src/include/sdk_events.h	(working copy)
+@@ -249,6 +249,8 @@
+ #define EVT_EDITOR_UPDATE_UI(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_EDITOR_UPDATE_UI, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&fn, (wxObject *) NULL ),
+ 
+ // project events
++extern EVTIMPORT const wxEventType cbEVT_PROJECT_NEW;
++#define EVT_PROJECT_NEW(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_PROJECT_NEW, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&fn, (wxObject *) NULL ),
+ extern EVTIMPORT const wxEventType cbEVT_PROJECT_CLOSE;
+ #define EVT_PROJECT_CLOSE(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_PROJECT_CLOSE, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&fn, (wxObject *) NULL ),
+ extern EVTIMPORT const wxEventType cbEVT_PROJECT_OPEN;
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(revision 6892)
++++ src/src/main.cpp	(working copy)
+@@ -2412,6 +2412,10 @@
+         if (!prj && filename.IsEmpty())
+             return;
+ 
++        // Send the new project event
++        CodeBlocksEvent evtNew(cbEVT_PROJECT_NEW, 0, prj);
++        Manager::Get()->GetPluginManager()->NotifyPlugins(evtNew);
++
+         if (prj)
+         {
+             prj->Save();
+@@ -2427,8 +2431,8 @@
+         }
+         if (prj && tot == totProject) // Created project should be parsed
+         {
+-            CodeBlocksEvent evt(cbEVT_PROJECT_OPEN, 0, prj);
+-            Manager::Get()->GetPluginManager()->NotifyPlugins(evt);
++            CodeBlocksEvent evtOpen(cbEVT_PROJECT_OPEN, 0, prj);
++            Manager::Get()->GetPluginManager()->NotifyPlugins(evtOpen);
+         }
+         return;
+     }

@@ -1,0 +1,80 @@
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 2484)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -123,7 +123,8 @@
+         m_ensure_consistent_line_ends(true),
+         m_LastMarginMenuLine(-1),
+         m_LastDebugLine(-1),
+-        m_useByteOrderMark(false)
++        m_useByteOrderMark(false),
++        lineNumbersWidth(0)
+     {
+         m_encoding = wxLocale::GetSystemEncoding();
+     }
+@@ -248,6 +249,27 @@
+     	control->ConvertEOLs(control->GetEOLMode());
+     }
+ 
++    /** Set line number column width */
++    void SetLineNumberColWidth()
++    {
++        int lineCount = 0;
++        lineCount = m_pOwner->m_pControl->GetLineCount();
++
++        int lineNumWidth = 1;
++        while (lineCount >= 10)
++        {
++            lineCount /= 10;
++            ++lineNumWidth;
++        }
++
++        if (lineNumWidth != lineNumbersWidth) {
++            int pixels = 0;
++            pixels = 5 + lineNumWidth * 8;
++            m_pOwner->m_pControl->SetMarginWidth(0, pixels);
++            lineNumbersWidth = lineNumWidth;
++        }
++    }
++
+     //vars
+     bool m_strip_trailing_spaces;
+     bool m_ensure_final_line_end;
+@@ -259,6 +281,8 @@
+     wxFontEncoding m_encoding;
+     bool m_useByteOrderMark;
+ 
++    int lineNumbersWidth;
++
+ };
+ ////////////////////////////////////////////////////////////////////////////////
+ 
+@@ -350,8 +374,8 @@
+ //    Manager::Get()->GetMessageManager()->DebugLog(_T("ctor: Filename=%s\nShort=%s"), m_Filename.c_str(), m_Shortname.c_str());
+ 
+ 	CreateEditor();
++	m_IsOK = Open();
+ 	SetEditorStyle();
+-	m_IsOK = Open();
+ 
+     // if !m_IsOK then it's a new file, so set the modified flag ON
+     if (!m_IsOK && filename.IsEmpty())
+@@ -579,7 +603,7 @@
+     // line numbering
+     m_pControl->SetMarginType(0, wxSCI_MARGIN_NUMBER);
+    	if (mgr->ReadBool(_T("/show_line_numbers"), true))
+-    	m_pControl->SetMarginWidth(0, 48);
++    	m_pData->SetLineNumberColWidth();
+ 	else
+ 		m_pControl->SetMarginWidth(0, 0);
+ 
+@@ -1870,6 +1894,9 @@
+ 
+             line = m_pControl->MarkerPrevious(line - 1, 1 << BREAKPOINT_MARKER);
+         }
++
++        // Adjust line numbers column
++        m_pData->SetLineNumberColWidth();
+     }
+ }
+ 

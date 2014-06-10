@@ -1,0 +1,1884 @@
+Index: src/plugins/codecompletion/ccdebuginfo.cpp
+===================================================================
+--- src/plugins/codecompletion/ccdebuginfo.cpp	(revision 5367)
++++ src/plugins/codecompletion/ccdebuginfo.cpp	(working copy)
+@@ -14,19 +14,11 @@
+ #include <wx/choicdlg.h> // wxGetSingleChoiceIndex
+ 
+ //(*InternalHeaders(CCDebugInfo)
+-#include <wx/bitmap.h>
+-#include <wx/font.h>
+-#include <wx/fontenum.h>
+-#include <wx/fontmap.h>
+-#include <wx/image.h>
+ #include <wx/intl.h>
+-#include <wx/settings.h>
+ #include <wx/string.h>
+ //*)
+ 
+ //(*IdInit(CCDebugInfo)
+-const long CCDebugInfo::ID_NOTEBOOK1 = wxNewId();
+-const long CCDebugInfo::ID_PANEL1 = wxNewId();
+ const long CCDebugInfo::ID_STATICTEXT29 = wxNewId();
+ const long CCDebugInfo::ID_TEXTCTRL1 = wxNewId();
+ const long CCDebugInfo::ID_BUTTON1 = wxNewId();
+@@ -71,10 +63,12 @@
+ const long CCDebugInfo::ID_STATICTEXT28 = wxNewId();
+ const long CCDebugInfo::ID_STATICTEXT34 = wxNewId();
+ const long CCDebugInfo::ID_STATICTEXT35 = wxNewId();
+-const long CCDebugInfo::ID_PANEL2 = wxNewId();
++const long CCDebugInfo::ID_PANEL1 = wxNewId();
+ const long CCDebugInfo::ID_LISTBOX1 = wxNewId();
+-const long CCDebugInfo::ID_PANEL3 = wxNewId();
++const long CCDebugInfo::ID_PANEL2 = wxNewId();
+ const long CCDebugInfo::ID_LISTBOX2 = wxNewId();
++const long CCDebugInfo::ID_PANEL3 = wxNewId();
++const long CCDebugInfo::ID_NOTEBOOK1 = wxNewId();
+ const long CCDebugInfo::ID_STATICTEXT31 = wxNewId();
+ const long CCDebugInfo::ID_STATICLINE2 = wxNewId();
+ //*)
+@@ -90,156 +84,157 @@
+ {
+     int id = -1;
+ 	//(*Initialize(CCDebugInfo)
+-	wxBoxSizer* BoxSizer1;
+ 	wxBoxSizer* BoxSizer2;
+ 	wxPanel* Panel3;
++	wxBoxSizer* BoxSizer1;
+ 	
+-	Create(parent,id,_("Code-completion debug tool"),wxDefaultPosition,wxDefaultSize,wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxTAB_TRAVERSAL,_T("wxDialog"));
++	Create(parent, id, _("Code-completion debug tool"), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxTAB_TRAVERSAL, _T("id"));
+ 	BoxSizer1 = new wxBoxSizer(wxVERTICAL);
+-	Notebook1 = new wxNotebook(this,ID_NOTEBOOK1,wxDefaultPosition,wxDefaultSize,0,_T("ID_NOTEBOOK1"));
+-	Panel1 = new wxPanel(Notebook1,ID_PANEL1,wxDefaultPosition,wxDefaultSize,wxTAB_TRAVERSAL,_T("ID_PANEL1"));
++	Notebook1 = new wxNotebook(this, ID_NOTEBOOK1, wxDefaultPosition, wxDefaultSize, 0, _T("ID_NOTEBOOK1"));
++	Panel1 = new wxPanel(Notebook1, ID_PANEL1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, _T("ID_PANEL1"));
+ 	BoxSizer2 = new wxBoxSizer(wxVERTICAL);
+ 	BoxSizer4 = new wxBoxSizer(wxHORIZONTAL);
+-	StaticText29 = new wxStaticText(Panel1,ID_STATICTEXT29,_("Find:"),wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT29"));
+-	BoxSizer4->Add(StaticText29,0,wxRIGHT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL,6);
+-	txtFilter = new wxTextCtrl(Panel1,ID_TEXTCTRL1,_("*"),wxDefaultPosition,wxSize(401,21),0,wxDefaultValidator,_T("ID_TEXTCTRL1"));
+-	BoxSizer4->Add(txtFilter,1,wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL,0);
+-	btnFind = new wxButton(Panel1,ID_BUTTON1,_("Find"),wxDefaultPosition,wxDefaultSize,0,wxDefaultValidator,_T("ID_BUTTON1"));
++	StaticText29 = new wxStaticText(Panel1, ID_STATICTEXT29, _("Find:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT29"));
++	BoxSizer4->Add(StaticText29, 0, wxRIGHT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 6);
++	txtFilter = new wxTextCtrl(Panel1, ID_TEXTCTRL1, _("*"), wxDefaultPosition, wxSize(401,21), 0, wxDefaultValidator, _T("ID_TEXTCTRL1"));
++	BoxSizer4->Add(txtFilter, 1, wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 0);
++	btnFind = new wxButton(Panel1, ID_BUTTON1, _("Find"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("ID_BUTTON1"));
+ 	btnFind->SetDefault();
+-	BoxSizer4->Add(btnFind,0,wxLEFT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL,5);
+-	BoxSizer2->Add(BoxSizer4,0,wxTOP|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP,5);
+-	StaticLine1 = new wxStaticLine(Panel1,ID_STATICLINE1,wxDefaultPosition,wxSize(10,-1),wxLI_HORIZONTAL,_T("ID_STATICLINE1"));
+-	BoxSizer2->Add(StaticLine1,0,wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP,5);
+-	FlexGridSizer1 = new wxFlexGridSizer(0,2,5,5);
++	BoxSizer4->Add(btnFind, 0, wxLEFT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
++	BoxSizer2->Add(BoxSizer4, 0, wxTOP|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP, 5);
++	StaticLine1 = new wxStaticLine(Panel1, ID_STATICLINE1, wxDefaultPosition, wxSize(10,-1), wxLI_HORIZONTAL, _T("ID_STATICLINE1"));
++	BoxSizer2->Add(StaticLine1, 0, wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP, 5);
++	FlexGridSizer1 = new wxFlexGridSizer(0, 2, 5, 5);
+ 	FlexGridSizer1->AddGrowableCol(1);
+-	StaticText17 = new wxStaticText(Panel1,ID_STATICTEXT17,_("ID:"),wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT17"));
+-	FlexGridSizer1->Add(StaticText17,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	txtID = new wxStaticText(Panel1,ID_STATICTEXT18,wxEmptyString,wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT18"));
+-	FlexGridSizer1->Add(txtID,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	StaticText1 = new wxStaticText(Panel1,ID_STATICTEXT1,_("Name:"),wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT1"));
+-	FlexGridSizer1->Add(StaticText1,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	txtName = new wxStaticText(Panel1,ID_STATICTEXT2,wxEmptyString,wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT2"));
+-	FlexGridSizer1->Add(txtName,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	StaticText9 = new wxStaticText(Panel1,ID_STATICTEXT9,_("Kind:"),wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT9"));
+-	FlexGridSizer1->Add(StaticText9,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	txtKind = new wxStaticText(Panel1,ID_STATICTEXT10,wxEmptyString,wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT10"));
+-	FlexGridSizer1->Add(txtKind,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	StaticText11 = new wxStaticText(Panel1,ID_STATICTEXT11,_("Scope:"),wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT11"));
+-	FlexGridSizer1->Add(StaticText11,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	txtScope = new wxStaticText(Panel1,ID_STATICTEXT12,wxEmptyString,wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT12"));
+-	FlexGridSizer1->Add(txtScope,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	StaticText3 = new wxStaticText(Panel1,ID_STATICTEXT3,_("Type:"),wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT3"));
+-	FlexGridSizer1->Add(StaticText3,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	txtType = new wxStaticText(Panel1,ID_STATICTEXT4,wxEmptyString,wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT4"));
+-	FlexGridSizer1->Add(txtType,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	StaticText5 = new wxStaticText(Panel1,ID_STATICTEXT5,_("Actual type:"),wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT5"));
+-	FlexGridSizer1->Add(StaticText5,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	txtActualType = new wxStaticText(Panel1,ID_STATICTEXT6,wxEmptyString,wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT6"));
+-	FlexGridSizer1->Add(txtActualType,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	StaticText7 = new wxStaticText(Panel1,ID_STATICTEXT7,_("Arguments:"),wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT7"));
+-	FlexGridSizer1->Add(StaticText7,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	txtArgs = new wxStaticText(Panel1,ID_STATICTEXT8,wxEmptyString,wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT8"));
+-	FlexGridSizer1->Add(txtArgs,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	StaticText13 = new wxStaticText(Panel1,ID_STATICTEXT13,_("Is operator\?"),wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT13"));
+-	FlexGridSizer1->Add(StaticText13,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	txtIsOp = new wxStaticText(Panel1,ID_STATICTEXT14,wxEmptyString,wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT14"));
+-	FlexGridSizer1->Add(txtIsOp,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	StaticText15 = new wxStaticText(Panel1,ID_STATICTEXT15,_("Is local\?"),wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT15"));
+-	FlexGridSizer1->Add(StaticText15,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	txtIsLocal = new wxStaticText(Panel1,ID_STATICTEXT16,wxEmptyString,wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT16"));
+-	FlexGridSizer1->Add(txtIsLocal,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	StaticText32 = new wxStaticText(Panel1,ID_STATICTEXT32,_("Is temp\?"),wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT32"));
+-	FlexGridSizer1->Add(StaticText32,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	txtIsTemp = new wxStaticText(Panel1,ID_STATICTEXT33,wxEmptyString,wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT33"));
+-	FlexGridSizer1->Add(txtIsTemp,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	StaticText19 = new wxStaticText(Panel1,ID_STATICTEXT19,_("Namespace:"),wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT19"));
+-	FlexGridSizer1->Add(StaticText19,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	txtNamespace = new wxStaticText(Panel1,ID_STATICTEXT20,wxEmptyString,wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT20"));
+-	FlexGridSizer1->Add(txtNamespace,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	StaticText22 = new wxStaticText(Panel1,ID_STATICTEXT22,_("Parent:"),wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT22"));
+-	FlexGridSizer1->Add(StaticText22,0,wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL,0);
++	StaticText17 = new wxStaticText(Panel1, ID_STATICTEXT17, _("ID:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT17"));
++	FlexGridSizer1->Add(StaticText17, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	txtID = new wxStaticText(Panel1, ID_STATICTEXT18, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT18"));
++	FlexGridSizer1->Add(txtID, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	StaticText1 = new wxStaticText(Panel1, ID_STATICTEXT1, _("Name:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT1"));
++	FlexGridSizer1->Add(StaticText1, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	txtName = new wxStaticText(Panel1, ID_STATICTEXT2, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT2"));
++	FlexGridSizer1->Add(txtName, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	StaticText9 = new wxStaticText(Panel1, ID_STATICTEXT9, _("Kind:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT9"));
++	FlexGridSizer1->Add(StaticText9, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	txtKind = new wxStaticText(Panel1, ID_STATICTEXT10, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT10"));
++	FlexGridSizer1->Add(txtKind, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	StaticText11 = new wxStaticText(Panel1, ID_STATICTEXT11, _("Scope:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT11"));
++	FlexGridSizer1->Add(StaticText11, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	txtScope = new wxStaticText(Panel1, ID_STATICTEXT12, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT12"));
++	FlexGridSizer1->Add(txtScope, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	StaticText3 = new wxStaticText(Panel1, ID_STATICTEXT3, _("Type:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT3"));
++	FlexGridSizer1->Add(StaticText3, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	txtType = new wxStaticText(Panel1, ID_STATICTEXT4, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT4"));
++	FlexGridSizer1->Add(txtType, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	StaticText5 = new wxStaticText(Panel1, ID_STATICTEXT5, _("Actual type:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT5"));
++	FlexGridSizer1->Add(StaticText5, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	txtActualType = new wxStaticText(Panel1, ID_STATICTEXT6, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT6"));
++	FlexGridSizer1->Add(txtActualType, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	StaticText7 = new wxStaticText(Panel1, ID_STATICTEXT7, _("Arguments:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT7"));
++	FlexGridSizer1->Add(StaticText7, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	txtArgs = new wxStaticText(Panel1, ID_STATICTEXT8, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT8"));
++	FlexGridSizer1->Add(txtArgs, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	StaticText13 = new wxStaticText(Panel1, ID_STATICTEXT13, _("Is operator\?"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT13"));
++	FlexGridSizer1->Add(StaticText13, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	txtIsOp = new wxStaticText(Panel1, ID_STATICTEXT14, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT14"));
++	FlexGridSizer1->Add(txtIsOp, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	StaticText15 = new wxStaticText(Panel1, ID_STATICTEXT15, _("Is local\?"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT15"));
++	FlexGridSizer1->Add(StaticText15, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	txtIsLocal = new wxStaticText(Panel1, ID_STATICTEXT16, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT16"));
++	FlexGridSizer1->Add(txtIsLocal, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	StaticText32 = new wxStaticText(Panel1, ID_STATICTEXT32, _("Is temp\?"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT32"));
++	FlexGridSizer1->Add(StaticText32, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	txtIsTemp = new wxStaticText(Panel1, ID_STATICTEXT33, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT33"));
++	FlexGridSizer1->Add(txtIsTemp, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	StaticText19 = new wxStaticText(Panel1, ID_STATICTEXT19, _("Namespace:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT19"));
++	FlexGridSizer1->Add(StaticText19, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	txtNamespace = new wxStaticText(Panel1, ID_STATICTEXT20, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT20"));
++	FlexGridSizer1->Add(txtNamespace, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	StaticText22 = new wxStaticText(Panel1, ID_STATICTEXT22, _("Parent:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT22"));
++	FlexGridSizer1->Add(StaticText22, 0, wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 0);
+ 	BoxSizer7 = new wxBoxSizer(wxHORIZONTAL);
+-	txtParent = new wxStaticText(Panel1,ID_STATICTEXT24,wxEmptyString,wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT24"));
+-	BoxSizer7->Add(txtParent,1,wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL,0);
+-	btnGoParent = new wxButton(Panel1,ID_BUTTON4,_("Go"),wxDefaultPosition,wxSize(36,23),0,wxDefaultValidator,_T("ID_BUTTON4"));
+-	BoxSizer7->Add(btnGoParent,0,wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL,0);
+-	FlexGridSizer1->Add(BoxSizer7,0,wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	StaticText30 = new wxStaticText(Panel1,ID_STATICTEXT30,_("Children:"),wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT30"));
+-	FlexGridSizer1->Add(StaticText30,0,wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL,0);
++	txtParent = new wxStaticText(Panel1, ID_STATICTEXT24, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT24"));
++	BoxSizer7->Add(txtParent, 1, wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 0);
++	btnGoParent = new wxButton(Panel1, ID_BUTTON4, _("Go"), wxDefaultPosition, wxSize(36,23), 0, wxDefaultValidator, _T("ID_BUTTON4"));
++	BoxSizer7->Add(btnGoParent, 0, wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 0);
++	FlexGridSizer1->Add(BoxSizer7, 0, wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	StaticText30 = new wxStaticText(Panel1, ID_STATICTEXT30, _("Children:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT30"));
++	FlexGridSizer1->Add(StaticText30, 0, wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 0);
+ 	BoxSizer8 = new wxBoxSizer(wxHORIZONTAL);
+-	cmbChildren = new wxComboBox(Panel1,ID_COMBOBOX3,wxEmptyString,wxDefaultPosition,wxDefaultSize,0,0,wxCB_READONLY,wxDefaultValidator,_T("ID_COMBOBOX3"));
+-	BoxSizer8->Add(cmbChildren,1,wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL,0);
+-	btnGoChildren = new wxButton(Panel1,ID_BUTTON5,_("Go"),wxDefaultPosition,wxSize(36,23),0,wxDefaultValidator,_T("ID_BUTTON5"));
+-	BoxSizer8->Add(btnGoChildren,0,wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL,0);
+-	FlexGridSizer1->Add(BoxSizer8,0,wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	StaticText21 = new wxStaticText(Panel1,ID_STATICTEXT21,_("Ancestors:"),wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT21"));
+-	FlexGridSizer1->Add(StaticText21,0,wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL,0);
++	cmbChildren = new wxComboBox(Panel1, ID_COMBOBOX3, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, 0, wxCB_READONLY, wxDefaultValidator, _T("ID_COMBOBOX3"));
++	BoxSizer8->Add(cmbChildren, 1, wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 0);
++	btnGoChildren = new wxButton(Panel1, ID_BUTTON5, _("Go"), wxDefaultPosition, wxSize(36,23), 0, wxDefaultValidator, _T("ID_BUTTON5"));
++	BoxSizer8->Add(btnGoChildren, 0, wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 0);
++	FlexGridSizer1->Add(BoxSizer8, 0, wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	StaticText21 = new wxStaticText(Panel1, ID_STATICTEXT21, _("Ancestors:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT21"));
++	FlexGridSizer1->Add(StaticText21, 0, wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 0);
+ 	BoxSizer6 = new wxBoxSizer(wxHORIZONTAL);
+-	cmbAncestors = new wxComboBox(Panel1,ID_COMBOBOX2,wxEmptyString,wxDefaultPosition,wxDefaultSize,0,0,wxCB_READONLY,wxDefaultValidator,_T("ID_COMBOBOX2"));
+-	BoxSizer6->Add(cmbAncestors,1,wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL,0);
+-	btnGoAsc = new wxButton(Panel1,ID_BUTTON3,_("Go"),wxDefaultPosition,wxSize(36,23),0,wxDefaultValidator,_T("ID_BUTTON3"));
+-	BoxSizer6->Add(btnGoAsc,0,wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL,0);
+-	FlexGridSizer1->Add(BoxSizer6,0,wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	StaticText23 = new wxStaticText(Panel1,ID_STATICTEXT23,_("Descendants:"),wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT23"));
+-	FlexGridSizer1->Add(StaticText23,0,wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL,0);
++	cmbAncestors = new wxComboBox(Panel1, ID_COMBOBOX2, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, 0, wxCB_READONLY, wxDefaultValidator, _T("ID_COMBOBOX2"));
++	BoxSizer6->Add(cmbAncestors, 1, wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 0);
++	btnGoAsc = new wxButton(Panel1, ID_BUTTON3, _("Go"), wxDefaultPosition, wxSize(36,23), 0, wxDefaultValidator, _T("ID_BUTTON3"));
++	BoxSizer6->Add(btnGoAsc, 0, wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 0);
++	FlexGridSizer1->Add(BoxSizer6, 0, wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	StaticText23 = new wxStaticText(Panel1, ID_STATICTEXT23, _("Descendants:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT23"));
++	FlexGridSizer1->Add(StaticText23, 0, wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 0);
+ 	BoxSizer5 = new wxBoxSizer(wxHORIZONTAL);
+-	cmbDescendants = new wxComboBox(Panel1,ID_COMBOBOX1,wxEmptyString,wxDefaultPosition,wxDefaultSize,0,0,wxCB_READONLY,wxDefaultValidator,_T("ID_COMBOBOX1"));
+-	BoxSizer5->Add(cmbDescendants,1,wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL,0);
+-	btnGoDesc = new wxButton(Panel1,ID_BUTTON2,_("Go"),wxDefaultPosition,wxSize(36,23),0,wxDefaultValidator,_T("ID_BUTTON2"));
+-	BoxSizer5->Add(btnGoDesc,0,wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL,0);
+-	FlexGridSizer1->Add(BoxSizer5,0,wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	StaticText25 = new wxStaticText(Panel1,ID_STATICTEXT25,_("Decl. filename:"),wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT25"));
+-	FlexGridSizer1->Add(StaticText25,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	txtDeclFile = new wxStaticText(Panel1,ID_STATICTEXT26,wxEmptyString,wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT26"));
+-	FlexGridSizer1->Add(txtDeclFile,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	StaticText27 = new wxStaticText(Panel1,ID_STATICTEXT27,_("Impl. filename:"),wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT27"));
+-	FlexGridSizer1->Add(StaticText27,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	txtImplFile = new wxStaticText(Panel1,ID_STATICTEXT28,wxEmptyString,wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT28"));
+-	FlexGridSizer1->Add(txtImplFile,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	StaticText34 = new wxStaticText(Panel1,ID_STATICTEXT34,_("User data:"),wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT34"));
+-	FlexGridSizer1->Add(StaticText34,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	txtUserData = new wxStaticText(Panel1,ID_STATICTEXT35,wxEmptyString,wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT35"));
+-	FlexGridSizer1->Add(txtUserData,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
+-	BoxSizer2->Add(FlexGridSizer1,0,wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP,5);
++	cmbDescendants = new wxComboBox(Panel1, ID_COMBOBOX1, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, 0, wxCB_READONLY, wxDefaultValidator, _T("ID_COMBOBOX1"));
++	BoxSizer5->Add(cmbDescendants, 1, wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 0);
++	btnGoDesc = new wxButton(Panel1, ID_BUTTON2, _("Go"), wxDefaultPosition, wxSize(36,23), 0, wxDefaultValidator, _T("ID_BUTTON2"));
++	BoxSizer5->Add(btnGoDesc, 0, wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 0);
++	FlexGridSizer1->Add(BoxSizer5, 0, wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	StaticText25 = new wxStaticText(Panel1, ID_STATICTEXT25, _("Decl. filename:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT25"));
++	FlexGridSizer1->Add(StaticText25, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	txtDeclFile = new wxStaticText(Panel1, ID_STATICTEXT26, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT26"));
++	FlexGridSizer1->Add(txtDeclFile, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	StaticText27 = new wxStaticText(Panel1, ID_STATICTEXT27, _("Impl. filename:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT27"));
++	FlexGridSizer1->Add(StaticText27, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	txtImplFile = new wxStaticText(Panel1, ID_STATICTEXT28, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT28"));
++	FlexGridSizer1->Add(txtImplFile, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	StaticText34 = new wxStaticText(Panel1, ID_STATICTEXT34, _("User data:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT34"));
++	FlexGridSizer1->Add(StaticText34, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	txtUserData = new wxStaticText(Panel1, ID_STATICTEXT35, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT35"));
++	FlexGridSizer1->Add(txtUserData, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 0);
++	BoxSizer2->Add(FlexGridSizer1, 0, wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP, 5);
+ 	Panel1->SetSizer(BoxSizer2);
+ 	BoxSizer2->Fit(Panel1);
+ 	BoxSizer2->SetSizeHints(Panel1);
+-	Panel2 = new wxPanel(Notebook1,ID_PANEL2,wxDefaultPosition,wxDefaultSize,wxTAB_TRAVERSAL,_T("ID_PANEL2"));
++	Panel2 = new wxPanel(Notebook1, ID_PANEL2, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, _T("ID_PANEL2"));
+ 	BoxSizer3 = new wxBoxSizer(wxHORIZONTAL);
+-	lstFiles = new wxListBox(Panel2,ID_LISTBOX1,wxDefaultPosition,wxDefaultSize,0,0,0,wxDefaultValidator,_T("ID_LISTBOX1"));
+-	BoxSizer3->Add(lstFiles,1,wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP,5);
++	lstFiles = new wxListBox(Panel2, ID_LISTBOX1, wxDefaultPosition, wxDefaultSize, 0, 0, 0, wxDefaultValidator, _T("ID_LISTBOX1"));
++	BoxSizer3->Add(lstFiles, 1, wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP, 5);
+ 	Panel2->SetSizer(BoxSizer3);
+ 	BoxSizer3->Fit(Panel2);
+ 	BoxSizer3->SetSizeHints(Panel2);
+-	Panel3 = new wxPanel(Notebook1,ID_PANEL3,wxDefaultPosition,wxDefaultSize,wxTAB_TRAVERSAL,_T("ID_PANEL3"));
++	Panel3 = new wxPanel(Notebook1, ID_PANEL3, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, _T("ID_PANEL3"));
+ 	BoxSizer9 = new wxBoxSizer(wxHORIZONTAL);
+-	lstDirs = new wxListBox(Panel3,ID_LISTBOX2,wxDefaultPosition,wxDefaultSize,0,0,0,wxDefaultValidator,_T("ID_LISTBOX2"));
+-	BoxSizer9->Add(lstDirs,1,wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL,5);
++	lstDirs = new wxListBox(Panel3, ID_LISTBOX2, wxDefaultPosition, wxDefaultSize, 0, 0, 0, wxDefaultValidator, _T("ID_LISTBOX2"));
++	BoxSizer9->Add(lstDirs, 1, wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+ 	Panel3->SetSizer(BoxSizer9);
+ 	BoxSizer9->Fit(Panel3);
+ 	BoxSizer9->SetSizeHints(Panel3);
+-	Notebook1->AddPage(Panel1,_("Tokens"),false);
+-	Notebook1->AddPage(Panel2,_("Files list"),false);
+-	Notebook1->AddPage(Panel3,_("Search dirs"),false);
+-	BoxSizer1->Add(Notebook1,1,wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP,5);
+-	lblInfo = new wxStaticText(this,ID_STATICTEXT31,_("The parser contains 0 tokens found in 0 files"),wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT31"));
+-	BoxSizer1->Add(lblInfo,0,wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP,5);
+-	StaticLine2 = new wxStaticLine(this,ID_STATICLINE2,wxDefaultPosition,wxSize(10,-1),wxLI_HORIZONTAL,_T("ID_STATICLINE2"));
+-	BoxSizer1->Add(StaticLine2,0,wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL,5);
++	Notebook1->AddPage(Panel1, _("Tokens"), false);
++	Notebook1->AddPage(Panel2, _("Files list"), false);
++	Notebook1->AddPage(Panel3, _("Search dirs"), false);
++	BoxSizer1->Add(Notebook1, 1, wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP, 5);
++	lblInfo = new wxStaticText(this, ID_STATICTEXT31, _("The parser contains 0 tokens found in 0 files"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT31"));
++	BoxSizer1->Add(lblInfo, 0, wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP, 5);
++	StaticLine2 = new wxStaticLine(this, ID_STATICLINE2, wxDefaultPosition, wxSize(10,-1), wxLI_HORIZONTAL, _T("ID_STATICLINE2"));
++	BoxSizer1->Add(StaticLine2, 0, wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+ 	StdDialogButtonSizer1 = new wxStdDialogButtonSizer();
+-	StdDialogButtonSizer1->AddButton(new wxButton(this,wxID_CANCEL,_("Close")));
++	StdDialogButtonSizer1->AddButton(new wxButton(this, wxID_CANCEL, _("Close")));
+ 	StdDialogButtonSizer1->Realize();
+-	BoxSizer1->Add(StdDialogButtonSizer1,0,wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL,5);
++	BoxSizer1->Add(StdDialogButtonSizer1, 0, wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+ 	SetSizer(BoxSizer1);
+ 	BoxSizer1->Fit(this);
+ 	BoxSizer1->SetSizeHints(this);
+ 	Center();
+-	Connect(wxID_ANY,wxEVT_INIT_DIALOG,(wxObjectEventFunction)&CCDebugInfo::OnInit);
++	
+ 	Connect(ID_BUTTON1,wxEVT_COMMAND_BUTTON_CLICKED,(wxObjectEventFunction)&CCDebugInfo::OnFindClick);
+ 	Connect(ID_BUTTON4,wxEVT_COMMAND_BUTTON_CLICKED,(wxObjectEventFunction)&CCDebugInfo::OnGoParentClick);
+ 	Connect(ID_BUTTON5,wxEVT_COMMAND_BUTTON_CLICKED,(wxObjectEventFunction)&CCDebugInfo::OnGoChildrenClick);
+ 	Connect(ID_BUTTON3,wxEVT_COMMAND_BUTTON_CLICKED,(wxObjectEventFunction)&CCDebugInfo::OnGoAscClick);
+ 	Connect(ID_BUTTON2,wxEVT_COMMAND_BUTTON_CLICKED,(wxObjectEventFunction)&CCDebugInfo::OnGoDescClick);
++	Connect(wxID_ANY,wxEVT_INIT_DIALOG,(wxObjectEventFunction)&CCDebugInfo::OnInit);
+ 	//*)
+ }
+ 
+Index: src/plugins/codecompletion/ccdebuginfo.h
+===================================================================
+--- src/plugins/codecompletion/ccdebuginfo.h	(revision 5367)
++++ src/plugins/codecompletion/ccdebuginfo.h	(working copy)
+@@ -13,16 +13,16 @@
+ #endif
+ 
+ //(*Headers(CCDebugInfo)
+-#include <wx/button.h>
+-#include <wx/combobox.h>
+-#include <wx/dialog.h>
+-#include <wx/listbox.h>
+ #include <wx/notebook.h>
+-#include <wx/panel.h>
+ #include <wx/sizer.h>
+-#include <wx/statline.h>
+ #include <wx/stattext.h>
+ #include <wx/textctrl.h>
++#include <wx/listbox.h>
++#include <wx/statline.h>
++#include <wx/panel.h>
++#include <wx/button.h>
++#include <wx/dialog.h>
++#include <wx/combobox.h>
+ //*)
+ 
+ class Parser;
+@@ -46,8 +46,6 @@
+ 		void FillDescendants();
+ 
+ 		//(*Identifiers(CCDebugInfo)
+-		static const long ID_NOTEBOOK1;
+-		static const long ID_PANEL1;
+ 		static const long ID_STATICTEXT29;
+ 		static const long ID_TEXTCTRL1;
+ 		static const long ID_BUTTON1;
+@@ -92,10 +90,12 @@
+ 		static const long ID_STATICTEXT28;
+ 		static const long ID_STATICTEXT34;
+ 		static const long ID_STATICTEXT35;
++		static const long ID_PANEL1;
++		static const long ID_LISTBOX1;
+ 		static const long ID_PANEL2;
+-		static const long ID_LISTBOX1;
++		static const long ID_LISTBOX2;
+ 		static const long ID_PANEL3;
+-		static const long ID_LISTBOX2;
++		static const long ID_NOTEBOOK1;
+ 		static const long ID_STATICTEXT31;
+ 		static const long ID_STATICLINE2;
+ 		//*)
+@@ -112,65 +112,65 @@
+ 		//*)
+ 
+ 		//(*Declarations(CCDebugInfo)
+-		wxNotebook* Notebook1;
+-		wxPanel* Panel1;
+ 		wxBoxSizer* BoxSizer4;
++		wxButton* btnGoChildren;
++		wxStaticText* StaticText22;
++		wxStaticText* StaticText9;
++		wxBoxSizer* BoxSizer6;
++		wxBoxSizer* BoxSizer5;
+ 		wxStaticText* StaticText29;
+-		wxTextCtrl* txtFilter;
+-		wxButton* btnFind;
+-		wxStaticLine* StaticLine1;
+-		wxFlexGridSizer* FlexGridSizer1;
+-		wxStaticText* StaticText17;
+-		wxStaticText* txtID;
+-		wxStaticText* StaticText1;
+-		wxStaticText* txtName;
+-		wxStaticText* StaticText9;
+-		wxStaticText* txtKind;
++		wxNotebook* Notebook1;
++		wxBoxSizer* BoxSizer7;
++		wxStaticText* txtIsTemp;
++		wxBoxSizer* BoxSizer8;
++		wxStaticText* StaticText13;
++		wxStaticText* StaticText30;
++		wxButton* btnGoAsc;
++		wxStaticText* txtType;
++		wxComboBox* cmbAncestors;
++		wxStaticText* StaticText19;
++		wxStaticText* StaticText32;
+ 		wxStaticText* StaticText11;
++		wxButton* btnGoParent;
++		wxPanel* Panel1;
++		wxStaticText* txtImplFile;
+ 		wxStaticText* txtScope;
++		wxStaticText* StaticText1;
++		wxStaticText* StaticText27;
+ 		wxStaticText* StaticText3;
+-		wxStaticText* txtType;
++		wxStaticText* txtID;
++		wxStaticText* StaticText21;
++		wxStaticLine* StaticLine2;
++		wxStaticText* StaticText23;
++		wxListBox* lstDirs;
++		wxStaticText* txtIsOp;
++		wxStaticText* lblInfo;
++		wxStaticText* StaticText34;
+ 		wxStaticText* StaticText5;
++		wxStaticText* StaticText7;
+ 		wxStaticText* txtActualType;
+-		wxStaticText* StaticText7;
++		wxButton* btnGoDesc;
++		wxStaticText* txtDeclFile;
++		wxStaticText* txtNamespace;
++		wxStaticText* txtName;
++		wxStaticLine* StaticLine1;
++		wxStaticText* StaticText15;
+ 		wxStaticText* txtArgs;
+-		wxStaticText* StaticText13;
+-		wxStaticText* txtIsOp;
+-		wxStaticText* StaticText15;
+-		wxStaticText* txtIsLocal;
+-		wxStaticText* StaticText32;
+-		wxStaticText* txtIsTemp;
+-		wxStaticText* StaticText19;
+-		wxStaticText* txtNamespace;
+-		wxStaticText* StaticText22;
+-		wxBoxSizer* BoxSizer7;
++		wxBoxSizer* BoxSizer9;
+ 		wxStaticText* txtParent;
+-		wxButton* btnGoParent;
+-		wxStaticText* StaticText30;
+-		wxBoxSizer* BoxSizer8;
++		wxPanel* Panel2;
+ 		wxComboBox* cmbChildren;
+-		wxButton* btnGoChildren;
+-		wxStaticText* StaticText21;
+-		wxBoxSizer* BoxSizer6;
+-		wxComboBox* cmbAncestors;
+-		wxButton* btnGoAsc;
+-		wxStaticText* StaticText23;
+-		wxBoxSizer* BoxSizer5;
++		wxFlexGridSizer* FlexGridSizer1;
++		wxStaticText* StaticText25;
+ 		wxComboBox* cmbDescendants;
+-		wxButton* btnGoDesc;
+-		wxStaticText* StaticText25;
+-		wxStaticText* txtDeclFile;
+-		wxStaticText* StaticText27;
+-		wxStaticText* txtImplFile;
+-		wxStaticText* StaticText34;
++		wxBoxSizer* BoxSizer3;
+ 		wxStaticText* txtUserData;
+-		wxPanel* Panel2;
+-		wxBoxSizer* BoxSizer3;
++		wxStaticText* StaticText17;
++		wxStaticText* txtKind;
++		wxTextCtrl* txtFilter;
+ 		wxListBox* lstFiles;
+-		wxBoxSizer* BoxSizer9;
+-		wxListBox* lstDirs;
+-		wxStaticText* lblInfo;
+-		wxStaticLine* StaticLine2;
++		wxButton* btnFind;
++		wxStaticText* txtIsLocal;
+ 		wxStdDialogButtonSizer* StdDialogButtonSizer1;
+ 		//*)
+ 
+Index: src/plugins/codecompletion/ccoptionsdlg.cpp
+===================================================================
+--- src/plugins/codecompletion/ccoptionsdlg.cpp	(revision 5367)
++++ src/plugins/codecompletion/ccoptionsdlg.cpp	(working copy)
+@@ -97,12 +97,13 @@
+ 	XRCCTRL(*this, "spnMaxMatches", wxSpinCtrl)->SetValue(cfg->ReadInt(_T("/max_matches"), 16384));
+ 	XRCCTRL(*this, "chkInheritance", wxCheckBox)->SetValue(m_Parser.ClassBrowserOptions().showInheritance);
+ 	XRCCTRL(*this, "chkExpandNS", wxCheckBox)->SetValue(m_Parser.ClassBrowserOptions().expandNS);
++	XRCCTRL(*this, "chkTreeMembers", wxCheckBox)->SetValue(m_Parser.ClassBrowserOptions().treeMembers);
+ 	XRCCTRL(*this, "spnThreadsNum", wxSpinCtrl)->SetValue(cfg->ReadInt(_T("/max_threads"), 1));
+ 	XRCCTRL(*this, "spnThreadsNum", wxSpinCtrl)->Enable(false);
+ 	XRCCTRL(*this, "chkFloatCB", wxCheckBox)->SetValue(cfg->ReadBool(_T("/as_floating_window"), false));
+ 	XRCCTRL(*this, "chkNoSB", wxCheckBox)->SetValue(!cfg->ReadBool(_T("/use_symbols_browser"), true));
+ 	XRCCTRL(*this, "txtFillupChars", wxTextCtrl)->SetValue(cfg->Read(_T("/fillup_chars"), wxEmptyString));
+-	
++
+ 	XRCCTRL(*this, "chkKL_1", wxCheckBox)->SetValue(cfg->ReadBool(_T("/lexer_keywords_set1"), true));
+ 	XRCCTRL(*this, "chkKL_2", wxCheckBox)->SetValue(cfg->ReadBool(_T("/lexer_keywords_set2"), true));
+ 	XRCCTRL(*this, "chkKL_3", wxCheckBox)->SetValue(cfg->ReadBool(_T("/lexer_keywords_set3"), false));
+@@ -290,6 +291,7 @@
+ 	cfg->Write(_T("/fillup_chars"), XRCCTRL(*this, "txtFillupChars", wxTextCtrl)->GetValue());
+ 	m_Parser.ClassBrowserOptions().showInheritance = XRCCTRL(*this, "chkInheritance", wxCheckBox)->GetValue();
+ 	m_Parser.ClassBrowserOptions().expandNS = XRCCTRL(*this, "chkExpandNS", wxCheckBox)->GetValue();
++	m_Parser.ClassBrowserOptions().treeMembers = XRCCTRL(*this, "chkTreeMembers", wxCheckBox)->GetValue();
+ 	cfg->Write(_T("/as_floating_window"), (bool)XRCCTRL(*this, "chkFloatCB", wxCheckBox)->GetValue());
+ 
+ 	cfg->Write(_T("/lexer_keywords_set1"), (bool)XRCCTRL(*this, "chkKL_1", wxCheckBox)->GetValue());
+Index: src/plugins/codecompletion/classbrowser.cpp
+===================================================================
+--- src/plugins/codecompletion/classbrowser.cpp	(revision 5367)
++++ src/plugins/codecompletion/classbrowser.cpp	(working copy)
+@@ -48,6 +48,10 @@
+ int idCBViewModeStructured = wxNewId();
+ int idMenuForceReparse = wxNewId();
+ int idMenuDebugSmartSense = wxNewId();
++int idCBSortByAlpabet = wxNewId();
++int idCBSortByKind = wxNewId();
++int idCBSortByScope = wxNewId();
++int idCBBottomTree = wxNewId();
+ 
+ BEGIN_EVENT_TABLE(ClassBrowser, wxPanel)
+ 	EVT_TREE_ITEM_ACTIVATED(XRCID("treeMembers"), ClassBrowser::OnTreeItemDoubleClick)
+@@ -58,7 +62,7 @@
+     EVT_TREE_ITEM_EXPANDING(XRCID("treeAll"), ClassBrowser::OnTreeItemExpanding)
+     EVT_TREE_ITEM_COLLAPSING(XRCID("treeAll"), ClassBrowser::OnTreeItemCollapsing)
+     EVT_TREE_SEL_CHANGED(XRCID("treeAll"), ClassBrowser::OnTreeItemSelected)
+-    
++
+     EVT_TEXT_ENTER(XRCID("cmbSearch"), ClassBrowser::OnSearch)
+     EVT_COMBOBOX(XRCID("cmbSearch"), ClassBrowser::OnSearch)
+ 
+@@ -70,8 +74,13 @@
+     EVT_MENU(idCBExpandNS, ClassBrowser::OnCBExpandNS)
+     EVT_MENU(idCBViewModeFlat, ClassBrowser::OnCBViewMode)
+     EVT_MENU(idMenuDebugSmartSense, ClassBrowser::OnDebugSmartSense)
++    EVT_MENU(idCBSortByAlpabet, ClassBrowser::OnSetSortType)
++    EVT_MENU(idCBSortByKind, ClassBrowser::OnSetSortType)
++    EVT_MENU(idCBSortByScope, ClassBrowser::OnSetSortType)
++    EVT_MENU(idCBBottomTree, ClassBrowser::OnCBViewMode)
+     EVT_CHOICE(XRCID("cmbView"), ClassBrowser::OnViewScope)
+     EVT_BUTTON(XRCID("btnSearch"), ClassBrowser::OnSearch)
++
+ END_EVENT_TABLE()
+ 
+ // class constructor
+@@ -87,11 +96,12 @@
+ 
+ 	wxXmlResource::Get()->LoadPanel(this, parent, _T("pnlCB"));
+     m_Search = XRCCTRL(*this, "cmbSearch", wxComboBox);
+-    
++
+     if (platform::windows)
+ 		m_Search->SetWindowStyle(wxTE_PROCESS_ENTER); // it's a must on windows to catch EVT_TEXT_ENTER
+ 
+ 	m_Tree = XRCCTRL(*this, "treeAll", wxTreeCtrl);
++	m_TreeBottom = XRCCTRL(*this, "treeMembers", wxTreeCtrl);
+ 
+     int filter = cfg->ReadInt(_T("/browser_display_filter"), bdfWorkspace);
+     XRCCTRL(*this, "cmbView", wxChoice)->SetSelection(filter);
+@@ -166,7 +176,21 @@
+ 
+             m_ActiveFilename.Append(_T('.'));
+ 	    }
++
+ 		BuildTree();
++
++		wxSplitterWindow* splitter = XRCCTRL(*this, "splitterWin", wxSplitterWindow);
++		if (m_pParser->ClassBrowserOptions().treeMembers)
++		{
++			splitter->SplitHorizontally(m_Tree, m_TreeBottom);
++			m_TreeBottom->Show(true);
++		}
++		else
++		{
++			splitter->Unsplit();
++			m_TreeBottom->Show(false);
++		}
++
+ 	}
+ 	else
+ 		m_Tree->DeleteAllItems();
+@@ -206,6 +230,7 @@
+         }
+     }
+ 
++    const BrowserOptions& options = m_pParser->ClassBrowserOptions();
+     if (tree == m_Tree)
+     {
+         // only in top tree
+@@ -229,12 +254,37 @@
+             menu->Check(idMenuDebugSmartSense, s_DebugSmartSense);
+         }
+ 
+-        menu->Check(idCBViewInheritance, m_pParser ? m_pParser->ClassBrowserOptions().showInheritance : false);
+-        menu->Check(idCBExpandNS, m_pParser ? m_pParser->ClassBrowserOptions().expandNS : false);
++        menu->Check(idCBViewInheritance, m_pParser ? options.showInheritance : false);
++        menu->Check(idCBExpandNS, m_pParser ? options.expandNS : false);
+     }
+ 
++    menu->AppendSeparator();
++    menu->AppendCheckItem(idCBSortByAlpabet, _("Sort alphabetically"));
++    menu->AppendCheckItem(idCBSortByKind, _("Sort by kind"));
++    menu->AppendCheckItem(idCBSortByScope, _("Sort by access"));
++
++	const BrowserSortType& bst = options.sortType;
++	switch (bst)
++	{
++		case bstAlphabet:
++			menu->Check(idCBSortByAlpabet, true);
++			break;
++		case bstKind:
++			menu->Check(idCBSortByKind, true);
++			break;
++		case bstScope:
++		default:
++			menu->Check(idCBSortByScope, true);
++			break;
++	}
++
++    menu->AppendSeparator();
++    menu->AppendCheckItem(idCBBottomTree, _("Display bottom tree"));
++	menu->Check(idCBBottomTree, options.treeMembers);
++
+     if (menu->GetMenuItemCount() != 0)
+         PopupMenu(menu);
++
+     delete menu; // Prevents memory leak
+ #endif // wxUSE_MENUS
+ }
+@@ -461,8 +511,14 @@
+ 	if (!m_pParser)
+ 		return;
+ 
++	BrowserOptions& options = m_pParser->ClassBrowserOptions();
++
+ 	if (event.GetId() == idCBViewInheritance)
+-		m_pParser->ClassBrowserOptions().showInheritance = event.IsChecked();
++		options.showInheritance = event.IsChecked();
++	if (event.GetId() == idCBExpandNS)
++		options.expandNS = event.IsChecked();
++	if (event.GetId() == idCBBottomTree)
++		options.treeMembers = event.IsChecked();
+ 
+ 	m_pParser->WriteOptions();
+ 	UpdateView();
+@@ -500,6 +556,23 @@
+     s_DebugSmartSense = !s_DebugSmartSense;
+ }
+ 
++void ClassBrowser::OnSetSortType(wxCommandEvent& event)
++{
++	BrowserSortType bst;
++	if (event.GetId() == idCBSortByAlpabet) bst = bstAlphabet;
++	else if (event.GetId() == idCBSortByKind) bst = bstKind;
++	else bst = bstScope;
++
++	if (m_pParser)
++	{
++		m_pParser->ClassBrowserOptions().sortType = bst;
++		m_pParser->WriteOptions();
++		UpdateView();
++	}
++	else
++		Manager::Get()->GetConfigManager(_T("code_completion"))->Write(_T("/browser_sort_type"), (int)bst);
++}
++
+ void ClassBrowser::OnSearch(wxCommandEvent& event)
+ {
+ 	wxString search = m_Search->GetValue();
+@@ -544,7 +617,7 @@
+             token = m_pParser->GetTokens()->at(int_selections[0]);
+         }
+ 	}
+-	
++
+ 	// time to "walk" the tree
+ 	if (token)
+ 	{
+@@ -552,7 +625,6 @@
+ 		if (m_Search->FindString(token->m_Name) == wxNOT_FOUND)
+ 			m_Search->Append(token->m_Name);
+ 
+-		wxTreeCtrl* bottomTree = XRCCTRL(*this, "treeMembers", wxTreeCtrl);
+ 		if (token->m_ParentIndex == -1 && !(token->m_TokenKind & tkAnyContainer))
+ 		{
+ 			// a global non-container: search in special folders only
+@@ -564,10 +636,10 @@
+ 				if (data && (data->m_SpecialFolder & (sfGFuncs | sfGVars | sfPreproc | sfTypedef)))
+ 				{
+ 					m_Tree->SelectItem(res);
+-					wxTreeItemId srch = FindChild(token->m_Name, bottomTree, bottomTree->GetRootItem(), false, true);
++					wxTreeItemId srch = FindChild(token->m_Name, m_TreeBottom, m_TreeBottom->GetRootItem(), false, true);
+ 					if (srch.IsOk())
+ 					{
+-						bottomTree->SelectItem(srch);
++						m_TreeBottom->SelectItem(srch);
+ 						return;
+ 					}
+ 				}
+@@ -575,7 +647,7 @@
+ 			}
+ 			return;
+ 		}
+-		
++
+ 		// example:
+ 		//   search="cou"
+ 		//   token->GetNamespace()="std::"
+@@ -603,9 +675,9 @@
+ 		else
+ 		{
+ 			// search in bottom tree too
+-			wxTreeItemId res = FindChild(token->m_Name, bottomTree, bottomTree->GetRootItem(), true, true);
++			wxTreeItemId res = FindChild(token->m_Name, m_TreeBottom, m_TreeBottom->GetRootItem(), true, true);
+ 			if (res.IsOk())
+-				bottomTree->SelectItem(res);
++				m_TreeBottom->SelectItem(res);
+ 		}
+ 	}
+ }
+@@ -632,7 +704,7 @@
+     // initialise it
+     m_pBuilderThread->Init(m_pParser,
+                             m_Tree,
+-                            XRCCTRL(*this, "treeMembers", wxTreeCtrl),
++                            m_TreeBottom,
+                             m_ActiveFilename,
+                             m_pActiveProject,
+                             m_pParser->ClassBrowserOptions(),
+@@ -662,7 +734,7 @@
+ 
+ void ClassBrowser::OnTreeItemSelected(wxTreeEvent& event)
+ {
+-    if (m_pBuilderThread)
++    if (m_pBuilderThread && m_pParser->ClassBrowserOptions().treeMembers)
+         m_pBuilderThread->SelectItem(event.GetItem());
+     event.Allow();
+ }
+Index: src/plugins/codecompletion/classbrowser.h
+===================================================================
+--- src/plugins/codecompletion/classbrowser.h	(revision 5367)
++++ src/plugins/codecompletion/classbrowser.h	(working copy)
+@@ -36,6 +36,8 @@
+         const Parser* GetParserPtr() { return m_pParser; }
+         void UnlinkParser();
+         void UpdateView();
++
++		void OnSize(wxSizeEvent& event);
+     private:
+         friend class myTextCtrl;
+         void OnTreeItemDoubleClick(wxTreeEvent& event);
+@@ -47,6 +49,7 @@
+ 		void OnCBExpandNS(wxCommandEvent& event);
+         void OnViewScope(wxCommandEvent& event);
+         void OnDebugSmartSense(wxCommandEvent& event);
++		void OnSetSortType(wxCommandEvent& event);
+ 
+         void OnSearch(wxCommandEvent& event);
+         bool FoundMatch(const wxString& search, wxTreeCtrl* tree, const wxTreeItemId& item);
+@@ -64,6 +67,7 @@
+ 
+         NativeParser* m_NativeParser;
+         wxTreeCtrl* m_Tree;
++        wxTreeCtrl* m_TreeBottom;
+         wxComboBox* m_Search;
+         wxTreeCtrl* m_TreeForPopupMenu;
+         Parser* m_pParser;
+Index: src/plugins/codecompletion/classbrowserbuilderthread.cpp
+===================================================================
+--- src/plugins/codecompletion/classbrowserbuilderthread.cpp	(revision 5367)
++++ src/plugins/codecompletion/classbrowserbuilderthread.cpp	(working copy)
+@@ -21,6 +21,59 @@
+ 
+ namespace compatibility { typedef TernaryCondTypedef<wxMinimumVersion<2,5>::eval, wxTreeItemIdValue, long int>::eval tree_cookie_t; };
+ 
++// CBScopeCompare
++int CBAlphabetCompare::operator() (CBTreeData* lhs, CBTreeData* rhs)
++{
++	if (!lhs->m_pToken || !rhs->m_pToken) return 1;
++	//if () return -1;
++	return wxStricmp(lhs->m_pToken->DisplayName(), rhs->m_pToken->DisplayName());
++}
++
++// CBKindCompare
++CBKindCompare::CBKindCompare()
++{
++	TokenKind prior[] =
++	{
++		tkNamespace,
++		tkClass,
++		tkEnum,
++		tkTypedef,
++		tkConstructor,
++		tkDestructor,
++		tkFunction,
++		tkVariable
++	};
++	m_KindPrior.assign(prior, prior + sizeof(prior)/sizeof(prior[0]));
++}
++
++int CBKindCompare::operator() (CBTreeData* lhs, CBTreeData* rhs)
++{
++	if (lhs->m_TokenKind == rhs->m_TokenKind)
++		return m_CompareEquals(lhs, rhs);
++
++	size_t l_prior, r_prior;
++	l_prior = r_prior = m_KindPrior.size();
++	for (size_t i = 0; i < m_KindPrior.size(); ++i)
++	{
++		if (m_KindPrior[i] == lhs->m_TokenKind) l_prior = i;
++		if (m_KindPrior[i] == rhs->m_TokenKind) r_prior = i;
++	}
++
++	return (l_prior == r_prior) ? m_CompareEquals(lhs, rhs) : l_prior - r_prior;
++}
++
++// CBScopeCompare
++int CBScopeCompare::operator() (CBTreeData* lhs, CBTreeData* rhs)
++{
++	if (lhs->m_SpecialFolder != sfToken || rhs->m_SpecialFolder != sfToken)
++		return 1;
++	if (lhs->m_pToken->m_Scope == rhs->m_pToken->m_Scope)
++		return m_CompareEquals(lhs, rhs);
++
++	return rhs->m_pToken->m_Scope - lhs->m_pToken->m_Scope;
++}
++
++// ClassBrowserBuilderThread
+ ClassBrowserBuilderThread::ClassBrowserBuilderThread(wxSemaphore& sem, ClassBrowserBuilderThread** threadVar)
+     : wxThread(wxTHREAD_JOINABLE),
+     m_Semaphore(sem),
+@@ -30,7 +83,8 @@
+     m_pUserData(0),
+     m_Options(),
+     m_pTokens(0),
+-    m_ppThreadVar(threadVar)
++    m_ppThreadVar(threadVar),
++    m_pDataCompare(0)
+ {
+     //ctor
+ }
+@@ -173,6 +227,9 @@
+     m_pTreeTop = 0;
+     m_pTreeBottom = 0;
+ 
++    if (m_pDataCompare)
++		delete m_pDataCompare;
++
+     /*if (m_ppThreadVar)
+         *m_ppThreadVar = 0;*/
+     return 0;
+@@ -215,13 +272,40 @@
+         m_pTreeTop->SetItemHasChildren(root);
+     }
+ 
++	if (m_pDataCompare)
++		delete m_pDataCompare;
++
++	switch (m_Options.sortType)
++	{
++		case bstAlphabet:
++			m_pDataCompare = new CBAlphabetCompare;
++			break;
++		case bstKind:
++			m_pDataCompare = new CBKindCompare;
++			break;
++		case bstScope:
++		default:
++			m_pDataCompare = new CBScopeCompare;
++			break;
++	}
++
++	m_ExpandedVect.clear();
++	SaveExpandedItems(m_pTreeTop, root, 0);
++
++	SaveSelectedItem();
++
++
++    if (m_Options.treeMembers)
++    {
++		m_pTreeBottom->Hide();
++		m_pTreeBottom->Freeze();
++    }
+     m_pTreeTop->Hide();
+-    m_pTreeBottom->Hide();
+     m_pTreeTop->Freeze();
+-    m_pTreeBottom->Freeze();
+ 
+ 	RemoveInvalidNodes(m_pTreeTop, root);
+-	RemoveInvalidNodes(m_pTreeBottom, m_pTreeBottom->GetRootItem());
++	if (m_Options.treeMembers)
++		RemoveInvalidNodes(m_pTreeBottom, m_pTreeBottom->GetRootItem());
+ 
+     if (!TestDestroy() && !Manager::IsAppShuttingDown())
+     {
+@@ -231,6 +315,8 @@
+         // this technique makes it really fast to draw (we only draw what's expanded) and
+         // has very minimum memory overhead since it contains as few items as possible.
+         // plus, it doesn't flicker because we 're not emptying it and re-creating it each time ;)
++
++        CollapseItem(root);
+         m_pTreeTop->Expand(root);
+ 
+         if(platform::gtk)
+@@ -239,14 +325,18 @@
+             // so make it happen now
+             ExpandItem(root);
+         }
++
++        ExpandSavedItems(m_pTreeTop, root, 0);
++        SelectSavedItem();
+     }
+ 
+-    m_pTreeBottom->Thaw();
++    if (m_Options.treeMembers)
++    {
++		m_pTreeBottom->Thaw();
++		m_pTreeBottom->Show();
++    }
+     m_pTreeTop->Thaw();
+-    m_pTreeBottom->Show();
+     m_pTreeTop->Show();
+-
+-    SelectNode(m_pTreeTop->GetSelection()); // refresh selection
+ }
+ 
+ #if 1
+@@ -260,7 +350,6 @@
+ 
+     // we 'll loop backwards so we can delete nodes without problems
+     wxTreeItemId existing = tree->GetLastChild(parent);
+-    wxTreeItemId root = tree->GetRootItem();
+     while (parent.IsOk() && existing.IsOk())
+     {
+         bool removeCurrent = false;
+@@ -268,9 +357,12 @@
+         CBTreeData* data = (CBTreeData*)(tree->GetItemData(existing));
+ 
+         if (tree == m_pTreeBottom)
++        {
+             removeCurrent = true;
++        }
+         else if (data && data->m_pToken)
+         {
++
+             if (m_pTokens->at(data->m_TokenIndex) != data->m_pToken ||
+                 (data->m_Ticket && data->m_Ticket != data->m_pToken->GetTicket()) ||
+                 !TokenMatchesFilter(data->m_pToken))
+@@ -278,10 +370,12 @@
+                 removeCurrent = true;
+             }
+         }
++
+         if(removeCurrent)
+         {
+             if(hasChildren)
+                 tree->DeleteChildren(existing);
++
+             wxTreeItemId next = tree->GetPrevSibling(existing);
+             if(!next.IsOk() && parent.IsOk() && tree == m_pTreeTop && tree->GetChildrenCount(parent, false) == 1 )
+             {
+@@ -360,9 +454,9 @@
+ //        tree->Delete(parent);
+ }
+ #endif
+-wxTreeItemId ClassBrowserBuilderThread::AddNodeIfNotThere(wxTreeCtrl* tree, wxTreeItemId parent, const wxString& name, int imgIndex, CBTreeData* data, bool sorted)
++
++wxTreeItemId ClassBrowserBuilderThread::AddNodeIfNotThere(wxTreeCtrl* tree, wxTreeItemId parent, const wxString& name, int imgIndex, CBTreeData* data)
+ {
+-    sorted = sorted & tree == m_pTreeTop && data; // sorting only for the top tree
+     SpecialFolder new_type = data->m_SpecialFolder;
+     bool newIsNamespace = data->m_TokenKind == tkNamespace;
+ 
+@@ -386,7 +480,7 @@
+             return existing;
+         }
+ 
+-        if (sorted)
++        if (data)
+         {
+             CBTreeData* existing_data = (CBTreeData*)tree->GetItemData(existing);
+             if (existing_data)
+@@ -402,14 +496,16 @@
+                 // then go namespaces, alphabetically
+                 else if (newIsNamespace &&
+                         existing_data->m_TokenKind == tkNamespace &&
+-                        name.CompareTo(itemText, wxString::ignoreCase) >= 0)
++                        (*m_pDataCompare)(data, existing_data) >= 0)
++                        //name.CompareTo(itemText, wxString::ignoreCase) >= 0)
+                 {
+                     insert_after = existing;
+                 }
+                 // then everything else, alphabetically
+                 else if (!newIsNamespace &&
+                         (existing_data->m_TokenKind == tkNamespace ||
+-                        name.CompareTo(itemText, wxString::ignoreCase) >= 0))
++                        (*m_pDataCompare)(data, existing_data) >= 0))
++                        //name.CompareTo(itemText, wxString::ignoreCase) >= 0))
+                 {
+                     insert_after = existing;
+                 }
+@@ -418,34 +514,30 @@
+         existing = tree->GetNextChild(parent, cookie);
+     }
+ 
+-    if (sorted)
++    if (data)
+         existing = tree->InsertItem(parent, insert_after, name, imgIndex, imgIndex, data);
+     else
+         existing = tree->AppendItem(parent, name, imgIndex, imgIndex, data);
+     return existing;
+ }
+ 
+-bool ClassBrowserBuilderThread::AddChildrenOf(wxTreeCtrl* tree, wxTreeItemId parent, int parentTokenIdx, int tokenKindMask)
++bool ClassBrowserBuilderThread::AddChildrenOf(wxTreeCtrl* tree, wxTreeItemId parent, int parentTokenIdx, int tokenKindMask, bool sorted, int tokenScopeMask)
+ {
+     if (TestDestroy() || Manager::IsAppShuttingDown())
+         return false;
+ 
+     Token* parentToken = 0;
+-    TokenIdxSet::iterator it;
+-    TokenIdxSet::iterator it_end;
++    TokenIdxSet* tokens = 0;
+ 
++    //TokenIdxSet::iterator it;
++    //TokenIdxSet::iterator it_end;
++
+     if (parentTokenIdx == -1)
+     {
+         if(m_Options.displayFilter >= bdfWorkspace)
+-        {
+-            it = m_pTokens->m_GlobalNameSpace.begin();
+-            it_end = m_pTokens->m_GlobalNameSpace.end();
+-        }
++            tokens = &m_pTokens->m_GlobalNameSpace;
+         else
+-        {
+-            it = m_CurrentGlobalTokensSet.begin();
+-            it_end = m_CurrentGlobalTokensSet.end();
+-        }
++            tokens = &m_CurrentGlobalTokensSet;
+     }
+     else
+     {
+@@ -455,11 +547,10 @@
+ //            Manager::Get()->GetLogManager()->DebugLog(F(_T("Token not found?!?")));
+             return false;
+         }
+-        it = parentToken->m_Children.begin();
+-        it_end = parentToken->m_Children.end();
++        tokens = &parentToken->m_Children;
+     }
+ 
+-    return AddNodes(tree, parent, it, it_end, tokenKindMask, m_Options.displayFilter == bdfEverything);
++    return AddNodes(tree, parent, *tokens, tokenKindMask, tokenScopeMask, m_Options.displayFilter == bdfEverything, sorted);
+ }
+ 
+ bool ClassBrowserBuilderThread::AddAncestorsOf(wxTreeCtrl* tree, wxTreeItemId parent, int tokenIdx)
+@@ -471,7 +562,7 @@
+     if (!token)
+         return false;
+ 
+-    return AddNodes(tree, parent, token->m_DirectAncestors.begin(), token->m_DirectAncestors.end(), tkClass | tkTypedef, true);
++    return AddNodes(tree, parent, token->m_DirectAncestors, tkClass | tkTypedef, 0, true, true);
+ }
+ 
+ bool ClassBrowserBuilderThread::AddDescendantsOf(wxTreeCtrl* tree, wxTreeItemId parent, int tokenIdx, bool allowInheritance)
+@@ -486,13 +577,13 @@
+     bool inh = m_Options.showInheritance;
+     m_Options.showInheritance = allowInheritance;
+ 
+-    bool ret = AddNodes(tree, parent, token->m_Descendants.begin(), token->m_Descendants.end(), tkClass | tkTypedef, true);
++    bool ret = AddNodes(tree, parent, token->m_Descendants, tkClass | tkTypedef, 0, true, true);
+ 
+     m_Options.showInheritance = inh;
+     return ret;
+ }
+ 
+-bool ClassBrowserBuilderThread::AddNodes(wxTreeCtrl* tree, wxTreeItemId parent, TokenIdxSet::iterator start, TokenIdxSet::iterator end, int tokenKindMask, bool allowGlobals)
++bool ClassBrowserBuilderThread::AddNodes(wxTreeCtrl* tree, wxTreeItemId parent, const TokenIdxSet& tokens, int tokenKindMask, int tokenScopeMask, bool allowGlobals, bool sorted)
+ {
+     int count = 0;
+     set<unsigned long, less<unsigned long> > tickets;
+@@ -512,15 +603,19 @@
+         }
+     }
+ 
++    TokenIdxSet::iterator start = tokens.begin();
++    TokenIdxSet::iterator end = tokens.end();
++
+     for ( ; start != end; ++start)
+     {
+         Token* token = m_pTokens->at(*start);
+         if (token &&
+             (token->m_TokenKind & tokenKindMask) &&
+-            (allowGlobals || token->m_IsLocal) &&
+-            TokenMatchesFilter(token))
++            (tokenScopeMask == 0 || token->m_Scope == tokenScopeMask) &&
++            (allowGlobals || token->m_IsLocal ||
++            TokenMatchesFilter(token)))
+         {
+-            if(tree == m_pTreeTop && tickets.find(token->GetTicket()) != tickets.end())
++            if(tree == m_pTreeTop && sorted && tickets.find(token->GetTicket()) != tickets.end())
+                 continue; // dupe
+             ++count;
+             int img = m_pParser->GetTokenKindImage(token);
+@@ -531,23 +626,34 @@
+             if (!token->m_ActualType.IsEmpty())
+                  str = str + _T(" : ") + token->m_ActualType;
+ 
+-            if (tree == m_pTreeTop)
++            if (sorted)
+             {
+                 wxTreeItemId child = AddNodeIfNotThere(tree, parent, str, img, new CBTreeData(sfToken, token, tokenKindMask));
++
+                 // mark as expanding if it is a container
++                int kind = tkClass | tkNamespace | tkEnum;
+                 if (token->m_TokenKind == tkClass)
+-                    tree->SetItemHasChildren(child, m_Options.showInheritance || TokenContainsChildrenOfKind(token, tkClass | tkNamespace | tkEnum));
++                {
++					if (!m_Options.treeMembers)
++						kind |= tkTypedef | tkFunction | tkVariable | tkEnum;
++					tree->SetItemHasChildren(child, m_Options.showInheritance || TokenContainsChildrenOfKind(token, kind));
++                }
+                 else if (token->m_TokenKind & (tkNamespace | tkEnum))
+-                    tree->SetItemHasChildren(child, TokenContainsChildrenOfKind(token, tkClass | tkNamespace | tkEnum));
++                {
++					if (!m_Options.treeMembers)
++						kind |= tkTypedef | tkFunction | tkVariable | tkEnumerator;
++                    tree->SetItemHasChildren(child, TokenContainsChildrenOfKind(token, kind));
++                }
+             }
+             else // the bottom tree needs no checks
+                 tree->AppendItem(parent, str, img, img, new CBTreeData(sfToken, token));
+         }
+     }
+-//    Manager::Get()->GetLogManager()->DebugLog(F(_T("Sorting...")));
+-    if (tree == m_pTreeBottom) // only sort alphabetically the bottom tree
++
++	//Manager::Get()->GetLogManager()->DebugLog(F(_T("Sorting...")));
++    if (!sorted) // fast alphabetical sort
+         tree->SortChildren(parent);
+-//    Manager::Get()->GetLogManager()->DebugLog(F(_T("Added %d nodes"), count));
++    //Manager::Get()->GetLogManager()->DebugLog(F(_T("Added %d nodes"), count));
+     return count != 0;
+ }
+ 
+@@ -595,53 +701,93 @@
+     return false;
+ }
+ 
+-void ClassBrowserBuilderThread::SelectNode(wxTreeItemId node)
++void ClassBrowserBuilderThread::AddMembersOf(wxTreeCtrl* tree, wxTreeItemId node)
+ {
+-    if (TestDestroy() || Manager::IsAppShuttingDown() || (!(node.IsOk())))
++   if (TestDestroy() || Manager::IsAppShuttingDown() || !node.IsOk())
+         return;
+ 
+-    m_pTreeBottom->Freeze();
+-    wxTreeItemId root = m_pTreeBottom->GetRootItem();
+-    if (!root)
+-        root = m_pTreeBottom->AddRoot(_T("Members")); // not visible, so don't translate
+-    else
+-        m_pTreeBottom->DeleteChildren(root);
+     CBTreeData* data = (CBTreeData*)m_pTreeTop->GetItemData(node);
++
++    bool bottom = (tree == m_pTreeBottom);
++    if (bottom)
++    {
++		tree->Freeze();
++        tree->DeleteAllItems();
++		node = tree->AddRoot(_T("Members")); // not visible, so don't translate
++    }
++
+     if (data)
+     {
+         switch (data->m_SpecialFolder)
+         {
+-            case sfGFuncs: AddChildrenOf(m_pTreeBottom, root, -1, tkFunction); break;
+-            case sfGVars: AddChildrenOf(m_pTreeBottom, root, -1, tkVariable); break;
+-            case sfPreproc: AddChildrenOf(m_pTreeBottom, root, -1, tkPreprocessor); break;
+-            case sfTypedef: AddChildrenOf(m_pTreeBottom, root, -1, tkTypedef); break;
++            case sfGFuncs: AddChildrenOf(tree, node, -1, tkFunction, false); break;
++            case sfGVars: AddChildrenOf(tree, node, -1, tkVariable, false); break;
++            case sfPreproc: AddChildrenOf(tree, node, -1, tkPreprocessor, false); break;
++            case sfTypedef: AddChildrenOf(tree, node, -1, tkTypedef, false); break;
+             case sfToken:
+             {
+-				wxTreeItemId rootCtorDtor = m_pTreeBottom->AppendItem(root, _("Ctors & Dtors"), PARSER_IMG_CLASS_FOLDER);
+-				wxTreeItemId rootFuncs = m_pTreeBottom->AppendItem(root, _("Functions"), PARSER_IMG_OTHERS_FOLDER);
+-				wxTreeItemId rootVars = m_pTreeBottom->AppendItem(root, _("Variables"), PARSER_IMG_SYMBOLS_FOLDER);
+-				wxTreeItemId rootOthers = m_pTreeBottom->AppendItem(root, _("Others"), PARSER_IMG_OTHERS_FOLDER);
+-				
+-				m_pTreeBottom->SetItemBold(rootCtorDtor, true);
+-				m_pTreeBottom->SetItemBold(rootFuncs, true);
+-				m_pTreeBottom->SetItemBold(rootVars, true);
+-				m_pTreeBottom->SetItemBold(rootOthers, true);
++				if (bottom)
++				{
++					if (m_Options.sortType == bstKind && !(data->m_pToken->m_TokenKind & tkEnum))
++					{
++						wxTreeItemId rootCtorDtor = tree->AppendItem(node, _("Ctors & Dtors"), PARSER_IMG_CLASS_FOLDER);
++						wxTreeItemId rootFuncs = tree->AppendItem(node, _("Functions"), PARSER_IMG_FUNCS_FOLDER);
++						wxTreeItemId rootVars = tree->AppendItem(node, _("Variables"), PARSER_IMG_VARS_FOLDER);
++						wxTreeItemId rootOthers = tree->AppendItem(node, _("Others"), PARSER_IMG_OTHERS_FOLDER);
++
++						AddChildrenOf(tree, rootCtorDtor, data->m_pToken->GetSelf(), tkConstructor | tkDestructor);
++						AddChildrenOf(tree, rootFuncs, data->m_pToken->GetSelf(), tkFunction);
++						AddChildrenOf(tree, rootVars, data->m_pToken->GetSelf(), tkVariable);
++						AddChildrenOf(tree, rootOthers, data->m_pToken->GetSelf(), ~(tkNamespace | tkClass | tkEnum | tkAnyFunction | tkVariable));
++					}
++					else if (m_Options.sortType == bstScope && data->m_pToken->m_TokenKind & tkClass)
++					{
++						wxTreeItemId rootPublic = tree->AppendItem(node, _("Public"), PARSER_IMG_CLASS_FOLDER);
++						wxTreeItemId rootProtected = tree->AppendItem(node, _("Protected"), PARSER_IMG_FUNCS_FOLDER);
++						wxTreeItemId rootPrivate = tree->AppendItem(node, _("Private"), PARSER_IMG_VARS_FOLDER);
++
++						AddChildrenOf(tree, rootPublic, data->m_pToken->GetSelf(), ~(tkNamespace | tkClass | tkEnum), true, tsPublic);
++						AddChildrenOf(tree, rootProtected, data->m_pToken->GetSelf(), ~(tkNamespace | tkClass | tkEnum), true, tsProtected);
++						AddChildrenOf(tree, rootPrivate, data->m_pToken->GetSelf(), ~(tkNamespace | tkClass | tkEnum), true, tsPrivate);
++					}
++					else
++					{
++						AddChildrenOf(tree, node, data->m_pToken->GetSelf(), ~(tkNamespace | tkClass | tkEnum));
++						break;
++					}
++
++					wxTreeItemId existing = tree->GetLastChild(tree->GetRootItem());
++					while (existing.IsOk())
++					{
++						wxTreeItemId next = tree->GetPrevSibling(existing);
++
++						if (tree->GetChildrenCount(existing) > 0)
++							tree->SetItemBold(existing, true);
++						else
++						{
++							tree->Delete(existing);
++							existing = next;
++							continue;
++						}
++						existing = tree->GetPrevSibling(existing);
++					}
++				}
++				else
++					AddChildrenOf(tree, node, data->m_pToken->GetSelf(), ~(tkNamespace | tkClass | tkEnum));
+ 
+-                AddChildrenOf(m_pTreeBottom, rootCtorDtor, data->m_pToken->GetSelf(), tkConstructor | tkDestructor);
+-                AddChildrenOf(m_pTreeBottom, rootFuncs, data->m_pToken->GetSelf(), tkFunction);
+-                AddChildrenOf(m_pTreeBottom, rootVars, data->m_pToken->GetSelf(), tkVariable);
+-                AddChildrenOf(m_pTreeBottom, rootOthers, data->m_pToken->GetSelf(), ~(tkNamespace | tkClass | tkEnum | tkAnyFunction | tkVariable));
+-                
+-                m_pTreeBottom->ExpandAll();
+-
+                 // add all children, except containers
+-//                AddChildrenOf(m_pTreeBottom, root, data->m_pToken->GetSelf(), ~(tkNamespace | tkClass | tkEnum));
++				// AddChildrenOf(tree, node, data->m_pToken->GetSelf(), ~(tkNamespace | tkClass | tkEnum));
+                 break;
+             }
+             default: break;
+         }
+     }
+-    m_pTreeBottom->Thaw();
++
++	if (bottom)
++	{
++		tree->ExpandAll();
++		tree->Thaw();
++	}
+ }
+ 
+ // checks if there are respective children and colors the nodes
+@@ -673,11 +819,17 @@
+             break; // we have everything, stop iterating...
+     }
+ 
+-    wxTreeItemId gfuncs = AddNodeIfNotThere(m_pTreeTop, parent, _("Global functions"), PARSER_IMG_OTHERS_FOLDER, new CBTreeData(sfGFuncs, 0, tkFunction, -1));
++    wxTreeItemId gfuncs = AddNodeIfNotThere(m_pTreeTop, parent, _("Global functions"), PARSER_IMG_FUNCS_FOLDER, new CBTreeData(sfGFuncs, 0, tkFunction, -1));
+     wxTreeItemId tdef = AddNodeIfNotThere(m_pTreeTop, parent, _("Global typedefs"), PARSER_IMG_TYPEDEF_FOLDER, new CBTreeData(sfTypedef, 0, tkTypedef, -1));
+-    wxTreeItemId gvars = AddNodeIfNotThere(m_pTreeTop, parent, _("Global variables"), PARSER_IMG_OTHERS_FOLDER, new CBTreeData(sfGVars, 0, tkVariable, -1));
++    wxTreeItemId gvars = AddNodeIfNotThere(m_pTreeTop, parent, _("Global variables"), PARSER_IMG_VARS_FOLDER, new CBTreeData(sfGVars, 0, tkVariable, -1));
+     wxTreeItemId preproc = AddNodeIfNotThere(m_pTreeTop, parent, _("Preprocessor symbols"), PARSER_IMG_PREPROC_FOLDER, new CBTreeData(sfPreproc, 0, tkPreprocessor, -1));
+ 
++	bool bottom = m_Options.treeMembers;
++	m_pTreeTop->SetItemHasChildren(gfuncs, !bottom && hasGF);
++	m_pTreeTop->SetItemHasChildren(tdef, !bottom && hasTD);
++	m_pTreeTop->SetItemHasChildren(gvars, !bottom && hasGV);
++	m_pTreeTop->SetItemHasChildren(preproc, !bottom && hasGP);
++
+     wxColour black = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+     wxColour grey = wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT);
+ 
+@@ -741,6 +893,10 @@
+             default: break;
+         }
+     }
++	if (m_pParser && !m_Options.treeMembers)
++	{
++		AddMembersOf(m_pTreeTop, item);
++	}
+ //    Manager::Get()->GetLogManager()->DebugLog(F(_("E: %d items"), m_pTreeTop->GetCount()));
+ }
+ 
+@@ -765,6 +921,115 @@
+         return;
+ 
+     wxMutexLocker lock(m_BuildMutex);
+-    SelectNode(item);
++
++    wxTreeCtrl* tree = (m_Options.treeMembers) ? m_pTreeBottom : m_pTreeTop;
++    AddMembersOf(tree, item);
+ //    Manager::Get()->GetLogManager()->DebugLog(F(_T("Select ") + m_pTreeTop->GetItemText(item)));
+ }
++
++void ClassBrowserBuilderThread::SaveExpandedItems(wxTreeCtrl* tree, wxTreeItemId parent, int level)
++{
++	if (Manager::IsAppShuttingDown())
++        return;
++
++	wxTreeItemIdValue cookie;
++    wxTreeItemId existing = tree->GetFirstChild(parent, cookie);
++    while (existing.IsOk())
++    {
++		CBTreeData* data = (CBTreeData*)(tree->GetItemData(existing));
++		if (tree->GetChildrenCount(existing,false) > 0)
++		{
++			m_ExpandedVect.push_back(CBExpandedItemData(data, level));
++
++			SaveExpandedItems(tree, existing, level + 1);
++		}
++
++		existing = tree->GetNextSibling(existing);
++	}
++}
++
++void ClassBrowserBuilderThread::ExpandSavedItems(wxTreeCtrl* tree, wxTreeItemId parent, int level)
++{
++	if (Manager::IsAppShuttingDown())
++        return;
++
++	wxTreeItemIdValue cookie;
++    wxTreeItemId existing = tree->GetFirstChild(parent, cookie);
++	while (existing.IsOk() && !m_ExpandedVect.empty())
++	{
++		CBTreeData* data = (CBTreeData*)(tree->GetItemData(existing));
++		CBExpandedItemData saved = m_ExpandedVect.front();
++
++		if (level == saved.GetLevel() &&
++			wxStrcmp(data->m_TokenName, saved.GetData().m_TokenName) == 0 &&
++			data->m_TokenKind == saved.GetData().m_TokenKind &&
++			data->m_SpecialFolder == saved.GetData().m_SpecialFolder)
++		{
++			tree->Expand(existing);
++			//ExpandItem(existing);
++
++			m_ExpandedVect.pop_front();
++
++			if (m_ExpandedVect.empty())
++				return;
++
++			saved = m_ExpandedVect.front(); //next saved
++			if (saved.GetLevel() < level)
++				return;
++
++			if (saved.GetLevel() > level)
++				ExpandSavedItems(tree, existing, saved.GetLevel());
++		}
++
++		existing = tree->GetNextSibling(existing);
++	}
++
++	//remove non-existing by now saved items
++	while(!m_ExpandedVect.empty() && m_ExpandedVect.front().GetLevel() > level)
++		m_ExpandedVect.pop_front();
++
++	//m_ExpandedVect.clear();
++}
++
++void ClassBrowserBuilderThread::SaveSelectedItem()
++{
++	m_SelectedPath.clear();
++
++	wxTreeItemId item = m_pTreeTop->GetSelection();
++	while(item.IsOk() && item != m_pTreeTop->GetRootItem())
++	{
++		CBTreeData* data = (CBTreeData*)m_pTreeTop->GetItemData(item);
++		m_SelectedPath.push_front(*data);
++
++		item = m_pTreeTop->GetItemParent(item);
++	}
++}
++
++void ClassBrowserBuilderThread::SelectSavedItem()
++{
++	wxTreeItemId parent = m_pTreeTop->GetRootItem();
++
++	wxTreeItemIdValue cookie;
++	wxTreeItemId item = m_pTreeTop->GetFirstChild(parent, cookie);
++
++	while (!m_SelectedPath.empty() && item.IsOk())
++	{
++		CBTreeData* data = (CBTreeData*)m_pTreeTop->GetItemData(item);
++		CBTreeData* saved = &m_SelectedPath.front();
++
++		if (data->m_SpecialFolder == saved->m_SpecialFolder &&
++			wxStrcmp(data->m_TokenName, saved->m_TokenName) == 0 &&
++			data->m_TokenKind == saved->m_TokenKind)
++		{
++			wxTreeItemIdValue cookie;
++			parent = item;
++			item = m_pTreeTop->GetFirstChild(item, cookie);
++			m_SelectedPath.pop_front();
++		}
++		else
++			item = m_pTreeTop->GetNextSibling(item);
++	}
++
++	m_pTreeTop->SelectItem(parent, true);
++	m_SelectedPath.clear();
++}
+Index: src/plugins/codecompletion/classbrowserbuilderthread.h
+===================================================================
+--- src/plugins/codecompletion/classbrowserbuilderthread.h	(revision 5367)
++++ src/plugins/codecompletion/classbrowserbuilderthread.h	(working copy)
+@@ -48,6 +48,55 @@
+         unsigned long m_Ticket;
+ };
+ 
++class CBExpandedItemData
++{
++	public:
++		CBExpandedItemData(const CBTreeData* data, const int level):
++			m_Data(*data),
++			m_Level(level)
++		{
++		}
++		int GetLevel() const { return m_Level; }
++		const CBTreeData& GetData() { return m_Data; }
++	private:
++		CBTreeData m_Data;	// copy of tree item data
++		int m_Level; 		// nesting level in the tree
++};
++
++class CBTreeDataCompare
++{
++	public:
++		virtual ~CBTreeDataCompare() {}
++		virtual int operator() (CBTreeData* lhs, CBTreeData* rhs) = 0;
++};
++
++class CBAlphabetCompare: public CBTreeDataCompare
++{
++	public:
++		virtual int operator() (CBTreeData* lhs, CBTreeData* rhs);
++};
++
++class CBKindCompare: public CBTreeDataCompare
++{
++	public:
++		CBKindCompare();
++		virtual int operator() (CBTreeData* lhs, CBTreeData* rhs);
++	private:
++		std::vector<TokenKind> m_KindPrior;
++		CBAlphabetCompare m_CompareEquals;
++};
++
++class CBScopeCompare: public CBTreeDataCompare
++{
++	public:
++		virtual int operator() (CBTreeData* lhs, CBTreeData* rhs);
++	private:
++		CBKindCompare m_CompareEquals;
++};
++
++typedef std::deque<CBExpandedItemData> ExpandedItemVect;
++typedef std::deque<CBTreeData> SelectedItemPath;
++
+ class ClassBrowserBuilderThread : public wxThread
+ {
+     public:
+@@ -71,12 +120,12 @@
+ 
+         void BuildTree();
+         void RemoveInvalidNodes(wxTreeCtrl* tree, wxTreeItemId parent);
+-        wxTreeItemId AddNodeIfNotThere(wxTreeCtrl* tree, wxTreeItemId parent, const wxString& name, int imgIndex = -1, CBTreeData* data = 0, bool sorted = true);
+-        bool AddChildrenOf(wxTreeCtrl* tree, wxTreeItemId parent, int parentTokenIdx, int tokenKindMask = 0xffff);
++        wxTreeItemId AddNodeIfNotThere(wxTreeCtrl* tree, wxTreeItemId parent, const wxString& name, int imgIndex = -1, CBTreeData* data = 0);
++        bool AddChildrenOf(wxTreeCtrl* tree, wxTreeItemId parent, int parentTokenIdx, int tokenKindMask = 0xffff, bool sorted = true, int tokenScopeMask = 0);
+         bool AddAncestorsOf(wxTreeCtrl* tree, wxTreeItemId parent, int tokenIdx);
+         bool AddDescendantsOf(wxTreeCtrl* tree, wxTreeItemId parent, int tokenIdx, bool allowInheritance = true);
+-        bool AddNodes(wxTreeCtrl* tree, wxTreeItemId parent, TokenIdxSet::iterator start, TokenIdxSet::iterator end, int tokenKindMask = 0xffff, bool allowGlobals = false);
+-        void SelectNode(wxTreeItemId node);
++        bool AddNodes(wxTreeCtrl* tree, wxTreeItemId parent, const TokenIdxSet& tokens, int tokenKindMask = 0xffff, int tokenScopeMask = 0, bool allowGlobals = false, bool sorted = true);
++        void AddMembersOf(wxTreeCtrl* tree, wxTreeItemId node);
+         bool TokenMatchesFilter(Token* token);
+         bool TokenContainsChildrenOfKind(Token* token, int kind);
+         bool CreateSpecialFolders(wxTreeCtrl* tree, wxTreeItemId parent);
+@@ -99,7 +148,15 @@
+ 
+ 
+         wxMutex m_BuildMutex;
++        CBTreeDataCompare* m_pDataCompare;
+     private:
++   		void SaveExpandedItems(wxTreeCtrl* tree, wxTreeItemId parent, int level);
++		void ExpandSavedItems(wxTreeCtrl* tree, wxTreeItemId parent, int level);
++		void SaveSelectedItem();
++		void SelectSavedItem();
++
++		ExpandedItemVect m_ExpandedVect;
++		SelectedItemPath m_SelectedPath;
+ };
+ 
+ #endif // CLASSBROWSERBUILDERTHREAD_H
+Index: src/plugins/codecompletion/codecompletion.cpp
+===================================================================
+--- src/plugins/codecompletion/codecompletion.cpp	(revision 5367)
++++ src/plugins/codecompletion/codecompletion.cpp	(working copy)
+@@ -752,6 +752,7 @@
+     if (files.GetCount() != 0)
+     {
+         files.Sort();
++        ed->GetControl()->ClearRegisteredImages();
+         ed->GetControl()->AutoCompSetIgnoreCase(caseSens);
+         ed->GetControl()->AutoCompShow(pos - lineStartPos - found, GetStringFromArray(files, _T(" ")));
+     }
+Index: src/plugins/codecompletion/nativeparser.cpp
+===================================================================
+--- src/plugins/codecompletion/nativeparser.cpp	(revision 5367)
++++ src/plugins/codecompletion/nativeparser.cpp	(working copy)
+@@ -1351,6 +1351,11 @@
+         col = actual.Length() - 1;
+     }
+ 
++#ifdef DEBUG_CC_AI
++	if (s_DebugSmartSense)
++		Manager::Get()->GetLogManager()->DebugLog(F(_T("AI enter, actual: \"%s\""), actual.c_str()));
++#endif
++
+     static cbEditor* cached_editor = 0;
+     static int cached_editor_start_word = 0;
+     static wxString cached_search;
+@@ -1554,6 +1559,32 @@
+         Manager::Get()->GetLogManager()->DebugLog(F(_T("Looping %d results"), local_result.size()));
+ #endif
+ 
++	if (local_result.size() == 1)
++	{
++		int id = *local_result.begin();
++		Token* token = tree->at(id);
++
++		if (token->m_TokenKind == tkTypedef)
++		{
++			std::queue<ParserComponent> type_components;
++			BreakUpComponents(parser, token->m_ActualType, type_components);
++
++			while(!components.empty())
++			{
++				ParserComponent comp = components.front();
++				components.pop();
++				type_components.push(comp);
++			}
++
++#ifdef DEBUG_CC_AI
++			if (s_DebugSmartSense)
++				Manager::Get()->GetLogManager()->DebugLog(F(_T("Replacing %s to %s"), token->m_Name.c_str(), token->m_ActualType.c_str()));
++#endif
++			return FindAIMatches(parser, type_components, result, parentTokenIdx, noPartialMatch, caseSensitive, use_inheritance, kindMask, search_scope);
++		}
++
++	}
++
+     // loop all matches, and recurse
+     for (TokenIdxSet::iterator it = local_result.begin(); it != local_result.end(); it++)
+     {
+@@ -1638,7 +1669,7 @@
+                         break;
+                     if (!parent)
+                         break;
+-                    parent = tree->at(parent->m_ParentIndex);
++					parent = tree->at(parent->m_ParentIndex);
+                 } while (true);
+                 ++itsearch;
+             }
+@@ -1715,7 +1746,7 @@
+     Token* parent = tree->at(parentIdx);
+ #ifdef DEBUG_CC_AI
+     if (s_DebugSmartSense)
+-        Manager::Get()->GetLogManager()->DebugLog(F(_T("GenerateResultSet: search '%s', parent='%s'"), search.c_str(), parent ? parent->m_Name.c_str() : _T("Global namespace")));
++        Manager::Get()->GetLogManager()->DebugLog(F(_T("GenerateResultSet: search '%s', parent='%s (%d), isPrefix=%d'"), search.c_str(), parent ? parent->m_Name.c_str() : _T("Global namespace"), parent ? parent->GetSelf() : 0, isPrefix ? 1 : 0));
+ #endif
+     if (parent)
+     {
+Index: src/plugins/codecompletion/parser/parser.cpp
+===================================================================
+--- src/plugins/codecompletion/parser/parser.cpp	(revision 5367)
++++ src/plugins/codecompletion/parser/parser.cpp	(working copy)
+@@ -82,6 +82,12 @@
+     m_pImageList->Add(bmp); // PARSER_IMG_CLASS_FOLDER
+     bmp = cbLoadBitmap(prefix + _T("class.png"), wxBITMAP_TYPE_PNG);
+     m_pImageList->Add(bmp); // PARSER_IMG_CLASS
++    bmp = cbLoadBitmap(prefix + _T("class_private.png"), wxBITMAP_TYPE_PNG);
++    m_pImageList->Add(bmp); // PARSER_IMG_CLASS_PRIVATE
++    bmp = cbLoadBitmap(prefix + _T("class_protected.png"), wxBITMAP_TYPE_PNG);
++    m_pImageList->Add(bmp); // PARSER_IMG_CLASS_PROTECTED
++    bmp = cbLoadBitmap(prefix + _T("class_public.png"), wxBITMAP_TYPE_PNG);
++    m_pImageList->Add(bmp); // PARSER_IMG_CLASS_PUBLIC
+     bmp = cbLoadBitmap(prefix + _T("ctor_private.png"), wxBITMAP_TYPE_PNG);
+     m_pImageList->Add(bmp); // PARSER_IMG_CTOR_PRIVATE
+     bmp = cbLoadBitmap(prefix + _T("ctor_protected.png"), wxBITMAP_TYPE_PNG);
+@@ -110,14 +116,30 @@
+     m_pImageList->Add(bmp); // PARSER_IMG_PREPROCESSOR
+     bmp = cbLoadBitmap(prefix + _T("enum.png"), wxBITMAP_TYPE_PNG);
+     m_pImageList->Add(bmp); // PARSER_IMG_ENUM
++    bmp = cbLoadBitmap(prefix + _T("enum_private.png"), wxBITMAP_TYPE_PNG);
++    m_pImageList->Add(bmp); // PARSER_IMG_ENUM_PRIVATE
++    bmp = cbLoadBitmap(prefix + _T("enum_protected.png"), wxBITMAP_TYPE_PNG);
++    m_pImageList->Add(bmp); // PARSER_IMG_ENUM_PROTECTED
++    bmp = cbLoadBitmap(prefix + _T("enum_public.png"), wxBITMAP_TYPE_PNG);
++    m_pImageList->Add(bmp); // PARSER_IMG_ENUM_PUBLIC
+     bmp = cbLoadBitmap(prefix + _T("enumerator.png"), wxBITMAP_TYPE_PNG);
+     m_pImageList->Add(bmp); // PARSER_IMG_ENUMERATOR
+     bmp = cbLoadBitmap(prefix + _T("namespace.png"), wxBITMAP_TYPE_PNG);
+     m_pImageList->Add(bmp); // PARSER_IMG_NAMESPACE
+     bmp = cbLoadBitmap(prefix + _T("typedef.png"), wxBITMAP_TYPE_PNG);
+     m_pImageList->Add(bmp); // PARSER_IMG_TYPEDEF
++    bmp = cbLoadBitmap(prefix + _T("typedef_private.png"), wxBITMAP_TYPE_PNG);
++    m_pImageList->Add(bmp); // PARSER_IMG_TYPEDEF_PRIVATE
++    bmp = cbLoadBitmap(prefix + _T("typedef_protected.png"), wxBITMAP_TYPE_PNG);
++    m_pImageList->Add(bmp); // PARSER_IMG_TYPEDEF_PROTECTED
++    bmp = cbLoadBitmap(prefix + _T("typedef_public.png"), wxBITMAP_TYPE_PNG);
++    m_pImageList->Add(bmp); // PARSER_IMG_TYPEDEF_PUBLIC
+     bmp = cbLoadBitmap(prefix + _T("symbols_folder.png"), wxBITMAP_TYPE_PNG);
+     m_pImageList->Add(bmp); // PARSER_IMG_SYMBOLS_FOLDER
++    bmp = cbLoadBitmap(prefix + _T("vars_folder.png"), wxBITMAP_TYPE_PNG);
++    m_pImageList->Add(bmp); // PARSER_IMG_VARS_FOLDER
++    bmp = cbLoadBitmap(prefix + _T("funcs_folder.png"), wxBITMAP_TYPE_PNG);
++    m_pImageList->Add(bmp); // PARSER_IMG_FUNCS_FOLDER
+     bmp = cbLoadBitmap(prefix + _T("enums_folder.png"), wxBITMAP_TYPE_PNG);
+     m_pImageList->Add(bmp); // PARSER_IMG_ENUMS_FOLDER
+     bmp = cbLoadBitmap(prefix + _T("preproc_folder.png"), wxBITMAP_TYPE_PNG);
+@@ -198,7 +220,9 @@
+     m_Options.wantPreprocessor = cfg->ReadBool(_T("/want_preprocessor"), true);
+     m_BrowserOptions.showInheritance = cfg->ReadBool(_T("/browser_show_inheritance"), false);
+     m_BrowserOptions.expandNS = cfg->ReadBool(_T("/browser_expand_ns"), false);
++	m_BrowserOptions.treeMembers = cfg->ReadBool(_T("/browser_tree_members"), true);
+     m_BrowserOptions.displayFilter = (BrowserDisplayFilter)cfg->ReadInt(_T("/browser_display_filter"), bdfWorkspace);
++	m_BrowserOptions.sortType = (BrowserSortType)cfg->ReadInt(_T("/browser_sort_type"), bstKind);
+ #endif // STANDALONE
+ }
+ 
+@@ -215,7 +239,9 @@
+     cfg->Write(_T("/want_preprocessor"), m_Options.wantPreprocessor);
+     cfg->Write(_T("/browser_show_inheritance"), m_BrowserOptions.showInheritance);
+     cfg->Write(_T("/browser_expand_ns"), m_BrowserOptions.expandNS);
++    cfg->Write(_T("/browser_tree_members"), m_BrowserOptions.treeMembers);
+     cfg->Write(_T("/browser_display_filter"), m_BrowserOptions.displayFilter);
++	cfg->Write(_T("/browser_sort_type"), m_BrowserOptions.sortType);
+ #endif // STANDALONE
+ }
+ 
+@@ -274,15 +300,36 @@
+     {
+         case tkPreprocessor: return PARSER_IMG_PREPROCESSOR;
+ 
+-        case tkEnum: return PARSER_IMG_ENUM;
++        case tkEnum:
++			switch (token->m_Scope)
++			{
++                case tsPublic: return PARSER_IMG_ENUM_PUBLIC;
++                case tsProtected: return PARSER_IMG_ENUM_PROTECTED;
++                case tsPrivate: return PARSER_IMG_ENUM_PRIVATE;
++				default: return PARSER_IMG_ENUM;
++        	}
+ 
+         case tkEnumerator: return PARSER_IMG_ENUMERATOR;
+ 
+-        case tkClass: return PARSER_IMG_CLASS;
++        case tkClass:
++			switch (token->m_Scope)
++			{
++                case tsPublic: return PARSER_IMG_CLASS_PUBLIC;
++                case tsProtected: return PARSER_IMG_CLASS_PROTECTED;
++                case tsPrivate: return PARSER_IMG_CLASS_PRIVATE;
++                default: return PARSER_IMG_CLASS_PUBLIC;
++			}
+ 
+         case tkNamespace: return PARSER_IMG_NAMESPACE;
+ 
+-        case tkTypedef: return PARSER_IMG_TYPEDEF;
++        case tkTypedef:
++			switch (token->m_Scope)
++			{
++                case tsPublic: return PARSER_IMG_TYPEDEF_PUBLIC;
++                case tsProtected: return PARSER_IMG_TYPEDEF_PROTECTED;
++                case tsPrivate: return PARSER_IMG_TYPEDEF_PRIVATE;
++				default: return PARSER_IMG_TYPEDEF;
++        	}
+ 
+         case tkConstructor:
+             switch (token->m_Scope)
+Index: src/plugins/codecompletion/parser/parser.h
+===================================================================
+--- src/plugins/codecompletion/parser/parser.h	(revision 5367)
++++ src/plugins/codecompletion/parser/parser.h	(working copy)
+@@ -20,31 +20,42 @@
+     #include <wx/imaglist.h>
+ #endif // STANDALONE
+ 
+-#define PARSER_IMG_NONE                -2
+-#define PARSER_IMG_CLASS_FOLDER        0
+-#define PARSER_IMG_CLASS            1
+-#define PARSER_IMG_CTOR_PRIVATE        2
+-#define PARSER_IMG_CTOR_PROTECTED    3
+-#define PARSER_IMG_CTOR_PUBLIC        4
+-#define PARSER_IMG_DTOR_PRIVATE        5
+-#define PARSER_IMG_DTOR_PROTECTED    6
+-#define PARSER_IMG_DTOR_PUBLIC        7
+-#define PARSER_IMG_FUNC_PRIVATE        8
+-#define PARSER_IMG_FUNC_PROTECTED    9
+-#define PARSER_IMG_FUNC_PUBLIC        10
+-#define PARSER_IMG_VAR_PRIVATE        11
+-#define PARSER_IMG_VAR_PROTECTED    12
+-#define PARSER_IMG_VAR_PUBLIC        13
+-#define PARSER_IMG_PREPROCESSOR        14
+-#define PARSER_IMG_ENUM                15
+-#define PARSER_IMG_ENUMERATOR        16
+-#define PARSER_IMG_NAMESPACE         17
+-#define PARSER_IMG_TYPEDEF         18
+-#define PARSER_IMG_SYMBOLS_FOLDER    19
+-#define PARSER_IMG_ENUMS_FOLDER        20
+-#define PARSER_IMG_PREPROC_FOLDER    21
+-#define PARSER_IMG_OTHERS_FOLDER    22
+-#define PARSER_IMG_TYPEDEF_FOLDER    23
++#define PARSER_IMG_NONE         	-2
++#define PARSER_IMG_CLASS_FOLDER     	0
++#define PARSER_IMG_CLASS            	1
++#define PARSER_IMG_CLASS_PRIVATE    	2
++#define PARSER_IMG_CLASS_PROTECTED  	3
++#define PARSER_IMG_CLASS_PUBLIC     	4
++#define PARSER_IMG_CTOR_PRIVATE     	5
++#define PARSER_IMG_CTOR_PROTECTED   	6
++#define PARSER_IMG_CTOR_PUBLIC      	7
++#define PARSER_IMG_DTOR_PRIVATE     	8
++#define PARSER_IMG_DTOR_PROTECTED   	9
++#define PARSER_IMG_DTOR_PUBLIC      	10
++#define PARSER_IMG_FUNC_PRIVATE     	11
++#define PARSER_IMG_FUNC_PROTECTED   	12
++#define PARSER_IMG_FUNC_PUBLIC      	13
++#define PARSER_IMG_VAR_PRIVATE      	14
++#define PARSER_IMG_VAR_PROTECTED    	15
++#define PARSER_IMG_VAR_PUBLIC       	16
++#define PARSER_IMG_PREPROCESSOR     	17
++#define PARSER_IMG_ENUM             	18
++#define PARSER_IMG_ENUM_PRIVATE			19
++#define PARSER_IMG_ENUM_PROTECTED		20
++#define PARSER_IMG_ENUM_PUBLIC			21
++#define PARSER_IMG_ENUMERATOR       	22
++#define PARSER_IMG_NAMESPACE        	23
++#define PARSER_IMG_TYPEDEF       		24
++#define PARSER_IMG_TYPEDEF_PRIVATE		25
++#define PARSER_IMG_TYPEDEF_PROTECTED	26
++#define PARSER_IMG_TYPEDEF_PUBLIC		27
++#define PARSER_IMG_SYMBOLS_FOLDER   	28
++#define PARSER_IMG_VARS_FOLDER     		29
++#define PARSER_IMG_FUNCS_FOLDER     	30
++#define PARSER_IMG_ENUMS_FOLDER     	31
++#define PARSER_IMG_PREPROC_FOLDER   	32
++#define PARSER_IMG_OTHERS_FOLDER		33
++#define PARSER_IMG_TYPEDEF_FOLDER   	34
+ 
+ #define PARSER_IMG_MIN PARSER_IMG_CLASS_FOLDER
+ #define PARSER_IMG_MAX PARSER_IMG_OTHERS_FOLDER
+@@ -77,11 +88,20 @@
+     bdfEverything,
+ };
+ 
++enum BrowserSortType
++{
++	bstAlphabet	= 0,
++	bstKind,
++	bstScope
++};
++
+ struct BrowserOptions
+ {
+     bool showInheritance; // default: false
+     bool expandNS; // default: false (auto-expand namespaces)
++    bool treeMembers; //
+     BrowserDisplayFilter displayFilter; // default: bdfWorkspace
++    BrowserSortType	sortType; //
+ };
+ 
+ class ClassBrowser;
+Index: src/plugins/codecompletion/parser/parserthread.cpp
+===================================================================
+--- src/plugins/codecompletion/parser/parserthread.cpp	(revision 5367)
++++ src/plugins/codecompletion/parser/parserthread.cpp	(working copy)
+@@ -832,7 +832,9 @@
+     if (!newToken && !m_Options.isTemp)
+         newToken = TokenExists(name, m_pLastParent, kind);
+ 
+-    if (newToken && newToken->m_TokenKind == kind && newToken->m_Args == args)
++
++    wxString newTokenArgs = (newToken) ? (newToken->m_Args) : _T("");
++    if (newToken && newToken->m_TokenKind == kind && newTokenArgs == args)
+     {
+         m_pTokens->m_modified = true;
+     }
+@@ -1366,7 +1368,7 @@
+ 
+     Token* newEnum = 0L;
+     unsigned int level = 0;
+-    if (wxIsalpha(token.GetChar(0)))
++    if (wxIsalpha(token.GetChar(0)) || token.GetChar(0) == '_')
+     {
+         if (m_Tokenizer.PeekToken().GetChar(0) != '{')
+             return;
+@@ -1405,7 +1407,7 @@
+         {
+             // this "if", avoids non-valid enumerators
+             // like a comma (if no enumerators follow)
+-            if (wxIsalpha(token.GetChar(0)))
++            if (wxIsalpha(token.GetChar(0)) || token.GetChar(0) == '_')
+             {
+                 Token* lastParent = m_pLastParent;
+                 m_pLastParent = newEnum;
+Index: src/plugins/codecompletion/parser/token.cpp
+===================================================================
+--- src/plugins/codecompletion/parser/token.cpp	(revision 5367)
++++ src/plugins/codecompletion/parser/token.cpp	(working copy)
+@@ -463,7 +463,7 @@
+         Token* curtoken = m_Tokens[result];
+         if(!curtoken)
+             continue;
+-        if((parent<0 || curtoken->m_ParentIndex == parent) && curtoken->m_TokenKind & kindMask)
++        if((/*parent<0 || */curtoken->m_ParentIndex == parent) && curtoken->m_TokenKind & kindMask)
+             return result;
+     }
+     return -1;
+@@ -688,6 +688,7 @@
+     if(index <=0)
+         return;
+     TokenIdxSet& the_list = m_FilesMap[index];
++    wxString fname = GetFilename(index);
+     TokenIdxSet::iterator it;
+     for(it = the_list.begin(); it != the_list.end();it++)
+     {
+@@ -695,6 +696,7 @@
+         if(idx < 0 || (size_t)idx > m_Tokens.size())
+             continue;
+         Token* the_token = at(idx);
++
+         if(!the_token)
+             continue;
+ 
+Index: src/plugins/codecompletion/parser/tokenizer.cpp
+===================================================================
+--- src/plugins/codecompletion/parser/tokenizer.cpp	(revision 5367)
++++ src/plugins/codecompletion/parser/tokenizer.cpp	(working copy)
+@@ -619,6 +619,10 @@
+         // fix-up arguments (remove excessive spaces/tabs/newlines)
+         for (unsigned int i = 0; i < tmp.Length() - 1; ++i)
+         {
++            //skip spaces before '=' and ','
++            if (tmp.GetChar(i) == ' ' && (tmp.GetChar(i + 1) == ',' || tmp.GetChar(i + 1) == '='))
++				continue;
++
+             if (tmp.GetChar(i) == '/' && tmp.GetChar(i + 1) == '*')
+             {
+                 // skip C comments
+Index: src/plugins/codecompletion/resources/settings.xrc
+===================================================================
+--- src/plugins/codecompletion/resources/settings.xrc	(revision 5367)
++++ src/plugins/codecompletion/resources/settings.xrc	(working copy)
+@@ -393,6 +393,14 @@
+ 											<flag>wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+ 											<border>8</border>
+ 										</object>
++										<object class="sizeritem">
++											<object class="wxCheckBox" name="chkTreeMembers">
++												<label>Display member list in separate tree</label>
++											</object>
++											<flag>wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++											<border>8</border>
++											<option>1</option>
++										</object>
+ 									</object>
+ 									<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+ 									<border>8</border>

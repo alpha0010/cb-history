@@ -1,0 +1,36 @@
+Index: src/plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- src/plugins/compilergcc/compilergcc.cpp	(revision 9676)
++++ src/plugins/compilergcc/compilergcc.cpp	(working copy)
+@@ -471,13 +471,29 @@
+     cbConfigurationPanel* panel = new CompilerOptionsDlg(&dlg, this, project, target);
+     panel->SetParentDialog(&dlg);
+     dlg.AttachConfigurationPanel(panel);
+-    PlaceWindow(&dlg);
++
++    // Load the previous position and size of the build options dialog.
++    ConfigManager* cfg = Manager::Get()->GetConfigManager(_T("compiler"));
++    int positionX = cfg->ReadInt(_T("optionsDialogPositionX"), 0);
++    int positionY = cfg->ReadInt(_T("optionsDialogPositionY"), 0);
++    int width = cfg->ReadInt(_T("optionsDialogWidth"), 0);
++    int height = cfg->ReadInt(_T("optionsDialogHeight"), 0);
++    if (width != 0 && height != 0)
++        dlg.SetSize(positionX, positionY, width, height);
++    else
++        PlaceWindow(&dlg);
++
+     if (dlg.ShowModal() == wxID_OK)
+     {
++        cfg->Write(_T("optionsDialogPositionX"), dlg.GetPosition().x);
++        cfg->Write(_T("optionsDialogPositionY"), dlg.GetPosition().y);
++        cfg->Write(_T("optionsDialogWidth"), dlg.GetClientSize().GetWidth());
++        cfg->Write(_T("optionsDialogHeight"), dlg.GetClientSize().GetHeight());
++
+         SaveOptions();
+         Manager::Get()->GetMacrosManager()->Reset();
+ 
+-        bool hasBuildProg = Manager::Get()->GetConfigManager(_T("compiler"))->ReadBool(_T("/build_progress/bar"), false);
++        bool hasBuildProg = cfg->ReadBool(_T("/build_progress/bar"), false);
+         if (hasBuildProg)
+             m_pLog->AddBuildProgressBar();
+         else

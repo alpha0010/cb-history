@@ -1,0 +1,573 @@
+Index: src/plugins/contrib/AutoVersioning/avConfig.h
+===================================================================
+--- src/plugins/contrib/AutoVersioning/avConfig.h	(revision 5857)
++++ src/plugins/contrib/AutoVersioning/avConfig.h	(working copy)
+@@ -42,6 +42,21 @@
+                 RevisionMax != Other.RevisionMax || RevisionRandMax != Other.RevisionRandMax ||
+                 BuildTimesToIncrementMinor != Other.BuildTimesToIncrementMinor);
+ 	}
++};
++
++struct avCode
++{
++	std::string HeaderGuard;
++	std::string NameSpace;
++	std::string Prefix;
++
++	avCode() : HeaderGuard("VERSION_H"), NameSpace("AutoVersion"), Prefix(""){}
++
++	bool operator!=(const avCode& Other) const
++	{
++	    return (HeaderGuard != Other.HeaderGuard || NameSpace != Other.NameSpace ||
++                Prefix != Other.Prefix);
++	}
+ };
+ 
+ struct avSettings
+@@ -80,7 +95,8 @@
+ };
+ 
+ struct avConfig
+-{
++{
++    avCode Code;
+ 	avScheme Scheme;
+ 	avSettings Settings;
+ 	avChangesLog ChangesLog;
+@@ -88,7 +104,7 @@
+ 	bool operator!=(const avConfig& Other) const
+ 	{
+ 	    return (Scheme != Other.Scheme || Settings != Other.Settings ||
+-                ChangesLog != Other.ChangesLog);
++                ChangesLog != Other.ChangesLog || Code != Other.Code);
+ 	}
+ };
+ 
+Index: src/plugins/contrib/AutoVersioning/avVersionEditorDlg.cpp
+===================================================================
+--- src/plugins/contrib/AutoVersioning/avVersionEditorDlg.cpp	(revision 5857)
++++ src/plugins/contrib/AutoVersioning/avVersionEditorDlg.cpp	(working copy)
+@@ -46,6 +46,13 @@
+ const long avVersionEditorDlg::ID_BUILDTIMES_LABEL = wxNewId();
+ const long avVersionEditorDlg::ID_BUILDTIMES_TEXT = wxNewId();
+ const long avVersionEditorDlg::ID_SCHEME_PANEL = wxNewId();
++const long avVersionEditorDlg::ID_HEADER_GUARD_LABEL = wxNewId();
++const long avVersionEditorDlg::ID_HEADER_GUARD_TEXT = wxNewId();
++const long avVersionEditorDlg::ID_NAMESPACE_LABEL = wxNewId();
++const long avVersionEditorDlg::ID_NAMESPACE_TEXT = wxNewId();
++const long avVersionEditorDlg::ID_PREFIX_LABEL = wxNewId();
++const long avVersionEditorDlg::ID_PREFIX_TEXT = wxNewId();
++const long avVersionEditorDlg::ID_CODE_PANEL = wxNewId();
+ const long avVersionEditorDlg::ID_AUTO_CHECK = wxNewId();
+ const long avVersionEditorDlg::ID_DATES_CHECK = wxNewId();
+ const long avVersionEditorDlg::ID_COMMIT_CHECK = wxNewId();
+@@ -93,6 +100,7 @@
+     wxBoxSizer* BoxSizer13;
+     wxBoxSizer* BoxSizer11;
+     wxBoxSizer* BoxSizer14;
++    wxBoxSizer* codeSizer;
+ 
+     Create(parent, wxID_ANY, _("Auto Versioning Editor"), wxDefaultPosition, wxDefaultSize, wxCAPTION|wxRESIZE_BORDER, _T("wxID_ANY"));
+     SetClientSize(wxSize(469,364));
+@@ -150,7 +158,7 @@
+     lblStatus = new wxStaticText(pnlStatus, ID_SATUS_LABEL, _("Software Status:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_SATUS_LABEL"));
+     statusSizer->Add(lblStatus, 0, wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+     cmbStatus = new wxComboBox(pnlStatus, ID_STATUS_COMBOBOX, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, 0, 0, wxDefaultValidator, _T("ID_STATUS_COMBOBOX"));
+-    cmbStatus->SetSelection( cmbStatus->Append(_("Alpha")) );
++    cmbStatus->Append(_("Alpha"));
+     cmbStatus->Append(_("Beta"));
+     cmbStatus->Append(_("Release"));
+     cmbStatus->Append(_("Release Candidate"));
+@@ -162,7 +170,7 @@
+     StaticText1 = new wxStaticText(pnlStatus, ID_STATICTEXT1, _("Abbreviation:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_STATICTEXT1"));
+     statusSizer->Add(StaticText1, 0, wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+     cmbAbbreviation = new wxComboBox(pnlStatus, ID_ABBREVIATION_COMBOBOX, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, 0, 0, wxDefaultValidator, _T("ID_ABBREVIATION_COMBOBOX"));
+-    cmbAbbreviation->SetSelection( cmbAbbreviation->Append(_("a")) );
++    cmbAbbreviation->Append(_("a"));
+     cmbAbbreviation->Append(_("b"));
+     cmbAbbreviation->Append(_("r"));
+     cmbAbbreviation->Append(_("rc"));
+@@ -210,6 +218,23 @@
+     pnlScheme->SetSizer(schemeSizer);
+     schemeSizer->Fit(pnlScheme);
+     schemeSizer->SetSizeHints(pnlScheme);
++    pnlCode = new wxPanel(nbAutoVersioning, ID_CODE_PANEL, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, _T("ID_CODE_PANEL"));
++    codeSizer = new wxBoxSizer(wxVERTICAL);
++    lblHeaderGuard = new wxStaticText(pnlCode, ID_HEADER_GUARD_LABEL, _("Header guard:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_HEADER_GUARD_LABEL"));
++    codeSizer->Add(lblHeaderGuard, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 5);
++    txtHeaderGuard = new wxTextCtrl(pnlCode, ID_HEADER_GUARD_TEXT, _("VERSION_H"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("ID_HEADER_GUARD_TEXT"));
++    codeSizer->Add(txtHeaderGuard, 0, wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP, 5);
++    lblNamespace = new wxStaticText(pnlCode, ID_NAMESPACE_LABEL, _("Namespace:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_NAMESPACE_LABEL"));
++    codeSizer->Add(lblNamespace, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 5);
++    txtNameSpace = new wxTextCtrl(pnlCode, ID_NAMESPACE_TEXT, _("AutoVersion"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("ID_NAMESPACE_TEXT"));
++    codeSizer->Add(txtNameSpace, 0, wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP, 5);
++    lblPrefix = new wxStaticText(pnlCode, ID_PREFIX_LABEL, _("Variables prefix:"), wxDefaultPosition, wxDefaultSize, 0, _T("ID_PREFIX_LABEL"));
++    codeSizer->Add(lblPrefix, 0, wxALL|wxALIGN_LEFT|wxALIGN_TOP, 5);
++    txtPrefix = new wxTextCtrl(pnlCode, ID_PREFIX_TEXT, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("ID_PREFIX_TEXT"));
++    codeSizer->Add(txtPrefix, 0, wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
++    pnlCode->SetSizer(codeSizer);
++    codeSizer->Fit(pnlCode);
++    codeSizer->SetSizeHints(pnlCode);
+     pnlSettings = new wxPanel(nbAutoVersioning, ID_SETTINGS_PANEL, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, _T("ID_SETTINGS_PANEL"));
+     settingsSizer = new wxBoxSizer(wxVERTICAL);
+     BoxSizer11 = new wxBoxSizer(wxHORIZONTAL);
+@@ -253,8 +278,8 @@
+     BoxSizer8 = new wxBoxSizer(wxHORIZONTAL);
+     wxString __wxRadioBoxChoices_1[2] =
+     {
+-        _("C"),
+-        _("C++")
++    	_("C"),
++    	_("C++")
+     };
+     rbHeaderLanguage = new wxRadioBox(pnlSettings, ID_HEADERLANGUAGE_RADIOBOX, _("Header language"), wxDefaultPosition, wxDefaultSize, 2, __wxRadioBoxChoices_1, 2, wxRA_HORIZONTAL, wxDefaultValidator, _T("ID_HEADERLANGUAGE_RADIOBOX"));
+     rbHeaderLanguage->SetSelection(1);
+@@ -281,7 +306,7 @@
+     pnlSettings->SetSizer(settingsSizer);
+     settingsSizer->Fit(pnlSettings);
+     settingsSizer->SetSizeHints(pnlSettings);
+-    pnlChanges = new wxPanel(nbAutoVersioning, ID_CHANGES_PANEL, wxPoint(231,17), wxDefaultSize, wxTAB_TRAVERSAL, _T("ID_CHANGES_PANEL"));
++    pnlChanges = new wxPanel(nbAutoVersioning, ID_CHANGES_PANEL, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, _T("ID_CHANGES_PANEL"));
+     changesSizer = new wxBoxSizer(wxVERTICAL);
+     chkChanges = new wxCheckBox(pnlChanges, ID_GENERATECHANGES_CHECKBOX, _("Show changes editor when incrementing version"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("ID_GENERATECHANGES_CHECKBOX"));
+     chkChanges->SetValue(false);
+@@ -311,10 +336,11 @@
+     nbAutoVersioning->AddPage(pnlVersionValues, _("Version Values"), true);
+     nbAutoVersioning->AddPage(pnlStatus, _("Status"), false);
+     nbAutoVersioning->AddPage(pnlScheme, _("Scheme"), false);
++    nbAutoVersioning->AddPage(pnlCode, _("Code"), false);
+     nbAutoVersioning->AddPage(pnlSettings, _("Settings"), false);
+     nbAutoVersioning->AddPage(pnlChanges, _("Changes Log"), false);
+     mainSizer->Add(nbAutoVersioning, 1, wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+-    lblCurrentProject = new wxStaticText(this, ID_STATICTEXT2, _("Current Project: "), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE, _T("ID_STATICTEXT2"));
++    lblCurrentProject = new wxStaticText(this, ID_STATICTEXT2, _("Current Project:"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE, _T("ID_STATICTEXT2"));
+     mainSizer->Add(lblCurrentProject, 0, wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+     buttonsSizer = new wxBoxSizer(wxHORIZONTAL);
+     btnAccept = new wxButton(this, ID_ACCEPT, _("&Accept"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("ID_ACCEPT"));
+@@ -341,7 +367,7 @@
+     Connect(ID_ACCEPT,wxEVT_COMMAND_BUTTON_CLICKED,(wxObjectEventFunction)&avVersionEditorDlg::OnAcceptClick);
+     Connect(ID_CANCEL,wxEVT_COMMAND_BUTTON_CLICKED,(wxObjectEventFunction)&avVersionEditorDlg::OnCancelClick);
+     Connect(ID_VALIDATE_TIMER,wxEVT_TIMER,(wxObjectEventFunction)&avVersionEditorDlg::OnTmrValidateInputTrigger);
+-    Connect(wxID_ANY,wxEVT_ENTER_WINDOW,(wxObjectEventFunction)&avVersionEditorDlg::OnMouseEnter);
++    Connect(wxEVT_ENTER_WINDOW,(wxObjectEventFunction)&avVersionEditorDlg::OnMouseEnter);
+     //*)
+ 
+     tmrValidateInput.Stop();
+@@ -554,6 +580,26 @@
+         txtChangesTitle->SetValue(value);
+     }
+ }
++//}
++
++//{Code
++void avVersionEditorDlg::SetHeaderGuard(const wxString& value)
++{
++    m_headerGuard = value;
++    txtHeaderGuard->SetValue(value);
++}
++
++void avVersionEditorDlg::SetNamespace(const wxString& value)
++{
++    m_namespace = value;
++    txtNameSpace->SetValue(value);
++}
++
++void avVersionEditorDlg::SetPrefix(const wxString& value)
++{
++    m_prefix = value;
++    txtPrefix->SetValue(value);
++}
+ //}
+ 
+ void avVersionEditorDlg::SetCurrentProject(const wxString& projectName)
+@@ -593,7 +639,11 @@
+ 
+     m_changes = chkChanges->IsChecked();
+     m_changesTitle = txtChangesTitle->GetValue();
+-    m_changesLogPath = txtChangesLogPath->GetValue();
++    m_changesLogPath = txtChangesLogPath->GetValue();
++
++    m_headerGuard = txtHeaderGuard->GetValue();
++    m_namespace = txtNameSpace->GetValue();
++    m_prefix = txtPrefix->GetValue();
+ 
+     EndModal(0);
+ }
+Index: src/plugins/contrib/AutoVersioning/AutoVersioning.cpp
+===================================================================
+--- src/plugins/contrib/AutoVersioning/AutoVersioning.cpp	(revision 5857)
++++ src/plugins/contrib/AutoVersioning/AutoVersioning.cpp	(working copy)
+@@ -186,6 +186,12 @@
+                     Config.Settings.Svn = Help?true:false;
+                 }
+             }
++            if(const TiXmlElement* pElem = Handle.FirstChildElement("Code").ToElement())
++            {
++                Config.Code.HeaderGuard = pElem->Attribute("header_guard");
++                Config.Code.NameSpace = pElem->Attribute("namespace");
++                Config.Code.Prefix = pElem->Attribute("prefix");
++            }
+             if(const TiXmlElement* pElem = Handle.FirstChildElement("Changes_Log").ToElement())
+             {
+                 Config.ChangesLog.AppTitle = pElem->Attribute("app_title");
+@@ -261,6 +267,11 @@
+             ChangesLog.SetAttribute("app_title", NewConfig.ChangesLog.AppTitle.c_str());
+             ChangesLog.SetAttribute("changeslog_path", NewConfig.ChangesLog.ChangesLogPath.c_str());
+             node->InsertEndChild(ChangesLog);
++            TiXmlElement Code("Code");
++            Code.SetAttribute("header_guard", NewConfig.Code.HeaderGuard.c_str());
++            Code.SetAttribute("namespace", NewConfig.Code.NameSpace.c_str());
++            Code.SetAttribute("prefix", NewConfig.Code.Prefix.c_str());
++            node->InsertEndChild(Code);
+         }
+         // TODO (KILLERBOT) : what if we decide to not version anymore : how to remove ??
+     }
+@@ -488,6 +499,10 @@
+     VersionEditorDialog.SetChangesTitle(cbC2U(GetConfig().ChangesLog.AppTitle.c_str()));
+     VersionEditorDialog.SetChangesLogPath(cbC2U(GetConfig().ChangesLog.ChangesLogPath.c_str()));
+ 
++    VersionEditorDialog.SetHeaderGuard(cbC2U(GetConfig().Code.HeaderGuard.c_str()));
++    VersionEditorDialog.SetNamespace(cbC2U(GetConfig().Code.NameSpace.c_str()));
++    VersionEditorDialog.SetPrefix(cbC2U(GetConfig().Code.Prefix.c_str()));
++
+     VersionEditorDialog.ShowModal();
+     // allright let's call all the getters
+     avConfig OldConfig = GetConfig();
+@@ -507,6 +522,9 @@
+     GetConfig().ChangesLog.ShowChangesEditor = VersionEditorDialog.GetChanges();
+     GetConfig().ChangesLog.AppTitle = cbU2C(VersionEditorDialog.GetChangesTitle());
+     GetConfig().ChangesLog.ChangesLogPath = cbU2C(VersionEditorDialog.GetChangesLogPath());
++    GetConfig().Code.HeaderGuard = cbU2C(VersionEditorDialog.GetHeaderGuard());
++    GetConfig().Code.NameSpace = cbU2C(VersionEditorDialog.GetNamespace());
++    GetConfig().Code.Prefix = cbU2C(VersionEditorDialog.GetPrefix());
+ 
+     //Save Header path
+     m_versionHeaderPath = cbC2U(GetConfig().Settings.HeaderPath.c_str());
+@@ -545,10 +563,26 @@
+ 
+     //Declares the header guard to be used based on the filename
+     wxFileName filename(cbC2U(GetConfig().Settings.HeaderPath.c_str()));
+-    wxString headerGuard = filename.GetName() + _T("_") + filename.GetExt();
+-    headerGuard.Replace(_T(" "), _T("_"), true);
+-    headerGuard.UpperCase();
++    wxString headerGuard;
+ 
++    if(cbC2U(GetConfig().Code.HeaderGuard.c_str()) == _T(""))
++    {
++        headerGuard = filename.GetName() + _T("_") + filename.GetExt();
++        headerGuard.Replace(_T(" "), _T("_"), true);
++        headerGuard.UpperCase();
++    }
++    else
++    {
++        headerGuard = cbC2U(GetConfig().Code.HeaderGuard.c_str());
++    }
++
++    wxString prefix = cbC2U(GetConfig().Code.Prefix.c_str());
++
++    if(prefix != _T(""))
++    {
++        prefix = prefix + _T("_");
++    }
++
+     wxString headerOutput = _T("");
+     headerOutput << _T("#ifndef ") << headerGuard << _T("\n");
+     headerOutput << _T("#define ") << headerGuard  << _T("\n");
+@@ -556,7 +590,7 @@
+ 
+     if(cbC2U(GetConfig().Settings.Language.c_str()) == _T("C++"))
+     {
+-        headerOutput << _T("namespace AutoVersion{") << _T("\n");
++        headerOutput << _T("namespace ") << cbC2U(GetConfig().Code.NameSpace.c_str()) << _T("{") << _T("\n");
+         headerOutput << _T("\t") << _T("\n");
+     }
+ 
+@@ -564,49 +598,49 @@
+     {
+         wxDateTime actualDate = wxDateTime::Now();
+         headerOutput << _T("\t") << _T("//Date Version Types") << _T("\n");
+-        headerOutput << _T("\t") << _T("static const char DATE[] = ") << actualDate.Format(_T("\"%d\"")) << _T(";\n");
+-        headerOutput << _T("\t") << _T("static const char MONTH[] = ") << actualDate.Format(_T("\"%m\"")) << _T(";\n");
+-        headerOutput << _T("\t") << _T("static const char YEAR[] = ") << actualDate.Format(_T("\"%Y\"")) << _T(";\n");
++        headerOutput << _T("\t") << _T("static const char ") << prefix << _T("DATE[] = ") << actualDate.Format(_T("\"%d\"")) << _T(";\n");
++        headerOutput << _T("\t") << _T("static const char ") << prefix << _T("MONTH[] = ") << actualDate.Format(_T("\"%m\"")) << _T(";\n");
++        headerOutput << _T("\t") << _T("static const char ") << prefix << _T("YEAR[] = ") << actualDate.Format(_T("\"%Y\"")) << _T(";\n");
+         long ubuntuYearNumber = 0;
+         actualDate.Format(_T("%y")).ToLong(&ubuntuYearNumber);
+         wxString ubuntuYear;
+         ubuntuYear.Printf(_T("%ld"),ubuntuYearNumber);
+-        headerOutput << _T("\t") << _T("static const double UBUNTU_VERSION_STYLE = ") << ubuntuYear << actualDate.Format(_T(".%m")) << _T(";\n");
++        headerOutput << _T("\t") << _T("static const char ") << prefix << _T("UBUNTU_VERSION_STYLE[] = \"") << ubuntuYear << actualDate.Format(_T(".%m")) << _T("\";\n");
+         headerOutput << _T("\t") << _T("\n");
+     }
+ 
+     headerOutput << _T("\t") << _T("//Software Status") << _T("\n");
+-    headerOutput << _T("\t") << _T("static const char STATUS[] = \"") << cbC2U(GetVersionState().Status.SoftwareStatus.c_str()) << _T("\";\n");
+-    headerOutput << _T("\t") << _T("static const char STATUS_SHORT[] = \"") << cbC2U(GetVersionState().Status.Abbreviation.c_str()) << _T("\";\n");
++    headerOutput << _T("\t") << _T("static const char ") << prefix << _T("STATUS[] = \"") << cbC2U(GetVersionState().Status.SoftwareStatus.c_str()) << _T("\";\n");
++    headerOutput << _T("\t") << _T("static const char ") << prefix << _T("STATUS_SHORT[] = \"") << cbC2U(GetVersionState().Status.Abbreviation.c_str()) << _T("\";\n");
+     headerOutput << _T("\t") << _T("\n");
+ 
+     wxString myPrintf;
+     headerOutput << _T("\t") << _T("//Standard Version Type") << _T("\n");
+     myPrintf.Printf(_T("%ld"), GetVersionState().Values.Major);
+-    headerOutput << _T("\t") << _T("static const long MAJOR = ") << myPrintf << _T(";\n");
++    headerOutput << _T("\t") << _T("static const long ") << prefix << _T("MAJOR = ") << myPrintf << _T(";\n");
+     myPrintf.Printf(_T("%ld"), GetVersionState().Values.Minor);
+-    headerOutput << _T("\t") << _T("static const long MINOR = ") << myPrintf << _T(";\n");
++    headerOutput << _T("\t") << _T("static const long ") << prefix << _T("MINOR = ") << myPrintf << _T(";\n");
+     myPrintf.Printf(_T("%ld"), GetVersionState().Values.Build);
+-    headerOutput << _T("\t") << _T("static const long BUILD = ") << myPrintf << _T(";\n");
++    headerOutput << _T("\t") << _T("static const long ") << prefix << _T("BUILD = ") << myPrintf << _T(";\n");
+     myPrintf.Printf(_T("%ld"), GetVersionState().Values.Revision);
+-    headerOutput << _T("\t") << _T("static const long REVISION = ") << myPrintf << _T(";\n");
++    headerOutput << _T("\t") << _T("static const long ") << prefix << _T("REVISION = ") << myPrintf << _T(";\n");
+     headerOutput << _T("\t") << _T("\n");
+ 
+     headerOutput << _T("\t") << _T("//Miscellaneous Version Types") << _T("\n");
+     myPrintf.Printf(_T("%ld"), GetVersionState().Values.BuildCount);
+-    headerOutput << _T("\t") << _T("static const long BUILDS_COUNT = ") << myPrintf << _T(";\n");
++    headerOutput << _T("\t") << _T("static const long ") << prefix << _T("BUILDS_COUNT = ") << myPrintf << _T(";\n");
+ 
+     myPrintf.Printf(_T("%ld,%ld,%ld,%ld"), GetVersionState().Values.Major, GetVersionState().Values.Minor,
+             GetVersionState().Values.Build, GetVersionState().Values.Revision);
+-    headerOutput << _T("\t") << _T("#define RC_FILEVERSION ") << myPrintf << _T("\n");
++    headerOutput << _T("\t") << _T("#define ") << prefix << _T("RC_FILEVERSION ") << myPrintf << _T("\n");
+ 
+     myPrintf.Printf(_T("\"%ld, %ld, %ld, %ld\\0\""), GetVersionState().Values.Major, GetVersionState().Values.Minor,
+             GetVersionState().Values.Build, GetVersionState().Values.Revision);
+-    headerOutput << _T("\t") << _T("#define RC_FILEVERSION_STRING ") << myPrintf << _T("\n");
++    headerOutput << _T("\t") << _T("#define ") << prefix << _T("RC_FILEVERSION_STRING ") << myPrintf << _T("\n");
+ 
+     myPrintf.Printf(_T("\"%ld.%ld.%ld.%ld\""), GetVersionState().Values.Major, GetVersionState().Values.Minor,
+             GetVersionState().Values.Build, GetVersionState().Values.Revision);
+-    headerOutput << _T("\t") << _T("static const char FULLVERSION_STRING[] = ") << myPrintf << _T(";\n");
++    headerOutput << _T("\t") << _T("static const char ") << prefix << _T("FULLVERSION_STRING[] = ") << myPrintf << _T(";\n");
+ 
+     if(GetConfig().Settings.Svn)
+     {
+@@ -615,14 +649,14 @@
+             wxMessageBox(_("Svn configuration files not found.\nVerify the Autoversioning svn directory."),_("Error"),wxICON_ERROR);
+         headerOutput << _T("\t") << _T("\n");
+         headerOutput << _T("\t") << _T("//SVN Version") << _T("\n");
+-        headerOutput << _T("\t") << _T("static const char SVN_REVISION[] = ") << _T("\"") + revision + _T("\"")<< _T(";\n");
+-        headerOutput << _T("\t") << _T("static const char SVN_DATE[] = ") << _T("\"") + date + _T("\"")<< _T(";\n");
++        headerOutput << _T("\t") << _T("static const char ") << prefix << _T("SVN_REVISION[] = ") << _T("\"") + revision + _T("\"")<< _T(";\n");
++        headerOutput << _T("\t") << _T("static const char ") << prefix << _T("SVN_DATE[] = ") << _T("\"") + date + _T("\"")<< _T(";\n");
+     }
+ 
+     headerOutput << _T("\t") << _T("\n");
+     headerOutput << _T("\t") << _T("//These values are to keep track of your versioning state, don't modify them.") << _T("\n");
+     myPrintf.Printf(_T("%ld"), GetVersionState().BuildHistory);
+-    headerOutput << _T("\t") << _T("static const long BUILD_HISTORY = ") << myPrintf << _T(";\n");
++    headerOutput << _T("\t") << _T("static const long ") << prefix << _T("BUILD_HISTORY = ") << myPrintf << _T(";\n");
+ 
+     headerOutput << _T("\t") << _T("\n\n");
+ 
+Index: src/plugins/contrib/AutoVersioning/avVersionEditorDlg.h
+===================================================================
+--- src/plugins/contrib/AutoVersioning/avVersionEditorDlg.h	(revision 5857)
++++ src/plugins/contrib/AutoVersioning/avVersionEditorDlg.h	(working copy)
+@@ -49,6 +49,9 @@
+     long m_revisionRandomMaximun;
+     long m_buildTimesToMinorIncrement;
+     long m_changes;
++    wxString m_headerGuard;
++    wxString m_namespace;
++    wxString m_prefix;
+     wxString m_svnDirectory;
+     wxString m_status;
+     wxString m_statusAbbreviation;
+@@ -96,6 +99,13 @@
+ 		static const long ID_BUILDTIMES_LABEL;
+ 		static const long ID_BUILDTIMES_TEXT;
+ 		static const long ID_SCHEME_PANEL;
++		static const long ID_HEADER_GUARD_LABEL;
++		static const long ID_HEADER_GUARD_TEXT;
++		static const long ID_NAMESPACE_LABEL;
++		static const long ID_NAMESPACE_TEXT;
++		static const long ID_PREFIX_LABEL;
++		static const long ID_PREFIX_TEXT;
++		static const long ID_CODE_PANEL;
+ 		static const long ID_AUTO_CHECK;
+ 		static const long ID_DATES_CHECK;
+ 		static const long ID_COMMIT_CHECK;
+@@ -181,6 +191,7 @@
+ 		wxButton* btnChangesLogPath;
+ 		wxStaticText* lblHeaderPath;
+ 		wxBoxSizer* settingsSizer;
++		wxStaticText* lblNamespace;
+ 		wxTextCtrl* txtChangesLogPath;
+ 		wxStaticText* StaticText1;
+ 		wxBoxSizer* buttonsSizer;
+@@ -192,6 +203,8 @@
+ 		wxBoxSizer* BoxSizer12;
+ 		wxStaticLine* StaticLine4;
+ 		wxStaticLine* StaticLine2;
++		wxPanel* pnlCode;
++		wxTextCtrl* txtHeaderGuard;
+ 		wxStaticText* lblRevisionMax;
+ 		wxButton* btnSvnDir;
+ 		wxCheckBox* chkSvn;
+@@ -206,18 +219,22 @@
+ 		wxStaticLine* StaticLine3;
+ 		wxStaticLine* StaticLine1;
+ 		wxBoxSizer* changesSizer;
++		wxStaticText* lblPrefix;
+ 		wxBoxSizer* BoxSizer1;
+ 		wxPanel* pnlChanges;
+ 		wxBoxSizer* BoxSizer9;
+ 		wxButton* btnAccept;
+ 		wxStaticText* lblStatus;
+ 		wxTextCtrl* txtBuildCount;
++		wxTextCtrl* txtNameSpace;
+ 		wxPanel* pnlScheme;
+ 		wxStaticText* lblBuild;
+ 		wxBoxSizer* BoxSizer3;
+ 		wxTimer tmrValidateInput;
++		wxTextCtrl* txtPrefix;
+ 		wxTextCtrl* txtRevisionMax;
+ 		wxCheckBox* chkAskCommit;
++		wxStaticText* lblHeaderGuard;
+ 		wxTextCtrl* txtSvnDir;
+ 		wxTextCtrl* txtMinorVersion;
+ 		wxStaticText* lblMinor;
+@@ -285,8 +302,17 @@
+ 
+ 	bool GetChanges() const {return m_changes;}
+ 	wxString GetChangesLogPath() const {return m_changesLogPath;}
+-	wxString GetChangesTitle() const {return m_changesTitle;}
++	wxString GetChangesTitle() const {return m_changesTitle;}
++
++	void SetHeaderGuard(const wxString& value);
++	void SetNamespace(const wxString& value);
++	void SetPrefix(const wxString& value);
++
++	wxString GetHeaderGuard() const {return m_headerGuard;}
++	wxString GetNamespace() const {return m_namespace;}
++	wxString GetPrefix() const {return m_prefix;}
+ 
++
+ };
+ 
+ #endif
+Index: src/plugins/contrib/AutoVersioning/wxsmith/avVersionEditorDlg.wxs
+===================================================================
+--- src/plugins/contrib/AutoVersioning/wxsmith/avVersionEditorDlg.wxs	(revision 5857)
++++ src/plugins/contrib/AutoVersioning/wxsmith/avVersionEditorDlg.wxs	(working copy)
+@@ -322,6 +322,54 @@
+ 						<label>Scheme</label>
+ 					</object>
+ 					<object class="notebookpage">
++						<object class="wxPanel" name="ID_CODE_PANEL" variable="pnlCode" member="yes">
++							<object class="wxBoxSizer" variable="codeSizer" member="no">
++								<orient>wxVERTICAL</orient>
++								<object class="sizeritem">
++									<object class="wxStaticText" name="ID_HEADER_GUARD_LABEL" variable="lblHeaderGuard" member="yes">
++										<label>Header guard:</label>
++									</object>
++									<flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
++									<border>5</border>
++								</object>
++								<object class="sizeritem">
++									<object class="wxTextCtrl" name="ID_HEADER_GUARD_TEXT" variable="txtHeaderGuard" member="yes">
++										<value>VERSION__H</value>
++									</object>
++									<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++									<border>5</border>
++								</object>
++								<object class="sizeritem">
++									<object class="wxStaticText" name="ID_NAMESPACE_LABEL" variable="lblNamespace" member="yes">
++										<label>Namespace:</label>
++									</object>
++									<flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
++									<border>5</border>
++								</object>
++								<object class="sizeritem">
++									<object class="wxTextCtrl" name="ID_NAMESPACE_TEXT" variable="txtNameSpace" member="yes">
++										<value>AutoVersion</value>
++									</object>
++									<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++									<border>5</border>
++								</object>
++								<object class="sizeritem">
++									<object class="wxStaticText" name="ID_PREFIX_LABEL" variable="lblPrefix" member="yes">
++										<label>Variables prefix:</label>
++									</object>
++									<flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
++									<border>5</border>
++								</object>
++								<object class="sizeritem">
++									<object class="wxTextCtrl" name="ID_PREFIX_TEXT" variable="txtPrefix" member="yes" />
++									<flag>wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++									<border>5</border>
++								</object>
++							</object>
++						</object>
++						<label>Code</label>
++					</object>
++					<object class="notebookpage">
+ 						<object class="wxPanel" name="ID_SETTINGS_PANEL" variable="pnlSettings" member="yes">
+ 							<object class="wxBoxSizer" variable="settingsSizer" member="yes">
+ 								<orient>wxVERTICAL</orient>
+@@ -507,7 +555,6 @@
+ 					</object>
+ 					<object class="notebookpage">
+ 						<object class="wxPanel" name="ID_CHANGES_PANEL" variable="pnlChanges" member="yes">
+-							<pos>231,17</pos>
+ 							<object class="wxBoxSizer" variable="changesSizer" member="yes">
+ 								<orient>wxVERTICAL</orient>
+ 								<object class="sizeritem">
+@@ -589,7 +636,7 @@
+ 			</object>
+ 			<object class="sizeritem">
+ 				<object class="wxStaticText" name="ID_STATICTEXT2" variable="lblCurrentProject" member="yes">
+-					<label>Current Project: </label>
++					<label>Current Project:</label>
+ 					<style>wxALIGN_CENTRE</style>
+ 				</object>
+ 				<flag>wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
+Index: src/plugins/contrib/AutoVersioning/manifest.xml
+===================================================================
+--- src/plugins/contrib/AutoVersioning/manifest.xml	(revision 5857)
++++ src/plugins/contrib/AutoVersioning/manifest.xml	(working copy)
+@@ -3,7 +3,7 @@
+     <SdkVersion major="1" minor="10" release="0" />
+     <Plugin name="AutoVersioning">
+         <Value title="AutoVersioning" />
+-        <Value version="1.2" />
++        <Value version="1.3" />
+         <Value description="Auto increments the version and build number of your application every time a change has been made and stores it in version.h with easy to use variable declarations. Also have a feature for committing changes a la SVN style, a version scheme editor and a change log generator.
+ 
+ Example:
+Index: src/plugins/contrib/AutoVersioning/avChangesDlg.cpp
+===================================================================
+--- src/plugins/contrib/AutoVersioning/avChangesDlg.cpp	(revision 5857)
++++ src/plugins/contrib/AutoVersioning/avChangesDlg.cpp	(working copy)
+@@ -41,7 +41,7 @@
+     //(*Initialize(avChangesDlg)
+     wxBoxSizer* sizerButtons;
+     wxBoxSizer* sizerConfirmation;
+-
++    
+     Create(parent, wxID_ANY, _("AutoVersioning :: Changes Log"), wxDefaultPosition, wxDefaultSize, wxCAPTION|wxRESIZE_BORDER, _T("wxID_ANY"));
+     SetClientSize(wxSize(700,300));
+     BoxSizer1 = new wxBoxSizer(wxVERTICAL);
+@@ -57,8 +57,6 @@
+     sizerButtons->Add(btnDelete, 1, wxALL|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+     BoxSizer1->Add(sizerButtons, 0, wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+     grdChanges = new wxGrid(this, ID_CHANGES_GRID, wxDefaultPosition, wxDefaultSize, 0, _T("ID_CHANGES_GRID"));
+-    grdChanges->SetMinSize(wxSize(600,300));
+-    grdChanges->SetToolTip(_("List of changes"));
+     BoxSizer1->Add(grdChanges, 1, wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+     sizerConfirmation = new wxBoxSizer(wxHORIZONTAL);
+     btnSave = new wxButton(this, ID_SAVE_BUTTON, _("Save"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("ID_SAVE_BUTTON"));
+@@ -74,7 +72,7 @@
+     BoxSizer1->Add(sizerConfirmation, 0, wxALL|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5);
+     SetSizer(BoxSizer1);
+     BoxSizer1->SetSizeHints(this);
+-
++    
+     Connect(ID_ADD_BUTTON,wxEVT_COMMAND_BUTTON_CLICKED,(wxObjectEventFunction)&avChangesDlg::OnBtnAddClick);
+     Connect(ID_EDIT_BUTTON,wxEVT_COMMAND_BUTTON_CLICKED,(wxObjectEventFunction)&avChangesDlg::OnBtnEditClick);
+     Connect(ID_DELETE_BUTTON,wxEVT_COMMAND_BUTTON_CLICKED,(wxObjectEventFunction)&avChangesDlg::OnBtnDeleteClick);

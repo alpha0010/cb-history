@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 978 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #978 <small>2006-04-01 13:16:24</small></h3>
+          <h4>dermeister</h4>
+          Make Search-&gt;Find and Search-&gt;Find in files more consistent
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="978-Make_Search_Fin.patch">978-Make_Search_Fin.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Refinement</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2006-04-24 15:41:20</dd>
+            <dt>Assigned to</dt><dd>tiwag</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">dermeister 2006-04-01 13:19:27</div>
+        <div class="panel-body">
+          <p>When you open the find-dialog with "Search-&gt;Find" you see both tabs  - one for "Find" and one for "Find in files" - in the dialog and the tab for "Find" is selected.</p>
+          <p>But if you open the same dialog with "Search-&gt;Find in files" there is only the tab for "Find in files" even if there is an open editor. It would be better if both tabs are there (as long as there is an open editor) and the tab for "Find in files" should be selected.</p>
+          <p>This patch implements this behaviour.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2006-04-05 07:52:08</div>
+        <div class="panel-body">
+          <p>Hmm, patch doesn't apply (failed hunks)...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">dermeister 2006-04-07 15:09:36</div>
+        <div class="panel-body">
+          <p>I just updated the patch. It sould now apply to revision 2321.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">tiwag 2006-04-13 12:53:32</div>
+        <div class="panel-body">
+          <p>reverted from svn for now, because the provided patch introduces a bug, which prevents the Search-pattern edit control getting the focus. This is only one (visible) bug!</p>
+          <p>Other side-effects exist too because the FindDlg::m_Complete flag is used in all event handlers to decide if we are in "Find" or in "Find in Files" mode.</p>
+          <p>Will look at this and possibly correct it later ...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">dermeister 2006-04-20 13:26:57</div>
+        <div class="panel-body">
+          <p>As far as I can see only the destructor uses FindDlg::m_Complete to check if Find in Files was selected (should be around line 130 in finddlg.cpp). In my opinion this is *not* correct. The function FindDlg::IsFindInFiles should be used instead because this function does the correct check.</p>
+          <p>The current way would even fail if you open the FindDlg with "Search-&gt;Find" and then select the FindInFiles-page.</p>
+          <p>The same issue appears in FindDlg::OnActivate. This function sets the focus to the wrong edit control if you do the same thing as described above. Using FindDlg::IsFindInFiles instead of FindDlg::m_Complete should fix this issue.</p>
+          <p>One word to the focus bug: It looks like the edit control never gets the focus if you switch between the pages. And that is what the constructor does if my original patch is applied and "Search-&gt;FindInFiles" is selected. Maybe we have to set the focus after the "...-&gt;SetSelection(1);"-line from my patch? Or perhaps set it always to the edit control after someone selects another page?</p>
+          <p>I'll take another look at this problem this evening and probably provide another (hopefully better) patch...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">dermeister 2006-04-20 16:43:49</div>
+        <div class="panel-body">
+          <p>OK, looks as if I was right. I made a few changes according to my last comment and it seems to work. I could not reproduce any of the described issues. The patch here is updated and should apply to revision 2366.</p>
+          <p>Just an additional note: I'm not sure about the expression in the if-statement in FindDlg::OnActivate. The second part (XCONTROL(... ) looks useless to me - or did I miss something? Maybe some possible race-conditions during construction? But if that's the reason for this check then it should also be checked in the else-branch for the same reason...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">tiwag 2006-04-24 15:39:44</div>
+        <div class="panel-body">
+          <p>ad "I'm not sure about the expression in the if-statement in FindDlg::OnActivate. The second part (XCONTROL(... ) looks useless to me..." :</p>
+          <p>this is used to prevent a crash when the dialog wasn't created, this happens when no project or no editor of a project is opened. i recoded this part and added a check for null pointers.</p>
+          <p>general:</p>
+          <p>there are still a few bugs left,</p>
+          <p>* switching between tabs (find) &amp;&amp; (find in files) - the editcontrol doesn't get the focus</p>
+          <p>* pressing Ctrl-F or Ctrl-Shift-F without active project - the dialog appears (should not) - but it doesn't crash C::B ;-)</p>
+          <p>* some occurances of m_Complete are left</p>
+          <p>from my point of view the Handling with IsFindInFiles() and Complete is still buggy - we would need both flags as private flags for example (bool m_findInFilesOnly, bool m_findInFilesActive) in order to clean up all possibilities, but i don't care at the moment.</p>
+          <p>@dermeister: if you have time please clean it up</p>
+          <p>your patch is commited to svn rev 2373</p>
+          <p>thanks for your patch</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">dermeister 2006-04-24 17:19:39</div>
+        <div class="panel-body">
+          <p>"* switching between tabs (find) &amp;&amp; (find in files) - the editcontrol doesn't get the focus"</p>
+          <p>Yes, but I think this was the case before, too. I didn't see any code that handles the switching between the tabs to set the focus to the edit control. Maybe we should add this?</p>
+          <p>"* pressing Ctrl-F or Ctrl-Shift-F without active project - the dialog appears (should not) - but it doesn't crash C::B ;-)"</p>
+          <p>Well - I did not test this. Does this also happen without this patch? And which dialog should not appear? The find-dialog? The find-in-files-dialog? Or Both? Personally I would say that "find in files" should even work without any project and "find" should work only with open editors - no matter if there is an open project.</p>
+          <p>"* some occurances of m_Complete are left"</p>
+          <p>Yes, but they are there to see if the "find" tab is there or not - they are not used to check which tab is active! Thus, these occurances *must* stay...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">dermeister 2006-04-24 17:23:31</div>
+        <div class="panel-body">
+          <p>"from my point of view the Handling with IsFindInFiles() and Complete is still buggy - we would need both flags as private flags for example (bool m_findInFilesOnly, bool m_findInFilesActive) in order to clean up all possibilities, but i don't care at the moment.</p>
+          <p>@dermeister: if you have time please clean it up"</p>
+          <p>Well, I will have a look at this but I fear I don't have the  time in the next two weeks... sorry for that...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

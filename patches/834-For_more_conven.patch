@@ -1,0 +1,239 @@
+Index: D:/codeblocks/src/src/app.cpp
+===================================================================
+--- D:/codeblocks/src/src/app.cpp	(revision 2006)
++++ D:/codeblocks/src/src/app.cpp	(working copy)
+@@ -276,55 +276,26 @@
+ void CodeBlocksApp::InitLocale()
+ {
+     ConfigManager* cfg = Manager::Get()->GetConfigManager(_T("app"));
+-    const wxString langs[] =
+-    {
+-        _T("(System default)")
+-//        ,_T("English (U.S.)")
+-//        ,_T("English")
+-//        ,_T("Chinese (Simplified)")
+-//        ,_T("German")
+-//        ,_T("Russian")
+-    };
+ 
+-    // Must have the same order than the above
+-    const long int locales[] =
+-    {
+-        wxLANGUAGE_DEFAULT
+-//        ,wxLANGUAGE_ENGLISH_US
+-//        ,wxLANGUAGE_ENGLISH
+-//        ,wxLANGUAGE_CHINESE_SIMPLIFIED
+-//        ,wxLANGUAGE_GERMAN
+-//        ,wxLANGUAGE_RUSSIAN
+-    };
+ 
+-    long int lng = cfg->ReadInt(_T("/locale/language"),(long int)-2);
++    bool i18n=cfg->ReadBool(_T("/environment/I18N"),LOCALIZE);
++	int lng =-1;	// -1 = Don't use locale; the default is 0 = Use locale
++	if(i18n)
++		lng = cfg->ReadInt(_T("/locale/language"),(int)0);
+ 
+-    if (lng <= -2 && WXSIZEOF(langs)>=2) // ask only if undefined and there are at least 2 choices
+-    {
+-        lng = wxGetSingleChoiceIndex(_T("Please choose language:"), _T("Language"), WXSIZEOF(langs), langs);
+-        if (lng >= 0 && static_cast<unsigned int>(lng) < WXSIZEOF(locales))
+-        {
+-            lng = locales[lng];
+-        }
+-    }
+-    else
+-    {
+-        lng = -1; // -1 = Don't use locale
+-    }
++	int catalogNum = cfg->ReadInt(_T("/locale/catalogNum"), (int)0);
++	if (catalogNum == 0)
++	{
++		catalogNum = 1;
++		cfg->Write(_T("/locale/Domain1"), "codeblocks");
++	}
+ 
+     if (lng>=0)
+     {
+-        m_locale.Init(lng);
++        m_locale.Init(locales[lng]);
+         wxLocale::AddCatalogLookupPathPrefix(ConfigManager::GetDataFolder() + _T("/locale"));
+         wxLocale::AddCatalogLookupPathPrefix(wxT("."));
+         wxLocale::AddCatalogLookupPathPrefix(wxT(".."));
+-		int catalogNum = cfg->ReadInt(_T("/locale/catalogNum"), (int)0);
+-		if (catalogNum == 0)
+-		{
+-			catalogNum = 1;
+-			cfg->Write(_T("/locale/Domain1"), "codeblocks");
+-		}
+-
+ 		for (int i = 1; i <= catalogNum; ++i)
+ 		{
+ 			wxString tempStr = wxString::Format(_T("/locale/Domain%d"), i);
+@@ -338,9 +309,10 @@
+ 			else if (cfg->Read(_T("/plugins/") + catalogName))
+ 				m_locale.AddCatalog(catalogName);
+ 		}
+-		cfg->Write(_T("/locale/catalogNum"), (int)catalogNum);
++		
+     }
+-
++	cfg->Write(_T("/locale/catalogNum"), (int)catalogNum);
++	cfg->Write(_T("/environment/I18N"),  (bool)i18n);
+     cfg->Write(_T("/locale/language"), (int)lng);
+ }
+ 
+Index: D:/codeblocks/src/src/appglobals.cpp
+===================================================================
+--- D:/codeblocks/src/src/appglobals.cpp	(revision 2006)
++++ D:/codeblocks/src/src/appglobals.cpp	(working copy)
+@@ -43,3 +43,25 @@
+ const wxString g_AppBuildTimestamp = (wxString(wxT(__DATE__)) + wxT(", ") + wxT(__TIME__) + wxT(" - wx") + wxString(wxT(wxVERSION_NUM_DOT_STRING)) + wxT(" (") + g_AppPlatform + wxT(", ") + g_AppWXAnsiUnicode + wxT(")") );
+ 
+ const wxString g_DefaultBatchBuildArgs = _T("-na -nd -ns --batch-build-notify");
++
++
++const wxString langs[] =
++{
++	_("(System default)")
++//        ,_T("English (U.S.)")
++//        ,_T("English")
++	,_("Chinese (Simplified)")
++//        ,_T("German")
++//        ,_T("Russian")
++};
++
++// Must have the same order than the above
++const int locales[] =
++{
++	wxLANGUAGE_DEFAULT
++//        ,wxLANGUAGE_ENGLISH_US
++//        ,wxLANGUAGE_ENGLISH
++	,wxLANGUAGE_CHINESE_SIMPLIFIED
++//        ,wxLANGUAGE_GERMAN
++//        ,wxLANGUAGE_RUSSIAN
++};
+Index: D:/codeblocks/src/src/appglobals.h
+===================================================================
+--- D:/codeblocks/src/src/appglobals.h	(revision 2006)
++++ D:/codeblocks/src/src/appglobals.h	(working copy)
+@@ -16,4 +16,10 @@
+ 
+ extern const wxString g_DefaultBatchBuildArgs;
+ 
++#define LOCALIZE   true
++#define LANGUAGES  2
++//Please fix this. I have no Idea that the WXSIZEOF couldn't work whithout defining LANGUAGES
++extern const wxString langs[LANGUAGES];
++extern const int locales[LANGUAGES];
++
+ #endif // APPGLOBALS_H
+Index: D:/codeblocks/src/src/environmentsettingsdlg.cpp
+===================================================================
+--- D:/codeblocks/src/src/environmentsettingsdlg.cpp	(revision 2006)
++++ D:/codeblocks/src/src/environmentsettingsdlg.cpp	(working copy)
+@@ -66,6 +66,7 @@
+     EVT_BUTTON(XRCID("btnAuiInactiveCaptionTextColor"), EnvironmentSettingsDlg::OnChooseColor)
+     EVT_CHECKBOX(XRCID("chkDoPlace"), EnvironmentSettingsDlg::OnPlaceCheck)
+     EVT_CHECKBOX(XRCID("chkPlaceHead"), EnvironmentSettingsDlg::OnHeadCheck)
++    EVT_CHECKBOX(XRCID("chkI18N"), EnvironmentSettingsDlg::OnI18NCheck)
+ 
+     EVT_LISTBOOK_PAGE_CHANGING(XRCID("nbMain"), EnvironmentSettingsDlg::OnPageChanging)
+     EVT_LISTBOOK_PAGE_CHANGED(XRCID("nbMain"), EnvironmentSettingsDlg::OnPageChanged)
+@@ -102,6 +103,23 @@
+     XRCCTRL(*this, "chkAutoHideMessages", wxCheckBox)->SetValue(mcfg->ReadBool(_T("/auto_hide"), false));
+     XRCCTRL(*this, "chkShowStartPage", wxCheckBox)->SetValue(cfg->ReadBool(_T("/environment/start_here_page"), true));
+ 
++	bool i18n=cfg->ReadBool(_T("/environment/I18N"), false);
++		XRCCTRL(*this, "chkI18N", wxCheckBox)->SetValue(i18n);
++	for(size_t i=0; i < WXSIZEOF(langs); i++)
++	{
++		XRCCTRL(*this, "cbxLanguage", wxComboBox)->Append(langs[i]);
++	}
++	XRCCTRL(*this, "cbxLanguage", wxComboBox)->Enable(i18n);
++	if(i18n)
++	{
++		int lng = cfg->ReadInt(_T("/locale/language"),-1);
++
++		if (lng >= 0 && static_cast<unsigned int>(lng) < WXSIZEOF(locales))
++		{
++			XRCCTRL(*this, "cbxLanguage", wxComboBox)->SetSelection(lng+1);
++		}
++	}
++	
+     // tab "Notebook"
+     XRCCTRL(*this, "cmbEditorTabs", wxComboBox)->SetSelection(cfg->ReadInt(_T("/environment/tabs_style"), 0));
+     XRCCTRL(*this, "btnFNBorder", wxButton)->SetBackgroundColour(cfg->ReadColour(_T("/environment/gradient_border"), wxColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW))));
+@@ -280,6 +298,8 @@
+         cfg->Write(_T("/environment/toolbar_size"),          (bool) XRCCTRL(*this, "rbToolbarSize", wxRadioBox)->GetSelection() == 1);
+         mcfg->Write(_T("/auto_hide"),                        (bool) XRCCTRL(*this, "chkAutoHideMessages", wxCheckBox)->GetValue());
+         cfg->Write(_T("/environment/start_here_page"),       (bool) XRCCTRL(*this, "chkShowStartPage", wxCheckBox)->GetValue());
++        cfg->Write(_T("/environment/I18N"),                       (bool) XRCCTRL(*this, "chkI18N", wxCheckBox)->GetValue());
++        cfg->Write(_T("/locale/language"),                   (int)  XRCCTRL(*this, "cbxLanguage", wxComboBox)->GetSelection()-1);
+ 
+         // tab "Appearence"
+         cfg->Write(_T("/environment/tabs_style"),           (int)XRCCTRL(*this, "cmbEditorTabs", wxComboBox)->GetSelection());
+@@ -359,4 +379,8 @@
+ {
+     PlaceWindow(this, event.IsChecked() ? pdlHead : pdlCentre, true);
+ }
++void EnvironmentSettingsDlg::OnI18NCheck(wxCommandEvent& event)
++{
++    XRCCTRL(*this, "cbxLanguage", wxComboBox)->Enable(event.IsChecked());
++}
+ 
+Index: D:/codeblocks/src/src/environmentsettingsdlg.h
+===================================================================
+--- D:/codeblocks/src/src/environmentsettingsdlg.h	(revision 2006)
++++ D:/codeblocks/src/src/environmentsettingsdlg.h	(working copy)
+@@ -21,6 +21,7 @@
+         void OnUpdateUI(wxUpdateUIEvent& event);
+         void OnPlaceCheck(wxCommandEvent& event);
+         void OnHeadCheck(wxCommandEvent& event);
++        void OnI18NCheck(wxCommandEvent& event);
+ 	private:
+         void AddPluginPanels();
+         void LoadListbookImages();
+Index: D:/codeblocks/src/src/resources/env_settings.xrc
+===================================================================
+--- D:/codeblocks/src/src/resources/env_settings.xrc	(revision 2006)
++++ D:/codeblocks/src/src/resources/env_settings.xrc	(working copy)
+@@ -109,6 +109,39 @@
+                   <flag>wxLEFT|wxTOP|wxEXPAND</flag>
+                   <border>8</border>
+                 </object>
++                <object class="sizeritem">
++                    <flag>wxGROW</flag>
++                    <border>5</border>
++                    <object class="wxBoxSizer">
++                        <orient>wxHORIZONTAL</orient>
++                        <object class="sizeritem">
++                            <flag>wxGROW|wxLEFT|wxTOP</flag>
++                            <border>8</border>
++                            <object class="wxCheckBox" name="chkI18N">
++                                <style>wxCHK_2STATE</style>
++                                <label>Internationalization  (needs restarts)</label>
++                                <checked>0</checked>
++                            </object>
++                        </object>
++                        <object class="spacer">
++                            <flag>wxALIGN_CENTER_VERTICAL|wxALL</flag>
++                            <border>5</border>
++                            <size>5,5</size>
++                        </object>
++                        <object class="sizeritem">
++                            <flag>wxALIGN_CENTER_VERTICAL</flag>
++                            <border>5</border>
++                            <object class="wxComboBox" name="cbxLanguage">
++                                <size>135,-1</size>
++                                <style>wxCB_DROPDOWN</style>
++                                <content>
++                                    <item>Available Languages</item>
++                                </content>
++                                <selection>0</selection>
++                            </object>
++                        </object>
++                    </object>
++                </object>
+                 <object class="spacer">
+                   <size>0,16</size>
+                 </object>

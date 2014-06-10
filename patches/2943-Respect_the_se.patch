@@ -1,0 +1,31 @@
+Index: src/sdk/projectmanager.cpp
+===================================================================
+--- src/sdk/projectmanager.cpp	(revision 6508)
++++ src/sdk/projectmanager.cpp	(working copy)
+@@ -1791,7 +1791,7 @@
+ void ProjectManager::OnExecParameters(wxCommandEvent& /*event*/)
+ {
+     if (m_pActiveProject)
+-        m_pActiveProject->SelectTarget(0, true);
++        m_pActiveProject->SelectTarget(-1, true);
+ }
+ 
+ void ProjectManager::OnRightClick(wxCommandEvent& /*event*/)
+Index: src/sdk/selecttargetdlg.cpp
+===================================================================
+--- src/sdk/selecttargetdlg.cpp	(revision 6508)
++++ src/sdk/selecttargetdlg.cpp	(working copy)
+@@ -47,7 +47,12 @@
+ 	if (selected != -1)
+ 		list->SetSelection(selected);
+ 	else
+-		list->SetSelection(list->FindString(m_pProject->GetDefaultExecuteTarget()));
++	{
++	    int item = list->FindString(m_pProject->GetActiveBuildTarget());
++	    if (item == wxNOT_FOUND)
++            item = list->FindString(m_pProject->GetDefaultExecuteTarget());
++		list->SetSelection(item);
++	}
+ 
+ 	UpdateSelected();
+ 	XRCCTRL(*this, "wxID_OK", wxButton)->MoveBeforeInTabOrder (XRCCTRL(*this, "lstItems", wxListBox));

@@ -1,0 +1,38 @@
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(revision 4717)
++++ src/src/main.cpp	(working copy)
+@@ -606,7 +606,7 @@
+ 
+     pm->RegisterEventSink(cbEVT_QUERY_VIEW_LAYOUT, new cbEventFunctor<MainFrame, CodeBlocksLayoutEvent>(this, &MainFrame::OnLayoutQuery));
+     pm->RegisterEventSink(cbEVT_SWITCH_VIEW_LAYOUT, new cbEventFunctor<MainFrame, CodeBlocksLayoutEvent>(this, &MainFrame::OnLayoutSwitch));
+-    
++
+     pm->RegisterEventSink(cbEVT_ADD_LOG_WINDOW, new cbEventFunctor<MainFrame, CodeBlocksLogEvent>(this, &MainFrame::OnAddLogWindow));
+     pm->RegisterEventSink(cbEVT_REMOVE_LOG_WINDOW, new cbEventFunctor<MainFrame, CodeBlocksLogEvent>(this, &MainFrame::OnRemoveLogWindow));
+     pm->RegisterEventSink(cbEVT_SWITCH_TO_LOG_WINDOW, new cbEventFunctor<MainFrame, CodeBlocksLogEvent>(this, &MainFrame::OnSwitchToLogWindow));
+@@ -1045,13 +1045,19 @@
+     }
+ 
+     int id = wxNewId();
++    wxString title = info->title + (menu == m_HelpPluginsMenu ? _T("...") : wxEmptyString);
+     m_PluginIDsMap[id] = info->name;
+     if (pos == -1)
+-        item = menu->Append(id, info->title + (menu == m_HelpPluginsMenu ? _T("...") :
+-            wxEmptyString), wxEmptyString, checkable ? wxITEM_CHECK : wxITEM_NORMAL);
+-    else
+-        item = menu->Insert(pos, id, info->title + (menu == m_HelpPluginsMenu ? _T("...") :
+-            wxEmptyString), wxEmptyString, checkable ? wxITEM_CHECK : wxITEM_NORMAL);
++        pos = menu->GetMenuItemCount();
++
++    while(!item)
++    {
++        if(!pos || title.CmpNoCase(menu->FindItemByPosition(pos - 1)->GetLabel()) > 0)
++            item = menu->Insert(pos, id, title, wxEmptyString, checkable ? wxITEM_CHECK : wxITEM_NORMAL);
++
++        pos--;
++    }
++
+     Connect( id,  wxEVT_COMMAND_MENU_SELECTED, callback );
+     return item;
+ }

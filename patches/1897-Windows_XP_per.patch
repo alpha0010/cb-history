@@ -1,0 +1,30 @@
+Index: src/src/app.cpp
+===================================================================
+--- src/src/app.cpp	(revision 4032)
++++ src/src/app.cpp	(working copy)
+@@ -933,14 +933,18 @@
+         CompileTimeAssertion<wxMinimumVersion<2,5>::eval>::Assert(); // just to make sure: wxWidgets 2.4 is dead
+ 
+         const wxArrayString items(Manager::Get()->GetPersonalityManager()->GetPersonalitiesList());
++        int persIndex;
++        persIndex = wxGetSingleChoiceIndex
++              (
++                _("Please choose which personality (profile) to load:"),
++                _("Personalities (profiles)"),
++                items
++              );
+ 
+-        wxSingleChoiceDialog dlg(0, _("Please choose which personality (profile) to load:"),
+-                                    _("Personalities (profiles)"),
+-                                    items);
+-        PlaceWindow(&dlg);
+-
+-        if (dlg.ShowModal() == wxID_OK)
+-            Manager::Get()->GetPersonalityManager()->SetPersonality(dlg.GetStringSelection());
++        if ( persIndex != -1 )
++            Manager::Get()->GetPersonalityManager()->SetPersonality(items[persIndex]);
++        else
++            Manager::Get()->GetPersonalityManager()->SetPersonality(_T("default"));
+     }
+     else
+     {

@@ -1,0 +1,175 @@
+Index: plugins/codecompletion/cclistctrl.cpp
+===================================================================
+--- plugins/codecompletion/cclistctrl.cpp	(Revision 2295)
++++ plugins/codecompletion/cclistctrl.cpp	(Arbeitskopie)
+@@ -82,7 +82,7 @@
+ 	return GetTokenAt(GetGridCursorRow());
+ }
+ 
+-void CCListCtrl::PrepareTokens()
++bool CCListCtrl::PrepareTokens()
+ {
+ 	// don't do any GUI updates while we 're building the tokens list
+ 	Freeze();
+@@ -113,21 +113,24 @@
+ 
+ 	// refresh list
+ 	ForceRefresh();
++
++	/* return whether there are tokens (to hide control if no possible tokens */
++	return (!m_CCTokens.empty());
+ }
+ 
+-void CCListCtrl::AddChar(const wxChar& ch)
++bool CCListCtrl::AddChar(const wxChar& ch)
+ {
+ 	wxString s;
+ 	s << ch;
+ 	m_pEditor->InsertText(m_pEditor->GetCurrentPos(), s);
+ 	m_pEditor->GotoPos(m_pEditor->GetCurrentPos() + 1);
+ 	m_Initial << s;
+-	PrepareTokens();
++	return PrepareTokens();
+ }
+ 
+-void CCListCtrl::RemoveLastChar()
++bool CCListCtrl::RemoveLastChar()
+ {
+ 	m_Initial.RemoveLast();
+ 	m_pEditor->CmdKeyExecute(wxSCI_CMD_DELETEBACKNOTLINE);
+-	PrepareTokens();
++	return PrepareTokens();
+ }
+Index: plugins/codecompletion/cclistctrl.h
+===================================================================
+--- plugins/codecompletion/cclistctrl.h	(Revision 2295)
++++ plugins/codecompletion/cclistctrl.h	(Arbeitskopie)
+@@ -15,12 +15,12 @@
+ 
+ 		Token* GetTokenAt(unsigned int pos);
+ 		Token* GetSelectedToken();
+-		void AddChar(const wxChar& ch);
+-		void RemoveLastChar();
++		bool AddChar(const wxChar& ch);
++		bool RemoveLastChar();
+ 	protected:
+ 		void OnChar(wxKeyEvent& event);
+ 
+-		void PrepareTokens();
++		bool PrepareTokens();
+ 	private:
+ 		wxWindow* m_pParent;
+ 		Parser* m_pParser;
+Index: plugins/codecompletion/cclist.cpp
+===================================================================
+--- plugins/codecompletion/cclist.cpp	(Revision 2295)
++++ plugins/codecompletion/cclist.cpp	(Arbeitskopie)
+@@ -88,7 +88,11 @@
+ 	Manager::Get()->GetConfigManager(_T("code_completion"))->Write(_T("/size/width"), GetSize().GetWidth());
+ 	Manager::Get()->GetConfigManager(_T("code_completion"))->Write(_T("/size/height"), GetSize().GetHeight());
+ 	m_pEditor->SetFocus();
+-	delete m_pList;
++	if (m_pList)
++	{
++		delete m_pList;
++		m_pList = 0L;
++	}
+ 	g_CCList = 0L;
+ }
+ 
+@@ -114,6 +118,8 @@
+ 
+ void CCList::SelectCurrent(wxChar ch)
+ {
++	if (!m_pList)
++		return;
+ 	Token* token = m_pList->GetSelectedToken();
+ 	if (token)
+ 	{
+@@ -188,6 +194,8 @@
+ 	event.Skip(); // let the event proceed, anyway
+ 	if (!m_IsCtrlPressed)
+ 		return;
++	if (!m_pList)
++		return;
+ 	Token* token = m_pList->GetTokenAt(event.GetRow());
+ 	if (token)
+ 	{
+@@ -249,8 +257,8 @@
+ 
+ 		case WXK_SPACE:
+ 		{
+-		    m_pList->AddChar(c);
+-			Destroy();
++			if (m_pList && !m_pList->AddChar(c))
++				Destroy();
+ 			event.Skip();
+ 			break;
+ 		}
+@@ -282,7 +290,10 @@
+ 			if (m_pEditor->GetCurrentPos() <= m_StartPos)
+ 				Destroy();
+ 			else
+-				m_pList->RemoveLastChar();
++			{
++				if (m_pList && !m_pList->RemoveLastChar())
++					Destroy();
++			}
+ 			break;
+ 		}
+ 
+@@ -293,21 +304,28 @@
+ 		{
+ 			if (!event.ShiftDown())
+ 				c += 32;
+-			m_pList->AddChar(c);
++			if (m_pList && !m_pList->AddChar(c))
++				Destroy();
+ 			break;
+ 		}
+ 
+ 		case '~':
+ 		{
+ 			if (event.ShiftDown())
+-				m_pList->AddChar(c);
++			{
++				if (m_pList && !m_pList->AddChar(c))
++					Destroy();
++			}
+ 			break;
+ 		}
+ 
+ 		case '-':
+ 		{
+ 			if (event.ShiftDown())
+-				m_pList->AddChar('_');
++			{
++				if (m_pList && !m_pList->AddChar('_'))
++					Destroy();
++			}
+ 			else
+ 				SelectCurrent(c);
+ 			break;
+@@ -318,14 +336,20 @@
+ 		case '8':
+ 		{
+ 			if (!event.ShiftDown())
+-				m_pList->AddChar(c);
++			{
++				if (m_pList && !m_pList->AddChar(c))
++					Destroy();
++			}
+ 			break;
+ 		}
+ 
+ 		case '9':
+ 		{
+ 			if (!event.ShiftDown())
+-				m_pList->AddChar(c);
++			{
++				if (m_pList && !m_pList->AddChar(c))
++					Destroy();
++			}
+ 			else
+ 				SelectCurrent('(');
+ 			break;

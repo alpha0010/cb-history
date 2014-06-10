@@ -1,0 +1,133 @@
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 5986)
++++ src/sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -339,7 +339,11 @@
+ 
+ void EditorConfigurationDlg::OnPageChanged(wxListbookEvent& event)
+ {
+-    UpdateListbookImages();
++    // update only on real change, not on dialog creation
++    if (event.GetOldSelection() != -1 && event.GetSelection() != -1)
++    {
++        UpdateListbookImages();
++    }
+ }
+ 
+ void EditorConfigurationDlg::CreateColoursSample()
+Index: src/src/compilersettingsdlg.cpp
+===================================================================
+--- src/src/compilersettingsdlg.cpp	(revision 5986)
++++ src/src/compilersettingsdlg.cpp	(working copy)
+@@ -216,7 +216,11 @@
+ 
+ void CompilerSettingsDlg::OnPageChanged(wxListbookEvent& event)
+ {
+-    UpdateListbookImages();
++    // update only on real change, not on dialog creation
++    if (event.GetOldSelection() != -1 && event.GetSelection() != -1)
++    {
++        UpdateListbookImages();
++    }
+ }
+ 
+ void CompilerSettingsDlg::EndModal(int retCode)
+Index: src/src/environmentsettingsdlg.cpp
+===================================================================
+--- src/src/environmentsettingsdlg.cpp	(revision 5986)
++++ src/src/environmentsettingsdlg.cpp	(working copy)
+@@ -291,7 +291,11 @@
+ 
+ void EnvironmentSettingsDlg::OnPageChanged(wxListbookEvent& event)
+ {
+-    UpdateListbookImages();
++    // update only on real change, not on dialog creation
++    if (event.GetOldSelection() != -1 && event.GetSelection() != -1)
++    {
++        UpdateListbookImages();
++    }
+ }
+ 
+ void EnvironmentSettingsDlg::OnSetAssocs(wxCommandEvent& event)
+Index: src/sdk/finddlg.cpp
+===================================================================
+--- src/sdk/finddlg.cpp	(revision 5986)
++++ src/sdk/finddlg.cpp	(working copy)
+@@ -289,22 +289,23 @@
+ 
+ void FindDlg::OnFindChange(wxNotebookEvent& event)
+ {
+-    wxComboBox* cmbFind1 = XRCCTRL(*this, "cmbFind1", wxComboBox);
+-    wxComboBox* cmbFind2 = XRCCTRL(*this, "cmbFind2", wxComboBox);
++    if (    (event.GetOldSelection() == 0 && event.GetSelection() == 1)
++         || (event.GetOldSelection() == 1 && event.GetSelection() == 0))
++    {
++        wxComboBox* cmbFind1 = XRCCTRL(*this, "cmbFind1", wxComboBox);
++        wxComboBox* cmbFind2 = XRCCTRL(*this, "cmbFind2", wxComboBox);
+ 
+-    if (cmbFind1 && cmbFind2)
+-    {
+-        if (XRCCTRL(*this, "nbFind", wxNotebook)->GetSelection() == 1)
++        if (event.GetSelection() == 0)
+         {
+-            cmbFind2->SetValue(cmbFind1->GetValue());
+-            cmbFind2->SetFocus();
++            cmbFind1->SetValue(cmbFind2->GetValue());
++            cmbFind1->SetFocus();            
+         }
+-        else
++        else if (event.GetSelection() == 1)
+         {
+-            cmbFind1->SetValue(cmbFind2->GetValue());
+-            cmbFind1->SetFocus();
++            cmbFind2->SetValue(cmbFind1->GetValue());
++            cmbFind2->SetFocus();            
+         }
+-    }
++    }    
+     event.Skip();
+ }
+ 
+Index: src/sdk/replacedlg.cpp
+===================================================================
+--- src/sdk/replacedlg.cpp	(revision 5986)
++++ src/sdk/replacedlg.cpp	(working copy)
+@@ -243,22 +243,27 @@
+ 
+ void ReplaceDlg::OnFindChange(wxNotebookEvent& event)
+ {
+-    wxComboBox* cmbFind1 = XRCCTRL(*this, "cmbFind1", wxComboBox);
+-    wxComboBox* cmbFind2 = XRCCTRL(*this, "cmbFind2", wxComboBox);
++    if (    (event.GetOldSelection() == 0 && event.GetSelection() == 1)
++         || (event.GetOldSelection() == 1 && event.GetSelection() == 0))
++    {
++        wxComboBox* cmbFind1 = XRCCTRL(*this, "cmbFind1", wxComboBox);
++        wxComboBox* cmbFind2 = XRCCTRL(*this, "cmbFind2", wxComboBox);
++        wxComboBox* cmbReplace1 =XRCCTRL(*this, "cmbReplace1", wxComboBox);
++        wxComboBox* cmbReplace2 =XRCCTRL(*this, "cmbReplace2", wxComboBox);
+ 
+-    if (cmbFind1 && cmbFind2)
+-    {
+-        if (XRCCTRL(*this, "nbReplace", wxNotebook)->GetSelection() == 1)
++        if (event.GetSelection() == 0)
+         {
+-            cmbFind2->SetValue(cmbFind1->GetValue());
+-            cmbFind2->SetFocus();
++            cmbFind1->SetValue(cmbFind2->GetValue());
++            cmbReplace1->SetValue(cmbReplace2->GetValue());
++            cmbFind1->SetFocus();            
+         }
+-        else
++        else if (event.GetSelection() == 1)
+         {
+-            cmbFind1->SetValue(cmbFind2->GetValue());
+-            cmbFind1->SetFocus();
++            cmbFind2->SetValue(cmbFind1->GetValue());
++            cmbReplace2->SetValue(cmbReplace1->GetValue());
++            cmbFind2->SetFocus();            
+         }
+-    }
++    }    
+     event.Skip();
+ }
+ 

@@ -1,0 +1,714 @@
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 8219)
++++ src/sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -141,6 +141,8 @@
+     XRCCTRL(*this, "rbTabText",                   wxRadioBox)->SetSelection(cfg->ReadBool(_T("/tab_text_relative"),      true)? 1 : 0);
+ 
+     XRCCTRL(*this, "chkTrackPreprocessor",        wxCheckBox)->SetValue(cfg->ReadBool(_T("/track_preprocessor"),         false));
++    XRCCTRL(*this, "chkCollectPrjDefines",        wxCheckBox)->SetValue(cfg->ReadBool(_T("/collect_prj_defines"),        false));
++    XRCCTRL(*this, "chkPlatDefines",              wxCheckBox)->SetValue(cfg->ReadBool(_T("/platform_defines"),           false));
+     XRCCTRL(*this, "chkColoursWxSmith",           wxCheckBox)->SetValue(cfg->ReadBool(_T("/highlight_wxsmith"),          true));
+ 
+ #if defined __WXMSW__
+@@ -152,7 +154,7 @@
+ #endif
+     XRCCTRL(*this, "txtOpenFolder", wxTextCtrl)->SetValue(cfg->Read(_T("/open_containing_folder"), openFolderCmds));
+ 
+-    // Highlight Occurence
++    // Highlight Occurrence
+     bool highlightEnabled = cfg->ReadBool(_T("/highlight_occurrence/enabled"), true);
+     XRCCTRL(*this, "chkHighlightOccurrences",              wxCheckBox)->SetValue(highlightEnabled);
+     XRCCTRL(*this, "chkHighlightOccurrencesCaseSensitive", wxCheckBox)->SetValue(cfg->ReadBool(_T("/highlight_occurrence/case_sensitive"), true));
+@@ -814,6 +816,8 @@
+         cfg->Write(_T("/camel_case"),                          XRCCTRL(*this, "chkCamelCase",          wxCheckBox)->GetValue());
+ 
+         cfg->Write(_T("/track_preprocessor"),                  XRCCTRL(*this, "chkTrackPreprocessor",  wxCheckBox)->GetValue());
++        cfg->Write(_T("/collect_prj_defines"),                 XRCCTRL(*this, "chkCollectPrjDefines",  wxCheckBox)->GetValue());
++        cfg->Write(_T("/platform_defines"),                    XRCCTRL(*this, "chkPlatDefines",        wxCheckBox)->GetValue());
+         cfg->Write(_T("/highlight_wxsmith"),                   XRCCTRL(*this, "chkColoursWxSmith",     wxCheckBox)->GetValue());
+ 
+         bool resetZoom = XRCCTRL(*this, "chkResetZoom", wxCheckBox)->GetValue();
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 8219)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -2570,6 +2570,49 @@
+     if (matchingBrace == wxSCI_INVALID_POSITION)
+         matchingBrace = control->BraceMatch(control->GetCurrentPos() - 1);
+ 
++    // else look for a matching preprocessor command
++    if (matchingBrace == wxSCI_INVALID_POSITION)
++    {
++        wxRegEx ppIf(wxT("^[ \t]*#[ \t]*if"));
++        wxRegEx ppElse(wxT("^[ \t]*#[ \t]*el"));
++        wxRegEx ppEnd(wxT("^[ \t]*#[ \t]*endif"));
++        wxRegEx pp(wxT("^[ \t]*#[ \t]*[a-z]*")); // generic match to get length
++        if (ppIf.Matches(control->GetCurLine()) || ppElse.Matches(control->GetCurLine()))
++        {
++            int depth = 1; // search forwards
++            for (int i = control->GetCurrentLine() + 1; i < control->GetLineCount(); ++i)
++            {
++                if (ppIf.Matches(control->GetLine(i))) // ignore else's, elif's, ...
++                    ++depth;
++                else if (ppEnd.Matches(control->GetLine(i)))
++                    --depth;
++                if (depth == 0)
++                {
++                    pp.Matches(control->GetLine(i));
++                    matchingBrace = control->PositionFromLine(i) + pp.GetMatch(control->GetLine(i)).Length();
++                    break;
++                }
++            }
++        }
++        else if (ppEnd.Matches(control->GetCurLine()))
++        {
++            int depth = -1; // search backwards
++            for (int i = control->GetCurrentLine() - 1; i > 0; --i)
++            {
++                if (ppIf.Matches(control->GetLine(i))) // ignore else's, elif's, ...
++                    ++depth;
++                else if (ppEnd.Matches(control->GetLine(i)))
++                    --depth;
++                if (depth == 0)
++                {
++                    pp.Matches(control->GetLine(i));
++                    matchingBrace = control->PositionFromLine(i) + pp.GetMatch(control->GetLine(i)).Length();
++                    break;
++                }
++            }
++        }
++    }
++
+     // now, we either found it or not
+     if (matchingBrace != wxSCI_INVALID_POSITION)
+         control->GotoPos(matchingBrace);
+Index: src/sdk/wxscintilla/src/scintilla/lexers/LexCPP.cxx
+===================================================================
+--- src/sdk/wxscintilla/src/scintilla/lexers/LexCPP.cxx	(revision 8219)
++++ src/sdk/wxscintilla/src/scintilla/lexers/LexCPP.cxx	(working copy)
+@@ -88,6 +88,11 @@
+ 	int i =0;
+ 	char ch = styler.SafeGetCharAt(start, '\n');
+ 	while ((ch != '\r') && (ch != '\n')) {
++/* C::B begin */
++		if (ch == '/' && (styler.SafeGetCharAt(start + i + 1, '\n') == '/' ||
++						  styler.SafeGetCharAt(start + i + 1, '\n') == '*'))
++			break;
++/* C::B end */
+ 		if (allowSpace || (ch != ' '))
+ 			restOfLine += ch;
+ 		i++;
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(revision 8219)
++++ src/sdk/editormanager.cpp	(working copy)
+@@ -230,6 +230,9 @@
+ 
+     CreateSearchLog();
+     m_Zoom = Manager::Get()->GetConfigManager(_T("editor"))->ReadInt(_T("/zoom"));
++    Manager::Get()->RegisterEventSink(cbEVT_BUILDTARGET_SELECTED, new cbEventFunctor<EditorManager, CodeBlocksEvent>(this, &EditorManager::CollectDefines));
++    Manager::Get()->RegisterEventSink(cbEVT_PROJECT_ACTIVATE, new cbEventFunctor<EditorManager, CodeBlocksEvent>(this, &EditorManager::CollectDefines));
++    Manager::Get()->RegisterEventSink(cbEVT_WORKSPACE_LOADING_COMPLETE, new cbEventFunctor<EditorManager, CodeBlocksEvent>(this, &EditorManager::CollectDefines));
+ }
+ 
+ EditorManager::~EditorManager()
+@@ -3038,6 +3041,149 @@
+     event.Skip();
+ }
+ 
++void EditorManager::CollectDefines(CodeBlocksEvent& event)
++{
++    cbProject* prj = Manager::Get()->GetProjectManager()->GetActiveProject();
++    if (!prj ||
++        !Manager::Get()->GetConfigManager(wxT("editor"))->ReadBool(wxT("/track_preprocessor"), false) ||
++        !Manager::Get()->GetConfigManager(wxT("editor"))->ReadBool(wxT("/collect_prj_defines"), false))
++    {
++        event.Skip();
++        return;
++    }
++    wxArrayString compilerFlags = prj->GetCompilerOptions();
++    ProjectBuildTarget* trg = prj->GetBuildTarget(prj->GetActiveBuildTarget());
++    FilesList* lst;
++    wxString id;
++    if (trg)
++    {
++        AppendArray(trg->GetCompilerOptions(), compilerFlags);
++        lst = &trg->GetFilesList();
++        id = trg->GetCompilerID();
++    }
++    else
++    {
++        lst = &prj->GetFilesList();
++        id = prj->GetCompilerID();
++    }
++    wxArrayString defines;
++    for(size_t i = 0; i < compilerFlags.Count(); ++i)
++    {
++        if(compilerFlags[i].Left(2) == wxT("-D") || compilerFlags[i].Left(2) == wxT("/D"))
++            defines.Add(compilerFlags[i].Mid(2));
++    }
++    defines.Add(wxT("__cplusplus"));
++    for (FilesList::iterator it = lst->begin(); it != lst->end(); ++it)
++    {
++        if ((*it)->relativeFilename.EndsWith(wxT(".c")))
++        {
++            defines.RemoveAt(defines.GetCount() - 1); // do not define '__cplusplus' if even a single C file is found
++            break;
++        }
++    }
++    if (id.Find(wxT("gcc")) != wxNOT_FOUND)
++    {
++        defines.Add(wxT("__GNUC__"));
++        defines.Add(wxT("__GNUG__"));
++    }
++    else if (id.Find(wxT("msvc")) != wxNOT_FOUND)
++    {
++        defines.Add(wxT("_MSC_VER"));
++        defines.Add(wxT("__VISUALC__"));
++    }
++    if (Manager::Get()->GetConfigManager(wxT("editor"))->ReadBool(wxT("/platform_defines"), false))
++    {
++        if (platform::windows)
++        {
++            defines.Add(wxT("_WIN32"));
++            defines.Add(wxT("__WIN32"));
++            defines.Add(wxT("__WIN32__"));
++            defines.Add(wxT("WIN32"));
++            defines.Add(wxT("__WINNT"));
++            defines.Add(wxT("__WINNT__"));
++            defines.Add(wxT("WINNT"));
++            defines.Add(wxT("__WXMSW__"));
++            defines.Add(wxT("__WINDOWS__"));
++            if (platform::bits == 64)
++            {
++                defines.Add(wxT("_WIN64"));
++                defines.Add(wxT("__WIN64__"));
++            }
++        }
++        else if (platform::macosx)
++        {
++            defines.Add(wxT("__WXMAC__"));
++            defines.Add(wxT("__WXOSX__"));
++            defines.Add(wxT("__WXCOCOA__"));
++            defines.Add(wxT("__WXOSX_MAC__"));
++            defines.Add(wxT("__APPLE__"));
++        }
++        else if (platform::linux)
++        {
++            defines.Add(wxT("LINUX"));
++            defines.Add(wxT("linux"));
++            defines.Add(wxT("__linux"));
++            defines.Add(wxT("__linux__"));
++        }
++        else if (platform::freebsd)
++        {
++            defines.Add(wxT("FREEBSD"));
++            defines.Add(wxT("__FREEBSD__"));
++        }
++        else if (platform::netbsd)
++        {
++            defines.Add(wxT("NETBSD"));
++            defines.Add(wxT("__NETBSD__"));
++        }
++        else if (platform::openbsd)
++        {
++            defines.Add(wxT("OPENBSD"));
++            defines.Add(wxT("__OPENBSD__"));
++        }
++        else if (platform::darwin)
++        {
++            defines.Add(wxT("DARWIN"));
++            defines.Add(wxT("__APPLE__"));
++        }
++        else if (platform::solaris)
++        {
++            defines.Add(wxT("sun"));
++            defines.Add(wxT("__sun"));
++            defines.Add(wxT("__SUN__"));
++            defines.Add(wxT("__SUNOS__"));
++            defines.Add(wxT("__SOLARIS__"));
++        }
++        if (platform::unix)
++        {
++            defines.Add(wxT("unix"));
++            defines.Add(wxT("__unix"));
++            defines.Add(wxT("__unix__"));
++            defines.Add(wxT("__UNIX__"));
++        }
++        if (platform::gtk)
++            defines.Add(wxT("__WXGTK__"));
++        if (platform::bits == 32)
++        {
++            defines.Add(wxT("i386"));
++            defines.Add(wxT("__i386"));
++            defines.Add(wxT("__i386__"));
++            defines.Add(wxT("__i386__"));
++            defines.Add(wxT("_X86_"));
++            defines.Add(wxT("__INTEL__"));
++        }
++        else if (platform::bits == 64)
++        {
++            defines.Add(wxT("__amd64"));
++            defines.Add(wxT("__amd64__"));
++            defines.Add(wxT("__x86_64"));
++            defines.Add(wxT("__x86_64__"));
++            defines.Add(wxT("__IA64__"));
++        }
++    }
++    m_Theme->SetKeywords(m_Theme->GetHighlightLanguage(wxT("C/C++")), 4, GetStringFromArray(MakeUniqueArray(defines, true), wxT(" "), false));
++    event.Skip();
++}
++
+ void EditorManager::SetZoom(int zoom)
+ {
+     m_Zoom = zoom;
+Index: src/sdk/resources/lexers/lexer_cpp.xml
+===================================================================
+--- src/sdk/resources/lexers/lexer_cpp.xml	(revision 8219)
++++ src/sdk/resources/lexers/lexer_cpp.xml	(working copy)
+@@ -3,60 +3,94 @@
+ <CodeBlocks_lexer_properties>
+         <Lexer name="C/C++"
+                 index="3"
+-                filemasks="*.c,*.cpp,*.cc,*.cxx,*.h,*.hpp,*.hh,*.hxx,*.inl,*.ipp">
++                filemasks="*.c,*.cpp,*.cc,*.cxx,*.h,*.hpp,*.hh,*.hxx,*.inl,*.ipp,*.tcc">
+                 <Style name="Default"
+-                        index="0"
++                        index="0,11"
+                         fg="0,0,0"
+                         bg="255,255,255"
+                         bold="0"
+                         italics="0"
+                         underlined="0"/>
++                <Style name="Default (inactive)"
++                        index="64,72,75"
++                        fg="200,200,200"/>
+                 <Style name="Comment (normal)"
+-                        index="1,23"
++                        index="1,23,65,87"
+                         fg="160,160,160"/>
+                 <Style name="Comment line (normal)"
+-                        index="2"
++                        index="2,66"
+                         fg="190,190,230"/>
+                 <Style name="Comment (documentation)"
+-                        index="3"
++                        index="3,67"
+                         fg="128,128,255"
+                         bold="1"/>
+                 <Style name="Comment line (documentation)"
+-                        index="15"
++                        index="15,79"
+                         fg="128,128,255"
+                         bold="1"/>
+                 <Style name="Comment keyword (documentation)"
+-                        index="17"
++                        index="17,81"
+                         fg="0,128,128"/>
+                 <Style name="Comment keyword error (documentation)"
+-                        index="18"
++                        index="18,82"
+                         fg="128,0,0"/>
+                 <Style name="Number"
+                         index="4"
+                         fg="240,0,240"/>
++                <Style name="Number (inactive)"
++                        index="68"
++                        fg="240,200,240"/>
+                 <Style name="Keyword"
+                         index="5"
+                         fg="0,0,160"
+                         bold="1"/>
++                <Style name="Keyword (inactive)"
++                        index="69"
++                        fg="135,135,200"
++                        bold="1"/>
+                 <Style name="User keyword"
+                         index="16"
+                         fg="0,160,0"
+                         bold="1"/>
++                <Style name="User keyword (inactive)"
++                        index="80"
++                        fg="154,200,154"
++                        bold="1"/>
++                <Style name="Global classes and typedefs"
++                        index="19"
++                        fg="190,0,190"
++                        bold="1"/>
++                <Style name="Global classes and typedefs (inactive)"
++                        index="83"
++                        fg="190,137,190"
++                        bold="1"/>
+                 <Style name="String"
+                         index="6,12"
+                         fg="0,0,255"/>
++                <Style name="String (inactive)"
++                        index="70,76"
++                        fg="190,190,255"/>
+                 <Style name="Character"
+                         index="7"
+                         fg="224,160,0"/>
++                <Style name="Character (inactive)"
++                        index="71"
++                        fg="224,206,159"/>
+                 <Style name="UUID"
+                         index="8"
+                         fg="0,0,0"/>
+                 <Style name="Preprocessor"
+                         index="9"
+                         fg="0,160,0"/>
++                <Style name="Preprocessor (inactive)"
++                        index="73"
++                        fg="132,160,132"/>
+                 <Style name="Operator"
+                         index="10"
+                         fg="255,0,0"/>
++                <Style name="Operator (inactive)"
++                        index="74"
++                        fg="255,200,200"/>
+                 <Style name="Selection"
+                         index="-99"
+                         bg="192,192,192"/>
+@@ -74,6 +108,7 @@
+                         bg="255,128,0"/>
+                 <Style name="Matching brace highlight"
+                         index="34"
++                        fg="0,0,0"
+                         bg="128,255,255"
+                         bold="1"/>
+                 <Style name="No matching brace highlight"
+@@ -84,8 +119,11 @@
+                 <Style name="wxSmith-generated code"
+                         index="50"
+                         fg="64,64,128"
+-                        bg="255,255,255"
+                         italics="1"/>
++                <Style name="wxSmith-generated code (inactive)"
++                        index="114"
++                        fg="133,133,172"
++                        italics="1"/>
+                 <Keywords>
+                         <!-- Primary keywords and identifiers -->
+                         <Set index="0"
+@@ -156,9 +194,9 @@
+                     BoxCommentMid=" * "
+                     BoxCommentEnd=" */"
+                     CaseSensitive="1"
+-                    LexerCommentStyles="1,2,3,15,17,18"
+-                    LexerCharacterStyles="7"
+-                    LexerStringStyles="6,12"
+-                    LexerPreprocessorStyles="9"/>
++                    LexerCommentStyles="1,2,3,15,17,18,23,65,66,67,79,81,82,87"
++                    LexerCharacterStyles="7,71"
++                    LexerStringStyles="6,12,70,76"
++                    LexerPreprocessorStyles="9,73"/>
+         </Lexer>
+ </CodeBlocks_lexer_properties>
+Index: src/sdk/resources/editor_configuration.xrc
+===================================================================
+--- src/sdk/resources/editor_configuration.xrc	(revision 8219)
++++ src/sdk/resources/editor_configuration.xrc	(working copy)
+@@ -1,6 +1,9 @@
+-<?xml version="1.0" encoding="utf-8"?>
++<?xml version="1.0" encoding="utf-8" ?>
+ <resource xmlns="http://www.wxwidgets.org/wxxrc">
+   <object class="wxScrollingDialog" name="dlgConfigureEditor">
++    <title>Configure editor</title>
++    <centered>1</centered>
++    <style>wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER</style>
+     <object class="wxBoxSizer">
+       <orient>wxVERTICAL</orient>
+       <object class="sizeritem">
+@@ -37,7 +40,7 @@
+         <border>5</border>
+       </object>
+       <object class="sizeritem">
+-        <object class="wxStaticLine" name="ID_STATICLINE1"/>
++        <object class="wxStaticLine" name="ID_STATICLINE1" />
+         <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+       </object>
+       <object class="sizeritem">
+@@ -50,6 +53,7 @@
+                   <object class="wxNotebook" name="wxID_ANY">
+                     <object class="notebookpage">
+                       <object class="wxPanel" name="wxID_ANY">
++                        <pos>33,178</pos>
+                         <object class="wxBoxSizer">
+                           <orient>wxVERTICAL</orient>
+                           <object class="sizeritem">
+@@ -386,7 +390,6 @@
+                                     </object>
+                                     <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+                                   </object>
+-                                                                    
+                                   <object class="sizeritem">
+                                     <object class="wxCheckBox" name="chkHighlightCaretLine">
+                                       <label>Highlight line under caret</label>
+@@ -420,41 +423,44 @@
+                             <border>5</border>
+                           </object>
+                         </object>
+-                        <pos>33,178</pos>
+                       </object>
+                       <label>Editor settings</label>
+                     </object>
+                     <object class="notebookpage">
+                       <object class="wxPanel" name="wxID_ANY">
+-                        <object class="wxBoxSizer" name="wxID_ANY">
++                        <pos>64,15</pos>
++                        <object class="wxBoxSizer">
+                           <orient>wxVERTICAL</orient>
+-                                                    
+-                                                    
+-                                                    
+-                                                    
+                           <object class="sizeritem">
+                             <object class="wxStaticBoxSizer">
++                              <label>Colouring and highlighting options</label>
++                              <orient>wxVERTICAL</orient>
+                               <object class="sizeritem">
+-                                <object class="wxFlexGridSizer" name="wxID_ANY">
++                                <object class="wxFlexGridSizer">
+                                   <cols>1</cols>
+                                   <vgap>4</vgap>
+                                   <hgap>4</hgap>
+-                                                                    
+-                                                                    
+-                                                                    
+-                                                                    
+-                                                                    
+                                   <object class="sizeritem">
+                                     <object class="wxCheckBox" name="chkTrackPreprocessor">
+                                       <label>Interpret #if, #else, #endif to grey out inactive preprocessor-code</label>
+                                     </object>
+                                     <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+                                   </object>
+-                                                                    
+-                                                                    
+-                                                                    
+-                                                                    
+                                   <object class="sizeritem">
++                                    <object class="wxCheckBox" name="chkCollectPrjDefines">
++                                      <label>Collect defines from project file</label>
++                                    </object>
++                                    <flag>wxLEFT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                    <border>10</border>
++                                  </object>
++                                  <object class="sizeritem">
++                                    <object class="wxCheckBox" name="chkPlatDefines">
++                                      <label>Include host platform defines</label>
++                                    </object>
++                                    <flag>wxLEFT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                    <border>10</border>
++                                  </object>
++                                  <object class="sizeritem">
+                                     <object class="wxCheckBox" name="chkColoursWxSmith">
+                                       <label>Highlight wxSmith sections differently</label>
+                                       <checked>1</checked>
+@@ -465,20 +471,18 @@
+                                 <flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+                                 <border>4</border>
+                               </object>
+-                              <label>Colouring and highlighting options</label>
+-                              <orient>wxVERTICAL</orient>
+                             </object>
+                             <flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+                             <border>5</border>
+                           </object>
+                         </object>
+-                        <pos>64,15</pos>
+                       </object>
+                       <label>C/C++ Editor settings</label>
+                     </object>
+                     <object class="notebookpage">
+                       <object class="wxPanel" name="wxID_ANY">
+-                        <object class="wxBoxSizer" name="tabFolding">
++                        <pos>64,15</pos>
++                        <object class="wxBoxSizer">
+                           <orient>wxVERTICAL</orient>
+                           <object class="sizeritem">
+                             <object class="wxStaticBoxSizer">
+@@ -510,7 +514,7 @@
+                                   <label>Use this encoding</label>
+                                   <content>
+                                     <item>As fallback encoding</item>
+-                                    <item>As default encoding (bypassing C::B's auto-detection)</item>
++                                    <item>As default encoding (bypassing C::B&apos;s auto-detection)</item>
+                                   </content>
+                                   <style>wxRA_SPECIFY_COLS</style>
+                                 </object>
+@@ -544,7 +548,7 @@
+                           </object>
+                           <object class="sizeritem">
+                             <object class="wxRadioBox" name="rbTabText">
+-                              <label>Editor title is the file's</label>
++                              <label>Editor title is the file&apos;s</label>
+                               <content>
+                                 <item>name only (no path information)</item>
+                                 <item>relative filename (to the project file)</item>
+@@ -609,9 +613,7 @@
+                             <flag>wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
+                             <border>5</border>
+                           </object>
+-                        
+-                                                </object>
+-                        <pos>64,15</pos>
++                        </object>
+                       </object>
+                       <label>Other settings</label>
+                     </object>
+@@ -829,7 +831,7 @@
+                           <flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+                         </object>
+                         <object class="sizeritem">
+-                          <object class="wxButton" name="btnGutterColour"/>
++                          <object class="wxButton" name="btnGutterColour" />
+                           <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+                         </object>
+                         <object class="sizeritem">
+@@ -899,7 +901,7 @@
+                           <flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+                         </object>
+                         <object class="sizeritem">
+-                          <object class="wxButton" name="btnCaretColour"/>
++                          <object class="wxButton" name="btnCaretColour" />
+                           <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+                         </object>
+                         <object class="sizeritem">
+@@ -1069,7 +1071,7 @@
+                   <border>4</border>
+                 </object>
+                 <object class="sizeritem">
+-                  <object class="wxStaticLine" name="ID_STATICLINE2"/>
++                  <object class="wxStaticLine" name="ID_STATICLINE2" />
+                   <flag>wxTOP|wxLEFT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+                   <border>8</border>
+                 </object>
+@@ -1097,7 +1099,7 @@
+                                   <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+                                 </object>
+                                 <object class="sizeritem">
+-                                  <object class="wxButton" name="btnColoursFore"/>
++                                  <object class="wxButton" name="btnColoursFore" />
+                                   <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+                                 </object>
+                                 <object class="sizeritem">
+@@ -1108,7 +1110,7 @@
+                                   <border>8</border>
+                                 </object>
+                                 <object class="sizeritem">
+-                                  <object class="wxButton" name="btnColoursBack"/>
++                                  <object class="wxButton" name="btnColoursBack" />
+                                   <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+                                 </object>
+                               </object>
+@@ -1146,10 +1148,9 @@
+                           </object>
+                           <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+                         </object>
+-                                                
+                         <object class="spacer">
++                          <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+                           <option>1</option>
+-                          <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+                         </object>
+                         <object class="sizeritem">
+                           <object class="wxButton" name="btnColoursReset">
+@@ -1167,8 +1168,8 @@
+                 </object>
+                 <object class="sizeritem">
+                   <object class="unknown" name="txtColoursSample">
+-                    <style/>
+-                    <style/>
++                    <style></style>
++                    <style></style>
+                   </object>
+                   <flag>wxTOP|wxLEFT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+                   <border>4</border>
+@@ -1231,7 +1232,7 @@
+         <option>1</option>
+       </object>
+       <object class="sizeritem">
+-        <object class="wxStaticLine" name="ID_STATICLINE3"/>
++        <object class="wxStaticLine" name="ID_STATICLINE3" />
+         <flag>wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+         <border>8</border>
+       </object>
+@@ -1239,12 +1240,12 @@
+         <object class="wxStdDialogButtonSizer">
+           <object class="button">
+             <object class="wxButton" name="wxID_OK">
+-              <label/>
++              <label></label>
+             </object>
+           </object>
+           <object class="button">
+             <object class="wxButton" name="wxID_CANCEL">
+-              <label/>
++              <label></label>
+             </object>
+           </object>
+         </object>
+@@ -1252,8 +1253,5 @@
+         <border>4</border>
+       </object>
+     </object>
+-    <title>Configure editor</title>
+-    <centered>1</centered>
+-    <style>wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER</style>
+   </object>
+-</resource>
+\ No newline at end of file
++</resource>
+Index: src/CodeBlocks.cbp
+===================================================================
+--- src/CodeBlocks.cbp	(revision 8219)
++++ src/CodeBlocks.cbp	(working copy)
+@@ -2661,6 +2661,12 @@
+ 		<Unit filename="sdk\resources\lexers\lexer_cg.xml">
+ 			<Option target="scintilla" />
+ 		</Unit>
++		<Unit filename="sdk\resources\lexers\lexer_cmake.sample">
++			<Option target="scintilla" />
++		</Unit>
++		<Unit filename="sdk\resources\lexers\lexer_cmake.xml">
++			<Option target="scintilla" />
++		</Unit>
+ 		<Unit filename="sdk\resources\lexers\lexer_cpp.sample">
+ 			<Option target="scintilla" />
+ 		</Unit>
+Index: src/plugins/contrib/SpellChecker/OnlineSpellChecking.xml
+===================================================================
+--- src/plugins/contrib/SpellChecker/OnlineSpellChecking.xml	(revision 8219)
++++ src/plugins/contrib/SpellChecker/OnlineSpellChecking.xml	(working copy)
+@@ -6,7 +6,7 @@
+     <Language name="Batch"                   index="1" />
+     <Language name="BibTeX"                  index="1,5,6" />
+     <Language name="Caml"                    index="9,11,12,13,14,15" />
+-    <Language name="C/C++"                   index="1,2,3,15,17,6,12,23" />
++    <Language name="C/C++"                   index="1,2,3,6,12,15,17,18,23,65,66,67,70,76,79,81,82,87" />
+     <Language name="CMake"                   index="1,2,3,4" />
+     <Language name="CSS"                     index="9,12,14" />
+     <Language name="D"                       index="1,2,3,4,10,11,12,15,18,19" />
+@@ -17,7 +17,7 @@
+     <Language name="Haskell"                 index="4,5,13,14,15,16" />
+     <Language name="Hitachi asm"             index="1,2,3,6,7,12,15,17,18" />
+     <Language name="HTML/PHP/ASP/JS"         index="0,9,19,20,24,25,29,42,43,44,48,49,51,57,58,59,63,64,66,72,75,77,82,85,87,92,94,95,97,98,107,109,110,112,113,119,120,124,125" />
+-    <Language name="Java"                    index="1,2,3,15,17,6,12" />
++    <Language name="Java"                    index="1,2,3,6,12,15,17,18" />
+     <Language name="LaTeX"                   index="0,4,5" />
+     <Language name="Lisp"                    index="1,12" />
+     <Language name="Lua"                     index="1,2,3,6,8,12" />
+Index: src/include/editormanager.h
+===================================================================
+--- src/include/editormanager.h	(revision 8219)
++++ src/include/editormanager.h	(working copy)
+@@ -168,6 +168,7 @@
+         void OnTreeItemSelected(wxTreeEvent &event);
+         void OnTreeItemActivated(wxTreeEvent &event);
+         void OnTreeItemRightClick(wxTreeEvent &event);
++        void CollectDefines(CodeBlocksEvent& event);
+         void SetZoom(int zoom);
+         int GetZoom()const;
+ 

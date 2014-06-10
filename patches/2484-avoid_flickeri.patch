@@ -1,0 +1,48 @@
+--- codeblocks-1.0svn.orig/src/src/app.cpp	2008-05-01 07:11:56.000000000 +0200
++++ codeblocks-1.0svn.work/src/src/app.cpp	2008-05-25 12:24:12.000000000 +0200
+@@ -687,18 +687,22 @@
+         }
+     }
+ 
+-    wxTaskBarIcon* tbIcon = new wxTaskBarIcon();
+-    tbIcon->SetIcon(
+-            #ifdef __WXMSW__
+-                wxICON(A_MAIN_ICON),
+-            #else
+-                wxIcon(app),
+-            #endif // __WXMSW__
+-                _("Building ") + wxFileNameFromPath(wxString(argv[argc-1])));
+-
++    wxTaskBarIcon* tbIcon = 0;
+     m_pBatchBuildDialog = m_Frame->GetBatchBuildDialog();
+     PlaceWindow(m_pBatchBuildDialog);
+-    m_pBatchBuildDialog->Show();
++    if(!m_Clean)
++    {
++        tbIcon = new wxTaskBarIcon();
++        tbIcon->SetIcon(
++                #ifdef __WXMSW__
++                    wxICON(A_MAIN_ICON),
++                #else
++                    wxIcon(app),
++                #endif // __WXMSW__
++                    _("Building ") + wxFileNameFromPath(wxString(argv[argc-1])));
++
++        m_pBatchBuildDialog->Show();
++    }
+ 
+     if (m_ReBuild)
+     {
+@@ -744,8 +748,10 @@
+     if (!m_Clean && m_pBatchBuildDialog)
+         m_pBatchBuildDialog->ShowModal();
+ 
+-    tbIcon->RemoveIcon();
+-    delete tbIcon;
++    if(tbIcon){
++        tbIcon->RemoveIcon();
++        delete tbIcon;
++    }
+     if (m_pBatchBuildDialog)
+         m_pBatchBuildDialog->Destroy();
+     m_pBatchBuildDialog = 0;

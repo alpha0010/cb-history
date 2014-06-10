@@ -1,0 +1,81 @@
+Index: src/sdk/editorbase.cpp
+===================================================================
+--- src/sdk/editorbase.cpp	(Revision 7905)
++++ src/sdk/editorbase.cpp	(Arbeitskopie)
+@@ -175,6 +175,28 @@
+     Manager::Get()->GetEditorManager()->SetActiveEditor(this);
+ }
+ 
++bool EditorBase::QueryClose()
++{
++    if (GetModified())
++    {
++        wxString msg;
++        msg.Printf(_("File %s is modified...\nDo you want to save the changes?"), GetFilename().c_str());
++        switch (cbMessageBox(msg, _("Save file"), wxICON_QUESTION | wxYES_NO | wxCANCEL))
++        {
++        case wxID_YES:
++            if (!Save())
++                return false;
++            break;
++        case wxID_NO:
++            break;
++        case wxID_CANCEL:
++            return false;
++        }
++        SetModified(false);
++    }
++    return true;
++}
++
+ bool EditorBase::Close()
+ {
+     Destroy();
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(Revision 7905)
++++ src/sdk/editormanager.cpp	(Arbeitskopie)
+@@ -747,29 +747,7 @@
+ {
+     if (!ed)
+         return true;
+-    if (ed->GetModified())
+-    {
+-        // TODO (mandrav#1#): Move this in EditorBase
+-        wxString msg;
+-        msg.Printf(_("File %s is modified...\nDo you want to save the changes?"), ed->GetFilename().c_str());
+-        switch (cbMessageBox(msg, _("Save file"), wxICON_QUESTION | wxYES_NO | wxCANCEL))
+-        {
+-        case wxID_YES:
+-            if (!ed->Save())
+-                return false;
+-            break;
+-        case wxID_NO:
+-            break;
+-        case wxID_CANCEL:
+-            return false;
+-        }
+-        ed->SetModified(false);
+-    }
+-    else
+-    {
+-        return ed->QueryClose();
+-    }
+-    return true;
++    return ed->QueryClose();
+ }
+ 
+ int EditorManager::FindPageFromEditor(EditorBase* eb)
+Index: src/include/editorbase.h
+===================================================================
+--- src/include/editorbase.h	(Revision 7905)
++++ src/include/editorbase.h	(Arbeitskopie)
+@@ -92,7 +92,7 @@
+           * close it (i.e. it is not modified).
+           * @return True if this editor can be closed.
+           */
+-        virtual bool QueryClose(){ return true; }
++        virtual bool QueryClose();
+ 
+         /** @brief Close this editor.
+           *

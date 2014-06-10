@@ -1,0 +1,108 @@
+--- C:/CB_20061121_rev3253_win32/share/CodeBlocks/templates/wizard/old_common_functions.script	Tue Jul 25 21:05:04 2006
++++ C:/CB_20061121_rev3253_win32/share/CodeBlocks/templates/wizard/common_functions.script	Sat Nov 25 02:01:18 2006
+@@ -5,31 +5,44 @@
+ // Warnings On
+ function WarningsOn(base, compilerID)
+ {
+-    if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("msvc*")))
++	if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("msvc*")))
+     {
+         base.AddCompilerOption(_T("/W3"));
+     }
+-    else
++	else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gcc")))
+     {
+         // GCC options are used as fallback
+         base.AddCompilerOption(_T("-Wall"));
+     }
++	else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("bcc")))
++	{
++		// Set option for genearting warnings with BCC
++		base.AddCompilerOption(_T("-w"));
++	}
+ }
+ 
+ // Debug symbols On
+ function DebugSymbolsOn(base, compilerID)
+ {
+-    if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("msvc*")))
++	if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("msvc*")))
+     {
+         base.AddCompilerOption(_T("/Zi"));
+         base.AddCompilerOption(_T("/D_DEBUG"));
+         base.AddLinkerOption(_T("/DEBUG"));
++		base.AddLinkerOption(_T("/NODEFAULTLIB:libcmt.lib"));
++		base.AddLinkLib(_T("libcmtd.lib"));
+     }
+-    else
++    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gcc")))
+     {
+         // GCC options are used as fallback
+         base.AddCompilerOption(_T("-g"));
+     }
++	else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("bcc")))
++    {
++        // BCC options for generating debug symbols
++        base.AddCompilerOption(_T("-v"));
++		base.AddLinkerOption(_T("-v"));
++    }
+ }
+ 
+ // Optimizations On
+@@ -40,13 +53,19 @@
+         base.AddCompilerOption(_T("/Og"));
+         base.AddCompilerOption(_T("/Ox"));
+         base.AddCompilerOption(_T("/DNDEBUG"));
++		base.AddLinkLib(_T("libcmt.lib"));
+     }
+-    else
++    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gcc")))
+     {
+         // GCC options are used as fallback
+         base.AddCompilerOption(_T("-O2"));
+         base.AddLinkerOption(_T("-s"));
+     }
++	else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("bcc")))
++    {
++        // BCC options for optimizations
++        base.AddCompilerOption(_T("-O2"));
++    }
+ }
+ 
+ // C++ Exceptions On
+@@ -56,11 +75,34 @@
+     {
+         base.AddCompilerOption(_T("/EHsc"));
+     }
+-    else
++    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gcc")))
+     {
+         // GCC options are used as fallback
+         base.AddCompilerOption(_T("-fexceptions"));
+     }
++	else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("bcc")))
++    {
++        // BCC options for exceptions. Not Tested
++        base.AddCompilerOption(_T("-x"));
++    }
++}
++
++//To include additional Libraries needed for linking
++function IncludeAdditionalLib(base, compilerID)
++{
++	if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("msvc*")))
++	{
++		//Add any library which is needed
++	}
++	else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gcc")))
++	{
++		//Add any library which is needed
++	}
++	else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("bcc")))
++	{
++		base.AddLinkLib(_T("cw32mt.lib"));
++		base.AddLinkLib(_T("import32.lib"));
++	}
+ }
+ 
+ function VerifyDirectory(dir_or_macro)

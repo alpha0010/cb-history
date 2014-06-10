@@ -1,0 +1,252 @@
+Index: src/plugins/contrib/SpellChecker/Thesaurus.cpp
+===================================================================
+--- src/plugins/contrib/SpellChecker/Thesaurus.cpp	(revision 8236)
++++ src/plugins/contrib/SpellChecker/Thesaurus.cpp	(working copy)
+@@ -56,7 +56,48 @@
+         m_pT = new wxThes( idxpath, datpath );
+     }
+     else
++    {
+         Manager::Get()->GetLogManager()->Log(_T("SpellChecker: Thesaurus files '") + idxpath + _T("' not found!"));
++        wxString altIdx = wxFindFirstFile(idxpath.BeforeLast(wxT('.')) + wxT("*.idx"), wxFILE); // "*_v2.idx"
++        if (altIdx.IsEmpty()) // try again with more wildcards
++        {
++            altIdx = idxpath.AfterLast(wxFILE_SEP_PATH).BeforeLast(wxT('.')) + wxT("*.idx");
++            altIdx.Replace(wxT("_"), wxT("*"));
++            altIdx.Replace(wxT("-"), wxT("*"));
++            altIdx = wxFindFirstFile(idxpath.BeforeLast(wxFILE_SEP_PATH) + wxFILE_SEP_PATH + altIdx, wxFILE);
++        }
++        if (altIdx.IsEmpty()) // try to find the thesaurus of a related language (something is better than nothing)
++        {
++            altIdx = idxpath.AfterLast(wxFILE_SEP_PATH);
++            altIdx.Replace(wxT("_"), wxT("*"));
++            altIdx.Replace(wxT("-"), wxT("*"));
++            altIdx = altIdx.BeforeLast(wxT('*')) + wxT("*.idx");
++            altIdx = wxFindFirstFile(idxpath.BeforeLast(wxFILE_SEP_PATH) + wxFILE_SEP_PATH + altIdx, wxFILE);
++        }
++
++        wxString altDat = wxFindFirstFile(datpath.BeforeLast(wxT('.')) + wxT("*.dat"), wxFILE); // "*_v2.dat"
++        if (altDat.IsEmpty()) // try again with more wildcards
++        {
++            altDat = datpath.AfterLast(wxFILE_SEP_PATH).BeforeLast(wxT('.')) + wxT("*.dat");
++            altDat.Replace(wxT("_"), wxT("*"));
++            altDat.Replace(wxT("-"), wxT("*"));
++            altDat = wxFindFirstFile(datpath.BeforeLast(wxFILE_SEP_PATH) + wxFILE_SEP_PATH + altDat, wxFILE);
++        }
++        if (altDat.IsEmpty()) // try to find the thesaurus of a related language (something is better than nothing)
++        {
++            altDat = datpath.AfterLast(wxFILE_SEP_PATH);
++            altDat.Replace(wxT("_"), wxT("*"));
++            altDat.Replace(wxT("-"), wxT("*"));
++            altDat = altDat.BeforeLast(wxT('*')) + wxT("*.dat");
++            altDat = wxFindFirstFile(datpath.BeforeLast(wxFILE_SEP_PATH) + wxFILE_SEP_PATH + altDat, wxFILE);
++        }
++
++        if (!altIdx.IsEmpty() && !altDat.IsEmpty() && wxFileExists(altIdx) && wxFileExists(altDat))
++        {
++            m_pT = new  wxThes(altIdx, altDat);
++            Manager::Get()->GetLogManager()->Log(wxT("SpellChecker: Loading '") + altIdx + wxT("' instead..."));
++        }
++    }
+ }
+ 
+ 
+Index: src/plugins/contrib/SpellChecker/StatusField.cpp
+===================================================================
+--- src/plugins/contrib/SpellChecker/StatusField.cpp	(revision 8236)
++++ src/plugins/contrib/SpellChecker/StatusField.cpp	(working copy)
+@@ -26,7 +26,10 @@
+     //ctor
+     m_text = new wxStaticText(this, wxID_ANY, m_sccfg->GetDictionaryName());
+ 
+-    wxBitmap bm(wxImage( m_sccfg->GetBitmapPath() + wxFILE_SEP_PATH + m_sccfg->GetDictionaryName() + _T(".png"), wxBITMAP_TYPE_PNG ));
++    wxString name = m_sccfg->GetDictionaryName();
++    if (!wxFileExists(m_sccfg->GetBitmapPath() + wxFILE_SEP_PATH + name + _T(".png")))
++        name.Replace(wxT("-"), wxT("_")); // some dictionaries are distributed with hyphens
++    wxBitmap bm(wxImage( m_sccfg->GetBitmapPath() + wxFILE_SEP_PATH + name + _T(".png"), wxBITMAP_TYPE_PNG ));
+     m_bitmap = new wxStaticBitmap(this, wxID_ANY, bm);
+ 
+     if ( bm.IsOk() )
+@@ -41,6 +44,9 @@
+     m_text->Connect(wxEVT_RIGHT_UP, wxMouseEventHandler(SpellCheckerStatusField::OnRightUp), NULL, this);
+     m_bitmap->Connect(wxEVT_RIGHT_UP, wxMouseEventHandler(SpellCheckerStatusField::OnRightUp), NULL, this);
+     Connect(wxEVT_RIGHT_UP, wxMouseEventHandler(SpellCheckerStatusField::OnRightUp), NULL, this);
++    m_text->Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(SpellCheckerStatusField::OnRightUp), NULL, this);
++    m_bitmap->Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(SpellCheckerStatusField::OnRightUp), NULL, this);
++    Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(SpellCheckerStatusField::OnRightUp), NULL, this);
+ }
+ 
+ SpellCheckerStatusField::~SpellCheckerStatusField()
+@@ -58,7 +64,10 @@
+ void SpellCheckerStatusField::Update()
+ {
+     m_text->SetLabel(m_sccfg->GetDictionaryName() );
+-    wxBitmap bm(wxImage( m_sccfg->GetBitmapPath() + wxFILE_SEP_PATH + m_sccfg->GetDictionaryName()  + _T(".png"), wxBITMAP_TYPE_PNG ));
++    wxString name = m_sccfg->GetDictionaryName();
++    if (!wxFileExists(m_sccfg->GetBitmapPath() + wxFILE_SEP_PATH + name + _T(".png")))
++        name.Replace(wxT("-"), wxT("_")); // some dictionaries are distributed with hyphens
++    wxBitmap bm(wxImage( m_sccfg->GetBitmapPath() + wxFILE_SEP_PATH + name + _T(".png"), wxBITMAP_TYPE_PNG ));
+     if ( bm.IsOk() )
+     {
+         m_text->Hide();
+@@ -93,7 +102,7 @@
+     m_sccfg->ScanForDictionaries();
+     wxMenu *popup = new wxMenu();
+     std::vector<wxString> dicts = m_sccfg->GetPossibleDictionaries();
+-    for ( unsigned int i = 0 ; i < dicts.size()&& i < LANGS ; i++ )
++    for ( unsigned int i = 0 ; i < dicts.size() && i < LANGS ; i++ )
+         popup->Append( idCommand[i], m_sccfg->GetLanguageName(dicts[i]), _T(""), wxITEM_CHECK)->Check(dicts[i] == m_sccfg->GetDictionaryName() );
+     popup->AppendSeparator();
+     wxMenuItem *mnuItm = popup->Append( idEditPersonalDictionary, _T("Edit personal dictionary"), _T(""));
+Index: src/plugins/contrib/SpellChecker/SpellChecker-unix.cbp
+===================================================================
+--- src/plugins/contrib/SpellChecker/SpellChecker-unix.cbp	(revision 8236)
++++ src/plugins/contrib/SpellChecker/SpellChecker-unix.cbp	(working copy)
+@@ -65,8 +65,8 @@
+ 				</Compiler>
+ 				<Linker>
+ 					<Add option="`wx-config --libs`" />
++					<Add option="-lwxSpellChecker" />
+ 					<Add option="`pkg-config hunspell --libs`" />
+-					<Add library="wxSpellChecker" />
+ 					<Add library="codeblocks" />
+ 					<Add directory="../../../devel" />
+ 				</Linker>
+Index: src/plugins/contrib/SpellChecker/SpellCheckerConfig.cpp
+===================================================================
+--- src/plugins/contrib/SpellChecker/SpellCheckerConfig.cpp	(revision 8236)
++++ src/plugins/contrib/SpellChecker/SpellCheckerConfig.cpp	(working copy)
+@@ -109,20 +109,80 @@
+ }
+ const wxString SpellCheckerConfig::GetDictionaryPath()const
+ {
+-    wxString dictPath = m_DictPath;
+-    Manager::Get()->GetMacrosManager()->ReplaceEnvVars(dictPath);
+-    return dictPath;
++    wxArrayString dictPaths;
++    dictPaths.Add(m_DictPath);
++    Manager::Get()->GetMacrosManager()->ReplaceEnvVars(dictPaths[0]);
++    if (platform::windows)
++    {
++        wxString programs = wxT("C:\\Program Files");
++        wxGetEnv(wxT("ProgramFiles"), &programs);
++        dictPaths.Add(programs + wxT("\\Mozilla Firefox\\dictionaries"));
++        dictPaths.Add(programs + wxT("\\Mozilla\\Firefox\\dictionaries"));
++        dictPaths.Add(programs + wxT("\\Mozilla Thunderbird\\dictionaries"));
++        dictPaths.Add(programs + wxT("\\Mozilla\\Thunderbird\\dictionaries"));
++        wxString libreOffice = wxFindFirstFile(programs + wxT("\\*LibreOffice*"), wxDIR);
++        wxString openOffice = wxFindFirstFile(programs + wxT("\\*OpenOffice*"), wxDIR);
++        wxArrayString langs = GetArrayFromString(wxT("en;fr;es;de"));
++        for (size_t i = 0; i < langs.GetCount(); ++i)
++        {
++            if (!libreOffice.IsEmpty())
++                dictPaths.Add(libreOffice + wxT("\\share\\extensions\\dict-") + langs[i]);
++            if (!openOffice.IsEmpty())
++                dictPaths.Add(openOffice + wxT("\\share\\extensions\\dict-") + langs[i]);
++        }
++    }
++    else
++    {
++        dictPaths.Add(wxT("/usr/share/hunspell"));
++        dictPaths.Add(wxT("/usr/share/myspell/dicts"));
++    }
++    dictPaths.Add(m_pPlugin->GetOnlineCheckerConfigPath());
++    for (size_t i = 0; i < dictPaths.GetCount(); ++i)
++    {
++        if (!wxFindFirstFile(dictPaths[i] + wxFILE_SEP_PATH + wxT("*.dic"), wxFILE).IsEmpty())
++            return dictPaths[i];
++    }
++    return dictPaths[0];
+ }
+ const wxString SpellCheckerConfig::GetThesaurusPath()const
+ {
+-    wxString thesPath = m_ThesPath;
+-    Manager::Get()->GetMacrosManager()->ReplaceEnvVars(thesPath);
+-    return thesPath;
++    wxArrayString thesPaths;
++    thesPaths.Add(m_ThesPath);
++    Manager::Get()->GetMacrosManager()->ReplaceEnvVars(thesPaths[0]);
++    if (platform::windows)
++    {
++        wxString programs = wxT("C:\\Program Files");
++        wxGetEnv(wxT("ProgramFiles"), &programs);
++        wxString libreOffice = wxFindFirstFile(programs + wxT("\\*LibreOffice*"), wxDIR);
++        wxString openOffice = wxFindFirstFile(programs + wxT("\\*OpenOffice*"), wxDIR);
++        wxArrayString langs = GetArrayFromString(wxT("en;fr;es;de"));
++        for (size_t i = 0; i < langs.GetCount(); ++i)
++        {
++            if (!libreOffice.IsEmpty())
++                thesPaths.Add(libreOffice + wxT("\\share\\extensions\\dict-") + langs[i]);
++            if (!openOffice.IsEmpty())
++                thesPaths.Add(openOffice + wxT("\\share\\extensions\\dict-") + langs[i]);
++        }
++    }
++    else
++    {
++        thesPaths.Add(wxT("/usr/share/myspell/dicts"));
++        thesPaths.Add(wxT("/usr/share/mythes"));
++    }
++    thesPaths.Add(m_pPlugin->GetOnlineCheckerConfigPath());
++    for (size_t i = 0; i < thesPaths.GetCount(); ++i)
++    {
++        if (!wxFindFirstFile(thesPaths[i] + wxFILE_SEP_PATH + wxT("th*.dat"), wxFILE).IsEmpty())
++            return thesPaths[i];
++    }
++    return thesPaths[0];
+ }
+ const wxString SpellCheckerConfig::GetBitmapPath()const
+ {
+     wxString bitmPath = m_BitmPath;
+     Manager::Get()->GetMacrosManager()->ReplaceEnvVars(bitmPath);
++    if (wxFindFirstFile(bitmPath + wxFILE_SEP_PATH + wxT("*.png"), wxFILE).IsEmpty())
++        return m_pPlugin->GetOnlineCheckerConfigPath();
+     return bitmPath;
+ }
+ 
+@@ -183,11 +243,13 @@
+     m_LanguageNamesMap[_T("de_DE_comb")] =_T("German (Germany-old & neu ortho)");
+     m_LanguageNamesMap[_T("de_DE_neu")] =_T("German (Germany-neu ortho)");
+     m_LanguageNamesMap[_T("el_GR")] = _T("Greek (Greece)");
++    m_LanguageNamesMap[_T("en")]    = _T("English");
+     m_LanguageNamesMap[_T("en_AU")] = _T("English (Australia)");
+     m_LanguageNamesMap[_T("en_CA")] = _T("English (Canada)");
+     m_LanguageNamesMap[_T("en_GB")] = _T("English (United Kingdom)");
+     m_LanguageNamesMap[_T("en_NZ")] = _T("English (New Zealand)");
+     m_LanguageNamesMap[_T("en_US")] = _T("English (United States)");
++    m_LanguageNamesMap[_T("en_ZA")] = _T("English (South Africa)");
+     m_LanguageNamesMap[_T("eo_l3")] = _T("Esperanto (Anywhere)");
+     m_LanguageNamesMap[_T("es_ES")] = _T("Spanish (Spain-etal)");
+     m_LanguageNamesMap[_T("es_MX")] = _T("Spanish (Mexico)");
+@@ -199,10 +261,10 @@
+     m_LanguageNamesMap[_T("he_IL")] = _T("Hebrew (Israel)");
+     m_LanguageNamesMap[_T("hr_HR")] = _T("Croatian (Croatia)");
+     m_LanguageNamesMap[_T("hu_HU")] = _T("Hungarian (Hungaria)");
+-    m_LanguageNamesMap[_T("ia")] =_T("Interligua (x-register)");
++    m_LanguageNamesMap[_T("ia")]    =_T("Interligua (x-register)");
+     m_LanguageNamesMap[_T("id_ID")] = _T("Indonesian (Indonesia)");
+     m_LanguageNamesMap[_T("it_IT")] = _T("Italian (Italy)");
+-    m_LanguageNamesMap[_T("la")] =_T("Latin (x-register)");
++    m_LanguageNamesMap[_T("la")]    =_T("Latin (x-register)");
+     m_LanguageNamesMap[_T("lt_LT")] = _T("Lithuanian (Lithuania)");
+     m_LanguageNamesMap[_T("lv_LV")] = _T("Latvian (Latvia)");
+     m_LanguageNamesMap[_T("mg_MG")] = _T("Malagasy (Madagascar)");
+@@ -240,5 +302,19 @@
+     it = m_LanguageNamesMap.find(language_id);
+     if (it != m_LanguageNamesMap.end() )
+         return it->second;
++
++    wxString id_fix = language_id;
++    id_fix.Replace(wxT("-"), wxT("_")); // some dictionaries are distributed with hyphens
++
++    it = m_LanguageNamesMap.find(id_fix);
++    if (it != m_LanguageNamesMap.end() )
++        return it->second;
++
++    id_fix = id_fix.BeforeLast(wxT('_')); // may be "*_v2", or root language may be known even if this specification is not
++
++    it = m_LanguageNamesMap.find(id_fix);
++    if (it != m_LanguageNamesMap.end() )
++        return it->second + wxT(" (") + language_id + wxT(")"); // but may be incorrect, so specify the original name
++
+     return language_id;
+ }

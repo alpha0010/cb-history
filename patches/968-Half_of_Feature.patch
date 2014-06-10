@@ -1,0 +1,144 @@
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 2274)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -547,6 +547,8 @@
+ 
+ 	m_pControl->SetMouseDwellTime(1000);
+ 
++    m_pControl->SetCaretWidth(mgr->ReadInt(_T("/caret/width"), 1));
++    m_pControl->SetCaretForeground(GetOptionColour(_T("/caret/color"), *wxBLACK));
+ 	m_pControl->SetCaretLineVisible(mgr->ReadBool(_T("/highlight_caret_line"), false));
+ 	m_pControl->SetCaretLineBackground(GetOptionColour(_T("/highlight_caret_line_color"), wxColour(0xFF, 0xFF, 0x00)));
+ 
+Index: src/sdk/editorcolorset.cpp
+===================================================================
+--- src/sdk/editorcolorset.cpp	(revision 2274)
++++ src/sdk/editorcolorset.cpp	(working copy)
+@@ -410,8 +410,6 @@
+             if (i < 33 || i > 39)
+                 DoApplyStyle(control, i, defaults);
+         }
+-        // also set the caret color, same as the default foreground
+-        control->SetCaretForeground(defaults->fore);
+     }
+ 	// for some strange reason, when switching styles, the line numbering changes color
+ 	// too, though we didn't ask it to...
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 2274)
++++ src/sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -58,6 +58,7 @@
+ const wxString base_imgs[] =
+ {
+     _T("editor"),
++    _T("generic-plugin"),
+     _T("folding"),
+     _T("gutter-margin"),
+     _T("syntax-highlight"),
+@@ -75,6 +76,7 @@
+ 	EVT_BUTTON(XRCID("btnKeywords"), 			EditorConfigurationDlg::OnEditKeywords)
+ 	EVT_BUTTON(XRCID("btnFilemasks"), 			EditorConfigurationDlg::OnEditFilemasks)
+ 	EVT_BUTTON(XRCID("btnColorsReset"), 		EditorConfigurationDlg::OnColorsReset)
++	EVT_BUTTON(XRCID("btnCaretColor"), 		    EditorConfigurationDlg::OnChooseColor)
+ 	EVT_BUTTON(XRCID("btnGutterColor"), 		EditorConfigurationDlg::OnChooseColor)
+ 	EVT_BUTTON(XRCID("btnColorsFore"), 			EditorConfigurationDlg::OnChooseColor)
+ 	EVT_BUTTON(XRCID("btnColorsBack"), 			EditorConfigurationDlg::OnChooseColor)
+@@ -140,6 +142,11 @@
+    	XRCCTRL(*this, "chkEnsureConsistentEOL", wxCheckBox)->SetValue(cfg->ReadBool(_T("/eol/ensure_consistent_line_ends"), false));
+     XRCCTRL(*this, "cmbEOLMode", wxComboBox)->SetSelection(cfg->ReadInt(_T("/eol/eolmode"), default_eol));
+ 
++    //caret
++    wxColour caretColor = cfg->ReadColour(_T("/caret/color"), *wxBLACK);
++    XRCCTRL(*this, "spnCaretWidth", wxSpinCtrl)->SetValue(cfg->ReadInt(_T("/caret/width"), 1));
++    XRCCTRL(*this, "btnCaretColor", wxButton)->SetBackgroundColour(caretColor);
++
+ 	//folding
+    	XRCCTRL(*this, "chkEnableFolding", wxCheckBox)->SetValue(cfg->ReadBool(_T("/folding/show_folds"), true));
+    	XRCCTRL(*this, "chkFoldOnOpen", wxCheckBox)->SetValue(cfg->ReadBool(_T("/folding/fold_all_on_open"), false));
+@@ -148,9 +155,9 @@
+    	XRCCTRL(*this, "chkFoldXml", wxCheckBox)->SetValue(cfg->ReadBool(_T("/folding/fold_xml"), true));
+ 
+ 	//gutter
+-    wxColour color = cfg->ReadColour(_T("/gutter/color"), *wxLIGHT_GREY);
++    wxColour gutterColor = cfg->ReadColour(_T("/gutter/color"), *wxLIGHT_GREY);
+     XRCCTRL(*this, "lstGutterMode", wxChoice)->SetSelection(cfg->ReadInt(_T("/gutter/mode"), 0));
+-    XRCCTRL(*this, "btnGutterColor", wxButton)->SetBackgroundColour(color);
++    XRCCTRL(*this, "btnGutterColor", wxButton)->SetBackgroundColour(gutterColor);
+     XRCCTRL(*this, "spnGutterColumn", wxSpinCtrl)->SetValue(cfg->ReadInt(_T("/gutter/column"), 80));
+ 
+ 	// color set
+@@ -800,6 +807,11 @@
+         cfg->Write(_T("/view_whitespace"),      XRCCTRL(*this, "cmbViewWS", wxComboBox)->GetSelection());
+         cfg->Write(_T("/tab_text_relative"),    XRCCTRL(*this, "rbTabText", wxRadioBox)->GetSelection() ? true : false);
+         cfg->Write(_T("/auto_wrap_search"),     XRCCTRL(*this, "chkAutoWrapSearch", wxCheckBox)->GetValue());
++
++        //caret
++        cfg->Write(_T("/caret/width"), XRCCTRL(*this, "spnCaretWidth", wxSpinCtrl)->GetValue());
++        cfg->Write(_T("/caret/color"), XRCCTRL(*this, "btnCaretColor", wxButton)->GetBackgroundColour());
++
+         //folding
+         cfg->Write(_T("/folding/show_folds"), 			XRCCTRL(*this, "chkEnableFolding", wxCheckBox)->GetValue());
+         cfg->Write(_T("/folding/fold_all_on_open"), 	XRCCTRL(*this, "chkFoldOnOpen", wxCheckBox)->GetValue());
+Index: src/sdk/resources/editor_configuration.xrc
+===================================================================
+--- src/sdk/resources/editor_configuration.xrc	(revision 2274)
++++ src/sdk/resources/editor_configuration.xrc	(working copy)
+@@ -364,6 +364,50 @@
+             </object>
+           </object>
+           <object class="listbookpage">
++            <label>Caret settings</label>
++            <object class="wxPanel" name="tabCaret">
++              <object class="wxBoxSizer">
++                <orient>wxVERTICAL</orient>
++                <object class="sizeritem">
++                  <border>8</border>
++                  <flag>wxLEFT|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                  <object class="wxFlexGridSizer">
++                    <rows>0</rows>
++                    <cols>2</cols>
++                    <vgap>4</vgap>
++                    <hgap>8</hgap>
++                    <growablecols>1</growablecols>
++                    <object class="sizeritem">
++                      <flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++                      <object class="wxStaticText">
++                        <label>Width:</label>
++                      </object>
++                    </object>
++                    <object class="sizeritem">
++                      <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                      <object class="wxSpinCtrl" name="spnCaretWidth">
++                        <value>1</value>
++                        <max>3</max>
++                      </object>
++                    </object>
++                    <object class="sizeritem">
++                      <flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++                      <object class="wxStaticText">
++                        <label>Color:</label>
++                      </object>
++                    </object>
++                    <object class="sizeritem">
++                      <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                      <object class="wxButton" name="btnCaretColor">
++                        <label></label>
++                      </object>
++                    </object>
++                  </object>
++                </object>
++              </object>
++            </object>
++          </object>
++          <object class="listbookpage">
+             <label>Folding</label>
+             <object class="wxPanel" name="tabFolding">
+               <object class="wxBoxSizer">
+@@ -887,4 +931,4 @@
+       </object>
+     </object>
+   </object>
+-</resource>
+\ No newline at end of file
++</resource>

@@ -1,0 +1,189 @@
+Index: src/sdk/globals.cpp
+===================================================================
+--- src/sdk/globals.cpp	(revision 4978)
++++ src/sdk/globals.cpp	(working copy)
+@@ -31,6 +31,7 @@
+ #include <algorithm>
+ #include "filefilters.h"
+ #include "tinyxml/tinywxuni.h"
++#include "filegroupsandmasks.h"
+
+
+ namespace compatibility { typedef TernaryCondTypedef<wxMinimumVersion<2,5>::eval, wxTreeItemIdValue, long int>::eval tree_cookie_t; };
+@@ -284,6 +285,27 @@
+     else if (ext.IsSameAs(FileFilters::SCRIPT_EXT))
+         return ftScript;
+
++    // DrewBoo: Before giving up, see if the ProjectManager
++    // considers this extension a source or header
++    else
++    {
++        ProjectManager *pm = Manager::Get()->GetProjectManager();
++        if ( pm )
++        {
++            const FilesGroupsAndMasks* fg = pm->GetFilesGroupsAndMasks();
++            if ( fg )
++            {
++               for ( unsigned int i = 0; i != fg->GetGroupsCount(); ++i )
++               {
++                    if ( fg->GetGroupName(i) == _T("Sources") && fg->MatchesMask( ext, i ) )
++                        return ftSource;
++                    if ( fg->GetGroupName(i) == _T("Headers") && fg->MatchesMask( ext, i ) )
++                        return ftHeader;
++               }
++            }
++        }
++    }
++
+     return ftOther;
+ }
+
+Index: src/sdk/filegroupsandmasks.cpp
+===================================================================
+--- src/sdk/filegroupsandmasks.cpp	(revision 4978)
++++ src/sdk/filegroupsandmasks.cpp	(working copy)
+@@ -179,11 +179,11 @@
+     return GetStringFromArray(fg->fileMasks);
+ }
+
+-bool FilesGroupsAndMasks::MatchesMask(const wxString& ext, unsigned int group)
++bool FilesGroupsAndMasks::MatchesMask(const wxString& ext, unsigned int group) const
+ {
+     if (ext.IsEmpty() || group >= m_Groups.GetCount())
+         return false;
+-    FileGroups* fg = m_Groups[group];
++    const FileGroups* fg = m_Groups[group];
+     for (unsigned int i = 0; i < fg->fileMasks.GetCount(); ++i)
+     {
+         if (ext.Matches(fg->fileMasks[i]))
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(revision 4978)
++++ src/sdk/editormanager.cpp	(working copy)
+@@ -40,6 +40,7 @@
+ #include <wx/bmpbuttn.h>
+ #include <wx/progdlg.h>
+ #include <wx/fontutil.h>
++#include <wx/tokenzr.h>
+
+ #include "editorcolourset.h"
+ #include "editorconfigurationdlg.h"
+@@ -50,6 +51,7 @@
+ #include "filefilters.h"
+ #include "searchresultslog.h"
+ #include "projectfileoptionsdlg.h"
++#include "filegroupsandmasks.h"
+
+ #include "wx/wxFlatNotebook/wxFlatNotebook.h"
+
+@@ -1024,6 +1026,36 @@
+             fname.SetExt(FileFilters::CXX_EXT);
+             if (fname.FileExists())
+                 break;
++
++// DrewBoo: See if the project manager knows of other extensions
++//   (This could also outright replace the hard-coded extensions above)
++            ProjectManager *pm = Manager::Get()->GetProjectManager();
++            if ( !pm )
++                break;
++
++            const FilesGroupsAndMasks* fg = pm->GetFilesGroupsAndMasks();
++            if ( !fg )
++                break;
++
++            for ( unsigned int i = 0; i != fg->GetGroupsCount(); ++i )
++            {
++                if ( fg->GetGroupName(i) == _("Sources") )
++                {
++                    wxStringTokenizer tkz( fg->GetFileMasks(i), _T(";") );
++                    while ( tkz.HasMoreTokens() )
++                    {
++                        wxString token = tkz.GetNextToken();
++                        wxString ext;
++                        if ( token.StartsWith( _("*."), &ext ) )
++                        {
++                            fname.SetExt(ext);
++                            if (fname.FileExists())
++                                break;
++                        }
++                    }
++                    break;
++                }
++            }
+         }
+         else if (ft == ftSource)
+         {
+@@ -1039,6 +1071,36 @@
+             fname.SetExt(FileFilters::HXX_EXT);
+             if (fname.FileExists())
+                 break;
++
++// DrewBoo: See if the project manager knows of other extensions
++//   (This could also outright replace the hard-coded extensions above)
++            ProjectManager *pm = Manager::Get()->GetProjectManager();
++            if ( !pm )
++                break;
++
++            const FilesGroupsAndMasks* fg = pm->GetFilesGroupsAndMasks();
++            if ( !fg )
++                break;
++
++            for ( unsigned int i = 0; i != fg->GetGroupsCount(); ++i )
++            {
++                if ( fg->GetGroupName(i) == _("Headers") )
++                {
++                    wxStringTokenizer tkz( fg->GetFileMasks(i), _T(";") );
++                    while ( tkz.HasMoreTokens() )
++                    {
++                        wxString token = tkz.GetNextToken();
++                        wxString ext;
++                        if ( token.StartsWith( _("*."), &ext ) )
++                        {
++                            fname.SetExt(ext);
++                            if (fname.FileExists())
++                                break;
++                        }
++                    }
++                    break;
++                }
++            }
+         }
+     }
+
+@@ -1965,8 +2027,8 @@
+             int l2 = line + onScreen;
+             for(int l=l1; l<=l2;l+=2)       // unfold visible lines on screen
+                 control->EnsureVisible(l);
+-            control->GotoLine(l1);          // center selection on screen
+-            control->GotoLine(l2);
++//            control->GotoLine(l1);          // center selection on screen
++//            control->GotoLine(l2);
+             control->GotoLine(line);
+             control->SetSelection(pos, pos + lengthFound);
+             //            Manager::Get()->GetLogManager()->DebugLog("pos=%d, selLen=%d, length=%d", pos, data->end - data->start, lengthFound);
+Index: src/include/projectmanager.h
+===================================================================
+--- src/include/projectmanager.h	(revision 4978)
++++ src/include/projectmanager.h	(working copy)
+@@ -57,6 +57,8 @@
+
+         wxFlatNotebook* GetNotebook() { return m_pNotebook; }
+
++        const FilesGroupsAndMasks* GetFilesGroupsAndMasks() { return m_pFileGroups; }
++
+         // Can the app shutdown? (actually: is ProjectManager busy at the moment?)
+         static bool CanShutdown(){ return s_CanShutdown; }
+         /// Application menu creation. Called by the application only.
+Index: src/include/filegroupsandmasks.h
+===================================================================
+--- src/include/filegroupsandmasks.h	(revision 4978)
++++ src/include/filegroupsandmasks.h	(working copy)
+@@ -65,7 +65,7 @@
+           * \param ext The extension to query
+           * \param group Group index to match
+           * \return Extension matches the group in question? */
+-        bool MatchesMask(const wxString& ext, unsigned int group);
++        bool MatchesMask(const wxString& ext, unsigned int group) const;
+
+     private:
+         /** Load groups/masks from config */

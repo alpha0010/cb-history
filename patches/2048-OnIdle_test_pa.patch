@@ -1,0 +1,129 @@
+Index: src/plugins/debuggergdb/debuggergdb.cpp
+===================================================================
+--- src/plugins/debuggergdb/debuggergdb.cpp	(revision 4085)
++++ src/plugins/debuggergdb/debuggergdb.cpp	(working copy)
+@@ -253,6 +253,7 @@
+ 	if (kernelLib)
+ 		DebugBreakProcessFunc = (DebugBreakProcessApiCall)GetProcAddress(kernelLib, "DebugBreakProcess");
+ 	#endif
++//    SetExtraStyle(wxWS_EX_PROCESS_IDLE);
+ }
+
+ DebuggerGDB::~DebuggerGDB()
+Index: src/plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- src/plugins/compilergcc/compilergcc.cpp	(revision 4085)
++++ src/plugins/compilergcc/compilergcc.cpp	(working copy)
+@@ -268,6 +268,7 @@
+     {
+         NotifyMissingFile(_T("compiler.zip"));
+     }
++//    SetExtraStyle(wxWS_EX_PROCESS_IDLE);
+ }
+
+ CompilerGCC::~CompilerGCC()
+Index: src/sdk/propgrid/src/propgrid/odcombo.cpp
+===================================================================
+--- src/sdk/propgrid/src/propgrid/odcombo.cpp	(revision 4085)
++++ src/sdk/propgrid/src/propgrid/odcombo.cpp	(working copy)
+@@ -242,6 +242,7 @@
+ wxPGComboFrameEventHandler::wxPGComboFrameEventHandler( wxPGComboControlBase* combo )
+     : wxEvtHandler()
+ {
++    SetExtraStyle(wxWS_EX_PROCESS_IDLE);
+     m_combo = combo;
+ }
+
+Index: src/sdk/propgrid/src/propgrid/props.cpp
+===================================================================
+--- src/sdk/propgrid/src/propgrid/props.cpp	(revision 4085)
++++ src/sdk/propgrid/src/propgrid/props.cpp	(working copy)
+@@ -2245,6 +2245,7 @@
+
+ void wxArrayStringEditorDialog::Init()
+ {
++    SetExtraStyle(wxWS_EX_PROCESS_IDLE);
+     m_pCallingClass = (wxArrayStringPropertyClass*) NULL;
+ }
+
+Index: src/sdk/propgrid/src/propgrid/propgrid.cpp
+===================================================================
+--- src/sdk/propgrid/src/propgrid/propgrid.cpp	(revision 4085)
++++ src/sdk/propgrid/src/propgrid/propgrid.cpp	(working copy)
+@@ -3630,6 +3630,7 @@
+ //
+ void wxPropertyGrid::Init1()
+ {
++    SetExtraStyle(wxWS_EX_PROCESS_IDLE);
+     WX_PG_GLOBALS_LOCKER()
+
+ #if !wxPG_USE_WXMODULE
+Index: src/sdk/projectmanager.cpp
+===================================================================
+--- src/sdk/projectmanager.cpp	(revision 4085)
++++ src/sdk/projectmanager.cpp	(working copy)
+@@ -166,6 +166,7 @@
+     EVT_TREE_ITEM_ACTIVATED(ID_ProjectManager, ProjectManager::OnProjectFileActivated)
+     EVT_TREE_ITEM_RIGHT_CLICK(ID_ProjectManager, ProjectManager::OnTreeItemRightClick)
+     EVT_COMMAND_RIGHT_CLICK(ID_ProjectManager, ProjectManager::OnRightClick)
++    EVT_COMMAND_LEFT_DCLICK(ID_ProjectManager, ProjectManager::OnLeftDClick)
+
+     EVT_MENU_RANGE(idOpenWith[0], idOpenWith[MAX_OPEN_WITH_ITEMS - 1], ProjectManager::OnOpenWith)
+     EVT_MENU(idOpenWithInternal, ProjectManager::OnOpenWith)
+@@ -220,6 +221,8 @@
+     m_InitialDir(_T("")),
+     m_isCheckingForExternallyModifiedProjects(false)
+ {
++//    SetExtraStyle(wxWS_EX_PROCESS_IDLE);
++
+     m_pNotebook = new wxFlatNotebook(Manager::Get()->GetAppWindow(), idNB);
+     m_pNotebook->SetWindowStyleFlag(Manager::Get()->GetConfigManager(_T("app"))->ReadInt(_T("/environment/project_tabs_style"), wxFNB_NO_X_BUTTON));
+     m_pNotebook->SetImageList(new wxFlatNotebookImageList);
+Index: src/sdk/pipedprocess.cpp
+===================================================================
+--- src/sdk/pipedprocess.cpp	(revision 4085)
++++ src/sdk/pipedprocess.cpp	(working copy)
+@@ -139,6 +139,7 @@
+ 	m_Pid(0),
+ 	m_pvThis(pvThis)
+ {
++//    SetExtraStyle(wxWS_EX_PROCESS_IDLE);
+ 	wxSetWorkingDirectory(UnixFilename(dir));
+ 	if (pipe)
+ 		Redirect();
+Index: src/sdk/toolsmanager.cpp
+===================================================================
+--- src/sdk/toolsmanager.cpp	(revision 4085)
++++ src/sdk/toolsmanager.cpp	(working copy)
+@@ -66,6 +66,7 @@
+     m_pProcess(0L),
+     m_Pid(0)
+ {
++//    SetExtraStyle(wxWS_EX_PROCESS_IDLE);
+     LoadTools();
+     Manager::Get()->GetAppWindow()->PushEventHandler(this);
+ }
+Index: src/sdk/wxscintilla/src/wxscintilla.cpp
+===================================================================
+--- src/sdk/wxscintilla/src/wxscintilla.cpp	(revision 4085)
++++ src/sdk/wxscintilla/src/wxscintilla.cpp	(working copy)
+@@ -154,6 +154,7 @@
+                           const wxSize& size,
+                           long style,
+                           const wxString& name) {
++    SetExtraStyle(wxWS_EX_PROCESS_IDLE);
+ #ifdef __WXMAC__
+     style |= wxVSCROLL | wxHSCROLL;
+ #endif
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(revision 4085)
++++ src/src/main.cpp	(working copy)
+@@ -573,6 +573,9 @@
+                                                     "the Code::Blocks startup process.\n\n"
+                                                     "Please review them in the logs...\n\n"), 8000, 1000);
+     }
++
++    // only pass idle events to windows that set extra style wxWS_EX_PROCESS_IDLE
++    wxIdleEvent::SetMode(wxIDLE_PROCESS_SPECIFIED);
+ }

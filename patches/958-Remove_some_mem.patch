@@ -1,0 +1,49 @@
+Index: src/sdk/editorcolorset.cpp
+===================================================================
+--- src/sdk/editorcolorset.cpp  (revision 2274)
++++ src/sdk/editorcolorset.cpp  (working copy)
+@@ -89,6 +89,11 @@
+ 
+ void EditorColorSet::ClearAllOptionColors()
+ {
++       for (OptionSetsMap::iterator map_it = m_Sets.begin();
++                                                       map_it != m_Sets.end(); ++map_it)
++        for (OptionColors::iterator vec_it = (*map_it).second.m_Colors.begin();
++                            vec_it != (*map_it).second.m_Colors.end(); ++vec_it)
++                       delete (*vec_it);
+     m_Sets.clear();
+ }
+ 
+Index: src/sdk/pluginmanager.cpp
+===================================================================
+--- src/sdk/pluginmanager.cpp   (revision 2274)
++++ src/sdk/pluginmanager.cpp   (working copy)
+@@ -357,6 +357,7 @@
+             m_Plugins[i]->freeProc(plug);
+         else
+             delete plug; // try to delete it ourselves...
++               delete m_Plugins[i];
+     }
+ }
+ 
+Index: src/sdk/messagemanager.cpp
+===================================================================
+--- src/sdk/messagemanager.cpp  (revision 2274)
++++ src/sdk/messagemanager.cpp  (working copy)
+@@ -185,6 +185,8 @@
+ 
+     delete m_pNotebook->GetImageList();
+     m_pNotebook->Destroy();
++    for (LogsMap::iterator it = m_Logs.begin(); it != m_Logs.end(); ++it)
++               delete (*it).second;
+ }
+ 
+ void MessageManager::CreateMenu(wxMenuBar* menuBar)
+@@ -314,6 +316,7 @@
+     {
+         if (it->second->log == log)
+         {
++               delete (*it).second;
+             m_Logs.erase(it);
+             break;
+         }

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 2873 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #2873 <small>2009-12-27 13:16:37</small></h3>
+          <h4>techy</h4>
+          Incorrect icon sizes (debug1)
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="2873-Incorrect_icon.patch">2873-Incorrect_icon.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Bugfix</dd>
+            <dt>Status</dt><dd>Accepted</dd>
+            <dt>Close date</dt><dd>2010-02-25 15:59:24</dd>
+            <dt>Assigned to</dt><dd>jenslody</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">techy 2009-12-27 13:17:01</div>
+        <div class="panel-body">
+          <p>When debugging codeblocks, I compiled wxWidgets in debug mode (--enable-debug). To my surprise it seems that the codeblocks developers don't develop codeblocks in debug mode - there were lots of assertion violations when running it. I think that developing codeblocks _only_ with debugging enabled in wxWidgets can help to prevent some possibly serious errors (you get error messages when a function is used incorrectly, array ranges are checked and so on).</p>
+          <p>The following series of patches removes all the assertion violations from codeblocks, standard plugins and keybinder + browsetracker plugins. There are definitely more problems when using other plugins but I haven't fixed those as I don't use them (for instance I have noticed that ThreadSearch registers the same dynamic class as dragscroll). Some of the patches are only cosmetic, but some of them fix things like memory access through uninitialized value - I think it's useful to fix all the problems to see only the real problems with debug version of wxWidgets.</p>
+          <p>OK, since this patch is a kind of meta-patch, I'll continue in this meta-spirit of the patch (so no real patch here): folder_open.png and enums_folder.png have resolution 17x17. However, they are registered in wxImageList with other 16x16 images and since you have to specify the image size in wxImageList constructor, you get an assertion violation here. If there is no 16x16 version of these icons, I would suggest to change the color of vfolder_open.png, which looks the same (apart from the color) and then base enums_folder.png on this.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">techy 2009-12-27 22:09:52</div>
+        <div class="panel-body">
+          <p>Just one more note - I've tested this under Linux only so it's quite possible you get some assert violations under Windows as well. Also, while I've tried to open all windows and click everything I could, it's possible that there will be some more failures under some specific situations. Anyway, I'd recommend to use wxWidgets in debug mode and when some more errors are spotted, fix them. wxWidgets pops up a cool window with backtrace which makes the debugging of the problem much easier (though it's sometimes tricky to  find the real reasons of the problems).</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2010-01-01 08:01:33</div>
+        <div class="panel-body">
+          <p>Which images do you mean exactly? I find several images in the source base of C::B named folder_open for example.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">techy 2010-01-01 11:21:16</div>
+        <div class="panel-body">
+          <p>Hi, Happy New Year!</p>
+          <p>The icons are:</p>
+          <p>src/src/resources/images/folder_open.png</p>
+          <p>src/plugins/codecompletion/resources/enums_folder.png</p>
+          <p>both 17x17 pixels and the image that could be used as their replacement after changing the color could be</p>
+          <p>src/src/resources/images/vfolder_open.png</p>
+          <p>which has correct dimensions.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2010-02-25 15:59:24</div>
+        <div class="panel-body">
+          <p>It has been committed to trunk in rev 6170 by Jens. Thanks.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

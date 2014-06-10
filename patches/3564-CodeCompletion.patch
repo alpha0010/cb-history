@@ -1,0 +1,31 @@
+Index: parserthread.cpp
+===================================================================
+--- parserthread.cpp	(revision 9745)
++++ parserthread.cpp	(working copy)
+@@ -2369,6 +2369,7 @@
+     bool isEnumClass = false;
+     int lineNr = m_Tokenizer.GetLineNumber();
+     wxString token = m_Tokenizer.GetToken();
++    wxString underlying_type(_T("int"));
+     if (token == ParserConsts::kw_class)
+     {
+         token = m_Tokenizer.GetToken();
+@@ -2396,6 +2397,18 @@
+     if (   wxIsalpha(token.GetChar(0))
+         || (token.GetChar(0) == ParserConsts::underscore_chr) )
+     {
++        if (m_Tokenizer.PeekToken() == ParserConsts::colon) {
++          // support strictly typed named enums
++          // enum XXX : some_type { ... }
++          m_Tokenizer.GetToken(); // eat colon
++          underlying_type = m_Tokenizer.PeekToken();
++          if (wxIsalpha(underlying_type.GetChar(0))
++              || token.GetChar(0) == ParserConsts::underscore_chr) {
++            // ignore type identifier
++            m_Tokenizer.GetToken();
++          }
++        }
++
+         if (m_Tokenizer.PeekToken().GetChar(0) != ParserConsts::opbrace_chr)
+         {
+             if (TokenExists(token, m_LastParent, tkEnum))

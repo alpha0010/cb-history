@@ -1,0 +1,62 @@
+Index: src/sdk/compilercommandgenerator.cpp
+===================================================================
+--- src/sdk/compilercommandgenerator.cpp	(wersja 4759)
++++ src/sdk/compilercommandgenerator.cpp	(kopia robocza)
+@@ -94,6 +94,10 @@
+     bool projectWasModified = project->GetModified();
+     CompileTargetBase backup = *(CompileTargetBase*)project;
+ 
++    // Invoke plugins
++    CodeBlocksEvent evt(cbEVT_COMPILER_SET_BUILD_OPTIONS,0,project);
++    Manager::Get()->ProcessEvent(evt);
++
+     // project build scripts
+     DoBuildScripts(project, project, _T("SetBuildOptions"));
+ 
+@@ -126,6 +130,12 @@
+         // backup target settings
+         CompileTargetBase backuptarget = *(CompileTargetBase*)target;
+ 
++        // invoke plugins
++        CodeBlocksEvent evt(cbEVT_COMPILER_SET_BUILD_OPTIONS,0,project);
++        evt.SetBuildTargetName(target->GetTitle());
++        Manager::Get()->ProcessEvent(evt);
++
++
+         // target build scripts
+         DoBuildScripts(project, target, _T("SetBuildOptions"));
+ 
+Index: src/sdk/sdk_events.cpp
+===================================================================
+--- src/sdk/sdk_events.cpp	(wersja 4759)
++++ src/sdk/sdk_events.cpp	(kopia robocza)
+@@ -149,6 +149,7 @@
+ // compiler-related events
+ const wxEventType cbEVT_COMPILER_STARTED = wxNewEventType();
+ const wxEventType cbEVT_COMPILER_FINISHED = wxNewEventType();
++const wxEventType cbEVT_COMPILER_SET_BUILD_OPTIONS = wxNewEventType();
+ // debugger-related events
+ const wxEventType cbEVT_DEBUGGER_STARTED = wxNewEventType();
+ const wxEventType cbEVT_DEBUGGER_PAUSED = wxNewEventType();
+Index: src/include/sdk_events.h
+===================================================================
+--- src/include/sdk_events.h	(wersja 4759)
++++ src/include/sdk_events.h	(kopia robocza)
+@@ -59,7 +59,7 @@
+ 		// for some editor events
+ 		int m_X;
+ 		int m_Y;
+-		
++
+ 		wxString m_TargetName;
+ 		wxString m_OldTargetName;
+ 	private:
+@@ -326,6 +326,8 @@
+ #define EVT_COMPILER_STARTED(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_COMPILER_STARTED, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&fn, (wxObject *) NULL ),
+ extern EVTIMPORT const wxEventType cbEVT_COMPILER_FINISHED;
+ #define EVT_COMPILER_FINISHED(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_COMPILER_FINISHED, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&fn, (wxObject *) NULL ),
++extern EVTIMPORT const wxEventType cbEVT_COMPILER_SET_BUILD_OPTIONS;
++#define EVT_COMPILER_SET_BUILD_OPTIONS(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_COMPILER_SET_BUILD_OPTIONS, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&fn, (wxObject *) NULL ),
+ 
+ // debugger-related events (debugger plugins must fire them)
+ extern EVTIMPORT const wxEventType cbEVT_DEBUGGER_STARTED;

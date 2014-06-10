@@ -1,0 +1,147 @@
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 4335)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -960,6 +960,27 @@
+     control->SetTabIndents(mgr->ReadBool(_T("/tab_indents"), true));
+     control->SetBackSpaceUnIndents(mgr->ReadBool(_T("/backspace_unindents"), true));
+     control->SetWrapMode(mgr->ReadBool(_T("/word_wrap"), false));
++    if(mgr->ReadBool(_T("/word_wrap_style_home_end"), true))
++    {
++        //in word wrap mode, home/end keys goto the wrap point if not already there,
++        //otherwise to the start/end of the entire line.
++        //alt+home/end go to start/end of the entire line.
++        //in unwrapped mode, there is no difference between home/end and alt+home/end
++        control->CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_NULL,wxSCI_CMD_VCHOMEWRAP);
++        control->CmdKeyAssign(wxSCI_KEY_END,wxSCI_SCMOD_NULL,wxSCI_CMD_LINEENDWRAP);
++        control->CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_ALT,wxSCI_CMD_VCHOME);
++        control->CmdKeyAssign(wxSCI_KEY_END,wxSCI_SCMOD_ALT,wxSCI_CMD_LINEEND);
++        control->CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_SHIFT,wxSCI_CMD_VCHOMEWRAPEXTEND);
++        control->CmdKeyAssign(wxSCI_KEY_END,wxSCI_SCMOD_SHIFT,wxSCI_CMD_LINEENDWRAPEXTEND);
++        control->CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_SHIFT|wxSCI_SCMOD_ALT,wxSCI_CMD_VCHOMEEXTEND);
++        control->CmdKeyAssign(wxSCI_KEY_END,wxSCI_SCMOD_SHIFT|wxSCI_SCMOD_ALT,wxSCI_CMD_LINEENDEXTEND);
++    } else
++    { //in word wrap mode, home/end keys goto start/end of the entire line. alt+home/end goes to wrap points
++        control->CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_ALT,wxSCI_CMD_VCHOMEWRAP);
++        control->CmdKeyAssign(wxSCI_KEY_END,wxSCI_SCMOD_ALT,wxSCI_CMD_LINEENDWRAP);
++        control->CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_SHIFT|wxSCI_SCMOD_ALT,wxSCI_CMD_VCHOMEWRAPEXTEND);
++        control->CmdKeyAssign(wxSCI_KEY_END,wxSCI_SCMOD_SHIFT|wxSCI_SCMOD_ALT,wxSCI_CMD_LINEENDWRAPEXTEND);
++    }
+     control->SetViewEOL(mgr->ReadBool(_T("/show_eol"), false));
+     control->SetViewWhiteSpace(mgr->ReadInt(_T("/view_whitespace"), 0));
+     //gutter
+@@ -1860,20 +1881,34 @@
+         GetControl()->MarkerAdd(line, marker);
+ }
+ 
+-void cbEditor::GotoMatchingBrace()
++void cbEditor::GotoMatchingBrace(bool select)
+ {
+     cbStyledTextCtrl* control = GetControl();
+ 
++//    int currentpos=control->GetCurrentPos();
++    int anchorpos=control->GetAnchor();
+     // this works only when the caret is *before* the brace
+     int matchingBrace = control->BraceMatch(control->GetCurrentPos());
++    int offset=-1;
+ 
+     // if we haven't found it, we 'll search at pos-1 too
+     if(matchingBrace == wxSCI_INVALID_POSITION)
++    {
+         matchingBrace = control->BraceMatch(control->GetCurrentPos() - 1);
++        offset=0;
++    }
+ 
+     // now, we either found it or not
+     if(matchingBrace != wxSCI_INVALID_POSITION)
+-        control->GotoPos(matchingBrace);
++    {
++        matchingBrace-=offset; //move to the position either inside or outside the match depending on whether we were inside or outside of the first brace
++        if(select)
++        {
++            control->GotoPos(matchingBrace);
++            control->SetAnchor(anchorpos);
++        } else
++            control->GotoPos(matchingBrace);
++    }
+ }
+ 
+ void cbEditor::HighlightBraces()
+Index: src/include/cbeditor.h
+===================================================================
+--- src/include/cbeditor.h	(revision 4335)
++++ src/include/cbeditor.h	(working copy)
+@@ -175,7 +175,7 @@
+         EditorColourSet* GetColourSet() const { return m_pTheme; }
+ 
+         /** Jumps to the matching brace (if there is one). */
+-        void GotoMatchingBrace();
++        void GotoMatchingBrace(bool select=false);
+ 
+         /** Highlights the brace pair (one of the braces must be under the cursor) */
+         void HighlightBraces();
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(revision 4335)
++++ src/src/main.cpp	(working copy)
+@@ -146,6 +146,7 @@
+ int idEditPaste = XRCID("idEditPaste");
+ int idEditSwapHeaderSource = XRCID("idEditSwapHeaderSource");
+ int idEditGotoMatchingBrace = XRCID("idEditGotoMatchingBrace");
++int idEditSelectMatchingBrace = XRCID("idEditSelectMatchingBrace");
+ int idEditHighlightMode = XRCID("idEditHighlightMode");
+ int idEditHighlightModeText = XRCID("idEditHighlightModeText");
+ int idEditBookmarks = XRCID("idEditBookmarks");
+@@ -276,6 +277,7 @@
+     EVT_UPDATE_UI(idEditPaste, MainFrame::OnEditMenuUpdateUI)
+     EVT_UPDATE_UI(idEditSwapHeaderSource, MainFrame::OnEditMenuUpdateUI)
+     EVT_UPDATE_UI(idEditGotoMatchingBrace, MainFrame::OnEditMenuUpdateUI)
++    EVT_UPDATE_UI(idEditSelectMatchingBrace, MainFrame::OnEditMenuUpdateUI)
+     EVT_UPDATE_UI(idEditFoldAll, MainFrame::OnEditMenuUpdateUI)
+     EVT_UPDATE_UI(idEditUnfoldAll, MainFrame::OnEditMenuUpdateUI)
+     EVT_UPDATE_UI(idEditToggleAllFolds, MainFrame::OnEditMenuUpdateUI)
+@@ -357,6 +359,7 @@
+     EVT_MENU(idEditPaste,  MainFrame::OnEditPaste)
+     EVT_MENU(idEditSwapHeaderSource,  MainFrame::OnEditSwapHeaderSource)
+     EVT_MENU(idEditGotoMatchingBrace,  MainFrame::OnEditGotoMatchingBrace)
++    EVT_MENU(idEditSelectMatchingBrace,  MainFrame::OnEditGotoMatchingBrace)
+     EVT_MENU(idEditHighlightModeText,  MainFrame::OnEditHighlightMode)
+     EVT_MENU(idEditFoldAll,  MainFrame::OnEditFoldAll)
+     EVT_MENU(idEditUnfoldAll,  MainFrame::OnEditUnfoldAll)
+@@ -2564,7 +2567,7 @@
+ {
+     cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
+     if (ed)
+-        ed->GotoMatchingBrace();
++        ed->GotoMatchingBrace(event.GetId()==idEditSelectMatchingBrace);
+ }
+ 
+ void MainFrame::OnEditBookmarksToggle(wxCommandEvent& event)
+@@ -3392,6 +3395,7 @@
+     mbar->Enable(idEditPaste, canPaste);
+     mbar->Enable(idEditSwapHeaderSource, ed);
+     mbar->Enable(idEditGotoMatchingBrace, ed);
++    mbar->Enable(idEditSelectMatchingBrace, ed);
+     mbar->Enable(idEditHighlightMode, ed);
+     mbar->Enable(idEditSelectAll, ed);
+     mbar->Enable(idEditBookmarks, ed);
+Index: src/src/resources/main_menu.xrc
+===================================================================
+--- src/src/resources/main_menu.xrc	(revision 4335)
++++ src/src/resources/main_menu.xrc	(working copy)
+@@ -480,9 +480,14 @@
+       </object>
+       <object class="wxMenuItem" name="idEditGotoMatchingBrace">
+         <label>Goto matching brace</label>
+-        <accel>Ctrl-Shift-B</accel>
++        <accel>Ctrl-.</accel>
+         <help>Moves the caret to the matching brace (if any)</help>
+       </object>
++      <object class="wxMenuItem" name="idEditSelectMatchingBrace">
++        <label>Select matching brace</label>
++        <accel>Ctrl-Shift-.</accel>
++        <help>Exteds the selection to the matching brace (if any)</help>
++      </object>
+     </object>
+     <object class="wxMenu" name="menu_view">
+       <label>&amp;View</label>

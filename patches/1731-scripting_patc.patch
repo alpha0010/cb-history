@@ -1,0 +1,32 @@
+Index: src/sdk/scripting/bindings/sc_globals.cpp
+===================================================================
+--- src/sdk/scripting/bindings/sc_globals.cpp	(revision 3393)
++++ src/sdk/scripting/bindings/sc_globals.cpp	(working copy)
+@@ -81,7 +81,11 @@
+     SQInteger wx_GetColourFromUser(HSQUIRRELVM v)
+     {
+     	StackHandler sa(v);
++#if wxCHECK_VERSION(2, 8, 0)
++        wxColour c = sa.GetParamCount() == 2 ? *SqPlus::GetInstance<wxColour>(v, 2) : *wxBLACK;
++#else
+ 		wxColour& c = sa.GetParamCount() == 2 ? *SqPlus::GetInstance<wxColour>(v, 2) : *wxBLACK;
++#endif
+ 		return SqPlus::ReturnCopy(v, wxGetColourFromUser(Manager::Get()->GetAppWindow(), c));
+     }
+     long wx_GetNumberFromUser(const wxString& message, const wxString& prompt, const wxString& caption, long value)
+Index: src/sdk/scripting/bindings/sc_wxtypes.cpp
+===================================================================
+--- src/sdk/scripting/bindings/sc_wxtypes.cpp	(revision 3393)
++++ src/sdk/scripting/bindings/sc_wxtypes.cpp	(working copy)
+@@ -229,7 +229,11 @@
+                 func(&wxArrayString::GetCount, "GetCount").
+                 func(&wxArrayString::Item, "Item");
+
++#if wxCHECK_VERSION(2, 8, 0)
++		typedef void(wxColour::*WXC_SET)(const unsigned char, const unsigned char, const unsigned char, const unsigned char);
++#else		
+		typedef void(wxColour::*WXC_SET)(const unsigned char, const unsigned char, const unsigned char);
++#endif
+ 		SqPlus::SQClassDef<wxColour>("wxColour").
+ 				emptyCtor().
+                 staticFuncVarArgs(&wxColour_OpToString, "_tostring", "").

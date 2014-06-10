@@ -1,0 +1,170 @@
+Index: src/plugins/astyle/astyleplugin.cpp
+===================================================================
+--- src/plugins/astyle/astyleplugin.cpp	(revision 6196)
++++ src/plugins/astyle/astyleplugin.cpp	(working copy)
+@@ -102,7 +102,7 @@
+     {
+         case mtEditorManager:
+             menu->AppendSeparator();
+-            menu->Append( idCodeFormatterActiveFile, _( "Format this file (AStyle)" ), _( "Format the source code in the current file" ) );
++            menu->Append( idCodeFormatterActiveFile, _( "Format use AStyle" ), _( "Format the selected source code (selected line) in the current file" ) );
+             break;
+ 
+         case mtProjectManager:
+@@ -290,14 +290,68 @@
+ 
+ bool AStylePlugin::FormatEditor( cbEditor *ed )
+ {
+-    if (ed->GetControl()->GetReadOnly())
++    cbStyledTextCtrl* control = ed->GetControl();
++    if (control->GetReadOnly())
+     {
+         cbMessageBox(_("The file is read-only!"), _("Error"), wxICON_ERROR);
+         return false;
+     }
+ 
+-    wxString edText(ed->GetControl()->GetText());
++    bool onlySelected = false;
++    wxString edText;
++    wxString selText;
++    int leftBracesNumber = 0;
++    const int pos = control->GetCurrentPos();
++    int start = control->GetSelectionStart();
++    int end = control->GetSelectionEnd();
++    wxString fromWord;
++    if (start != end)
++    {
++        onlySelected = true;
++        start = control->GetLineIndentPosition(control->LineFromPosition(start));
++        control->GotoPos(start);
++        control->Home();
++        start = control->GetCurrentPos();
++        control->SetSelectionStart(start);
++        end = control->GetLineEndPosition(control->LineFromPosition(end));
++        control->SetSelectionEnd(end);
++        selText = control->GetTextRange(start, end);
+ 
++        wxChar ch;
++        int findBracesPos = start;
++        while (--findBracesPos > 0 )
++        {
++            ch = control->GetCharAt(findBracesPos);
++            int style = control->GetStyleAt(findBracesPos);
++            int lexer = control->GetLexer();
++            if (lexer == wxSCI_LEX_CPP)
++            {
++                if (style == wxSCI_C_COMMENT || style == wxSCI_C_COMMENTDOC
++                    || style == wxSCI_C_COMMENTDOCKEYWORD || style == wxSCI_C_COMMENTDOCKEYWORDERROR
++                    || style == wxSCI_C_COMMENTLINE || style == wxSCI_C_COMMENTLINEDOC
++                    || style == wxSCI_C_STRING || style == wxSCI_C_CHARACTER)
++                    continue;
++            }
++            else if (lexer == wxSCI_LEX_D)
++            {
++                if (style == wxSCI_D_COMMENT || style == wxSCI_D_COMMENTDOC
++                    || style == wxSCI_D_COMMENTDOCKEYWORD || style == wxSCI_D_COMMENTDOCKEYWORDERROR
++                    || style == wxSCI_D_COMMENTLINE || style == wxSCI_D_COMMENTLINEDOC
++                    || style == wxSCI_D_STRING || style == wxSCI_D_CHARACTER)
++                    continue;
++            }
++
++            if (ch == _T('}')) --leftBracesNumber;
++            else if (ch == _T('{')) ++leftBracesNumber;
++        }
++
++        for (int i = leftBracesNumber; i > 0; --i)
++            edText.Append(_T('{'));
++        edText.Append(selText);
++    }
++    else
++        edText = control->GetText();
++
+     wxString formattedText;
+ 
+     astyle::ASFormatter formatter;
+@@ -308,9 +362,8 @@
+ 
+     wxString eolChars;
+ 
+-    switch (ed->GetControl()->GetEOLMode())
++    switch (control->GetEOLMode())
+     {
+-
+         case wxSCI_EOL_CRLF:
+             eolChars = _T("\r\n");
+             break;
+@@ -324,7 +377,7 @@
+             break;
+     }
+ 
+-    if (edText.size() && edText.Last() != _T('\r') && edText.Last() != _T('\n'))
++    if (edText.size() && edText.Last() != _T('\r') && edText.Last() != _T('\n') && !onlySelected)
+     {
+         edText += eolChars;
+     }
+@@ -338,15 +391,17 @@
+     std::vector<int> ed_breakpoints;
+ 
+     // hack: we need to evaluate the special case of having a bookmark in the first line here
+-
+-    if (ed->HasBookmark(0))
++    if (!onlySelected)
+     {
+-        new_bookmark.push_back(0);
++        if (ed->HasBookmark(0))
++        {
++            new_bookmark.push_back(0);
++        }
++        if (ed->HasBreakpoint(0))
++        {
++            ed_breakpoints.push_back(0);
++        }
+     }
+-    if (ed->HasBreakpoint(0))
+-    {
+-        ed_breakpoints.push_back(0);
+-    }
+ 
+     wxSetCursor(*wxHOURGLASS_CURSOR);
+ 
+@@ -373,14 +428,25 @@
+         }
+     }
+ 
+-    int pos = ed->GetControl()->GetCurrentPos();
++    if (onlySelected && leftBracesNumber > 0)
++    {
++        while (leftBracesNumber > 0)
++        {
++            --leftBracesNumber;
++            formattedText = formattedText.SubString(formattedText.Find(_T('{')) + 1, formattedText.Length());
++        }
++        formattedText = formattedText.SubString(formattedText.Find(eolChars) + eolChars.Length(), formattedText.Length());
++    }
+ 
+-    bool changed = BuffersDiffer( formattedText, edText );
++    bool changed = BuffersDiffer( formattedText, !onlySelected ? edText : selText);
+ 
+     if ( changed )
+     {
+-        ed->GetControl()->BeginUndoAction();
+-        ed->GetControl()->SetText(formattedText);
++        control->BeginUndoAction();
++        if (!onlySelected)
++            control->SetText(formattedText);
++        else
++            control->ReplaceSelection(formattedText);
+ 
+         for (std::vector<int>::const_iterator i = new_bookmark.begin(); i != new_bookmark.end(); ++i)
+         {
+@@ -392,8 +458,8 @@
+             ed->ToggleBreakpoint(*i);
+         }
+ 
+-        ed->GetControl()->EndUndoAction();
+-        ed->GetControl()->GotoPos(pos);
++        control->EndUndoAction();
++        control->GotoPos(pos);
+         ed->SetModified(true);
+     }
+ 

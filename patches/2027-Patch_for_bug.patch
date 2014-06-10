@@ -1,0 +1,49 @@
+Index: src/sdk/replacedlg.cpp
+===================================================================
+--- src/sdk/replacedlg.cpp	(revision 4010)
++++ src/sdk/replacedlg.cpp	(working copy)
+@@ -73,7 +73,7 @@
+ 	XRCCTRL(*this, "rbDirection", wxRadioBox)->Enable(!XRCCTRL(*this, "chkRegEx1", wxCheckBox)->GetValue()); // if regex, only forward searches
+ 	XRCCTRL(*this, "rbOrigin", wxRadioBox)->SetSelection(cfg->ReadInt(CONF_GROUP _T("/origin"), 0));
+ 	XRCCTRL(*this, "rbScope1", wxRadioBox)->SetSelection(hasSelection);
+-	XRCCTRL(*this, "rbScope1", wxRadioBox)->Enable(hasSelection);
++	//XRCCTRL(*this, "rbScope1", wxRadioBox)->Enable(hasSelection);
+ 	// special key, uses same config for both find & replace options
+ 	XRCCTRL(*this, "chkAutoWrapSearch", wxCheckBox)->SetValue(cfg->ReadBool(_T("/find_options/auto_wrap_search"), true));
+
+Index: src/sdk/finddlg.cpp
+===================================================================
+--- src/sdk/finddlg.cpp	(revision 4010)
++++ src/sdk/finddlg.cpp	(working copy)
+@@ -89,7 +89,7 @@
+ 	XRCCTRL(*this, "rbDirection", wxRadioBox)->Enable(!XRCCTRL(*this, "chkRegEx1", wxCheckBox)->GetValue()); // if regex, only forward searches
+ 	XRCCTRL(*this, "rbOrigin", wxRadioBox)->SetSelection(cfg->ReadInt(CONF_GROUP _T("/origin"), 0));
+ 	XRCCTRL(*this, "rbScope1", wxRadioBox)->SetSelection(hasSelection);
+-	XRCCTRL(*this, "rbScope1", wxRadioBox)->Enable(hasSelection);
++//	XRCCTRL(*this, "rbScope1", wxRadioBox)->Enable(hasSelection);
+
+ 	// find in files options
+ 	XRCCTRL(*this, "cmbFind2", wxComboBox)->SetValue(initial);
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(revision 4010)
++++ src/sdk/editormanager.cpp	(working copy)
+@@ -1222,14 +1222,9 @@
+         int wordEnd = control->WordEndPosition(control->GetCurrentPos(), true);
+         wxString wordAtCursor = control->GetTextRange(wordStart, wordEnd);
+         phraseAtCursor = control->GetSelectedText();
+-        // if selected text is the last searched text, don't suggest "search in selection"
+-        if ((m_LastFindReplaceData &&
+-                !phraseAtCursor.IsEmpty() &&
+-                phraseAtCursor == m_LastFindReplaceData->findText)
+-                || phraseAtCursor == wordAtCursor)
+-        {
++        // if selected text is part of a single line, don't suggest "search in selection"
++        if (control->LineFromPosition(control->GetSelectionStart())
++            == control->LineFromPosition(control->GetSelectionEnd()))
+             hasSelection = false;
+-        }
+
+         if ( phraseAtCursor.IsEmpty())
+             phraseAtCursor = wordAtCursor;
+

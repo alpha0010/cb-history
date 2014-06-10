@@ -1,0 +1,749 @@
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 8435)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -2440,10 +2440,13 @@
+             int depth = 1; // search forwards
+             for (int i = control->GetCurrentLine() + 1; i < control->GetLineCount(); ++i)
+             {
+-                if (ppIf.Matches(control->GetLine(i))) // ignore else's, elif's, ...
+-                    ++depth;
+-                else if (ppEnd.Matches(control->GetLine(i)))
+-                    --depth;
++                if (control->GetLine(i).Find(wxT('#')) != wxNOT_FOUND) // limit testing due to performance cost
++                {
++                    if (ppIf.Matches(control->GetLine(i))) // ignore else's, elif's, ...
++                        ++depth;
++                    else if (ppEnd.Matches(control->GetLine(i)))
++                        --depth;
++                }
+                 if (depth == 0)
+                 {
+                     pp.Matches(control->GetLine(i));
+@@ -2457,10 +2460,13 @@
+             int depth = -1; // search backwards
+             for (int i = control->GetCurrentLine() - 1; i >= 0; --i)
+             {
+-                if (ppIf.Matches(control->GetLine(i))) // ignore else's, elif's, ...
+-                    ++depth;
+-                else if (ppEnd.Matches(control->GetLine(i)))
+-                    --depth;
++                if (control->GetLine(i).Find(wxT('#')) != wxNOT_FOUND) // limit testing due to performance cost
++                {
++                    if (ppIf.Matches(control->GetLine(i))) // ignore else's, elif's, ...
++                        ++depth;
++                    else if (ppEnd.Matches(control->GetLine(i)))
++                        --depth;
++                }
+                 if (depth == 0)
+                 {
+                     pp.Matches(control->GetLine(i));
+@@ -2473,7 +2479,10 @@
+ 
+     // now, we either found it or not
+     if (matchingBrace != wxSCI_INVALID_POSITION)
++    {
+         control->GotoPos(matchingBrace);
++        control->ChooseCaretX();
++    }
+ }
+ 
+ void cbEditor::HighlightBraces()
+Index: src/sdk/resources/lexers/lexer_html.xml
+===================================================================
+--- src/sdk/resources/lexers/lexer_html.xml	(revision 8435)
++++ src/sdk/resources/lexers/lexer_html.xml	(working copy)
+@@ -270,6 +270,10 @@
+                     BoxCommentStart="/* "
+                     BoxCommentMid=" * "
+                     BoxCommentEnd=" */"
+-                    CaseSensitive="0"/>
++                    CaseSensitive="0"
++                    LexerCommentStyles="9,20,29,42,43,44,57,58,59,72,82,92,107,124,125"
++                    LexerCharacterStyles=""
++                    LexerStringStyles="5,6,7,17,24,25,48,49,63,64,75,77,85,87,94,95,109,110,119,120"
++                    LexerPreprocessorStyles=""/>
+         </Lexer>
+ </CodeBlocks_lexer_properties>
+Index: src/sdk/resources/lexers/lexer_java.xml
+===================================================================
+--- src/sdk/resources/lexers/lexer_java.xml	(revision 8435)
++++ src/sdk/resources/lexers/lexer_java.xml	(working copy)
+@@ -94,16 +94,22 @@
+                                    char     final     interface  static    void
+                                    class    finally   long       strictfp  volatile
+                                    const    float     native     super     while
+-				   true     false     null"/>
++                                   true     false     null"/>
+                         <!-- Secondary keywords and identifiers -->
+                         <Set index="1"
+-                            value="String"/>
++                            value="Boolean          Byte          Character         Class      ClassLoader
++                                   Compiler         Double        Enum              Float      InheritableThreadLocal
++                                   Integer          Long          Math              Number     Object
++                                   Package          Process       ProcessBuilder    Runtime    RuntimePermission
++                                   SecurityManager  Short         StackTraceElement StrictMath String
++                                   StringBuffer     StringBuilder System            Thread     ThreadGroup
++                                   ThreadLocal      Throwable"/>
+                         <!-- Documentation comment keywords -->
+                         <Set index="2"
+                             value="author docRoot   deprecated  exception   inheritDoc
+-			           link   linkplain literal     param       return
+-				   see    serial    serialData  serialField since
+-				   throws value     version     $ @ \ & < > # { }"/>
++                                   link   linkplain literal     param       return
++                                   see    serial    serialData  serialField since
++                                   throws value     version     $ @ \ & < > # { }"/>
+                 </Keywords>
+                 <SampleCode value="lexer_java.sample"
+                                    breakpoint_line="21"
+@@ -117,9 +123,9 @@
+                     BoxCommentMid=" * "
+                     BoxCommentEnd=" */"
+                     CaseSensitive="1"
+-                    LexerCommentStyles="1,2,3,15,17,18"
+-                    LexerCharacterStyles="7"
+-                    LexerStringStyles="6,12"
+-                    LexerPreprocessorStyles="9"/>
++                    LexerCommentStyles="1,2,3,15,17,18,23,65,66,67,79,81,82,87"
++                    LexerCharacterStyles="7,71"
++                    LexerStringStyles="6,12,70,76"
++                    LexerPreprocessorStyles="9,73"/>
+         </Lexer>
+ </CodeBlocks_lexer_properties>
+Index: src/sdk/resources/lexers/lexer_xml.xml
+===================================================================
+--- src/sdk/resources/lexers/lexer_xml.xml	(revision 8435)
++++ src/sdk/resources/lexers/lexer_xml.xml	(working copy)
+@@ -53,6 +53,10 @@
+                     BoxCommentStart="&lt;!-- "
+                     BoxCommentMid="  -- "
+                     BoxCommentEnd="  --&gt;"
+-                    CaseSensitive="1"/>
++                    CaseSensitive="1"
++                    LexerCommentStyles="9"
++                    LexerCharacterStyles=""
++                    LexerStringStyles="5,6,7,17"
++                    LexerPreprocessorStyles=""/>
+         </Lexer>
+ </CodeBlocks_lexer_properties>
+Index: src/plugins/contrib/SmartIndent/XMLSmartIndent.cpp
+===================================================================
+--- src/plugins/contrib/SmartIndent/XMLSmartIndent.cpp	(revision 0)
++++ src/plugins/contrib/SmartIndent/XMLSmartIndent.cpp	(working copy)
+@@ -0,0 +1,176 @@
++#include "XMLSmartIndent.h"
++
++#include <sdk.h> // Code::Blocks SDK
++
++#ifndef CB_PRECOMP
++    #include <cbeditor.h>
++    #include <configmanager.h>
++    #include <editormanager.h>
++    #include <editorcolourset.h>
++    #include <manager.h>
++#endif
++
++#include <wx/regex.h>
++
++#include <cbstyledtextctrl.h>
++
++// Register the plugin with Code::Blocks.
++// We are using an anonymous namespace so we don't litter the global one.
++namespace
++{
++    PluginRegistrant<XMLSmartIndent> reg(wxT("XMLSmartIndent"));
++}
++
++void XMLSmartIndent::OnEditorHook(cbEditor* ed, wxScintillaEvent& event) const
++{
++    // check if smart indent is enabled
++    // check the event type and the currently set language
++    // if it is not a CharAdded event or the language is neither XML nor HTML return
++
++    if (!ed)
++        return;
++
++    if ( !SmartIndentEnabled() )
++        return;
++
++    wxEventType type = event.GetEventType();
++    if ( type != wxEVT_SCI_CHARADDED )
++        return;
++
++    cbStyledTextCtrl* stc = ed->GetControl();
++    if (!stc)
++        return;
++
++    const int lexer = stc->GetLexer();
++    if (lexer != wxSCI_LEX_XML && lexer != wxSCI_LEX_HTML)
++        return;
++
++    ed->AutoIndentDone(); // we are responsible
++
++    const int pos = stc->GetCurrentPos();
++    int currLine = stc->LineFromPosition(pos);
++
++    const wxChar ch = event.GetKey();
++    wxRegEx reTag(wxT("***:<[ \t]*?(|/)[ \t]*?([a-zA-Z][a-zA-Z0-9_-]*).*?(|/)[ \t]*?>"));
++
++    if (BraceCompletionEnabled())
++    {
++        // finish tag
++        if (ch == wxT('>'))
++        {
++            wxString tag;
++            for (int i = pos - 2; i > 0; --i)
++            {
++                if (stc->GetCharAt(i) == wxT('<') || stc->GetCharAt(i) == wxT('>'))
++                {
++                    tag = stc->GetTextRange(i, pos);
++                    break;
++                }
++            }
++            // is open tag
++            if (reTag.Matches(tag) && reTag.GetMatch(tag, 1).IsEmpty() && reTag.GetMatch(tag, 3).IsEmpty())
++                stc->InsertText(pos, wxT("</") + reTag.GetMatch(tag, 2) + wxT(">"));
++        }
++        // close string
++        else if (ch == wxT('"') || ch == wxT('\''))
++        {
++            if (stc->GetCharAt(pos) == ch)
++            {
++                stc->DeleteBack();
++                stc->CharRight();
++            }
++            else if (!stc->IsString(stc->GetStyleAt(pos - 2)))
++                stc->InsertText(pos, ch);
++        }
++        else if (ch == wxT('?') && stc->GetCharAt(pos - 2) == wxT('<'))
++        {
++            wxString tag;
++            for (int i = pos; i < stc->GetLength(); ++i)
++            {
++                if (stc->GetCharAt(i) == wxT('<') || stc->GetCharAt(i) == wxT('>'))
++                {
++                    tag = stc->GetTextRange(i - 1, i + 1);
++                    break;
++                }
++            }
++            if (tag != wxT("?>"))
++                stc->InsertText(pos, wxT(" ?>"));
++        }
++        // close CDATA
++        else if (ch == wxT('[') && pos > 8 && stc->GetTextRange(pos - 9, pos - 1) == wxT("<![CDATA"))
++        {
++            wxString tag;
++            for (int i = pos; i < stc->GetLength(); ++i)
++            {
++                if (stc->GetCharAt(i) == wxT('<') || stc->GetCharAt(i) == wxT('>'))
++                {
++                    tag = stc->GetTextRange(i - 2, i + 1);
++                    break;
++                }
++            }
++            if (tag != wxT("]]>"))
++                stc->InsertText(pos, wxT("]]>"));
++        }
++    }
++    // indent
++    if ( (ch == wxT('\n')) || ( (stc->GetEOLMode() == wxSCI_EOL_CR) && (ch == wxT('\r')) ) )
++    {
++        if (AutoIndentEnabled())
++        {
++            wxString indent = ed->GetLineIndentString(currLine - 1);
++            int idx = stc->GetLine(currLine - 1).Find(wxT('>'), true);
++
++            stc->BeginUndoAction();
++            if (idx != wxNOT_FOUND)
++            {
++                wxString tag;
++                for (int i = stc->PositionFromLine(currLine - 1) + idx - 1; i > 0; --i)
++                {
++                    if (stc->GetCharAt(i) == wxT('<'))
++                    {
++                        tag = stc->GetTextRange(i, pos);
++                        break;
++                    }
++                }
++                // tag found
++                if (reTag.Matches(tag))
++                {
++                    indent = ed->GetLineIndentString(stc->LineFromPosition(pos - tag.Length()));
++                    // is open tag
++                    if (reTag.GetMatch(tag, 1).IsEmpty() && reTag.GetMatch(tag, 3).IsEmpty())
++                    {
++                        wxString tagId = reTag.GetMatch(tag, 2);
++                        // is close-tag after cursor?
++                        tag = stc->GetLine(currLine);
++                        if (reTag.Matches(tag) && !reTag.GetMatch(tag, 1).IsEmpty() && reTag.GetMatch(tag, 2) == tagId)
++                        {
++                            if (wxIsspace(stc->GetCharAt(pos)))
++                                stc->DelWordRight();
++                            stc->InsertText(pos, indent);
++                            stc->NewLine();
++                        }
++                        Indent(stc, indent);
++                    }
++                }
++            }
++            else
++            {
++                // align attributes
++                for (int i = stc->PositionFromLine(currLine - 1); i < stc->GetLineEndPosition(currLine - 1); ++i)
++                {
++                    if (stc->GetStyleAt(i) == wxSCI_H_ATTRIBUTE || stc->GetStyleAt(i) == wxSCI_H_ATTRIBUTEUNKNOWN)
++                    {
++                        Indent(stc, indent, i - stc->PositionFromLine(currLine - 1));
++                        if (stc->GetLineEndPosition(currLine) > pos + 2 && wxIsspace(stc->GetCharAt(pos)))
++                            stc->DelWordRight();
++                        break;
++                    }
++                }
++            }
++            stc->InsertText(pos, indent);
++            stc->GotoPos(pos + indent.Length());
++            stc->ChooseCaretX();
++            stc->EndUndoAction();
++        }
++    }
++}
+Index: src/plugins/contrib/SmartIndent/SmartIndent.cbp
+===================================================================
+--- src/plugins/contrib/SmartIndent/SmartIndent.cbp	(revision 8435)
++++ src/plugins/contrib/SmartIndent/SmartIndent.cbp	(working copy)
+@@ -7,13 +7,13 @@
+ 		<Option compiler="gcc" />
+ 		<Build>
+ 			<Target title="CppSmartIndent">
+-				<Option output="..\..\..\devel\share\CodeBlocks\plugins\CppSmartIndent" prefix_auto="1" extension_auto="1" />
+-				<Option working_dir="..\..\..\devel" />
+-				<Option object_output="..\..\..\.objs\plugins\contrib\SmartIndent" />
++				<Option output="../../../devel/share/CodeBlocks/plugins/CppSmartIndent" prefix_auto="1" extension_auto="1" />
++				<Option working_dir="../../../devel" />
++				<Option object_output="../../../.objs/plugins/contrib/SmartIndent" />
+ 				<Option type="3" />
+ 				<Option compiler="gcc" />
+ 				<Option parameters="--debug-log" />
+-				<Option host_application="..\..\..\devel\codeblocks.exe" />
++				<Option host_application="../../../devel/codeblocks.exe" />
+ 				<Option run_host_application_in_terminal="0" />
+ 				<Option projectCompilerOptionsRelation="2" />
+ 				<Compiler>
+@@ -28,13 +28,13 @@
+ 				</ExtraCommands>
+ 			</Target>
+ 			<Target title="HDLSmartIndent">
+-				<Option output="..\..\..\devel\share\CodeBlocks\plugins\HDLSmartIndent" prefix_auto="1" extension_auto="1" />
+-				<Option working_dir="..\..\..\devel" />
+-				<Option object_output="..\..\..\.objs\plugins\contrib\SmartIndent" />
++				<Option output="../../../devel/share/CodeBlocks/plugins/HDLSmartIndent" prefix_auto="1" extension_auto="1" />
++				<Option working_dir="../../../devel" />
++				<Option object_output="../../../.objs/plugins/contrib/SmartIndent" />
+ 				<Option type="3" />
+ 				<Option compiler="gcc" />
+ 				<Option parameters="--debug-log --no-check-associations -ns -nd" />
+-				<Option host_application="..\..\..\devel\codeblocks.exe" />
++				<Option host_application="../../../devel/codeblocks.exe" />
+ 				<Option run_host_application_in_terminal="0" />
+ 				<Option projectCompilerOptionsRelation="2" />
+ 				<Compiler>
+@@ -49,13 +49,13 @@
+ 				</ExtraCommands>
+ 			</Target>
+ 			<Target title="PascalSmartIndent">
+-				<Option output="..\..\..\devel\share\CodeBlocks\plugins\PascalSmartIndent" prefix_auto="1" extension_auto="1" />
+-				<Option working_dir="..\..\..\devel" />
+-				<Option object_output="..\..\..\.objs\plugins\contrib\SmartIndent" />
++				<Option output="../../../devel/share/CodeBlocks/plugins/PascalSmartIndent" prefix_auto="1" extension_auto="1" />
++				<Option working_dir="../../../devel" />
++				<Option object_output="../../../.objs/plugins/contrib/SmartIndent" />
+ 				<Option type="3" />
+ 				<Option compiler="gcc" />
+ 				<Option parameters="--debug-log" />
+-				<Option host_application="..\..\..\devel\codeblocks.exe" />
++				<Option host_application="../../../devel/codeblocks.exe" />
+ 				<Option run_host_application_in_terminal="0" />
+ 				<Option projectCompilerOptionsRelation="2" />
+ 				<Compiler>
+@@ -70,13 +70,13 @@
+ 				</ExtraCommands>
+ 			</Target>
+ 			<Target title="PythonSmartIndent">
+-				<Option output="..\..\..\devel\share\CodeBlocks\plugins\PythonSmartIndent" prefix_auto="1" extension_auto="1" />
+-				<Option working_dir="..\..\..\devel" />
+-				<Option object_output="..\..\..\.objs\plugins\contrib\SmartIndent" />
++				<Option output="../../../devel/share/CodeBlocks/plugins/PythonSmartIndent" prefix_auto="1" extension_auto="1" />
++				<Option working_dir="../../../devel" />
++				<Option object_output="../../../.objs/plugins/contrib/SmartIndent" />
+ 				<Option type="3" />
+ 				<Option compiler="gcc" />
+ 				<Option parameters="--debug-log" />
+-				<Option host_application="..\..\..\devel\codeblocks.exe" />
++				<Option host_application="../../../devel/codeblocks.exe" />
+ 				<Option run_host_application_in_terminal="0" />
+ 				<Option projectCompilerOptionsRelation="2" />
+ 				<Compiler>
+@@ -91,13 +91,13 @@
+ 				</ExtraCommands>
+ 			</Target>
+ 			<Target title="LuaSmartIndent">
+-				<Option output="..\..\..\devel\share\CodeBlocks\plugins\LuaSmartIndent" prefix_auto="1" extension_auto="1" />
+-				<Option working_dir="..\..\..\devel" />
+-				<Option object_output="..\..\..\.objs\plugins\contrib\SmartIndent" />
++				<Option output="../../../devel/share/CodeBlocks/plugins/LuaSmartIndent" prefix_auto="1" extension_auto="1" />
++				<Option working_dir="../../../devel" />
++				<Option object_output="../../../.objs/plugins/contrib/SmartIndent" />
+ 				<Option type="3" />
+ 				<Option compiler="gcc" />
+ 				<Option parameters="--debug-log --no-check-associations -ns -nd" />
+-				<Option host_application="..\..\..\devel\codeblocks.exe" />
++				<Option host_application="../../../devel/codeblocks.exe" />
+ 				<Option run_host_application_in_terminal="0" />
+ 				<Option projectCompilerOptionsRelation="2" />
+ 				<Compiler>
+@@ -112,13 +112,13 @@
+ 				</ExtraCommands>
+ 			</Target>
+ 			<Target title="FortranSmartIndent">
+-				<Option output="..\..\..\devel\share\CodeBlocks\plugins\FortranSmartIndent" prefix_auto="1" extension_auto="1" />
+-				<Option working_dir="..\..\..\devel" />
+-				<Option object_output="..\..\..\.objs\plugins\contrib\SmartIndent" />
++				<Option output="../../../devel/share/CodeBlocks/plugins/FortranSmartIndent" prefix_auto="1" extension_auto="1" />
++				<Option working_dir="../../../devel" />
++				<Option object_output="../../../.objs/plugins/contrib/SmartIndent" />
+ 				<Option type="3" />
+ 				<Option compiler="gcc" />
+ 				<Option parameters="--debug-log --no-check-associations -ns -nd" />
+-				<Option host_application="..\..\..\devel\codeblocks.exe" />
++				<Option host_application="../../../devel/codeblocks.exe" />
+ 				<Option run_host_application_in_terminal="0" />
+ 				<Option projectCompilerOptionsRelation="2" />
+ 				<Compiler>
+@@ -132,13 +132,34 @@
+ 					<Mode after="always" />
+ 				</ExtraCommands>
+ 			</Target>
++			<Target title="XMLSmartIndent">
++				<Option output="../../../devel/share/CodeBlocks/plugins/XMLSmartIndent" prefix_auto="1" extension_auto="1" />
++				<Option working_dir="../../../devel" />
++				<Option object_output="../../../.objs/plugins/contrib/SmartIndent" />
++				<Option type="3" />
++				<Option compiler="gcc" />
++				<Option parameters="--debug-log" />
++				<Option host_application="../../../devel/codeblocks.exe" />
++				<Option run_host_application_in_terminal="0" />
++				<Option projectCompilerOptionsRelation="2" />
++				<Compiler>
++					<Add option="-g" />
++					<Add option="-DBUILDING_PLUGIN" />
++					<Add directory="." />
++				</Compiler>
++				<ExtraCommands>
++					<Add after="cmd.exe /c copy /Y xmlmanifest.xml manifest.xml" />
++					<Add after="zip -j9 ..\..\..\devel\share\CodeBlocks\XMLSmartIndent.zip manifest.xml" />
++					<Mode after="always" />
++				</ExtraCommands>
++			</Target>
+ 			<Environment>
+ 				<Variable name="WX_CFG" value="" />
+ 				<Variable name="WX_SUFFIX" value="u" />
+ 			</Environment>
+ 		</Build>
+ 		<VirtualTargets>
+-			<Add alias="All" targets="CppSmartIndent;HDLSmartIndent;PascalSmartIndent;PythonSmartIndent;LuaSmartIndent;FortranSmartIndent;" />
++			<Add alias="All" targets="CppSmartIndent;HDLSmartIndent;PascalSmartIndent;PythonSmartIndent;LuaSmartIndent;FortranSmartIndent;XMLSmartIndent;" />
+ 		</VirtualTargets>
+ 		<Compiler>
+ 			<Add option="-pipe" />
+@@ -154,16 +175,16 @@
+ 			<Add option="-DWX_PRECOMP" />
+ 			<Add option="-DwxUSE_UNICODE" />
+ 			<Add option="-DNOPCH" />
+-			<Add directory="..\..\..\include" />
+-			<Add directory="..\..\..\sdk\wxscintilla\include" />
++			<Add directory="../../../include" />
++			<Add directory="../../../sdk/wxscintilla/include" />
+ 			<Add directory="$(#wx.include)" />
+-			<Add directory="$(#wx.lib)\gcc_dll$(WX_CFG)\msw$(WX_SUFFIX)" />
++			<Add directory="$(#wx.lib)/gcc_dll$(WX_CFG)/msw$(WX_SUFFIX)" />
+ 		</Compiler>
+ 		<Linker>
+ 			<Add library="codeblocks" />
+ 			<Add library="wxmsw28$(WX_SUFFIX)" />
+-			<Add directory="..\..\..\devel" />
+-			<Add directory="$(#wx.lib)\gcc_dll$(WX_CFG)" />
++			<Add directory="../../../devel" />
++			<Add directory="$(#wx.lib)/gcc_dll$(WX_CFG)" />
+ 		</Linker>
+ 		<Unit filename="CppSmartIndent.cpp">
+ 			<Option target="CppSmartIndent" />
+@@ -201,6 +222,12 @@
+ 		<Unit filename="PythonSmartIndent.h">
+ 			<Option target="PythonSmartIndent" />
+ 		</Unit>
++		<Unit filename="XMLSmartIndent.cpp">
++			<Option target="XMLSmartIndent" />
++		</Unit>
++		<Unit filename="XMLSmartIndent.h">
++			<Option target="XMLSmartIndent" />
++		</Unit>
+ 		<Unit filename="cppmanifest.xml">
+ 			<Option target="CppSmartIndent" />
+ 		</Unit>
+@@ -219,6 +246,9 @@
+ 		<Unit filename="pythonmanifest.xml">
+ 			<Option target="PythonSmartIndent" />
+ 		</Unit>
++		<Unit filename="xmlmanifest.xml">
++			<Option target="XMLSmartIndent" />
++		</Unit>
+ 		<Extensions>
+ 			<code_completion />
+ 			<envvars />
+Index: src/plugins/contrib/SmartIndent/LuaSmartIndent.cpp
+===================================================================
+--- src/plugins/contrib/SmartIndent/LuaSmartIndent.cpp	(revision 8435)
++++ src/plugins/contrib/SmartIndent/LuaSmartIndent.cpp	(working copy)
+@@ -22,7 +22,7 @@
+ {
+     // check if smart indent is enabled
+     // check the event type and the currently set language
+-    // if it is not a CharAdded event or the language is not python return
++    // if it is not a CharAdded event or the language is not Lua return
+ 
+     if (!ed)
+         return;
+Index: src/plugins/contrib/SmartIndent/SmartIndent-unix.cbp
+===================================================================
+--- src/plugins/contrib/SmartIndent/SmartIndent-unix.cbp	(revision 8435)
++++ src/plugins/contrib/SmartIndent/SmartIndent-unix.cbp	(working copy)
+@@ -126,9 +126,29 @@
+ 					<Mode after="always" />
+ 				</ExtraCommands>
+ 			</Target>
++			<Target title="XMLSmartIndent">
++				<Option output="../../../devel/share/codeblocks/plugins/XMLSmartIndent" prefix_auto="1" extension_auto="1" />
++				<Option working_dir="../../../devel" />
++				<Option object_output="../../../.objs/plugins/contrib/SmartIndent" />
++				<Option type="3" />
++				<Option compiler="gcc" />
++				<Option host_application="../../../devel/codeblocks" />
++				<Option run_host_application_in_terminal="0" />
++				<Option projectCompilerOptionsRelation="2" />
++				<Compiler>
++					<Add option="-g" />
++					<Add option="-DBUILDING_PLUGIN" />
++					<Add directory="." />
++				</Compiler>
++				<ExtraCommands>
++					<Add after="cp xmlmanifest.xml ./manifest.xml" />
++					<Add after="zip -j9 ../../../devel/share/codeblocks/XMLSmartIndent.zip manifest.xml" />
++					<Mode after="always" />
++				</ExtraCommands>
++			</Target>
+ 		</Build>
+ 		<VirtualTargets>
+-			<Add alias="All" targets="CppSmartIndent;HDLSmartIndent;PascalSmartIndent;PythonSmartIndent;LuaSmartIndent;FortranSmartIndent;" />
++			<Add alias="All" targets="HDLSmartIndent;PascalSmartIndent;CppSmartIndent;PythonSmartIndent;LuaSmartIndent;FortranSmartIndent;XMLSmartIndent;" />
+ 		</VirtualTargets>
+ 		<Compiler>
+ 			<Add option="-Wextra" />
+@@ -188,6 +208,12 @@
+ 		<Unit filename="PythonSmartIndent.h">
+ 			<Option target="PythonSmartIndent" />
+ 		</Unit>
++		<Unit filename="XMLSmartIndent.cpp">
++			<Option target="XMLSmartIndent" />
++		</Unit>
++		<Unit filename="XMLSmartIndent.h">
++			<Option target="XMLSmartIndent" />
++		</Unit>
+ 		<Unit filename="cppmanifest.xml">
+ 			<Option target="CppSmartIndent" />
+ 		</Unit>
+@@ -206,6 +232,9 @@
+ 		<Unit filename="pythonmanifest.xml">
+ 			<Option target="PythonSmartIndent" />
+ 		</Unit>
++		<Unit filename="xmlmanifest.xml">
++			<Option target="XMLSmartIndent" />
++		</Unit>
+ 		<Extensions>
+ 			<code_completion />
+ 			<envvars />
+Index: src/plugins/contrib/SmartIndent/CppSmartIndent.cpp
+===================================================================
+--- src/plugins/contrib/SmartIndent/CppSmartIndent.cpp	(revision 8435)
++++ src/plugins/contrib/SmartIndent/CppSmartIndent.cpp	(working copy)
+@@ -25,7 +25,7 @@
+ 
+     // check if smart indent is enabled
+     // check the event type and the currently set language
+-    // if it is not a CharAdded event or the language is not python return
++    // if it is not a CharAdded event or the language is not C/C++, D, or Java return
+ 
+     if (!ed)
+         return;
+@@ -42,14 +42,14 @@
+         return;
+ 
+     wxString langname = Manager::Get()->GetEditorManager()->GetColourSet()->GetLanguageName(ed->GetLanguage());
+-    if ( langname != _T("C/C++") && langname != _T("D") ) return;
++    if ( langname != _T("C/C++") && langname != _T("D") && langname != _T("Java") ) return;
+ 
+     ed->AutoIndentDone(); // we are responsible.
+ 
+     const int pos = stc->GetCurrentPos();
+     int currLine = stc->LineFromPosition(pos);
+ 
+-    if ( currLine == 0)
++    if (currLine == 0)
+         return;
+ 
+     const wxChar ch = event.GetKey();
+@@ -551,6 +551,59 @@
+ {
+     int pos = control->GetCurrentPos();
+     int style = control->GetStyleAt(pos);
++
++    // match preprocessor commands
++    if ( (ch == _T('\n')) || ( (control->GetEOLMode() == wxSCI_EOL_CR) && (ch == _T('\r')) ) )
++    {
++        wxRegEx ppIf(wxT("^[ \t]*#[ \t]*if"));
++        wxRegEx ppElse(wxT("^[ \t]*#[ \t]*el"));
++        wxRegEx ppEnd(wxT("^[ \t]*#[ \t]*endif"));
++        wxRegEx pp(wxT("^([ \t]*#[ \t]*)[a-z]*([ \t]+([a-zA-Z0-9_]+)|())")); // generic match to extract parts
++        const int ppLine = control->GetCurrentLine() - 1;
++        if (ppIf.Matches(control->GetLine(ppLine)) || ppElse.Matches(control->GetLine(ppLine)))
++        {
++            int depth = 1;
++            for (int i = ppLine + 1; i < control->GetLineCount(); ++i)
++            {
++                if (control->GetLine(i).Find(wxT('#')) != wxNOT_FOUND) // limit testing due to performance cost
++                {
++                    if (ppIf.Matches(control->GetLine(i))) // ignore else's, elif's, ...
++                        ++depth;
++                    else if (ppEnd.Matches(control->GetLine(i)))
++                        --depth;
++                }
++                if (depth == 0)
++                    break;
++            }
++            if (depth > 0)
++            {
++                wxString endIf = wxT("endif");
++                if (pp.Matches(control->GetLine(ppLine)))
++                {
++                    endIf.Prepend(pp.GetMatch(control->GetLine(ppLine), 1));
++                    if (!pp.GetMatch(control->GetLine(ppLine), 3).IsEmpty())
++                        endIf.Append(wxT(" // ") + pp.GetMatch(control->GetLine(ppLine), 3));
++                }
++                else
++                    endIf.Prepend(wxT("#"));
++                switch (control->GetEOLMode())
++                {
++                case wxSCI_EOL_LF:
++                    endIf.Prepend(wxT("\n"));
++                    break;
++                case wxSCI_EOL_CRLF:
++                    endIf.Prepend(wxT("\r\n"));
++                    break;
++                case wxSCI_EOL_CR:
++                    endIf.Prepend(wxT("\r"));
++                    break;
++                }
++                control->InsertText(pos, endIf);
++                return;
++            }
++        }
++    }
++
+     if ( control->IsComment(style) || control->IsPreprocessor(style) )
+         return;
+     if (ch == _T('\'') || ch == _T('"'))
+Index: src/plugins/contrib/SmartIndent/xmlmanifest.xml
+===================================================================
+--- src/plugins/contrib/SmartIndent/xmlmanifest.xml	(revision 0)
++++ src/plugins/contrib/SmartIndent/xmlmanifest.xml	(working copy)
+@@ -0,0 +1,14 @@
++<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
++<CodeBlocks_plugin_manifest_file>
++    <SdkVersion major="1" minor="11" release="12" />
++    <Plugin name="XMLSmartIndent">
++        <Value title="XMLSmartIndent" />
++        <Value version="0.1" />
++        <Value description="Provides Smart indenting for XML and HTML" />
++        <Value author="Alpha" />
++        <Value authorEmail="" />
++        <Value authorWebsite="" />
++        <Value thanksTo="" />
++        <Value license="GPL" />
++    </Plugin>
++</CodeBlocks_plugin_manifest_file>
+Index: src/plugins/contrib/SmartIndent/XMLSmartIndent.h
+===================================================================
+--- src/plugins/contrib/SmartIndent/XMLSmartIndent.h	(revision 0)
++++ src/plugins/contrib/SmartIndent/XMLSmartIndent.h	(working copy)
+@@ -0,0 +1,22 @@
++#ifndef XMLSMARTINDENT_H_INCLUDED
++#define XMLSMARTINDENT_H_INCLUDED
++
++// For compilers that support precompilation, includes <wx/wx.h>
++#include <wx/wxprec.h>
++
++#ifndef WX_PRECOMP
++    #include <wx/string.h>
++#endif
++
++#include <cbplugin.h> // for "class cbSmartIndentPlugin"
++
++class cbEditor;
++class wxScintillaEvent;
++
++class XMLSmartIndent : public cbSmartIndentPlugin
++{
++    public:
++        virtual void OnEditorHook(cbEditor* ed, wxScintillaEvent& event) const;
++};
++
++#endif // XMLSMARTINDENT_H_INCLUDED
+Index: src/plugins/contrib/SmartIndent/HDLSmartIndent.cpp
+===================================================================
+--- src/plugins/contrib/SmartIndent/HDLSmartIndent.cpp	(revision 8435)
++++ src/plugins/contrib/SmartIndent/HDLSmartIndent.cpp	(working copy)
+@@ -22,7 +22,7 @@
+ {
+     // check if smart indent is enabled
+     // check the event type and the currently set language
+-    // if it is not a CharAdded event or the language is not python return
++    // if it is not a CharAdded event or the language is neither VHDL nor Verilog return
+ 
+     if (!ed)
+         return;
+Index: src/plugins/contrib/SmartIndent/FortranSmartIndent.cpp
+===================================================================
+--- src/plugins/contrib/SmartIndent/FortranSmartIndent.cpp	(revision 8435)
++++ src/plugins/contrib/SmartIndent/FortranSmartIndent.cpp	(working copy)
+@@ -22,7 +22,7 @@
+ {
+     // check if smart indent is enabled
+     // check the event type and the currently set language
+-    // if it is not a CharAdded event or the language is not python return
++    // if it is not a CharAdded event or the language is not Fortran return
+ 
+     if (!ed)
+         return;
+Index: src/plugins/contrib/SmartIndent/PythonSmartIndent.cpp
+===================================================================
+--- src/plugins/contrib/SmartIndent/PythonSmartIndent.cpp	(revision 8435)
++++ src/plugins/contrib/SmartIndent/PythonSmartIndent.cpp	(working copy)
+@@ -22,7 +22,7 @@
+ {
+     // check if smart indent is enabled
+     // check the event type and the currently set language
+-    // if it is not a CharAdded event or the language is not python return
++    // if it is not a CharAdded event or the language is not Python return
+ 
+     if (!ed)
+         return;

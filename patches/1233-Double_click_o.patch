@@ -1,0 +1,51 @@
+Index: src/sdk/newfromtemplatedlg.cpp
+===================================================================
+--- src/sdk/newfromtemplatedlg.cpp	(revision 2778)
++++ src/sdk/newfromtemplatedlg.cpp	(working copy)
+@@ -63,18 +63,22 @@
+ 
+     // projects
+ 	EVT_LIST_ITEM_RIGHT_CLICK(XRCID("listProjects"), NewFromTemplateDlg::OnListRightClick)
++	EVT_LIST_ITEM_ACTIVATED(XRCID("listProjects"), NewFromTemplateDlg::OnListActivate)
+ 	EVT_CHOICE(XRCID("cmbProjectCategories"), NewFromTemplateDlg::OnCategoryChanged)
+ 
+     // targets
+ 	EVT_LIST_ITEM_RIGHT_CLICK(XRCID("listTargets"), NewFromTemplateDlg::OnListRightClick)
++	EVT_LIST_ITEM_ACTIVATED(XRCID("listTargets"), NewFromTemplateDlg::OnListActivate)
+ 	EVT_CHOICE(XRCID("cmbTargetCategories"), NewFromTemplateDlg::OnCategoryChanged)
+ 
+     // files
+ 	EVT_LIST_ITEM_RIGHT_CLICK(XRCID("listFiles"), NewFromTemplateDlg::OnListRightClick)
++	EVT_LIST_ITEM_ACTIVATED(XRCID("listFiles"), NewFromTemplateDlg::OnListActivate)
+ 	EVT_CHOICE(XRCID("cmbFileCategories"), NewFromTemplateDlg::OnCategoryChanged)
+ 
+     // workspaces
+ 	EVT_LIST_ITEM_RIGHT_CLICK(XRCID("listCustoms"), NewFromTemplateDlg::OnListRightClick)
++	EVT_LIST_ITEM_ACTIVATED(XRCID("listCustoms"), NewFromTemplateDlg::OnListActivate)
+ 	EVT_CHOICE(XRCID("cmbCustomCategories"), NewFromTemplateDlg::OnCategoryChanged)
+ 
+     // context menu for wizard scripts
+@@ -347,6 +351,11 @@
+ 	delete menu;
+ }
+ 
++void NewFromTemplateDlg::OnListActivate(wxListEvent& event)
++{
++	this->EndModal(wxID_OK);
++}
++
+ void NewFromTemplateDlg::OnCategoryChanged(wxCommandEvent& event)
+ {
+     BuildListFor(GetVisibleOutputType(), GetVisibleListCtrl(), GetVisibleCategory());
+Index: src/sdk/newfromtemplatedlg.h
+===================================================================
+--- src/sdk/newfromtemplatedlg.h	(revision 2778)
++++ src/sdk/newfromtemplatedlg.h	(working copy)
+@@ -33,6 +33,7 @@
+ 		void ClearList();
+ 		void ClearListFor(wxListCtrl* list);
+ 		void OnListRightClick(wxListEvent& event);
++		void OnListActivate(wxListEvent& event);
+ 		void OnCategoryChanged(wxCommandEvent& event);
+ 		void OnEditScript(wxCommandEvent& event);
+ 		void OnEditGlobalScript(wxCommandEvent& event);

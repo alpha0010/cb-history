@@ -1,0 +1,162 @@
+Index: classwizarddlg.h
+===================================================================
+--- classwizarddlg.h	(revision 4532)
++++ classwizarddlg.h	(working copy)
+@@ -20,7 +20,8 @@
+         void OnCancelClick(wxCommandEvent& event);
+         void OnNameChange(wxCommandEvent& event);
+         void OnAncestorChange(wxCommandEvent& event);
+-        void OnBaseDirClick(wxCommandEvent& event);
++        void OnIncludeDirClick(wxCommandEvent& event);
++        void OnImplDirClick(wxCommandEvent& event);
+         void DoGuardBlock();
+ 
+         wxString m_Header;
+Index: resources/new_class.xrc
+===================================================================
+--- resources/new_class.xrc	(revision 4532)
++++ resources/new_class.xrc	(working copy)
+@@ -147,7 +147,7 @@
+                             <object class="sizeritem">
+                                 <flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
+                                 <object class="wxStaticText" name="ID_STATICTEXT9">
+-                                    <label>Base folder:</label>
++                                    <label>Include folder:</label>
+                                 </object>
+                             </object>
+                             <object class="sizeritem">
+@@ -157,14 +157,14 @@
+                                     <object class="sizeritem">
+                                         <option>1</option>
+                                         <flag>wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
+-                                        <object class="wxTextCtrl" name="txtBaseDir">
++                                        <object class="wxTextCtrl" name="txtIncludeDir">
+                                             <value>Text</value>
+                                             <size>115,23</size>
+                                         </object>
+                                     </object>
+                                     <object class="sizeritem">
+                                         <flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                                        <object class="wxButton" name="btnBaseDir">
++                                        <object class="wxButton" name="btnIncludeDir">
+                                             <label>...</label>
+                                             <size>24,23</size>
+                                         </object>
+@@ -172,6 +172,33 @@
+                                 </object>
+                             </object>
+                             <object class="sizeritem">
++                                <flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                <object class="wxStaticText" name="ID_STATICTEXT29">
++                                    <label>Implementation folder:</label>
++                                </object>
++                            </object>
++                            <object class="sizeritem">
++                                <flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                                <object class="wxBoxSizer">
++                                    <orient>wxHORIZONTAL</orient>
++                                    <object class="sizeritem">
++                                        <option>1</option>
++                                        <flag>wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                                        <object class="wxTextCtrl" name="txtImplDir">
++                                            <value>Text</value>
++                                            <size>115,23</size>
++                                        </object>
++                                    </object>
++                                    <object class="sizeritem">
++                                        <flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                        <object class="wxButton" name="btnImplDir">
++                                            <label>...</label>
++                                            <size>24,23</size>
++                                        </object>
++                                    </object>
++                                </object>
++                            </object>
++                            <object class="sizeritem">
+                                 <border>4</border>
+                                 <flag>wxTOP|wxALIGN_LEFT|wxALIGN_TOP</flag>
+                                 <object class="wxStaticText" name="ID_STATICTEXT6">
+Index: classwizarddlg.cpp
+===================================================================
+--- classwizarddlg.cpp	(revision 4532)
++++ classwizarddlg.cpp	(working copy)
+@@ -69,7 +69,8 @@
+     EVT_BUTTON(XRCID("wxID_CANCEL"), ClassWizardDlg::OnCancelClick)
+     EVT_TEXT(XRCID("txtName"), ClassWizardDlg::OnNameChange)
+     EVT_TEXT(XRCID("txtInheritance"), ClassWizardDlg::OnAncestorChange)
+-    EVT_BUTTON(XRCID("btnBaseDir"), ClassWizardDlg::OnBaseDirClick)
++    EVT_BUTTON(XRCID("btnIncludeDir"), ClassWizardDlg::OnIncludeDirClick)
++    EVT_BUTTON(XRCID("btnImplDir"), ClassWizardDlg::OnImplDirClick)
+ END_EVENT_TABLE()
+ 
+ 
+@@ -80,9 +81,15 @@
+     ProjectManager* prjMan = Manager::Get()->GetProjectManager();
+     cbProject* prj = prjMan->GetActiveProject();
+     if (prj)
+-  	    XRCCTRL(*this, "txtBaseDir", wxTextCtrl)->SetValue(prj->GetBasePath());
++    {
++  	    XRCCTRL(*this, "txtIncludeDir", wxTextCtrl)->SetValue(prj->GetBasePath() + "include");
++  	    XRCCTRL(*this, "txtImplDir", wxTextCtrl)->SetValue(prj->GetBasePath() + "src");\
++    }
+     else
+-  	    XRCCTRL(*this, "txtBaseDir", wxTextCtrl)->SetValue(::wxGetCwd());
++    {
++  	    XRCCTRL(*this, "txtIncludeDir", wxTextCtrl)->SetValue(::wxGetCwd());
++  	    XRCCTRL(*this, "txtImplDir", wxTextCtrl)->SetValue(::wxGetCwd());
++    }
+ }
+ 
+ 
+@@ -160,7 +167,8 @@
+         Name = tkz.GetNextToken();
+     }
+ 
+-    wxString baseDir = XRCCTRL(*this, "txtBaseDir", wxTextCtrl)->GetValue();
++    wxString includeDir = XRCCTRL(*this, "txtIncludeDir", wxTextCtrl)->GetValue();
++    wxString implDir = XRCCTRL(*this, "txtImplDir", wxTextCtrl)->GetValue();
+     //wxSetWorkingDirectory(baseDir);
+ 
+     wxString Constructor = XRCCTRL(*this, "txtConstructor", wxTextCtrl)->GetValue();
+@@ -182,8 +190,8 @@
+ 
+     wxFileName headerFname(UnixFilename(m_Header));
+     wxFileName implementationFname(UnixFilename(m_Implementation));
+-    headerFname.MakeAbsolute(baseDir);
+-    implementationFname.MakeAbsolute(baseDir);
++    headerFname.MakeAbsolute(includeDir);
++    implementationFname.MakeAbsolute(implDir);
+ 
+     bool usestabs = Manager::Get()->GetConfigManager(_T("editor"))->ReadBool(_T("/use_tab"), false);
+     int tabsize = Manager::Get()->GetConfigManager(_T("editor"))->ReadInt(_T("/tab_size"), 4);
+@@ -308,17 +316,27 @@
+ }
+ 
+ 
+-void ClassWizardDlg::OnBaseDirClick(wxCommandEvent& event)
++void ClassWizardDlg::OnIncludeDirClick(wxCommandEvent& event)
+ {
+-    wxString path = XRCCTRL(*this, "txtBaseDir", wxTextCtrl)->GetValue();
++    wxString path = XRCCTRL(*this, "txtIncludeDir", wxTextCtrl)->GetValue();
+     wxDirDialog dlg (this, _T("Choose a directory"), path);
+     if (dlg.ShowModal()==wxID_OK)
+     {
+         path = dlg.GetPath();
+-        XRCCTRL(*this, "txtBaseDir", wxTextCtrl)->SetValue(path);
++        XRCCTRL(*this, "txtIncludeDir", wxTextCtrl)->SetValue(path);
+     }
+ }
+ 
++void ClassWizardDlg::OnImplDirClick(wxCommandEvent& event)
++{
++    wxString path = XRCCTRL(*this, "txtImplDir", wxTextCtrl)->GetValue();
++    wxDirDialog dlg (this, _T("Choose a directory"), path);
++    if (dlg.ShowModal()==wxID_OK)
++    {
++        path = dlg.GetPath();
++        XRCCTRL(*this, "txtImplDir", wxTextCtrl)->SetValue(path);
++    }
++}
+ 
+ void ClassWizardDlg::OnCancelClick(wxCommandEvent& event)
+ {

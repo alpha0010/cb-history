@@ -1,0 +1,184 @@
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 2339)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -553,6 +553,15 @@
+ 	m_pControl->SetCaretLineVisible(mgr->ReadBool(_T("/highlight_caret_line"), false));
+ 	m_pControl->SetCaretLineBackground(GetOptionColour(_T("/highlight_caret_line_color"), wxColour(0xFF, 0xFF, 0x00)));
+ 
++    wxColour selForegroundColor = GetOptionColour(_T("/selection_foreground_color"), wxNullColour);
++
++    if (selForegroundColor != wxNullColour)
++        m_pControl->SetSelForeground(true, selForegroundColor);
++    else
++        m_pControl->SetSelForeground(false, wxNullColour);
++
++    m_pControl->SetSelBackground(true, GetOptionColour(_T("/selection_background_color"), *wxLIGHT_GREY));
++
+     m_pControl->SetUseTabs(mgr->ReadBool(_T("/use_tab"), false));
+ 	m_pControl->SetIndentationGuides(mgr->ReadBool(_T("/show_indent_guides"), false));
+     m_pControl->SetTabIndents(mgr->ReadBool(_T("/tab_indents"), true));
+Index: src/sdk/editorcolorset.cpp
+===================================================================
+--- src/sdk/editorcolorset.cpp	(revision 2339)
++++ src/sdk/editorcolorset.cpp	(working copy)
+@@ -41,7 +41,6 @@
+ #include "filefilters.h"
+ 
+ const int cbHIGHLIGHT_LINE = -98; // highlight line under caret virtual style
+-const int cbSELECTION      = -99; // selection virtual style
+ 
+ EditorColorSet::EditorColorSet(const wxString& setName)
+ 	: m_Name(setName)
+@@ -134,7 +133,6 @@
+ 			OptionColor* opt = it->second.m_Colors.Item(i);
+ 			// valid values are:
+ 			if (opt->value < 0 &&               // styles >= 0
+-                opt->value != cbSELECTION &&    // cbSELECTION
+                 opt->value != cbHIGHLIGHT_LINE) // cbHIGHLIGHT_LINE
+             {
+                 it->second.m_Colors.Remove(opt);
+@@ -437,16 +435,6 @@
+                 control->SetCaretLineBackground(opt->back);
+                 Manager::Get()->GetConfigManager(_T("editor"))->Write(_T("/highlight_caret_line_color"), opt->back);
+             }
+-            else if (opt->value == cbSELECTION)
+-            {
+-                if (opt->back != wxNullColour)
+-                {
+-                    control->SetSelBackground(true, opt->back);
+-                    Manager::Get()->GetConfigManager(_T("editor"))->Write(_T("/selection_color"), opt->back);
+-                }
+-                else
+-                    control->SetSelBackground(false, wxColour(0xC0, 0xC0, 0xC0));
+-            }
+ //            else
+ //            {
+ //                control->MarkerDefine(-opt->value, 1);
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 2339)
++++ src/sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -71,6 +71,8 @@
+ const FileType IdxToFileType[] = { ftSource, ftHeader };
+ 
+ BEGIN_EVENT_TABLE(EditorConfigurationDlg, wxDialog)
++    EVT_BUTTON(XRCID("btnSelForeColor"),        EditorConfigurationDlg::OnChooseColor)
++    EVT_BUTTON(XRCID("btnSelBackColor"),        EditorConfigurationDlg::OnChooseColor)
+ 	EVT_BUTTON(XRCID("btnChooseEditorFont"), 	EditorConfigurationDlg::OnChooseFont)
+ 	EVT_BUTTON(XRCID("btnKeywords"), 			EditorConfigurationDlg::OnEditKeywords)
+ 	EVT_BUTTON(XRCID("btnFilemasks"), 			EditorConfigurationDlg::OnEditFilemasks)
+@@ -112,6 +114,8 @@
+ 
+     ConfigManager* cfg = Manager::Get()->GetConfigManager(_T("editor"));
+ 
++    XRCCTRL(*this, "btnSelForeColor", wxButton)->SetBackgroundColour(cfg->ReadColour(_T("selection_foreground_color"), wxNullColour));
++    XRCCTRL(*this, "btnSelBackColor", wxButton)->SetBackgroundColour(cfg->ReadColour(_T("selection_background_color"), *wxLIGHT_GREY));
+    	XRCCTRL(*this, "chkAutoIndent", wxCheckBox)->SetValue(cfg->ReadBool(_T("/auto_indent"), true));
+    	XRCCTRL(*this, "chkSmartIndent", wxCheckBox)->SetValue(cfg->ReadBool(_T("/smart_indent"), true));
+    	XRCCTRL(*this, "chkUseTab", wxCheckBox)->SetValue(cfg->ReadBool(_T("/use_tab"), false));
+@@ -801,19 +805,21 @@
+ 
+         cfg->Write(_T("/font"), XRCCTRL(*this, "lblEditorFont", wxStaticText)->GetFont().GetNativeFontInfoDesc());
+ 
+-        cfg->Write(_T("/auto_indent"),			XRCCTRL(*this, "chkAutoIndent", wxCheckBox)->GetValue());
+-        cfg->Write(_T("/smart_indent"),			XRCCTRL(*this, "chkSmartIndent", wxCheckBox)->GetValue());
+-        cfg->Write(_T("/use_tab"), 				XRCCTRL(*this, "chkUseTab", wxCheckBox)->GetValue());
+-        cfg->Write(_T("/show_indent_guides"), 	XRCCTRL(*this, "chkShowIndentGuides", wxCheckBox)->GetValue());
+-        cfg->Write(_T("/tab_indents"), 			XRCCTRL(*this, "chkTabIndents", wxCheckBox)->GetValue());
+-        cfg->Write(_T("/backspace_unindents"), 	XRCCTRL(*this, "chkBackspaceUnindents", wxCheckBox)->GetValue());
+-        cfg->Write(_T("/word_wrap"), 			XRCCTRL(*this, "chkWordWrap", wxCheckBox)->GetValue());
+-        cfg->Write(_T("/show_line_numbers"), 	XRCCTRL(*this, "chkShowLineNumbers", wxCheckBox)->GetValue());
+-        cfg->Write(_T("/highlight_caret_line"), XRCCTRL(*this, "chkHighlightCaretLine", wxCheckBox)->GetValue());
+-        cfg->Write(_T("/tab_size"),             XRCCTRL(*this, "spnTabSize", wxSpinCtrl)->GetValue());
+-        cfg->Write(_T("/view_whitespace"),      XRCCTRL(*this, "cmbViewWS", wxComboBox)->GetSelection());
+-        cfg->Write(_T("/tab_text_relative"),    XRCCTRL(*this, "rbTabText", wxRadioBox)->GetSelection() ? true : false);
+-        cfg->Write(_T("/auto_wrap_search"),     XRCCTRL(*this, "chkAutoWrapSearch", wxCheckBox)->GetValue());
++        cfg->Write(_T("/selection_foreground_color"), XRCCTRL(*this, "btnSelForeColor", wxButton)->GetBackgroundColour());
++        cfg->Write(_T("/selection_background_color"), XRCCTRL(*this, "btnSelBackColor", wxButton)->GetBackgroundColour());
++        cfg->Write(_T("/auto_indent"),			      XRCCTRL(*this, "chkAutoIndent", wxCheckBox)->GetValue());
++        cfg->Write(_T("/smart_indent"),			      XRCCTRL(*this, "chkSmartIndent", wxCheckBox)->GetValue());
++        cfg->Write(_T("/use_tab"), 				      XRCCTRL(*this, "chkUseTab", wxCheckBox)->GetValue());
++        cfg->Write(_T("/show_indent_guides"), 	      XRCCTRL(*this, "chkShowIndentGuides", wxCheckBox)->GetValue());
++        cfg->Write(_T("/tab_indents"), 			      XRCCTRL(*this, "chkTabIndents", wxCheckBox)->GetValue());
++        cfg->Write(_T("/backspace_unindents"), 	      XRCCTRL(*this, "chkBackspaceUnindents", wxCheckBox)->GetValue());
++        cfg->Write(_T("/word_wrap"), 			      XRCCTRL(*this, "chkWordWrap", wxCheckBox)->GetValue());
++        cfg->Write(_T("/show_line_numbers"), 	      XRCCTRL(*this, "chkShowLineNumbers", wxCheckBox)->GetValue());
++        cfg->Write(_T("/highlight_caret_line"),       XRCCTRL(*this, "chkHighlightCaretLine", wxCheckBox)->GetValue());
++        cfg->Write(_T("/tab_size"),                   XRCCTRL(*this, "spnTabSize", wxSpinCtrl)->GetValue());
++        cfg->Write(_T("/view_whitespace"),            XRCCTRL(*this, "cmbViewWS", wxComboBox)->GetSelection());
++        cfg->Write(_T("/tab_text_relative"),          XRCCTRL(*this, "rbTabText", wxRadioBox)->GetSelection() ? true : false);
++        cfg->Write(_T("/auto_wrap_search"),           XRCCTRL(*this, "chkAutoWrapSearch", wxCheckBox)->GetValue());
+ 
+         //caret
+         cfg->Write(_T("/caret/width"), XRCCTRL(*this, "spnCaretWidth", wxSpinCtrl)->GetValue());
+Index: src/sdk/resources/editor_configuration.xrc
+===================================================================
+--- src/sdk/resources/editor_configuration.xrc	(revision 2339)
++++ src/sdk/resources/editor_configuration.xrc	(working copy)
+@@ -91,6 +91,58 @@
+                 </object>
+                 <object class="sizeritem">
+                   <border>8</border>
++                  <flag>wxLEFT|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                  <object class="wxStaticBoxSizer">
++                    <orient>wxVERTICAL</orient>
++                    <label>Selection</label>
++                    <object class="sizeritem">
++                      <option>1</option>
++                      <border>4</border>
++                      <flag>wxALL|wxALIGN_CENTER|wxEXPAND</flag>
++                      <object class="wxGridSizer">
++                        <cols>2</cols>
++                        <object class="sizeritem">
++                          <object class="wxBoxSizer">
++                            <orient>wxHORIZONTAL</orient>
++                            <object class="sizeritem">
++                              <flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++                              <object class="wxStaticText">
++                                <label>Selection foreground:</label>
++                              </object>
++                            </object>
++                            <object class="sizeritem">
++                              <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                              <object class="wxButton" name="btnSelForeColor">
++                                <label></label>
++                              </object>
++                            </object>
++                          </object>
++                        </object>
++                        <object class="sizeritem">
++                          <object class="wxBoxSizer">
++                            <orient>wxHORIZONTAL</orient>
++                            <object class="sizeritem">
++                              <flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++                              <object class="wxStaticText">
++                                <label>Selection background:</label>
++                              </object>
++                            </object>
++                            <object class="sizeritem">
++                              <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                              <object class="wxButton" name="btnSelBackColor">
++                                <label></label>
++                              </object>
++                            </object>
++                          </object>
++                        </object>
++                        <flag>wxTOP|wxLEFT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                        <border>8</border>
++                      </object>
++                    </object>
++                  </object>
++                </object>
++                <object class="sizeritem">
++                  <border>8</border>
+                   <flag>wxLEFT|wxTOP|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
+                   <object class="wxFlexGridSizer">
+                     <rows>2</rows>
+@@ -939,4 +991,4 @@
+       </object>
+     </object>
+   </object>
+-</resource>
+\ No newline at end of file
++</resource>

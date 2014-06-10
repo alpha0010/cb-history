@@ -1,0 +1,317 @@
+Index: src/plugins/todo/resources/settings.xrc
+===================================================================
+--- src/plugins/todo/resources/settings.xrc	(revision 4191)
++++ src/plugins/todo/resources/settings.xrc	(working copy)
+@@ -1,51 +1,28 @@
+-<?xml version="1.0" encoding="utf-8"?>
++<?xml version="1.0" encoding="utf-8" ?>
+ <resource>
+-  <object class="wxDialog" name="ToDoSettingsDlg">
+-    <title>To-Do list settings</title>
+-    <centered>1</centered>
+-    <object class="wxBoxSizer">
+-      <orient>wxVERTICAL</orient>
+-      <object class="sizeritem">
+-        <object class="wxCheckBox" name="chkAutoRefresh">
+-          <label>Auto-refresh To-Do list</label>
+-        </object>
+-        <flag>wxALL|wxGROW</flag>
+-        <border>8</border>
+-      </object>
+-      <object class="sizeritem">
+-        <object class="wxStaticText">
+-          <label>For large projects, it is advised to turn auto-refresh off
+-because it will result in sluggish performance of the IDE...</label>
+-          <fg>#800000</fg>
+-        </object>
+-        <flag>wxBOTTOM|wxLEFT|wxRIGHT</flag>
+-        <border>8</border>
+-      </object>
+-      <object class="sizeritem">
+-        <object class="wxStaticLine"/>
+-        <flag>wxLEFT|wxRIGHT|wxGROW</flag>
+-        <border>8</border>
+-      </object>
+-      <object class="sizeritem">
++    <object class="wxPanel" name="ToDoSettingsDlg">
++        <size>560,127</size>
+         <object class="wxBoxSizer">
+-          <orient>wxHORIZONTAL</orient>
+-          <object class="sizeritem">
+-            <object class="wxButton" name="wxID_OK">
+-              <label>&amp;OK</label>
+-              <default>1</default>
++            <orient>wxVERTICAL</orient>
++            <object class="sizeritem">
++                <object class="wxCheckBox" name="chkAutoRefresh">
++                    <label>Auto-refresh To-Do list (NOT recommended for large projects)</label>
++                </object>
++                <flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                <border>8</border>
+             </object>
+-          </object>
+-          <object class="sizeritem">
+-            <object class="wxButton" name="wxID_CANCEL">
+-              <label>&amp;Cancel</label>
++            <object class="sizeritem">
++                <object class="wxCheckBox" name="chkMessagesPane">
++                    <label>Include the To-do list in the messages pane (will take place after restart)</label>
++                </object>
++                <flag>wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++                <border>8</border>
+             </object>
+-            <flag>wxLEFT</flag>
+-            <border>8</border>
+-          </object>
++            <object class="sizeritem">
++                <object class="wxStaticLine" name="ID_STATICLINE1" />
++                <flag>wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                <border>8</border>
++            </object>
+         </object>
+-        <flag>wxALL|wxALIGN_CENTRE</flag>
+-        <border>8</border>
+-      </object>
+     </object>
+-  </object>
+-</resource>
+\ No newline at end of file
++</resource>
+Index: src/plugins/todo/todolist.cpp
+===================================================================
+--- src/plugins/todo/todolist.cpp	(revision 4191)
++++ src/plugins/todo/todolist.cpp	(working copy)
+@@ -60,7 +60,8 @@
+ 
+ ToDoList::ToDoList() :
+ m_InitDone(false),
+-m_ParsePending(false)
++m_ParsePending(false),
++m_StandAlone(true)
+ {
+ 	//ctor
+     if(!Manager::LoadResource(_T("todo.zip")))
+@@ -86,34 +87,54 @@
+ 	titles.Add(_("Line"));
+ 	titles.Add(_("File"));
+ 
+-//    MessageManager* msgMan = Manager::Get()->GetMessageManager();
+ 	m_pListLog = new ToDoListView(6, widths, titles, m_Types);
+-//	m_ListPageIndex = msgMan->AddLog(m_pListLog, m_PluginInfo.title);
++	m_pListLog->SetSize(wxSize(352,94));
++    #if wxCHECK_VERSION(2, 8, 0)
++    m_pListLog->SetInitialSize(wxSize(352,94));
++    #else
++    m_pListLog->SetBestFittingSize(wxSize(352,94));
++    #endif
+ 
+-    CodeBlocksDockEvent evt(cbEVT_ADD_DOCK_WINDOW);
+-    evt.name = _T("TodoListPane");
+-    evt.title = _("To-Do list");
+-    evt.pWindow = m_pListLog;
+-    evt.dockSide = CodeBlocksDockEvent::dsFloating;
+-    evt.desiredSize.Set(400, 150);
+-    evt.floatingSize.Set(400, 150);
+-    evt.minimumSize.Set(400, 150);
+-    Manager::Get()->GetAppWindow()->ProcessEvent(evt);
++    bool standalone = Manager::Get()->GetConfigManager(_T("todo_list"))->ReadBool(_T("stand_alone"), true);
++    m_StandAlone = standalone;
+ 
++    if(!standalone)
++    {
++        MessageManager* msgMan = Manager::Get()->GetMessageManager();
++        m_ListPageIndex = msgMan->AddLog(m_pListLog, _("To-Do"));
++    }
++    else
++    {
++        CodeBlocksDockEvent evt(cbEVT_ADD_DOCK_WINDOW);
++        evt.name = _T("TodoListPanev2.0.0");
++        evt.title = _("To-Do list");
++        evt.pWindow = m_pListLog;
++        evt.dockSide = CodeBlocksDockEvent::dsFloating;
++        evt.desiredSize.Set(352, 94);
++        evt.floatingSize.Set(352, 94);
++        evt.minimumSize.Set(352, 94);
++        Manager::Get()->GetAppWindow()->ProcessEvent(evt);
++    }
++
+     m_AutoRefresh = Manager::Get()->GetConfigManager(_T("todo_list"))->ReadBool(_T("auto_refresh"), true);
+     LoadTypes();
+ }
+ 
+ void ToDoList::OnRelease(bool appShutDown)
+ {
+-    CodeBlocksDockEvent evt(cbEVT_REMOVE_DOCK_WINDOW);
+-    evt.pWindow = m_pListLog;
+-    Manager::Get()->GetAppWindow()->ProcessEvent(evt);
+-
+-    m_pListLog->Destroy();
+-
+-//    if (Manager::Get()->GetMessageManager())
+-//        Manager::Get()->GetMessageManager()->RemoveLog(m_pListLog);
++    if(m_StandAlone)
++    {
++        CodeBlocksDockEvent evt(cbEVT_REMOVE_DOCK_WINDOW);
++        evt.pWindow = m_pListLog;
++        Manager::Get()->GetAppWindow()->ProcessEvent(evt);
++        m_pListLog->Destroy();
++    }
++    else
++    {
++        if (Manager::Get()->GetMessageManager())
++            Manager::Get()->GetMessageManager()->RemoveLog(m_pListLog);
++    }
++    m_pListLog = 0;
+ }
+ 
+ void ToDoList::BuildMenu(wxMenuBar* menuBar)
+@@ -153,13 +174,20 @@
+ 	return false;
+ }
+ 
++cbConfigurationPanel* ToDoList::GetConfigurationPanel(wxWindow* parent)
++{
++    ToDoSettingsDlg* dlg = new ToDoSettingsDlg(parent);
++    return dlg;
++}
++
+ int ToDoList::Configure()
+ {
+-    ToDoSettingsDlg dlg;
+-    PlaceWindow(&dlg);
+-    if (dlg.ShowModal() == wxID_OK)
+-        m_AutoRefresh = Manager::Get()->GetConfigManager(_T("todo_list"))->ReadBool(_T("auto_refresh"), true);
+-	return 0;
++    return 0;
++//    ToDoSettingsDlg dlg;
++//    PlaceWindow(&dlg);
++//    if (dlg.ShowModal() == wxID_OK)
++//        m_AutoRefresh = Manager::Get()->GetConfigManager(_T("todo_list"))->ReadBool(_T("auto_refresh"), true);
++//	return 0;
+ }
+ 
+ void ToDoList::LoadTypes()
+Index: src/plugins/todo/todolist.h
+===================================================================
+--- src/plugins/todo/todolist.h	(revision 4191)
++++ src/plugins/todo/todolist.h	(working copy)
+@@ -33,6 +33,7 @@
+ 	public:
+ 		ToDoList();
+ 		~ToDoList();
++		virtual cbConfigurationPanel* GetConfigurationPanel(wxWindow* parent);
+ 		int Configure();
+ 		void BuildMenu(wxMenuBar* menuBar);
+ 		void BuildModuleMenu(const ModuleType type, wxMenu* menu, const FileTreeData* data = 0);
+@@ -57,6 +58,7 @@
+ 		bool m_AutoRefresh;
+ 		bool m_InitDone;
+ 		bool m_ParsePending;
++		bool m_StandAlone;
+ 		wxArrayString m_Types;
+ 		wxTimer m_timer;
+ 
+Index: src/plugins/todo/todolistview.cpp
+===================================================================
+--- src/plugins/todo/todolistview.cpp	(revision 4191)
++++ src/plugins/todo/todolistview.cpp	(working copy)
+@@ -50,6 +50,12 @@
+             (wxObjectEventFunction) (wxEventFunction) (wxCommandEventFunction)
+             &ToDoListView::OnDoubleClick);
+ 
++    #if wxCHECK_VERSION(2, 8, 0)
++    m_pList->SetInitialSize(wxSize(342,56));
++    #else
++    m_pList->SetBestFittingSize(wxSize(342,56));
++    #endif
++	m_pList->SetMinSize(wxSize(342,56));
+ 	wxSizer* bs = m_pList->GetContainingSizer();
+ 	if (bs)
+ 	{
+@@ -70,12 +76,12 @@
+         m_pUser = new wxComboBox(this, idUser, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, 0L, wxCB_READONLY);
+         m_pUser->Append(_("<All users>"));
+         m_pUser->SetSelection(0);
+-        hbs->Add(m_pUser, 0, wxLEFT, 8);
++        hbs->Add(m_pUser, 0, wxLEFT, 4);
+ 
+-        m_pRefresh = new wxButton(this, idButtonRefresh, _("Refresh list"));
+-        hbs->Add(m_pRefresh, 0, wxLEFT, 8);
++        m_pRefresh = new wxButton(this, idButtonRefresh, _("Refresh"));
++        hbs->Add(m_pRefresh, 0, wxLEFT, 4);
+ 
+-        bs->Add(hbs, 0, wxGROW | wxALL, 8);
++        bs->Add(hbs, 0, wxGROW | wxALL, 4);
+ 	}
+ }
+ 
+Index: src/plugins/todo/todosettingsdlg.cpp
+===================================================================
+--- src/plugins/todo/todosettingsdlg.cpp	(revision 4191)
++++ src/plugins/todo/todosettingsdlg.cpp	(working copy)
+@@ -9,12 +9,14 @@
+ #endif
+ #include "todosettingsdlg.h"
+ 
+-ToDoSettingsDlg::ToDoSettingsDlg()
++ToDoSettingsDlg::ToDoSettingsDlg(wxWindow* parent)
+ {
+ 	//ctor
+-	wxXmlResource::Get()->LoadDialog(this, 0L, _T("ToDoSettingsDlg"));
++	wxXmlResource::Get()->LoadPanel(this, parent, _T("ToDoSettingsDlg"));
+ 	bool checked = Manager::Get()->GetConfigManager(_T("todo_list"))->ReadBool(_T("auto_refresh"), true);
++	bool standalone = Manager::Get()->GetConfigManager(_T("todo_list"))->ReadBool(_T("stand_alone"), true);
+ 	XRCCTRL(*this, "chkAutoRefresh", wxCheckBox)->SetValue(checked);
++	XRCCTRL(*this, "chkMessagesPane", wxCheckBox)->SetValue(!standalone);
+ }
+ 
+ ToDoSettingsDlg::~ToDoSettingsDlg()
+@@ -22,13 +24,10 @@
+ 	//dtor
+ }
+ 
+-void ToDoSettingsDlg::EndModal(int retCode)
++void ToDoSettingsDlg::OnApply()
+ {
+-    if (retCode == wxID_OK)
+-    {
+-        bool checked = XRCCTRL(*this, "chkAutoRefresh", wxCheckBox)->GetValue();
+-        Manager::Get()->GetConfigManager(_T("todo_list"))->Write(_T("auto_refresh"), checked);
+-    }
+-
+-    wxDialog::EndModal(retCode);
++    bool checked = XRCCTRL(*this, "chkAutoRefresh", wxCheckBox)->GetValue();
++    bool standalone = !(XRCCTRL(*this, "chkMessagesPane", wxCheckBox)->GetValue());
++    Manager::Get()->GetConfigManager(_T("todo_list"))->Write(_T("auto_refresh"), checked);
++    Manager::Get()->GetConfigManager(_T("todo_list"))->Write(_T("stand_alone"), standalone);
+ }
+Index: src/plugins/todo/todosettingsdlg.h
+===================================================================
+--- src/plugins/todo/todosettingsdlg.h	(revision 4191)
++++ src/plugins/todo/todosettingsdlg.h	(working copy)
+@@ -1,15 +1,21 @@
+ #ifndef TODOSETTINGSDLG_H
+ #define TODOSETTINGSDLG_H
+ 
+-#include <wx/dialog.h>
++// #include <wx/dialog.h>
++#include <wx/intl.h>
++#include "configurationpanel.h"
++#include <settings.h>
+ 
+-class ToDoSettingsDlg : public wxDialog
++class ToDoSettingsDlg : public cbConfigurationPanel
+ {
+ 	public:
+-		ToDoSettingsDlg();
++		ToDoSettingsDlg(wxWindow* parent);
+ 		~ToDoSettingsDlg();
+ 
+-		void EndModal(int retCode);
++        virtual wxString GetTitle() const { return _("To-do list"); }
++        virtual wxString GetBitmapBaseName() const { return _T("generic-plugin"); }
++        virtual void OnApply();
++        virtual void OnCancel(){}
+ };
+ 
+ #endif // TODOSETTINGSDLG_H

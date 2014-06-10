@@ -1,0 +1,48 @@
+Index: src/sdk/globals.cpp
+===================================================================
+--- src/sdk/globals.cpp	(revision 3758)
++++ src/sdk/globals.cpp	(working copy)
+@@ -505,7 +505,7 @@
+ }
+ 
+ // Return multibyte (C string) representation of the string
+-wxWX2MBbuf cbU2C(const wxString& str)
++const wxWX2MBbuf cbU2C(const wxString& str)
+ {
+     if(platform::unicode)
+         return str.mb_str(wxConvUTF8);
+Index: src/plugins/contrib/wxSmith/wxwidgets/wxsitemresdataobject.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/wxsitemresdataobject.cpp	(revision 3758)
++++ src/plugins/contrib/wxSmith/wxwidgets/wxsitemresdataobject.cpp	(working copy)
+@@ -44,7 +44,7 @@
+ bool wxsItemResDataObject::GetDataHere(const wxDataFormat& format,void *buf) const
+ {
+ 	wxString XmlData = GetXmlData();
+-	wxWX2MBbuf str = cbU2C(XmlData);
++	const wxWX2MBbuf str = cbU2C(XmlData);
+     memcpy(buf,str,strlen(str)+1);
+    	return true;
+ }
+@@ -52,7 +52,7 @@
+ size_t wxsItemResDataObject::GetDataSize(const wxDataFormat& format) const
+ {
+ 	wxString XmlData = GetXmlData();
+-	wxWX2MBbuf str = cbU2C(XmlData);
++	const wxWX2MBbuf str = cbU2C(XmlData);
+     return strlen(str)+1;
+ }
+ 
+Index: src/include/globals.h
+===================================================================
+--- src/include/globals.h	(revision 3758)
++++ src/include/globals.h	(working copy)
+@@ -134,7 +134,7 @@
+ /// Return @c str as a proper unicode-compatible string
+ extern DLLIMPORT wxString cbC2U(const char* str);
+ /// Return multibyte (C string) representation of the string
+-extern DLLIMPORT wxWX2MBbuf cbU2C(const wxString& str);
++extern DLLIMPORT const wxWX2MBbuf cbU2C(const wxString& str);
+ /// Try converting a C-string from different encodings until a possible match is found.
+ /// This tries the following encoding converters (in the same order):
+ /// utf8, system, default and iso8859-1 to iso8859-15.

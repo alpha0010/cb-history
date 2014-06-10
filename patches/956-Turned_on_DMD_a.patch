@@ -1,0 +1,183 @@
+Index: src/plugins/compilergcc/compilerDMD.h
+===================================================================
+--- src/plugins/compilergcc/compilerDMD.h	(wersja 2259)
++++ src/plugins/compilergcc/compilerDMD.h	(kopia robocza)
+@@ -1,6 +1,3 @@
+-#ifdef __WXMSW__
+-// this compiler is valid only in windows
+-
+ #ifndef COMPILERDMD_H
+ #define COMPILERDMD_H
+ 
+@@ -19,6 +16,4 @@
+ 	private:
+ };
+ 
+-#endif // COMPILERDMC_H
+-
+-#endif // __WXMSW__
++#endif // COMPILERDMD_H
+Index: src/plugins/compilergcc/compilerDMD.cpp
+===================================================================
+--- src/plugins/compilergcc/compilerDMD.cpp	(wersja 2259)
++++ src/plugins/compilergcc/compilerDMD.cpp	(kopia robocza)
+@@ -1,6 +1,3 @@
+-#ifdef __WXMSW__
+-// this compiler is valid only in windows
+-
+ #include <sdk.h>
+ #include "compilerDMD.h"
+ #include <wx/log.h>
+@@ -30,10 +27,12 @@
+ 
+ void CompilerDMD::Reset()
+ {
++	#ifdef __WXMSW__
+ 	m_Programs.C = _T("dmd.exe");
+ 	m_Programs.CPP = _T("dmd.exe");
+ 	m_Programs.LD = _T("dmd.exe");
+ 	m_Programs.LIB = _T("lib.exe");
++	m_Programs.DBG = _T("gdb.exe");
+ 	m_Programs.WINDRES = _T("dmd.exe");
+ 	m_Programs.MAKE = _T("make.exe");
+ 
+@@ -53,6 +52,45 @@
+ 	m_Switches.linkerNeedsLibPrefix = false;
+ 	m_Switches.linkerNeedsLibExtension = true;
+ 
++	// FIXME (hd#1#): should be work on: we need $res_options
++	m_Commands[(int)ctCompileResourceCmd] = _T("$rescomp $resource_output $res_includes $file");
++	m_Commands[(int)ctLinkExeCmd] = _T("$linker $exe_output $link_options $link_objects $libs");
++	m_Commands[(int)ctLinkConsoleExeCmd] = _T("$linker $exe_output $link_options $link_objects $libs");
++	
++	#else
++	m_Programs.C = _T("dmd");
++	m_Programs.CPP = _T("dmd");
++	m_Programs.LD = _T("gcc");
++	m_Programs.LIB = _T("ar");
++	m_Programs.DBG = _T("gdb");
++	m_Programs.WINDRES = _T("");
++	m_Programs.MAKE = _T("make");
++
++	m_Switches.includeDirs = _T("-I");
++	m_Switches.libDirs = _T("-L");
++	m_Switches.linkLibs = _T("-l");
++	m_Switches.libPrefix = _T("lib");
++	m_Switches.libExtension = _T("a");
++	m_Switches.defines = _T("");
++	m_Switches.genericSwitch = _T("-");
++	m_Switches.objectExtension = _T("o");
++	m_Switches.needDependencies = false;
++	m_Switches.forceCompilerUseQuotes = false;
++	m_Switches.forceLinkerUseQuotes = false;
++	m_Switches.logging = clogSimple;
++	m_Switches.buildMethod = cbmDirect;
++	m_Switches.linkerNeedsLibPrefix = false;
++	m_Switches.linkerNeedsLibExtension = false;
++
++ 	m_Commands[(int)ctCompileResourceCmd] = _T("");
++	m_Commands[(int)ctLinkExeCmd] = _T("$linker -o $exe_output $link_options $link_objects $libs");
++	m_Commands[(int)ctLinkConsoleExeCmd] = _T("$linker -o $exe_output $link_options $link_objects $libs");
++	#endif
++
++    m_Commands[(int)ctCompileObjectCmd] = _T("$compiler $options $includes -c $file -of$object");
++    m_Commands[(int)ctLinkDynamicCmd] = _T("$linker $exe_output $link_options $link_objects $libs $link_resobjects");
++    m_Commands[(int)ctLinkStaticCmd] = _T("$lib_linker $static_output $link_options $link_objects");	
++
+     m_Options.ClearOptions();
+ 
+ 	//. m_Options.AddOption(_("Alignment of struct members"), "-a[1|2|4|8]", _("Architecture"));
+@@ -73,19 +111,13 @@
+     m_Options.AddOption(_("verbose"), _T("-v"), _("Others"));
+     m_Options.AddOption(_("enable warnings"), _T("-w"), _("Others"));
+ 
+-    // FIXME (hd#1#): should be work on: we need $res_options
+-    m_Commands[(int)ctCompileObjectCmd] = _T("$compiler $options $includes -c $file -of$object");
+-    m_Commands[(int)ctCompileResourceCmd] = _T("$rescomp $resource_output $res_includes $file");
+-    m_Commands[(int)ctLinkExeCmd] = _T("$linker $exe_output $link_options $link_objects $libs");
+-    m_Commands[(int)ctLinkConsoleExeCmd] = _T("$linker $exe_output $link_options $link_objects $libs");
+-    m_Commands[(int)ctLinkDynamicCmd] = _T("$linker $exe_output $link_options $link_objects $libs $link_resobjects");
+-    m_Commands[(int)ctLinkStaticCmd] = _T("$lib_linker $static_output $link_options $link_objects");
+-
+     LoadDefaultRegExArray();
+ 
+     m_CompilerOptions.Clear();
+     m_LinkerOptions.Clear();
+     m_LinkLibs.Clear();
++	m_LinkLibs.Add(_("-lpthread"));
++	m_LinkLibs.Add(_("-lm"));
+     m_CmdsBefore.Clear();
+     m_CmdsAfter.Clear();
+ }
+@@ -101,20 +133,30 @@
+ 
+ AutoDetectResult CompilerDMD::AutoDetectInstallationDir()
+ {
++	wxString sep = wxFileName::GetPathSeparator();
++
++	// NOTE (hd#1#): dmc uses sc.ini for compiler's master directories
++    // NOTE (mandrav#1#): which doesn't seem to exist if you don't have the CD version ;)
++
+     // just a guess; the default installation dir
++	#ifdef __WXMSW__
+ 	m_MasterPath = _T("C:\\dmd");
+-    wxString sep = wxFileName::GetPathSeparator();
++	wxString incPath=m_MasterPath + sep + _T("src") + sep + _T("phobos");
++	wxString libPath=m_MasterPath + sep + _T("lib");
++	wxString libName=_T("phobos.lib");
++	#else
++	m_MasterPath = _T("/usr/local");
++	wxString incPath=m_MasterPath + sep + _T("include") + sep + _T("phobos");
++	wxString libPath=m_MasterPath + sep + _T("lib");
++	wxString libName=_T("-lphobos");
++	#endif
+ 
+-    // NOTE (hd#1#): dmc uses sc.ini for compiler's master directories
+-    // NOTE (mandrav#1#): which doesn't seem to exist if you don't have the CD version ;)
+-    if (!m_MasterPath.IsEmpty())
+-    {
+-        AddIncludeDir(m_MasterPath + sep + _T("src") + sep + _T("phobos"));
+-        AddLibDir(m_MasterPath + sep + _T("lib"));
+-    }
+-    AddLinkLib( _T("phobos.lib") );
++	if (!m_MasterPath.IsEmpty())
++	{
++		AddIncludeDir(incPath);
++        AddLibDir(libPath);
++	}
++	AddLinkLib(libName);
+ 
+     return wxFileExists(m_MasterPath + sep + _T("bin") + sep + m_Programs.C) ? adrDetected : adrGuessed;
+ }
+-
+-#endif // __WXMSW__
+Index: src/plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- src/plugins/compilergcc/compilergcc.cpp	(wersja 2259)
++++ src/plugins/compilergcc/compilergcc.cpp	(kopia robocza)
+@@ -57,10 +57,10 @@
+     #include "compilerBCC.h"
+     #include "compilerDMC.h"
+     #include "compilerOW.h"
+-    #include "compilerGDC.h"
+-    #include "compilerDMD.h"
+ 	#include "compilerGNUARM.h"
+ #endif
++#include "compilerGDC.h"
++#include "compilerDMD.h"
+ #include "compilerICC.h"
+ #include "compilerSDCC.h"
+ 
+@@ -240,10 +240,10 @@
+ 	CompilerFactory::RegisterCompiler(new CompilerICC);
+ 	CompilerFactory::RegisterCompiler(new CompilerSDCC);
+ #ifdef __WXMSW__
++	CompilerFactory::RegisterCompiler(new CompilerGNUARM);
++#endif
+ 	CompilerFactory::RegisterCompiler(new CompilerGDC);
+ 	CompilerFactory::RegisterCompiler(new CompilerDMD);
+-	CompilerFactory::RegisterCompiler(new CompilerGNUARM);
+-#endif
+ 
+ 	// register (if any) user-copies of built-in compilers
+ 	CompilerFactory::RegisterUserCompilers();

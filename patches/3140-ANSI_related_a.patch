@@ -1,0 +1,97 @@
+Index: src/plugins/contrib/HexEditor/HexEditPanel.cpp
+===================================================================
+--- src/plugins/contrib/HexEditor/HexEditPanel.cpp	(revision 7060)
++++ src/plugins/contrib/HexEditor/HexEditPanel.cpp	(working copy)
+@@ -1029,7 +1029,11 @@
+ 
+         default:
+         {
++#if wxUSE_UNICODE
+             m_ActiveView->PutChar( event.GetUnicodeKey() );
++#else
++            m_ActiveView->PutChar( event.GetKeyCode() );
++#endif
+             break;
+         }
+     }
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsimagelist.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsimagelist.cpp	(revision 7060)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsimagelist.cpp	(working copy)
+@@ -159,10 +159,10 @@
+         m_Count = 0;
+ 
+         m_ImageData.Clear();
+-        ss.Printf(_T("%d"), m_Width);
++        ss.Printf(_T("%ld"), m_Width);
+         m_ImageData.Add(ss);
+ 
+-        ss.Printf(_T("%d"), m_Height);
++        ss.Printf(_T("%ld"), m_Height);
+         m_ImageData.Add(ss);
+     }
+ 	// else reset the displayed size
+Index: src/plugins/contrib/NassiShneiderman/CParser.cpp
+===================================================================
+--- src/plugins/contrib/NassiShneiderman/CParser.cpp	(revision 7060)
++++ src/plugins/contrib/NassiShneiderman/CParser.cpp	(working copy)
+@@ -23,7 +23,11 @@
+ 
+     typedef rule<scanner<wxChar const *> > rule_t;
+ 
++#if wxUSE_UNICODE
+     const wxChar *buf = str.wc_str();
++#else
++    const wxChar *buf = str.c_str();
++#endif
+ 
+     //wxMessageBox(str, _T("parsing:"));
+     rule_t preprocessor   = comment_p( _T("#") );
+Index: src/plugins/contrib/ToolsPlus/PipedProcessCtrl.cpp
+===================================================================
+--- src/plugins/contrib/ToolsPlus/PipedProcessCtrl.cpp	(revision 7060)
++++ src/plugins/contrib/ToolsPlus/PipedProcessCtrl.cpp	(working copy)
+@@ -259,7 +259,11 @@
+         kc1[0]='\n';
+     }
+ //    cbMessageBox(_T("key press: ")+wxString::FromAscii(kc1)+wxString::Format(_T(" keycode: %i"),ke.GetKeyCode()));
++#if wxUSE_UNICODE
+     wxChar kc2=ke.GetUnicodeKey();
++#else
++	wxChar kc2=ke.GetKeyCode();
++#endif
+     wxString buf(kc2);
+     //kc1[0]=buf[0];
+     m_ostream->Write(kc1,1);
+Index: src/plugins/contrib/AutoVersioning/AutoVersioning.cpp
+===================================================================
+--- src/plugins/contrib/AutoVersioning/AutoVersioning.cpp	(revision 7060)
++++ src/plugins/contrib/AutoVersioning/AutoVersioning.cpp	(working copy)
+@@ -727,7 +727,7 @@
+ 					iLast = sLine.Find('"', true);
+ 					// Create a new version string...
+ 					wxString sVersion = sLine.SubString(iFirst, iLast);
+-					wxString sNewVersion = wxString::Format(wxT("\"%d.%d.%d\""), GetVersionState().Values.Major, GetVersionState().Values.Minor, GetVersionState().Values.Build);
++					wxString sNewVersion = wxString::Format(wxT("\"%ld.%ld.%ld\""), GetVersionState().Values.Major, GetVersionState().Values.Minor, GetVersionState().Values.Build);
+ 					// ...and insert it into the XML.
+ 					sLine.Replace(sVersion, sNewVersion);
+ 					// Remove the existing line and replace it with the new one.
+Index: src/plugins/codecompletion/parser/token.h
+===================================================================
+--- src/plugins/codecompletion/parser/token.h	(revision 7060)
++++ src/plugins/codecompletion/parser/token.h	(working copy)
+@@ -88,12 +88,12 @@
+         {
+             const long totalTime = it->first->m_StopWatch.Time();
+             wxString log;
+-            log.Printf(_T("\"%s\" used time is %d minute(s), %ld.%03ld seconds; call times is %d."),
++            log.Printf(_T("\"%s\" used time is %ld minute(s), %ld.%03ld seconds; call times is %ld."),
+                        it->second.wx_str(),
+                        (totalTime / 60000),
+                        (totalTime / 1000) % 60,
+                        (totalTime % 1000),
+-                       it->first->m_CallTimes);
++                       (long)it->first->m_CallTimes);
+ #ifndef CC_PARSER_TEST
+             Manager::Get()->GetLogManager()->DebugLog(log);
+ #endif

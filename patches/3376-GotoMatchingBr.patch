@@ -1,0 +1,54 @@
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 8732)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -375,6 +394,15 @@
+         return url;
+     }
+ 
++    void BufferPosition(cbStyledTextCtrl* stc)
++    {
++        const int dist = stc->VisibleFromDocLine(stc->GetCurrentLine()) - stc->GetFirstVisibleLine();
++        if (dist >= 0 && dist < 2)
++            stc->LineScroll(0, dist - 2);
++        else if (dist >= stc->LinesOnScreen() - 2)
++            stc->LineScroll(0, 3 + dist - stc->LinesOnScreen());
++    }
++
+     // vars
+     bool m_strip_trailing_spaces;
+     bool m_ensure_final_line_end;
+@@ -2255,7 +2295,10 @@
+ 
+     int newLine = p_Control->FindChangedLine(fromLine, toLine);
+     if (newLine != wxSCI_INVALID_POSITION)
++    {
+         p_Control->GotoLine(newLine);
++        m_pData->BufferPosition(p_Control);
++    }
+ }
+ 
+ void cbEditor::GotoPreviousChanged()
+@@ -2271,7 +2314,10 @@
+ 
+     int newLine = p_Control->FindChangedLine(fromLine, toLine);
+     if (newLine != wxSCI_INVALID_POSITION)
++    {
+         p_Control->GotoLine(newLine);
++        m_pData->BufferPosition(p_Control);
++    }
+ }
+ 
+ void cbEditor::SetChangeCollection(bool collectChange)
+@@ -2438,8 +2484,11 @@
+     // now, we either found it or not
+     if (matchingBrace != wxSCI_INVALID_POSITION)
+     {
++        // move to the actual position
+         control->GotoPos(matchingBrace);
+         control->ChooseCaretX();
++        // make nearby lines visible
++        m_pData->BufferPosition(control);
+     }
+ }
+ 

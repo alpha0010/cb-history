@@ -1,0 +1,4104 @@
+Index: src/sdk/scripting/sqsession/sqext.cpp
+===================================================================
+--- src/sdk/scripting/sqsession/sqext.cpp	(revision 0)
++++ src/sdk/scripting/sqsession/sqext.cpp	(revision 0)
+@@ -0,0 +1,294 @@
++/* see copyright notice in squirrel.h */
++#include <squirrel.h>
++#include <string.h>
++#include <stdlib.h>
++#include <stdio.h>
++#include <ctype.h>
++#include <assert.h>
++
++#include "../squirrel/sqpcheader.h"
++#include "../squirrel/sqvm.h"
++#include "../squirrel/sqclosure.h"
++#include "../squirrel/sqfuncproto.h"
++
++#include "sqext.h"
++
++#ifdef SQUNICODE
++#define scfprintf fwprintf
++#define scfopen	_wfopen
++#define scvprintf vwprintf
++#else
++#define scfprintf fprintf
++#define scfopen	fopen
++#define scvprintf vprintf
++#endif
++
++#ifdef ATS
++extern int g_sq_malloc_n;
++extern int g_sq_malloc_tot;
++extern int g_sq_malloc_oper_sum;
++
++SQInteger _ext_getmemusage(HSQUIRRELVM v){
++	sq_newtable(v);
++	sq_pushstring(v,_SC("nr_blocks"),-1);
++	sq_pushinteger(v,g_sq_malloc_n);
++	sq_rawset(v,-3);
++	sq_pushstring(v,_SC("total_size"),-1);
++	sq_pushinteger(v,g_sq_malloc_tot);
++	sq_rawset(v,-3);
++	sq_pushstring(v,_SC("total_nr_ops"),-1);
++	sq_pushinteger(v,g_sq_malloc_oper_sum);
++	sq_rawset(v,-3);
++	return 1;
++}
++#endif // ifdef ATS
++/*
++void ext_scstrcat( SQChar *dst, const SQChar *src, int *pp ){
++    if( !src ) return;
++    int i, p = *pp;
++    for( i=0; src[i]; i++ )
++        dst[p+i] = src[i];
++    dst[p+i] = 0;
++    *pp = p+i;
++}
++*/
++
++SQInteger _ext_getfuncinfo(HSQUIRRELVM v){
++	SQObjectPtr &o = stack_get(v,2);
++    SQChar *stype, *stemp = sq_getscratchpad(v,200);
++    SQChar buf[16];
++    *stemp = 0;
++    //printf( "type: %08X\n", type(o) );
++
++    if( type(o)!=OT_NATIVECLOSURE && type(o)!=OT_CLOSURE && type(o)!=OT_FUNCPROTO )
++        return 0;
++
++	sq_newtable(v);
++
++    switch( type(o) ){
++        case OT_NATIVECLOSURE:{
++            SQNativeClosure *pnc = o._unVal.pNativeClosure;
++            bool var_arg = pnc->_nparamscheck<0 ? true : false;
++
++            sq_pushstring(v,_SC("type"),-1);
++            sq_pushstring(v,_SC("native"),-1);
++            sq_rawset(v,-3);
++
++            sq_pushstring(v,_SC("args"),-1);
++            sq_newarray(v,0);
++
++            // If we don't have a typemask, use number of paramaters
++            if( !pnc->_typecheck.size() ){
++                if( pnc->_nparamscheck ){
++                    for( int i=(var_arg?-1:1)*pnc->_nparamscheck; i>0; i-- ){
++                        sq_pushstring(v,_SC("unspec"),-1);
++                        sq_arrayappend(v,-2);
++                    }
++                    if( var_arg ){
++                        sq_pushstring(v,_SC("..."),-1);
++                        sq_arrayappend(v,-2);
++                    }
++                }
++                else{
++                    sq_pushstring(v,_SC("???"),-1);
++                    sq_arrayappend(v,-2);
++                }
++            }
++            else{
++                // Write type of each argument
++                SQObjectType type_val;
++                unsigned int i;
++                for( i=0; i<pnc->_typecheck.size(); i++ ){
++                    type_val = SQObjectType(pnc->_typecheck._vals[i]);
++                    if( type_val==-1 ) stype = _SC("any");
++                    else{
++                        stype = (SQChar*)IdType2Name( type_val );
++                        if( !stype ){
++                            if( (type_val&(_RT_FLOAT|_RT_INTEGER))==(_RT_FLOAT|_RT_INTEGER) )
++                                stype = _SC("number");
++                            else{
++                                scsprintf( buf, _SC("unknown<%X>"), type_val );
++                                stype = buf; // (SQChar*)(!i ? _SC("env") : _SC("unknown"));
++                            }
++                        }
++                    }
++                    sq_pushstring(v,stype,-1);
++                    sq_arrayappend(v,-2);
++                }
++                
++                // If typemask is too short, correct for that
++                for( unsigned int imax = (var_arg?-1:1)*pnc->_nparamscheck; i<imax; i++ ){
++                    sq_pushstring(v,_SC("unsp"),-1);
++                    sq_arrayappend(v,-2);
++                }
++                
++                if( var_arg ){
++                    sq_pushstring(v,_SC("..."),-1);
++                    sq_arrayappend(v,-2);
++                }
++            }
++            sq_rawset(v,-3);    // Slot the array into the table
++            break;
++        }
++
++        case OT_CLOSURE:
++        case OT_FUNCPROTO:{
++            SQFunctionProto *pfp;
++            if( type(o)==OT_CLOSURE ) pfp = _funcproto(o._unVal.pClosure->_function);
++            else pfp = o._unVal.pFunctionProto;
++
++            sq_pushstring(v,_SC("type"),-1);
++            sq_pushstring(v,_SC(type(o)==OT_CLOSURE?"closure":"proto"),-1);
++            sq_rawset(v,-3);
++
++            sq_pushstring(v,_SC("args"),-1);
++            sq_newarray(v,0);
++
++            // Write number of paramaters
++            bool var_arg = pfp->_varparams ? true : false;
++            // for( int i=0; i<pfp->_nparameters-1; i++ ){
++            for( unsigned int i=0; i<pfp->_parameters.size(); i++ ){
++                sq_pushstring(v,_SC("dyn"),-1);
++                sq_arrayappend(v,-2);
++            }
++            if( var_arg ){
++                sq_pushstring(v,_SC("..."),-1);
++                sq_arrayappend(v,-2);
++            }
++
++            sq_rawset(v,-3);    // Slot the array into the table
++            break;
++        }
++
++        default:
++        return 0;
++    }
++
++	return 1;
++}
++
++/*
++SQInteger _ext_getfuncinfo(HSQUIRRELVM v){
++	SQObjectPtr &o = stack_get(v,2);
++    SQChar *stype, *stemp = sq_getscratchpad(v,200);
++    SQChar buf[16];
++    int p=0;
++    *stemp = 0;
++    //printf( "type: %08X\n", type(o) );
++
++    switch( type(o) ){
++        case OT_NATIVECLOSURE:{
++            SQNativeClosure *pnc = o._unVal.pNativeClosure;
++            bool var_arg = pnc->_nparamscheck<0 ? true : false;
++
++            ext_scstrcat( stemp, _SC("Function(N)"), &p );
++
++            // Write number of paramaters ?
++            if( !pnc->_typecheck.size() ){
++                ext_scstrcat( stemp, _SC(", Args: env,"), &p );
++                if( pnc->_nparamscheck ){
++                    if( var_arg ) scsprintf(buf, _SC("%d,..."), (-pnc->_nparamscheck)-1);
++                    else scsprintf(buf, _SC("%d"), pnc->_nparamscheck-1);
++                    ext_scstrcat( stemp, buf, &p );
++                }
++                else
++                    ext_scstrcat( stemp, _SC("no info available"), &p );
++            }
++            else{
++                // Write each argument
++                ext_scstrcat( stemp, _SC(", Args: "), &p );
++                SQObjectType type_val;
++                for( unsigned int i=0; i<pnc->_typecheck.size(); i++ ){
++                    type_val = SQObjectType(pnc->_typecheck._vals[i]);
++                    if( type_val==-1 ){
++                        stype = (SQChar*)(!i ? _SC("env") : _SC("any"));
++                    }
++                    else{
++                        stype = (SQChar*)IdType2Name( type_val );
++                        if( !stype ){
++                            if( (type_val&(_RT_FLOAT|_RT_INTEGER))==(_RT_FLOAT|_RT_INTEGER) )
++                                stype = _SC("number");
++                            else
++                                stype = (SQChar*)(!i ? _SC("env") : _SC("unknown"));
++                        }
++                    }
++                    ext_scstrcat( stemp, stype, &p );
++                    if( !i ) ext_scstrcat( stemp, _SC(",("), &p );
++                    if( i>0 && i<pnc->_typecheck.size()-1 )
++                        ext_scstrcat( stemp, _SC(", "), &p );
++                }
++                if( var_arg )
++                    ext_scstrcat( stemp, _SC(", ..."), &p );
++                ext_scstrcat( stemp, _SC(")"), &p );
++            }
++            break;
++        }
++
++        case OT_CLOSURE:
++        case OT_FUNCPROTO:{
++            SQFunctionProto *pfp;
++            if( type(o)==OT_CLOSURE ) pfp = _funcproto(o._unVal.pClosure->_function);
++            else pfp = o._unVal.pFunctionProto;
++
++            ext_scstrcat( stemp, _SC("Function"), &p );
++            ext_scstrcat( stemp, _SC(type(o)==OT_CLOSURE?"(C)":"(P)"), &p );
++
++            // Write number of paramaters
++            bool var_arg = pfp->_varparams ? true : false;
++            ext_scstrcat( stemp, _SC(", Args: env,("), &p );
++            // for( int i=0; i<pfp->_nparameters-1; i++ ){
++            for( unsigned int i=0; i<pfp->_parameters.size()-1; i++ ){
++                if( i>0 ) ext_scstrcat( stemp, _SC(", "), &p );
++                ext_scstrcat( stemp, _SC("any"), &p );
++            }
++            if( var_arg ) ext_scstrcat( stemp, _SC(", ..."), &p );
++            ext_scstrcat( stemp, _SC(")"), &p );
++
++            break;
++        }
++
++        case OT_USERPOINTER:
++            scsprintf(stemp,_SC("UserPointer: %08X"), (int)o._unVal.pUserPointer);
++            break;
++
++        case OT_USERDATA:
++            scsprintf(stemp,_SC("UserData: %08X"), (int)o._unVal.pUserData);
++            break;
++
++        default:
++            stype = (SQChar*)IdType2Name( type(o) );
++            if( !stype ) stype = _SC("unknown");
++            scsprintf(stemp,_SC("Type: %08X (%s)"), type(o), stype );
++    }
++
++    sq_pushstring(v,stemp,-1);
++	return 1;
++}
++*/
++
++
++#define _DECL_FUNC(name,nparams,pmask) {_SC(#name),_ext_##name,nparams,pmask}
++static SQRegFunction extlib_funcs[]={
++	_DECL_FUNC(getfuncinfo,2,_SC("..")),
++#ifdef ATS
++	_DECL_FUNC(getmemusage,1,_SC(".")),
++#endif
++	{0,0}
++};
++
++
++SQInteger sqstd_register_extlib(HSQUIRRELVM v)
++{
++	SQInteger i = 0;
++	while(extlib_funcs[i].name!=0)
++	{
++		sq_pushstring(v,extlib_funcs[i].name,-1);
++		sq_newclosure(v,extlib_funcs[i].f,0);
++		sq_setparamscheck(v,extlib_funcs[i].nparamscheck,extlib_funcs[i].typemask);
++		sq_setnativeclosurename(v,-1,extlib_funcs[i].name);
++		sq_createslot(v,-3);
++		i++;
++	}
++	return 1;
++}
++
+Index: src/sdk/scripting/sqsession/exparr.hpp
+===================================================================
+--- src/sdk/scripting/sqsession/exparr.hpp	(revision 0)
++++ src/sdk/scripting/sqsession/exparr.hpp	(revision 0)
+@@ -0,0 +1,436 @@
++
++
++/*
++
++The file provides a template array which grows 
++to required size. 
++
++Elements may be written/read through [] operator. 
++It may also be used as a stack through Push/Top/Pop
++operators.
++
++*/
++
++#ifndef EXPARR_HPP	
++#define EXPARR_HPP
++
++#include "assert.h"
++#include "stdlib.h"
++
++#define START_EXPARR_SIZE	8
++
++#ifndef EA_INC
++#define EA_INC				2.0
++#endif
++
++template <class T>
++class ExpArr{
++public:
++       ExpArr( T t );
++       ExpArr( );
++      ~ExpArr();
++
++  T	   *AddressToElems( );
++  T	   *Base( );
++  int  MaxSize( );
++  int  Size( );
++  int  MinCurrentSize( int size );
++  int  MinFreeElem( int  spc=0 );
++  int  MinTotalSize( int  siz );
++  int  Has( const T& elem );
++
++  T&   Elem( int ix );
++  int  SetElem( int ix, const T elem );
++
++  void Empty( );
++  T	   RemoveIndexUnordered( int ix );
++  T    RemoveIndexOrdered( int ix );
++  int  RemoveUnordered( const T& elem );
++  int  RemoveOrdered( const T& elem );
++  int  InsertOrdered( const T& elem, int ix );
++
++  T&   operator [] ( int  ix );
++  void Push( const T& elem );
++  T&   Pop( );
++  T&   Top( );
++  void Push( T *elems, int number );		// At top of stack
++  void Insert( T *elems, int number );		// At beginning of stack
++
++  void IterInit();
++  void IterInitEnd();
++  int  IterIndex();
++  void IterSetEmptyElem( const T elem );
++  T	   IterPlPl( );
++  T	   IterMiMi( );
++  T	   operator ++( int cpp );
++  T	   operator --( int cpp );
++  T	   Iter();
++
++  ExpArr& operator = ( ExpArr& other );
++  int operator == ( ExpArr& other );
++
++private:
++  void InitExpArr( );
++
++  int    cur_size;
++  int    max_size;
++  T     *ta;
++  T		 null_elem;
++  int	 ix;
++  };
++
++
++template <class T>
++void ExpArr<T>::IterSetEmptyElem( T elem ){
++	null_elem=elem;
++}
++
++template <class T>
++void ExpArr<T>::IterInit( ){
++	ix = 0;
++}
++
++template <class T>
++void ExpArr<T>::IterInitEnd( ){
++	ix = cur_size-1;
++}
++
++template <class T>
++T ExpArr<T>::operator ++( int cpp ){
++	if( ix>=0 && ix<cur_size )
++		return ta[ix++];
++	ix++;
++	return null_elem;
++}
++
++template <class T>
++T ExpArr<T>::operator --( int cpp ){
++	if( ix>=0 && ix<cur_size )
++		return ta[ix--];
++	ix--;
++	return null_elem;
++}
++
++template <class T>
++T ExpArr<T>::IterPlPl( ){
++	if( ix>=0 && ix<cur_size )
++		return ta[ix++];
++	ix++;
++	return null_elem;
++}
++
++template <class T>
++T ExpArr<T>::IterMiMi( ){
++	if( ix>=0 && ix<cur_size )
++		return ta[ix--];
++	ix--;
++	return null_elem;
++}
++
++template <class T>
++T ExpArr<T>::Iter( ){
++	if( ix>=0 && ix<cur_size )
++		return ta[ix];
++	return null_elem;
++}
++
++template <class T>
++int ExpArr<T>::IterIndex( ){
++	return ix;
++}
++
++
++template <class T>
++void ExpArr<T>::InitExpArr( ){
++    cur_size = 0;
++    max_size = 0;
++    ta     = NULL;
++    }
++
++template <class T>
++ExpArr<T>::ExpArr( T t ){
++	null_elem = t;
++    InitExpArr( );
++    };
++
++template <class T>
++ExpArr<T>::ExpArr( ){
++    InitExpArr( );
++    };
++
++template <class T>
++ExpArr<T>::~ExpArr(){
++    delete [] ta;
++	ta = NULL;
++    }
++
++
++template <class T>
++int  ExpArr<T>::MaxSize( ){
++    return max_size;
++    }
++
++template <class T>
++int  ExpArr<T>::Size( ){
++    return cur_size;
++    }
++
++template <class T>
++void ExpArr<T>::Empty( ){
++    cur_size=0;
++    }
++
++
++template <class T>
++int  ExpArr<T>::MinCurrentSize( int sz ){
++	if( sz>max_size ) 
++	{
++		if( MinTotalSize(sz) ) 
++			return 1;
++	}
++	if( cur_size<sz ) 
++		cur_size = sz;
++	return 0;
++}
++
++
++
++template <class T>
++int  ExpArr<T>::MinFreeElem( int  spc ){
++  T    *tp;
++  int   i,nsi;
++
++  if( !spc ){
++    if( cur_size<max_size )
++      return 0;
++    spc = max_size-cur_size+1; // !;
++    }
++
++  if( spc>max_size-cur_size ){
++
++	nsi = max_size ?  int(max_size*EA_INC) : START_EXPARR_SIZE;
++	nsi = cur_size+spc>nsi ? cur_size+spc : nsi;
++
++    tp = new T[ nsi ];
++    if( !tp )
++      return 1;
++
++    for( i=0; i<cur_size; i++ )
++      tp[i]=ta[i];
++    delete [] ta;
++
++    ta       = tp;
++    max_size = nsi;
++    }
++
++  return 0;
++  }
++
++template <class T>
++int  ExpArr<T>::MinTotalSize( int  siz ){
++  if( max_size<siz )
++    return MinFreeElem( siz-cur_size );
++  return 0;
++  }
++
++
++template <class T>
++T *ExpArr<T>::AddressToElems( )
++{
++	return ta;
++}
++
++template <class T>
++T *ExpArr<T>::Base( )
++{
++	return ta;
++}
++
++template <class T>
++int  ExpArr<T>::Has( const T& elem )
++{
++	for( int i=0; i<cur_size; i++ )
++		if( ta[i]==elem ) return i+1;		// ###
++	return 0;
++}
++
++
++template <class T>
++int  ExpArr<T>::SetElem( int ix, const T elem )
++{
++	if( ix>=0 && ix<cur_size )
++	{
++		ta[ix] = elem;
++		return 0;
++	}
++	return 1;
++}
++
++template <class T>
++T& ExpArr<T>::Elem( int ix )
++{
++	if( ix>=0 && ix<cur_size )
++		return ta[ix];
++	return null_elem;
++}
++
++
++template <class T>
++T ExpArr<T>::RemoveIndexUnordered( int ix )
++{
++	T elem;
++	assert( ix<max_size );
++	elem = ta[ix];
++	ta[ix] = ta[--cur_size];
++
++	return elem;
++}
++
++template <class T>
++T  ExpArr<T>::RemoveIndexOrdered( int ix )
++{
++	T elem;
++	assert( ix<max_size );
++	elem = ta[ix];
++	for( int i=ix; i<cur_size-1; i++ )
++		ta[i] = ta[i+1];
++	cur_size--;
++
++	return elem;
++}
++
++template <class T>
++int  ExpArr<T>::RemoveOrdered( const T& elem )
++{
++	for( int i=0; i<cur_size; i++ )
++	{
++		if( ta[i]==elem )
++		{
++			for( int j=i; j<cur_size-1; j++ )
++				ta[j]=ta[j+1];
++			cur_size--;
++			return 0;
++		}
++	}
++
++	return 1;
++}
++
++template <class T>
++int  ExpArr<T>::RemoveUnordered( const T& elem )
++{
++	for( int i=0; i<cur_size; i++ )
++	{
++		if( ta[i]==elem )
++		{
++			ta[i] = ta[--cur_size];
++			return 0;
++		}
++	}
++
++	return 1;
++}
++
++template <class T>
++int  ExpArr<T>::InsertOrdered( const T& elem, int ix )
++{
++	if( ix>cur_size )
++		return 1;
++
++	if( cur_size==max_size )
++		MinFreeElem();
++
++	for( int i=cur_size; i>ix; i-- )
++		ta[i] = ta[i-1];
++	cur_size++;
++
++	ta[ix] = elem;
++	return 0;
++}
++
++
++template <class T>
++T& ExpArr<T>::operator[] ( int  ix ){
++  assert( ix<max_size );
++
++  if( ix>=cur_size )
++    cur_size = ix+1;
++
++  return ta[ix];
++  }
++
++template <class T>
++void ExpArr<T>::Push( const T& elem ){
++  if( MinFreeElem( ) )
++    assert( 0 );
++  ta[cur_size++] = elem;
++  }
++
++template <class T>
++T& ExpArr<T>::Pop( ){
++  assert( cur_size>0 );
++  return ta[--cur_size];
++  }
++
++template <class T>
++T& ExpArr<T>::Top( ){
++  return ta[cur_size-1];
++  }
++
++template <class T>
++void ExpArr<T>::Push( T *elems, int number ){
++  if( MinFreeElem(number) )
++    EA_ASSERT( 0 );
++
++  for( int i=0; i<number; i++ )
++	ta[cur_size++] = elems[i];
++  }
++
++template <class T>
++void ExpArr<T>::Insert( T *elems, int number ){
++  if( MinFreeElem(number) )
++    EA_ASSERT( 0 );
++
++  for( int i=cur_size-1; i>=0; i-- )
++	ta[number+i] = ta[i];
++
++  for( int i=0; i<number; i++ )
++	ta[i] = elems[i];
++
++  cur_size += number;
++  }
++
++template <class T>
++ExpArr<T>& ExpArr<T>::operator = ( ExpArr<T>& other ){
++  if( ta==other.ta )
++	  return *this;
++
++  delete [] ta;
++  cur_size = other.cur_size;
++  max_size = other.max_size;
++  if( max_size )
++  {
++	ta = new T[max_size];
++	for( int ix=0;ix<cur_size;ix++ )
++		ta[ix]=other.ta[ix];
++  }
++  else
++    ta = NULL;
++
++  return *this;
++  }
++
++template <class T>
++int ExpArr<T>::operator == ( ExpArr<T>& other ){
++  if( cur_size!=other.cur_size ) 
++	  return 0;
++  for( int ix=0;ix<cur_size;ix++ )
++	if( ta[ix]!=other.ta[ix] )
++		return 0;
++  return 1;
++}  
++
++  
++#endif
++
++
+Index: src/sdk/scripting/sqsession/exparrp.hpp
+===================================================================
+--- src/sdk/scripting/sqsession/exparrp.hpp	(revision 0)
++++ src/sdk/scripting/sqsession/exparrp.hpp	(revision 0)
+@@ -0,0 +1,423 @@
++
++
++/*
++
++The file provides a template array which grows
++to required size.
++
++Elements may be written/read through [] operator.
++It may also be used as a stack through Push/Top/Pop
++operators.
++
++*/
++
++#ifndef EXPARRP_HPP
++#define EXPARRP_HPP
++
++//#include "assert.h"
++//#include "stdlib.h"
++
++#ifndef EA_ASSERT
++//#define EA_ASSERT VERIFY
++#define EA_ASSERT wxASSERT
++#endif
++
++#define START_EXPARRP_SIZE 8
++#ifndef EAP_INC
++#define EAP_INC				2.0
++#endif
++
++template <class T>
++class ExpArrP{
++public:
++       ExpArrP( );
++      ~ExpArrP();
++
++  T	   *AddressToElems( );
++  T	   *Base( );
++  int  MaxSize( );
++  int  Size( );
++  int  MinCurrentSize( int size );
++  int  MinFreeElem( int  spc=0 );
++  int  MinTotalSize( int  siz );
++  int  Has( T elem );
++
++  T&   Elem( int ix );
++  int  SetElem( int ix, T elem );
++
++  void Empty( );
++  void DeleteAll( );
++  T	   RemoveIndexUnordered( int ix );
++  T    RemoveIndexOrdered( int ix );
++  int  RemoveUnordered( T elem );
++  int  RemoveOrdered( T elem );
++  int  InsertOrdered( T elem, int ix );
++
++  T&   operator [] ( int  ix );
++  void Push( T elem );
++  T   Pop( );
++  T   Top( );
++  void Push( T *elems, int number );		// At top of stack
++  void Insert( T *elems, int number );		// At beginning of stack
++
++  void IterInit();
++  void IterInitEnd();
++  int  IterIndex();
++  T	   IterPlPl( );
++  T	   IterMiMi( );
++  T	   operator ++( int cpp );
++  T	   operator --( int cpp );
++  T	   Iter();
++
++  ExpArrP& operator = ( ExpArrP& other );
++
++private:
++  void InitExpArrP( );
++
++  int    cur_size;
++  int    max_size;
++  T     *ta;
++  int	 ix;
++  };
++
++
++template <class T>
++void ExpArrP<T>::IterInit( ){
++	ix = 0;
++}
++
++template <class T>
++void ExpArrP<T>::IterInitEnd( ){
++	ix = cur_size-1;
++}
++
++template <class T>
++T ExpArrP<T>::operator ++( int cpp ){
++	if( ix>=0 && ix<cur_size )
++		return ta[ix++];
++	ix++;
++	return NULL;
++}
++
++template <class T>
++T ExpArrP<T>::operator --( int cpp ){
++	if( ix>=0 && ix<cur_size )
++		return ta[ix--];
++	ix--;
++	return NULL;
++}
++
++template <class T>
++T ExpArrP<T>::IterPlPl( ){
++	if( ix>=0 && ix<cur_size )
++		return ta[ix++];
++	ix++;
++	return NULL;
++}
++
++template <class T>
++T ExpArrP<T>::IterMiMi( ){
++	if( ix>=0 && ix<cur_size )
++		return ta[ix--];
++	ix--;
++	return NULL;
++}
++
++template <class T>
++T ExpArrP<T>::Iter( ){
++	if( ix>=0 && ix<cur_size )
++		return ta[ix];
++	return NULL;
++}
++
++template <class T>
++int ExpArrP<T>::IterIndex( ){
++	return ix;
++}
++
++
++template <class T>
++void ExpArrP<T>::InitExpArrP( ){
++    cur_size = 0;
++    max_size = 0;
++    ta     = NULL;
++    }
++
++template <class T>
++ExpArrP<T>::ExpArrP( ){
++    InitExpArrP( );
++    };
++
++template <class T>
++ExpArrP<T>::~ExpArrP(){
++    delete [] ta;
++	ta = NULL;
++    }
++
++
++template <class T>
++int  ExpArrP<T>::MaxSize( ){
++    return max_size;
++    }
++
++template <class T>
++int  ExpArrP<T>::Size( ){
++    return cur_size;
++    }
++
++template <class T>
++void ExpArrP<T>::Empty( ){
++    cur_size=0;
++    }
++
++template <class T>
++void ExpArrP<T>::DeleteAll( ){
++    while( cur_size )
++        delete Pop();
++    }
++
++
++template <class T>
++int  ExpArrP<T>::MinCurrentSize( int sz ){
++	if( sz>max_size )
++	{
++		if( MinTotalSize(sz) )
++			return 1;
++	}
++	if( cur_size<sz )
++		cur_size = sz;
++	return 0;
++}
++
++
++template <class T>
++int  ExpArrP<T>::MinFreeElem( int  spc ){
++  T    *tp;
++  int   i,nsi;
++
++  if( !spc ){
++    if( cur_size<max_size )
++      return 0;
++    spc = max_size-cur_size+1; // !;
++    }
++
++  if( spc>max_size-cur_size ){
++	nsi = max_size ?  int(max_size*EAP_INC) : START_EXPARRP_SIZE;
++	nsi = cur_size+spc>nsi ? cur_size+spc : nsi;
++
++    tp = new T[ nsi ];
++    if( !tp )
++      return 1;
++
++    for( i=0; i<cur_size; i++ )
++      tp[i]=ta[i];
++	for( i=cur_size;i<nsi; i++ )
++		tp[i]=NULL;
++    delete [] ta;
++
++    ta       = tp;
++    max_size = nsi;
++    }
++
++  return 0;
++  }
++
++template <class T>
++int  ExpArrP<T>::MinTotalSize( int  siz ){
++  if( max_size<siz )
++    return MinFreeElem( siz-cur_size );
++  return 0;
++  }
++
++
++template <class T>
++T *ExpArrP<T>::AddressToElems( )
++{
++	return ta;
++}
++
++template <class T>
++T *ExpArrP<T>::Base( )
++{
++	return ta;
++}
++
++template <class T>
++int  ExpArrP<T>::Has( T elem )
++{
++	for( int i=0; i<cur_size; i++ )
++		if( ta[i]==elem ) return i+1;		// ###
++	return 0;
++}
++
++
++template <class T>
++int  ExpArrP<T>::SetElem( int ix, T elem )
++{
++	if( ix>=0 && ix<cur_size )
++	{
++		ta[ix] = elem;
++		return 0;
++	}
++	return 1;
++}
++
++template <class T>
++T&  ExpArrP<T>::Elem( int ix )
++{
++//	int cs = cur_size;
++	EA_ASSERT( ix>=0 && ix<cur_size );
++	return ta[ix];
++}
++
++
++template <class T>
++T ExpArrP<T>::RemoveIndexUnordered( int ix )
++{
++	T elem;
++	EA_ASSERT( ix<max_size );
++	elem = ta[ix];
++	ta[ix] = ta[--cur_size];
++
++	return elem;
++}
++
++template <class T>
++T  ExpArrP<T>::RemoveIndexOrdered( int ix )
++{
++	T elem;
++	EA_ASSERT( ix<max_size );
++	elem = ta[ix];
++	for( int i=ix; i<cur_size-1; i++ )
++		ta[i] = ta[i+1];
++	cur_size--;
++
++	return elem;
++}
++
++template <class T>
++int  ExpArrP<T>::RemoveOrdered( T elem )
++{
++	for( int i=0; i<cur_size; i++ )
++	{
++		if( ta[i]==elem )
++		{
++			for( int j=i; j<cur_size-1; j++ )
++				ta[j]=ta[j+1];
++			cur_size--;
++			return 0;
++		}
++	}
++
++	return 1;
++}
++
++template <class T>
++int  ExpArrP<T>::RemoveUnordered( T elem )
++{
++	for( int i=0; i<cur_size; i++ )
++	{
++		if( ta[i]==elem )
++		{
++			ta[i] = ta[--cur_size];
++			return 0;
++		}
++	}
++
++	return 1;
++}
++
++template <class T>
++int  ExpArrP<T>::InsertOrdered( T elem, int ix )
++{
++	if( ix>cur_size )
++		return 1;
++
++	if( cur_size==max_size )
++		MinFreeElem();
++
++	for( int i=cur_size; i>ix; i-- )
++		ta[i] = ta[i-1];
++	cur_size++;
++
++	ta[ix] = elem;
++	return 0;
++}
++
++
++template <class T>
++T& ExpArrP<T>::operator[] ( int  ix ){
++  EA_ASSERT( ix<max_size );
++
++  if( ix>=cur_size )
++    cur_size = ix+1;
++
++  return ta[ix];
++  }
++
++template <class T>
++void ExpArrP<T>::Push( T elem ){
++  if( MinFreeElem( ) )
++    EA_ASSERT( 0 );
++  ta[cur_size++] = elem;
++  }
++
++template <class T>
++T ExpArrP<T>::Pop( ){
++  EA_ASSERT( cur_size>0 );
++  return ta[--cur_size];
++  }
++
++template <class T>
++T ExpArrP<T>::Top( ){
++  return ta[cur_size-1];
++  }
++
++template <class T>
++void ExpArrP<T>::Push( T *elems, int number ){
++  if( MinFreeElem(number) )
++    EA_ASSERT( 0 );
++
++  for( int i=0; i<number; i++ )
++	ta[cur_size++] = elems[i];
++  }
++
++template <class T>
++void ExpArrP<T>::Insert( T *elems, int number ){
++  if( MinFreeElem(number) )
++    EA_ASSERT( 0 );
++
++  for( int i=cur_size-1; i>=0; i-- )
++	ta[number+i] = ta[i];
++
++  for( int i=0; i<number; i++ )
++	ta[i] = elems[i];
++
++  cur_size += number;
++  }
++
++
++template <class T>
++ExpArrP<T>& ExpArrP<T>::operator = ( ExpArrP<T>& other ){
++  delete [] ta;
++  cur_size = other.cur_size;
++  max_size = other.max_size;
++  if( max_size )
++  {
++	ta = new T[max_size];
++	for( int ix=0;ix<cur_size;ix++ )
++		ta[ix]=other.ta[ix];
++	for( int ix=cur_size;ix<max_size; ix++ )
++		ta[ix]=NULL;
++  }
++  else
++    ta = NULL;
++
++  return *this;
++  }
++
++
++
++#endif
++
++
+Index: src/sdk/scripting/sqsession/sqsession.cpp
+===================================================================
+--- src/sdk/scripting/sqsession/sqsession.cpp	(revision 0)
++++ src/sdk/scripting/sqsession/sqsession.cpp	(revision 0)
+@@ -0,0 +1,584 @@
++
++#include <stdlib.h>
++#include <string.h>
++#include <assert.h>
++#include <stdarg.h>
++
++#include "sqsession.h"
++#include <squirrel.h>
++#include "../squirrel/sqpcheader.h"
++#include "../squirrel/sqvm.h"
++
++#include "../squirrel/sqstring.h"
++#include "../squirrel/sqtable.h"
++#include "../squirrel/sqarray.h"
++
++#include <sqstdblob.h>
++#include <sqstdsystem.h>
++#include <sqstdio.h>
++#include <sqstdmath.h>
++#include <sqstdstring.h>
++#include <sqstdaux.h>
++
++#include "sqext.h"
++#include "sc.h"
++
++
++#define EA_INIT(ea) 		{ea.Empty();ea.Push((SQChar)0);}
++#define EA_N_CONC(ea,str,n) {ea.Pop();ea.Push(str,n);}
++#define EA_Z_CONC(ea,str) 	{ea.Pop();ea.Push(str,scstrlen(str)+1);}
++
++struct SQSPair{
++public:
++	SQSPair( SQVM *v, SQSession *sqs ) : m_v(v), m_sqs(sqs) {}
++	SQVM *m_v;
++	SQSession *m_sqs;
++};
++
++ExpArrP<struct SQSPair*>	g_sqs_pairs;
++
++SQSession *GetSQS( SQVM *v ){
++	for( int ix=0; ix<g_sqs_pairs.Size(); ix++ )
++		if( g_sqs_pairs[ix]->m_v==v )
++			return g_sqs_pairs[ix]->m_sqs;
++	return NULL;
++}
++
++void RemoveSQS( SQVM *v ){
++	for( int ix=0; ix<g_sqs_pairs.Size(); ix++ )
++		if( g_sqs_pairs[ix]->m_v==v )
++			g_sqs_pairs.RemoveIndexUnordered(ix);
++}
++
++
++
++
++
++SQChar *sqs_bracketcopy( SQChar *str ){
++    int sl = scstrlen(str);
++    SQChar *stemp = (SQChar*) sq_malloc((sl+3)*sizeof(SQChar));
++    stemp[0] = '[';
++    scstrncpy(stemp+1,str,sl);
++    stemp[sl+1] = ']';
++    stemp[sl+2] = 0;
++    return stemp;
++}
++
++void sqs_printfunc(HSQUIRRELVM v,const SQChar *s,...)
++{
++	va_list vl;
++	va_start(vl, s);
++	scvprintf( s, vl);
++	va_end(vl);
++}
++
++ExpArr<SQChar> g_sqs_log;
++void sqs_logprintfunc(HSQUIRRELVM v,const SQChar *s,...)
++{
++    g_sqs_log.MinFreeElem(128);
++	va_list vl;
++	va_start(vl, s);
++	int nc = scvsnprintf( g_sqs_log.Base()+g_sqs_log.Size()-1, g_sqs_log.MaxSize()-g_sqs_log.Size(), s, vl );
++	if( nc>0 ) g_sqs_log.MinCurrentSize( g_sqs_log.Size()+nc );
++	// scvprintf( s, vl);
++	va_end(vl);
++}
++
++// Print 1st line to the console.
++// Capture remaining lines in a Squirrel variable.
++static SQInteger sqs_printerror(HSQUIRRELVM v)
++{
++	SQPRINTFUNCTION pf = sq_getprintfunc(v);
++	if(pf) {
++		const SQChar *sErr = 0;
++		if(sq_gettop(v)>=1) {
++			if(SQ_SUCCEEDED(sq_getstring(v,2,&sErr)))	{
++				pf(v,_SC("\nError: [%s]\n"),sErr);
++			}
++			else{
++				pf(v,_SC("\nError: [unknown]\n"));
++			}
++
++			SQSession *ps = GetSQS(v);
++			assert(ps);
++            if( ps->GetFlags()&SQS_QUIET_ERRHANDLER ){
++                
++                // If we're doing the quiet err handler, we still want the top filename linenr
++                SQStackInfos si;
++                if(SQ_SUCCEEDED(sq_stackinfos(v,1,&si)))
++                {
++                    const SQChar *fn=_SC("unknown");
++                    const SQChar *src=_SC("unknown");
++                    if(si.funcname)fn=si.funcname;
++                    if(si.source)src=si.source;
++                    pf(v,_SC("Function: %s()   File: %s   Line: %d\n"),fn,src,si.line);
++                }
++                
++                // Allocate logging memory
++                EA_INIT( g_sqs_log );
++
++                // Now we change the printhandler, and print the stack
++                sq_setprintfunc(v,sqs_logprintfunc);
++                sqstd_printcallstack(v);
++                sq_setprintfunc(v,pf);
++
++                // Set a variable with error info
++                sq_pushroottable(v);
++                sq_pushstring(v,_SC("g_rl_last_error"),-1);
++                sq_pushstring(v,g_sqs_log.Base(),-1);
++                sq_rawset(v,-3);
++                sq_pop(v,1);
++            }
++            else
++                sqstd_printcallstack(v);
++		}
++	}
++	return 0;
++}
++
++struct SQSFlags {
++    int val;
++    const SQChar *name_clr;
++    const SQChar *name_set;
++};
++
++struct SQSFlags g_sqs_fnames []= {
++    {SQS_DO_ECHO_INPUT,_SC("norawecho"),_SC("rawecho")},
++    {SQS_DO_ECHO,_SC("noecho"),_SC("echo")},
++    {SQS_NO_LINE_TRANS,_SC("lt"),_SC("nolt")}, 
++    {SQS_QUIET_ERRHANDLER,_SC("errverb"),_SC("errbrief")},
++    {SQS_CHECK_STACK,_SC("stackcheck"),_SC("nostackcheck")},
++    {SQS_DO_EXIT,_SC("running"),_SC("exit")},
++    {0,NULL,NULL}
++};
++
++int sqs_get_flag_index( int flag ){
++    for( int ix=0; g_sqs_fnames[ix].val; ix++ )
++        if( flag==g_sqs_fnames[ix].val )
++            return ix;
++    return -1;
++}
++    
++SQInteger sqs_set( HSQUIRRELVM v ){
++	SQSession *ps = GetSQS(v);
++	if(!ps){
++        SQGETPRINT(v)( v,_SC("Not associated with an SQSession.\n") );
++		return 0;
++	}
++
++	const SQChar *s; 
++	int n_chg = 0;
++    sq_getstring(v,-1, &s); 
++    bool do_help = !scstrlen(s) ? true : false;
++    ExpArr<SQChar> buf;
++	EA_INIT(buf);
++
++    if( do_help )
++        EA_Z_CONC(buf,_SC("SQS Flags: ["));
++
++    for( int i=0; g_sqs_fnames[i].val; i++ ){
++        if( !scstrcmp(g_sqs_fnames[i].name_clr, s) )
++            ps->ClearFlagBits(g_sqs_fnames[i].val), n_chg++;
++        else if( !scstrcmp(g_sqs_fnames[i].name_set, s) )
++            ps->SetFlagBits(g_sqs_fnames[i].val), n_chg++;
++        if( do_help ){
++            if( i>0) EA_Z_CONC(buf,_SC(", "));
++            EA_Z_CONC(buf,(ps->GetFlags()&g_sqs_fnames[i].val ?
++                         (SQChar*)g_sqs_fnames[i].name_set :
++                         (SQChar*)g_sqs_fnames[i].name_clr));
++        }
++    }
++    
++    if( do_help ){
++        EA_Z_CONC(buf,_SC("]"));
++        SQGETPRINT(v)(v,buf.Base());
++    }
++    /*
++	if( !scstrcmp(s,"norawecho") )
++        ps->ClearFlagBits(SQS_DO_ECHO_INPUT), n_chg++;
++	else if( !scstrcmp(s,"rawecho") )
++        ps->SetFlagBits( SQS_DO_ECHO_INPUT), n_chg++;
++
++	if( !scstrcmp(s,"noecho") )
++        ps->ClearFlagBits(SQS_DO_ECHO), n_chg++;
++	else if( !scstrcmp(s,"echo") )
++        ps->SetFlagBits( SQS_DO_ECHO), n_chg++;
++
++	if( !scstrcmp(s,"nolt") )
++        ps->SetFlagBits( SQS_NO_LINE_TRANS), n_chg++;
++	else if( !scstrcmp(s,"lt") )
++        ps->ClearFlagBits(SQS_NO_LINE_TRANS), n_chg++;
++
++	if( !scstrcmp(s,"errquiet") )
++        ps->SetFlagBits( SQS_QUIET_ERRHANDLER), n_chg++;
++	if( !scstrcmp(s,"errverb") )
++        ps->ClearFlagBits(SQS_QUIET_ERRHANDLER), n_chg++;
++
++	if( !scstrcmp(s,"nostackcheck") )
++        ps->SetFlagBits( SQS_CHECK_STACK), n_chg++;
++	if( !scstrcmp(s,"stackcheck") )
++        ps->ClearFlagBits(SQS_CHECK_STACK), n_chg++;
++
++	if( !scstrcmp(s,"exit") )
++        ps->SetFlagBits( SQS_DO_EXIT), n_chg++;
++    */
++
++    if( !n_chg && !do_help )
++        SQGETPRINT(v)( v,_SC("No flag match, nothing changed.\n") );
++        	
++    return 0;
++}
++
++
++//
++// SQSession
++//
++SQSession::SQSession( SQVM *v, int flags, const SQChar *autoload ){
++	Init( v, flags, autoload );
++}
++
++//
++// ~SQSession
++//
++SQSession::~SQSession(  ){
++	if( m_flags&SQS_OWN_SQVM && m_v )
++	    sq_close(m_v);
++}
++
++//
++// Init
++//
++bool SQSession::Init( SQVM *v, int flags, const SQChar *autoload ){
++	RemoveSQS( m_v );
++	if( m_flags&SQS_OWN_SQVM && m_v )
++	    sq_close(m_v);
++	m_v = v;
++	m_flags = flags;
++	m_top_last = -1;
++	if( !v ){ 
++	    if( (flags&SQS_DO_CREATE_VM)!=SQS_OWN_SQVM ){
++	        if( !(m_v = sq_open(SQS_DEFAULT_STACK)) )
++                return false;
++	        m_flags |= SQS_OWN_SQVM;
++	    }
++	    else return true;
++	}
++	g_sqs_pairs.Push( new SQSPair(m_v,this) );
++
++	// sq_setprintfunc(m_v,sqs_printfunc);
++
++    // Init standard libraries
++    SyncLibsWithFlags( );
++
++	//sets error handlers & custom error handler
++	sqstd_seterrorhandlers(m_v);
++	sq_newclosure(m_v,sqs_printerror,0);
++	sq_seterrorhandler(m_v);
++
++    // Accessing shell settings through "set"
++	sq_pushroottable(m_v);
++	sq_pushstring(m_v,_SC("set"),-1);
++	sq_newclosure(m_v,sqs_set,0);
++	sq_setparamscheck(m_v,2,".s");
++	sq_createslot(m_v,-3);
++	sq_pop(m_v,1);
++
++    PrintVersionInfos();
++
++    // Run 'startup' script
++    if( autoload ) DoFile( autoload );
++    
++    return true;
++}
++
++//
++// AddScriptPath
++//
++bool SQSession::AddScriptPath( SQChar *path ){
++	return true;
++}
++
++//
++// SetFlagBits
++//
++void SQSession::SetFlagBits( int bits ){
++	m_flags |= bits;
++}
++
++//
++// ClearFlagBits
++//
++void SQSession::ClearFlagBits( int bits ){
++	m_flags &= ~bits;
++}
++
++//
++// GetFlags
++//
++int SQSession::GetFlags(  ){
++    return m_flags;
++}
++
++//
++// SetFlags
++//
++void SQSession::SetFlags( int flags ){
++    m_flags = flags;
++}
++
++
++
++bool SQSession::LoadFile( const SQChar *file ){
++    int rv = true;
++    sq_pushroottable(m_v);
++    if( !SQ_SUCCEEDED(sqstd_loadfile(m_v, file, true)) ){
++        rv = false;
++        PrintLastError( );
++    }
++    else{
++        SQGETPRINT(m_v)(m_v, _SC("File loaded OK:\n"), file);
++        PrintTop( true ); 
++    }
++    sq_pop(m_v,1);
++    return rv;
++}
++
++//
++// DoFile
++//
++bool SQSession::DoFile( const SQChar *file ){
++    int rv = true;
++    sq_pushroottable(m_v);
++    if( !SQ_SUCCEEDED(sqstd_dofile(m_v, file, true, true)) ){
++        rv = false;
++        PrintLastError();
++    }
++    else{
++        SQGETPRINT(m_v)(m_v, _SC("File loaded and ran OK: %s\n"), file );
++        PrintTop( true ); 
++        sq_pop(m_v,1);
++    }
++    sq_pop(m_v,1);
++    return rv;
++}
++
++//
++// DoLine  '!' - forces untranslated mode, '@' - forces translated mode
++//
++bool SQSession::DoLine( const SQChar *buffer ){
++    if( m_top_last==-1 )
++        m_top_last = GetTop();
++    else if( m_top_last!=GetTop() && (m_flags&SQS_CHECK_STACK) )
++        SQGETPRINT(m_v)(m_v, _SC("Note: Top of stack differs, Now %d, Before %d\n"),GetTop(), m_top_last);
++    m_top_last = GetTop();
++
++    bool do_raw = (buffer[0]=='!' || 
++        ((buffer[0]!='@') && (m_flags&SQS_NO_LINE_TRANS))) ? true : false;
++    if( m_flags&SQS_DO_ECHO_INPUT ){
++        int l = scstrlen(buffer)+4;
++        m_buf.MinTotalSize(l);
++        scsprintf(m_buf.Base(), _SC("sqs%c>%s"), _SC(do_raw?'!':'@'), buffer);
++        SQGETPRINT(m_v)(m_v,m_buf.Base());    
++    }
++    
++    if( do_raw )
++        return DoLineNoTransl( buffer );
++
++	// Apply Squirrel script on line before executing
++	// First we process line on script side
++	sq_pushroottable(m_v);
++	sq_pushstring(m_v,_SC("ltProcessLine"),-1);    // name of function
++	if( !SQ_SUCCEEDED(sq_get(m_v,-2)) ){
++		SQGETPRINT(m_v)( m_v,_SC("Failed locating Squirrel function: ltProcessLine (command line processor)\nEntering unprocessed mode.\n") );
++		sq_pop(m_v,1);
++		m_flags |= SQS_NO_LINE_TRANS;
++		return false;
++	}
++	sq_remove( m_v,-2 );
++	
++	sq_pushroottable(m_v);
++	sq_pushstring(m_v,_SC(buffer),-1);
++	if( !SQ_SUCCEEDED(sq_call(m_v,2,SQTrue,SQTrue)) ){
++		SQGETPRINT(m_v)( m_v, _SC("Failed executing ltProcessLine\nEntering unprocessed mode.\n") );
++		sq_pop(m_v,1);
++		m_flags |= SQS_NO_LINE_TRANS;
++		return false;
++	}
++
++	// Retrieve the processed array from ltProcessLine
++	SQObjectPtr &o = stack_get(m_v,-1);
++	SQArray *sqap = o._unVal.pArray;
++	assert( type(o)==OT_ARRAY );
++
++	// Iterate through all lines, concatenate and print. 
++	// Check for dofile and loadfile. 
++	SQObjectPtr op;
++	SQChar *str;
++	int sl, did_file;
++	EA_INIT(m_buf);
++	for( int ix=0; ix<sqap->Size(); ix++ ){
++		sqap->Get(ix,op);
++		str = op._unVal.pString->_val;
++		sl = op._unVal.pString->_len;
++		did_file = 0;
++		if( !scstrncmp(str,"dofile ",7) ){
++			DoFile( str+7 );
++			did_file = 1;
++		}
++		else if( !scstrncmp(str,"loadfile ",9) ) {
++			LoadFile( str+9 );
++			SQGETPRINT(m_v)(m_v, _SC("\n"));
++			did_file = 1;
++		}
++		else{
++			// Accumulate string
++			EA_N_CONC(m_buf,str,sl+1);
++		}
++		
++		// Print to stdout  
++		if( m_flags&SQS_DO_ECHO ){
++			if( !did_file )
++				SQGETPRINT(m_v)( m_v, _SC("%s\n"), str );
++			else
++				SQGETPRINT(m_v)( m_v, _SC("[%s]\n"), str );
++		}
++	}
++
++	// Compile buffer and execute
++	if(m_buf.Size()>0 && SQ_SUCCEEDED(sq_compilebuffer(m_v,m_buf.Base(),m_buf.Size(),_SC("interactive shell"),SQTrue))){
++		sq_pushroottable(m_v);
++		if(SQ_SUCCEEDED(sq_call(m_v,1,SQFalse,SQTrue)) ){
++			// Success in executing buffer
++		}
++		sq_pop(m_v,1); 
++		//SQGETPRINT(m_v)(m_v, _SC("\n"));
++	}
++
++	// Save array in squirrel variable 
++	sq_pushroottable(m_v);
++	sq_pushstring(m_v,_SC("g_rl_last_line"),-1);
++	sq_push(m_v,-3);
++	sq_rawset(m_v,-3);
++	sq_pop(m_v,1);
++	
++	// pop our array, we have copied all we need
++	sq_pop(m_v,2); 
++	
++	return true;
++}
++
++//
++// SyncLibsWithFlags
++//
++void SQSession::SyncLibsWithFlags(  ){
++	sq_pushroottable(m_v);
++	if( m_flags&SQS_STDLIB_BLOB && !RootObjExists(_SC("blob")) )
++		sqstd_register_bloblib(m_v);
++	if( m_flags&SQS_STDLIB_IO && !RootObjExists(_SC("dofile")) )
++		sqstd_register_iolib(m_v);
++	if( m_flags&SQS_STDLIB_SYSTEM && !RootObjExists(_SC("date")) )
++		sqstd_register_systemlib(m_v);
++	if( m_flags&SQS_STDLIB_MATH  && !RootObjExists(_SC("cos")) )
++		sqstd_register_mathlib(m_v);
++	if( m_flags&SQS_STDLIB_STRING && !RootObjExists(_SC("regexp")) )
++		sqstd_register_stringlib(m_v);
++		
++    // Extension library
++	if( m_flags&SQS_EXTLIB && !RootObjExists(_SC("getfuncinfo")) )
++        sqstd_register_extlib(m_v);
++    sq_pop(m_v,1);
++}
++
++bool SQSession::DoLineNoTransl( const SQChar *buffer ){
++	// A special exit command
++	if( !scstrncmp(buffer,"!!!",3) ){
++		m_flags |= SQS_DO_EXIT;
++		return false;
++	}
++
++    if( buffer[0]=='!' ) buffer++;
++    
++    if( !scstrncmp(buffer,"dofile ",7) ){
++        return DoFile( buffer+7 );
++        //SQGETPRINT(m_v)(m_v, _SC("\n"));
++    }
++    else if( !scstrncmp(buffer,"loadfile ",9) ) {
++        return LoadFile( buffer+9 );
++        //SQGETPRINT(m_v)(m_v, _SC("\n"));
++    }
++    else{
++        int bl = scstrlen(buffer);
++        if(SQ_SUCCEEDED(sq_compilebuffer(m_v,buffer,bl,_SC("interactive console"),SQTrue))){
++            sq_pushroottable(m_v);
++            if(SQ_SUCCEEDED(sq_call(m_v,1,SQTrue,SQTrue))){
++                PrintTop( true );
++                sq_pop(m_v,2);
++                //SQGETPRINT(m_v)(m_v,_SC("\n"));
++            }
++            else{
++                sq_pop(m_v,1);
++                return false;
++            }
++        }
++    }
++    return true;
++}
++
++
++void SQSession::PrintVersionInfos(  )
++{
++    SQChar buf[128];
++    scsprintf( buf, _SC("%s %s (%d bits)\n"),SQUIRREL_VERSION,SQUIRREL_COPYRIGHT,sizeof(SQInteger)*8 );
++    if(sq_getprintfunc(m_v))
++        sq_getprintfunc(m_v)( m_v, buf );
++}
++
++int SQSession::GetTop(  ){
++    return sq_gettop(m_v);
++}
++
++void SQSession::PrintLastError(){
++    SQGETPRINT(m_v)( m_v, m_v->_lasterror._unVal.pString->_val );
++}
++
++void SQSession::PrintTop( bool only_non_null ){
++    if( only_non_null ){
++        SQObjectPtr &o = stack_get(m_v,-1);
++        if( type(o)==OT_NULL )
++            return;
++    }
++
++    sq_pushroottable(m_v);
++    sq_pushstring(m_v,_SC("print"),-1);
++    sq_get(m_v,-2);
++    sq_pushroottable(m_v);
++    sq_push(m_v,-4);
++    sq_call(m_v,2,SQFalse,SQTrue);
++    sq_pop(m_v,2);
++}
++
++//
++// GetObjByName
++//
++bool SQSession::ObjExists( SQChar *name ){
++    sq_pushstring(m_v,name,-1);
++    bool rv = false;
++    // Note sq_rawget pops a value of the stack ONLY in case of failure
++    if( SQ_SUCCEEDED(sq_rawget(m_v,-2)) ){
++        rv = true;
++        sq_pop(m_v,1);
++    }
++    return rv;
++}
++
++//
++// GetRootObjByName
++//
++bool SQSession::RootObjExists( SQChar *name ){
++    sq_pushroottable(m_v);
++    bool rv = ObjExists( name );
++    sq_pop(m_v,1);
++    return rv;
++}
++
++
+Index: src/sdk/scripting/sqsession/sqext.h
+===================================================================
+--- src/sdk/scripting/sqsession/sqext.h	(revision 0)
++++ src/sdk/scripting/sqsession/sqext.h	(revision 0)
+@@ -0,0 +1,19 @@
++/*	see copyright notice in squirrel.h */
++#ifndef _SQSTD_EXT_H_
++#define _SQSTD_EXT_H_
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++SQInteger _ext_getmemusage(HSQUIRRELVM v);
++SQInteger _ext_getfuncinfo(HSQUIRRELVM v);
++
++SQInteger sqstd_register_extlib(HSQUIRRELVM v);
++
++#ifdef __cplusplus
++} /*extern "C"*/
++#endif
++
++#endif // _SQSTD_EXT_H_
++
+Index: src/sdk/scripting/sqsession/sc.h
+===================================================================
+--- src/sdk/scripting/sqsession/sc.h	(revision 0)
++++ src/sdk/scripting/sqsession/sc.h	(revision 0)
+@@ -0,0 +1,38 @@
++#ifndef SC_H
++#define SC_H
++
++// Simple defines to work with ansi/UTF8/unicode 
++// with 'sc* prefixed functions
++
++#ifdef _UNICODE
++    #ifndef _SC
++        #define _SC(a) L##a
++    #endif
++    #define scfprintf   fwprintf
++    #define scfopen	    _wfopen
++    #define scvprintf   vwprintf
++    #define scsprintf   swprintf
++    #define scvsnprintf vswnprintf
++    #define	scstrncmp	wcsncmp
++    #define	scstrncpy	wcsncpy
++    #define	scstrcpy	wcscpy
++    #define	scstrstr	wcsstr
++    #define	scstrlen	wcslen
++#else
++    #ifndef _SC
++        #define _SC(a)  a
++    #endif
++    #define scfprintf   fprintf
++    #define scfopen	    fopen
++    #define scvprintf   vprintf
++    #define scsprintf   sprintf
++    #define scvsnprintf vsnprintf
++    #define	scstrncmp	strncmp
++    #define	scstrncpy	strncpy
++    #define	scstrcpy	strcpy
++    #define	scstrstr	strstr
++    #define	scstrlen	strlen
++#endif
++
++#endif // SC_H
++
+Index: src/sdk/scripting/sqsession/sqsession.h
+===================================================================
+--- src/sdk/scripting/sqsession/sqsession.h	(revision 0)
++++ src/sdk/scripting/sqsession/sqsession.h	(revision 0)
+@@ -0,0 +1,84 @@
++#ifndef SQSESSION_H
++#define SQSESSION_H
++
++#include "squirrel.h"
++#include "../squirrel/sqpcheader.h"
++#include "../squirrel/sqvm.h"
++
++#define EA_ASSERT assert
++#include "ExpArrP.hpp"
++#include "ExpArr.hpp"
++
++// Flag fields
++#define SQS_DEFAULT          (SQS_DO_ECHO|SQS_QUIET_ERRHANDLER|SQS_STDLIB_ALL|SQS_CHECK_STACK)
++
++#define SQS_DO_ECHO_INPUT      	0x01    // This will echo the unprocessed command
++#define SQS_DO_ECHO      	    0x02    // This echoes the processed command
++#define SQS_DO_EXIT      	    0x04
++#define SQS_QUIET_ERRHANDLER    0x08
++#define SQS_NO_LINE_TRANS  	    0x10
++#define SQS_CHECK_STACK  	    0x20
++
++#define SQS_STDLIB_BLOB		0x00010000
++#define SQS_STDLIB_IO		0x00020000
++#define SQS_STDLIB_SYSTEM	0x00040000
++#define SQS_STDLIB_MATH	    0x00080000
++#define SQS_STDLIB_STRING	0x00100000
++#define SQS_EXTLIB      	0x00800000
++#define SQS_STDLIB_ALL      0x00FF0000
++
++#define SQS_OWN_SQVM		    0x01000000			// Then will close it in destructor 
++#define SQS_DO_CREATE_VM		0x03000000			// Ask SQSession to create VM (and destroy it later) 
++
++#define SQS_DEFAULT_FLAGS   (SQS_DO_ECHO|SQS_CHECK_STACK|SQS_EXTLIB|SQS_EXTLIB|SQS_STDLIB_IO)
++
++#define SQS_DEFAULT_STACK   1024
++
++// Use like SQGETPRINT(v)( fmt_str, args )
++#define SQGETPRINT(v) if(sq_getprintfunc(v))sq_getprintfunc(v)
++
++
++class SQVM;
++
++class SQSession{
++public:
++    SQSession(  ){ Init( NULL, 0 ); }
++    SQSession( SQVM *v, int flags, const SQChar *autoload=NULL );
++    virtual ~SQSession( );
++    
++    bool Init( SQVM *v, int flags, const SQChar *autoload=NULL );
++    SQVM *GetVm(  ){ return m_v; }
++
++    bool AddScriptPath( SQChar *path );
++     
++    void SetFlagBits( int bits );
++    void ClearFlagBits( int bits );
++    void SetFlags( int flags );    
++    int GetFlags(  );    
++   
++    bool DoLine( const SQChar *line );
++    bool DoFile( const SQChar *line );
++    bool LoadFile( const SQChar *line );
++    
++    void SyncLibsWithFlags( );
++    
++protected:
++	bool DoLineNoTransl( const SQChar *buffer );
++	void PrintVersionInfos(  );
++	int GetTop(  );
++	void PrintLastError();
++	void PrintTop( bool only_non_null );
++	
++	bool ObjExists( SQChar *name );
++	bool RootObjExists( SQChar *name );
++
++private:
++    SQVM    *m_v;    
++    int     m_flags;
++    int     m_top_last;
++	ExpArr<SQChar>	m_last_err;
++	ExpArr<SQChar>	m_buf;
++};
++
++
++#endif // SQSESSION_H
+Index: src/src/ext_scriptconsole.cpp
+===================================================================
+--- src/src/ext_scriptconsole.cpp	(revision 0)
++++ src/src/ext_scriptconsole.cpp	(revision 0)
+@@ -0,0 +1,353 @@
++#include <sdk.h>
++#include <sqplus.h>
++
++#include "ext_scriptconsole.h"
++
++#ifndef CB_PRECOMP
++    #include <globals.h>
++    #include <manager.h>
++    #include <configmanager.h>
++    #include <scriptingmanager.h>
++#endif
++
++#include <wx/filedlg.h>
++
++#ifdef SQUNICODE
++    #define scvsnprintf vswnprintf
++    #define scstrchr    wcschr
++#else
++    #define scvsnprintf vsnprintf
++    #define scstrchr    strchr
++#endif
++
++
++BEGIN_EVENT_TABLE(wxUdTextCtrl,wxTextCtrl)
++	//(*EventTable(wxUdTextCtrl)
++	EVT_KEY_DOWN(wxUdTextCtrl::OnKeyDown)
++	//*)
++END_EVENT_TABLE()
++
++// We want to find the up and down arrow buttons
++void wxUdTextCtrl::OnKeyDown( wxKeyEvent &event ){
++    event.Skip();
++
++    wxCommandEvent event_out( wxEVT_COMMAND_TEXT_ENTER, GetId() );
++    if( event.GetKeyCode()==WXK_DOWN ){
++        event_out.SetExtraLong( WXK_DOWN );
++        GetParent()->ProcessEvent( event_out );
++    }
++    else if( event.GetKeyCode()==WXK_UP ){
++        event_out.SetExtraLong( WXK_UP );
++        GetParent()->ProcessEvent( event_out );
++    }
++    else if( event.GetKeyCode()==WXK_ESCAPE ){
++        event_out.SetExtraLong( WXK_ESCAPE );
++        GetParent()->ProcessEvent( event_out );
++    }
++}
++
++int CalcVarArgLength( const SQChar *s, va_list vl ){
++    int len = scstrlen(s);
++    const SQChar *p, *pc = s;
++    while( pc=scstrchr(pc,_SC('%')) ){
++        if( !(p=va_arg(vl, SQChar *)) )
++            break;
++        if( pc[1]==_SC('s') )
++            len += scstrlen(p);
++        else
++            len += 20;  // For integers, floats, hex and others
++        pc++;
++    }
++    return len;
++}
++
++static ExtScriptConsole* s_ExtConsole = 0;
++static SQPRINTFUNCTION s_ExtOldPrintFunc = 0;
++
++static void ExtScriptConsolePrintFunc(HSQUIRRELVM v, const SQChar * s, ...)
++{
++    static ExpArr<SQChar> buf;
++    va_list vl;
++
++    // First calc length of incoming buffer
++    va_start(vl,s);
++    buf.MinTotalSize( CalcVarArgLength(s,vl)+128 );
++    va_end(vl);
++    
++    va_start(vl,s);
++    scvsnprintf( buf.Base(),buf.MaxSize(), s, vl );
++    wxString msg = cbC2U(buf.Base());
++    va_end(vl);
++
++    if (s_ExtConsole)
++        s_ExtConsole->Log(msg);
++    // Manager::Get()->GetScriptingManager()->InjectScriptOutput(msg);
++}
++
++int idTIMER_ID = wxNewId();
++
++BEGIN_EVENT_TABLE(ExtScriptConsole,wxPanel)
++	//(*EventTable(ExtScriptConsole)
++	EVT_BUTTON(ID_BUTTON1,ExtScriptConsole::OnbtnExecuteClick)
++	EVT_BUTTON(ID_BUTTON2,ExtScriptConsole::OnbtnLoadClick)
++	EVT_BUTTON(ID_BUTTON3,ExtScriptConsole::OnbtnClearClick)
++	EVT_BUTTON(ID_OPTIONS,ExtScriptConsole::OnbtnOptionsClick)
++	EVT_TEXT_ENTER(ID_TEXTCTRL2, ExtScriptConsole::OnTextEnter)
++	EVT_TEXT(ID_TEXTCTRL2, ExtScriptConsole::OnTextChanged)
++	EVT_MENU_RANGE(ID_RAW_ECHO, ID_LIB_EXT, ExtScriptConsole::OnOptionsMenu)
++	//*)
++END_EVENT_TABLE()
++
++ExtScriptConsole::ExtScriptConsole(wxWindow* parent,wxWindowID id)
++{
++	//(*Initialize(ExtScriptConsole)
++	Create(parent,id,wxDefaultPosition,wxDefaultSize,wxTAB_TRAVERSAL,_T(""));
++	BoxSizer1 = new wxBoxSizer(wxVERTICAL);
++	txtConsole = new wxTextCtrl(this,ID_TEXTCTRL1,_T(""),wxDefaultPosition,wxDefaultSize,wxTE_MULTILINE|wxTE_READONLY/*|wxHSCROLL*/,wxDefaultValidator,_("ID_TEXTCTRL1"));
++	if ( 0 ) txtConsole->SetMaxLength(0);
++	Panel1 = new wxPanel(this,ID_PANEL1,wxDefaultPosition,wxDefaultSize,0,_("ID_PANEL1"));
++	Panel1->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE));
++	BoxSizer2 = new wxBoxSizer(wxHORIZONTAL);
++	cmdText = new wxStaticText(Panel1,ID_STATICTEXT1,_("Command:"),wxDefaultPosition,wxDefaultSize,0,_("ID_STATICTEXT1"));
++	txtCommand = new wxUdTextCtrl(Panel1,ID_TEXTCTRL2,_T(""),wxDefaultPosition,wxDefaultSize,wxTE_PROCESS_ENTER,wxDefaultValidator,_("ID_TEXTCTRL2"));
++	if ( 0 ) txtCommand->SetMaxLength(0);
++	btnExecute = new wxButton(Panel1,ID_BUTTON1,_("Execute"),wxDefaultPosition,wxDefaultSize,0,wxDefaultValidator,_("ID_BUTTON1"));
++	if (false) btnExecute->SetDefault();
++	btnLoad = new wxButton(Panel1,ID_BUTTON2,_("Load from file"),wxDefaultPosition,wxDefaultSize,0,wxDefaultValidator,_("ID_BUTTON2"));
++	if (false) btnLoad->SetDefault();
++	btnClear = new wxButton(Panel1,ID_BUTTON3,_("Clear"),wxDefaultPosition,wxDefaultSize,0,wxDefaultValidator,_("ID_BUTTON3"));
++	if (false) btnClear->SetDefault();
++	btnOptions = new wxButton(Panel1,ID_OPTIONS,_("Options"),wxDefaultPosition,wxDefaultSize,0,wxDefaultValidator,_("ID_BUTTON4"));
++	if (false) btnClear->SetDefault();
++	BoxSizer2->Add(cmdText,0,wxLEFT|wxRIGHT|wxALIGN_CENTER,4);
++	BoxSizer2->Add(txtCommand,1,wxALL|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND,0);
++	BoxSizer2->Add(btnExecute,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
++	BoxSizer2->Add(btnLoad,0,wxLEFT|wxALIGN_LEFT|wxALIGN_TOP,16);
++	BoxSizer2->Add(btnClear,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
++	BoxSizer2->Add(btnOptions,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP,0);
++	Panel1->SetSizer(BoxSizer2);
++	BoxSizer2->Fit(Panel1);
++	BoxSizer2->SetSizeHints(Panel1);
++	BoxSizer1->Add(txtConsole,1,wxALL|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND,0);
++	BoxSizer1->Add(Panel1,0,wxALL|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND,0);
++	this->SetSizer(BoxSizer1);
++	BoxSizer1->Fit(this);
++	BoxSizer1->SetSizeHints(this);
++	//*)
++
++	if (!s_ExtConsole)
++	{
++        s_ExtConsole = this;
++        s_ExtOldPrintFunc = sq_getprintfunc(SquirrelVM::GetVMPtr());
++        sq_setprintfunc(SquirrelVM::GetVMPtr(), ExtScriptConsolePrintFunc);
++	}
++
++    m_pos_hist = 0;
++    m_pos_browse = 0;
++    
++    m_sqs.Init( SquirrelVM::GetVMPtr(), (SQS_DEFAULT_FLAGS|SQS_DO_ECHO_INPUT)&~(SQS_STDLIB_IO) );
++    wxString path;
++    bool b;
++    int search_dirs = sdScriptsUser | sdScriptsGlobal | sdBase | sdCurrent;
++    
++    // base.nut contains basic and general squirrel functions
++    path = ConfigManager::LocateDataFile(_T("base.nut"), search_dirs );
++    b = m_sqs.DoFile( cbU2C(path) );
++    
++    // parse.nut contains code to parse Squirrel scripts
++    path = ConfigManager::LocateDataFile(_T("parse.nut"), search_dirs );
++    b = m_sqs.DoFile( cbU2C(path) );
++    
++    // shell.nut contains the command line processing, the shell
++    path = ConfigManager::LocateDataFile(_T("shell.nut"), search_dirs );
++    b = m_sqs.DoFile( cbU2C(path) );
++    
++    // cb.script contains CodeBlocks specific functionality
++    path = ConfigManager::LocateDataFile(_T("cb.script"), search_dirs );
++    b = m_sqs.DoFile( cbU2C(path) );
++    
++    // These are CodeBlocks specific extensions to the basic shell
++    path = ConfigManager::LocateDataFile(_T("cb_shell.script"), search_dirs );
++    b = m_sqs.DoFile( cbU2C(path) );
++    
++    UpdatePromptText( );
++
++	Log(_("Welcome to the script console!"));
++}
++
++ExtScriptConsole::~ExtScriptConsole()
++{
++    if (s_ExtConsole == this)
++    {
++        s_ExtConsole = 0;
++        if (SquirrelVM::GetVMPtr())
++            sq_setprintfunc(SquirrelVM::GetVMPtr(), s_ExtOldPrintFunc);
++    }
++}
++
++void ExtScriptConsole::Log(const wxString& msg)
++{
++    txtConsole->AppendText(msg);
++    if (msg.Last() != _T('\n'))
++        txtConsole->AppendText(_T('\n'));
++	txtConsole->ScrollLines(-1);
++	Manager::ProcessPendingEvents();
++}
++
++void ExtScriptConsole::UpdatePromptText( ){
++    wxString s(_T("Command "));
++    s += m_sqs.GetFlags()&SQS_NO_LINE_TRANS ? _T("!>") : _T("@>");
++    cmdText->SetLabel( s );
++}
++
++
++void ExtScriptConsole::OnbtnExecuteClick(wxCommandEvent& event)
++{
++    wxString cmd = txtCommand->GetValue();
++    if (cmd.IsEmpty()){
++        wxBell();
++        return;
++    }
++    
++    // Store command in history
++    if( m_history[m_pos_hist%ESC_HISTORY_SIZE]!=cmd )
++        m_history[(m_pos_hist++)%ESC_HISTORY_SIZE] = cmd;
++
++    if( m_sqs.DoLine( cbU2C(cmd) ) )
++        txtCommand->Clear();
++    // In case of mode change
++    UpdatePromptText( );
++}
++
++
++// Manage the command history
++void ExtScriptConsole::OnCommandUpDown(wxCommandEvent& event){
++    int old_bp = m_pos_browse;
++    if( event.GetExtraLong()==WXK_UP && 
++        m_pos_browse<ESC_HISTORY_SIZE &&
++        m_history[(ESC_HISTORY_SIZE+m_pos_hist-m_pos_browse-1)%ESC_HISTORY_SIZE].length() )
++        m_pos_browse++;
++    if( event.GetExtraLong()==WXK_DOWN && (m_pos_browse==1 ||
++        (m_pos_browse>1 &&
++         m_history[(ESC_HISTORY_SIZE+m_pos_hist-m_pos_browse+1)%ESC_HISTORY_SIZE].length())) )
++        m_pos_browse--;
++    if( event.GetExtraLong()==WXK_ESCAPE )
++        m_pos_browse = 0;
++    if( m_pos_browse!=old_bp ){
++        if( !old_bp )
++            m_cur_edit = txtCommand->GetValue();
++        if( !m_pos_browse )
++            txtCommand->ChangeValue( m_cur_edit );
++        else
++            txtCommand->ChangeValue( m_history[(ESC_HISTORY_SIZE+m_pos_hist-m_pos_browse)%ESC_HISTORY_SIZE] );
++    }
++}
++
++// When press enter in text ctrl, execute script
++void ExtScriptConsole::OnTextEnter(wxCommandEvent& event){
++    if( event.GetExtraLong()!=0 )
++        OnCommandUpDown(event);
++    else
++        OnbtnExecuteClick( event );
++}
++
++// The text in the command box was manually modified
++void ExtScriptConsole::OnTextChanged(wxCommandEvent& event){
++    if( m_pos_browse>0 )
++        m_pos_browse = 0;   // If we've been browsing, set us back to default mode
++}
++
++void ExtScriptConsole::OnbtnLoadClick(wxCommandEvent& event)
++{
++    ConfigManager* mgr = Manager::Get()->GetConfigManager(_T("app"));
++    wxString path = mgr->Read(_T("/file_dialogs/file_run_script/directory"), wxEmptyString);
++    wxFileDialog* dlg = new wxFileDialog(this,
++                            _("Load script"),
++                            path,
++                            wxEmptyString,
++                            _T("Script files (*.script)|*.script"),
++                            wxOPEN
++#if (WXWIN_COMPATIBILITY_2_4)
++                            | wxHIDE_READONLY
++#endif
++                            );
++    if (dlg->ShowModal() == wxID_OK)
++    {
++        mgr->Write(_T("/file_dialogs/file_run_script/directory"), dlg->GetDirectory());
++        if (Manager::Get()->GetScriptingManager()->LoadScript(dlg->GetPath()))
++        {
++            Log(_("Loaded succesfully"));
++        }
++        else
++        {
++            Log(_("Failed..."));
++            txtConsole->AppendText(Manager::Get()->GetScriptingManager()->GetErrorString());
++        }
++    }
++    dlg->Destroy();
++}
++
++
++void ExtScriptConsole::OnbtnClearClick(wxCommandEvent& event)
++{
++    txtConsole->Clear();
++}
++
++struct LibFlagName{
++public:    
++    int wxId, flag;
++    const wxChar *name;
++    const wxChar *help;
++};
++
++struct LibFlagName g_lib_flag_names [] = {
++    {ExtScriptConsole::ID_LIB_IO,SQS_STDLIB_IO,_T("SqStdIo Library "),_T("If Squirrel StdIO lib is loaded")} ,
++    {ExtScriptConsole::ID_LIB_SYSTEM,SQS_STDLIB_SYSTEM,_T("SqStdSystem Library "),_T("If Squirrel StdSystem lib is loaded")} ,
++    {ExtScriptConsole::ID_LIB_EXT,SQS_EXTLIB,_T("Squirrel Session Library "),_T("If Squirrel session library is loaded")} ,
++    {-1,-1,NULL,NULL}
++};
++
++void ExtScriptConsole::OnbtnOptionsClick(wxCommandEvent& event)
++{
++    wxMenu menu, libmenu;
++    menu.Append( ID_TRANS, _T("Processed mode"), _("Command lines are processed before executed (not raw)"), wxITEM_CHECK );
++    menu.Append( ID_RAW_ECHO, _T("Echo command"), _("Echoes input command in output area"), wxITEM_CHECK );
++    menu.Append( ID_ECHO, _T("Echo processed"), _("Echoes processed command in output area"), wxITEM_CHECK );
++    menu.Append( ID_ERR_VERB, _T("Verbose errors"), _("Error messages with stack unwinding"), wxITEM_CHECK );
++    menu.Check( ID_TRANS, m_sqs.GetFlags()&SQS_NO_LINE_TRANS?false:true );
++    menu.Check( ID_RAW_ECHO, m_sqs.GetFlags()&SQS_DO_ECHO_INPUT );
++    menu.Check( ID_ECHO, m_sqs.GetFlags()&SQS_DO_ECHO );
++    menu.Check( ID_ERR_VERB, m_sqs.GetFlags()&SQS_QUIET_ERRHANDLER?false:true );
++
++    for( int i=0; g_lib_flag_names[i].wxId!=-1; i++ ){
++        libmenu.Append( g_lib_flag_names[i].wxId, g_lib_flag_names[i].name,
++                        g_lib_flag_names[i].help, wxITEM_CHECK );
++        libmenu.Check( g_lib_flag_names[i].wxId, m_sqs.GetFlags()&g_lib_flag_names[i].flag );
++    }
++    menu.AppendSubMenu( &libmenu, wxString(_T("Squirrel libraries")), wxEmptyString );
++    PopupMenu( &menu, wxDefaultPosition );
++}
++
++void ExtScriptConsole::OnOptionsMenu(wxCommandEvent& event){
++    switch( event.GetId() ){
++        case ID_TRANS: m_sqs.SetFlags(m_sqs.GetFlags()^SQS_NO_LINE_TRANS); UpdatePromptText( ); break;
++        case ID_RAW_ECHO: m_sqs.SetFlags(m_sqs.GetFlags()^SQS_DO_ECHO_INPUT); break;
++        case ID_ECHO: m_sqs.SetFlags(m_sqs.GetFlags()^SQS_DO_ECHO); break;
++        case ID_ERR_VERB: m_sqs.SetFlags(m_sqs.GetFlags()^SQS_QUIET_ERRHANDLER); break;
++        
++        default:{
++            for( int i=0; g_lib_flag_names[i].wxId!=-1; i++ ){
++                if( event.GetId()==g_lib_flag_names[i].wxId ){
++                    if( !(m_sqs.GetFlags()&g_lib_flag_names[i].flag) ){
++                        m_sqs.SetFlags(m_sqs.GetFlags()|g_lib_flag_names[i].flag);
++                        m_sqs.SyncLibsWithFlags();
++                        wxMessageBox( _T("Loading library"), _T("Loaded squirrel library") );
++                    }
++                    else
++                        wxMessageBox( _T("Cannot unload a Squirrel library while running") );
++                }
++            }
++        }
++    }
++}
++
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(revision 3557)
++++ src/src/main.cpp	(arbetskopia)
+@@ -63,6 +63,7 @@
+ #include "dlgaboutplugin.h"
+ #include "dlgabout.h"
+ #include "startherepage.h"
++#include "ext_scriptconsole.h"
+ #include "scriptconsole.h"
+ #include "scriptingsettingsdlg.h"
+ #include "printdlg.h"
+@@ -1621,8 +1622,9 @@
+ {
+     if (m_ScriptConsoleID == -1)
+     {
+-        // create console
+-        m_ScriptConsoleID = Manager::Get()->GetMessageManager()->AddLog(new ScriptConsoleLog(), _("Script console"));
++        // create console (the SQSession scripting console)
++        //m_ScriptConsoleID = Manager::Get()->GetMessageManager()->AddLog(new ScriptConsoleLog(), _("Script console"));
++        m_ScriptConsoleID = Manager::Get()->GetMessageManager()->AddLog(new ExtScriptConsoleLog(), _("Script console"));
+     }
+     else
+     {
+Index: src/src/ext_scriptconsole.h
+===================================================================
+--- src/src/ext_scriptconsole.h	(revision 0)
++++ src/src/ext_scriptconsole.h	(revision 0)
+@@ -0,0 +1,142 @@
++#ifndef EXT_SCRIPTCONSOLE_H
++#define EXT_SCRIPTCONSOLE_H
++
++#include <wx/wxprec.h>
++
++#ifdef __BORLANDC__
++    #pragma hdrstop
++#endif
++
++//(*Headers(ScriptConsole)
++#include <wx/button.h>
++#include <wx/intl.h>
++#include <wx/panel.h>
++#include <wx/settings.h>
++#include <wx/sizer.h>
++#include <wx/stattext.h>
++#include <wx/textctrl.h>
++//*)
++
++#include <messagelog.h>
++
++#include "scripting/include/squirrel.h"
++#include "scripting/sqsession/sqsession.h"
++
++#define ESC_HISTORY_SIZE    20
++
++// A simple class to intercept pressing up and down arrows
++class wxUdTextCtrl : public wxTextCtrl {
++    public:
++    wxUdTextCtrl(   wxWindow* parent, wxWindowID id, const wxString& value = "", 
++                    const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, 
++                    long style = 0, const wxValidator& validator = wxDefaultValidator, 
++                    const wxString& name = wxTextCtrlNameStr) : 
++        wxTextCtrl( parent, id, value, pos, size, style, 
++                    validator, name ) { }
++    void OnKeyDown(wxKeyEvent& event);
++	private:
++		DECLARE_EVENT_TABLE()
++};
++
++class ExtScriptConsole: public wxPanel
++{
++	public:
++
++		ExtScriptConsole(wxWindow* parent,wxWindowID id = -1);
++		virtual ~ExtScriptConsole();
++
++        void Log(const wxString& msg);
++
++		//(*Identifiers(ScriptConsole)
++		enum Identifiers
++		{
++		    ID_BUTTON1 = 0x1000,
++		    ID_BUTTON2,
++		    ID_BUTTON3,
++		    ID_OPTIONS,
++		    ID_PANEL1,
++		    ID_STATICTEXT1,
++		    ID_TEXTCTRL1,
++		    ID_TEXTCTRL2,
++		    // SQSession options
++		    ID_RAW_ECHO,
++		    ID_ECHO,
++		    ID_ERR_VERB,
++		    ID_TRANS,
++		    ID_LIB_IO,
++		    ID_LIB_SYSTEM,
++		    ID_LIB_EXT
++		};
++		//*)
++
++//	protected:
++		//(*Handlers(ScriptConsole)
++		void OnbtnExecuteClick(wxCommandEvent& event);
++		void OnbtnLoadClick(wxCommandEvent& event);
++		void OnbtnClearClick(wxCommandEvent& event);
++		void OnbtnOptionsClick(wxCommandEvent& event);
++		void OnTextEnter(wxCommandEvent& event);
++		void OnTextChanged(wxCommandEvent& event);
++        void OnCommandUpDown(wxCommandEvent& event);
++        void OnKeyDown(wxKeyEvent& event);
++        void OnOptionsMenu(wxCommandEvent& event);
++        void OnTimer(wxTimerEvent& event);
++		//*)
++
++		//(*Declarations(ScriptConsole)
++		wxBoxSizer* BoxSizer1;
++		wxTextCtrl* txtConsole;
++		wxPanel* Panel1;
++		wxBoxSizer* BoxSizer2;
++		wxStaticText* cmdText;
++		wxTextCtrl* txtCommand;
++		wxButton* btnExecute;
++		wxButton* btnLoad;
++		wxButton* btnClear;
++		wxButton* btnOptions;
++        wxString  m_ack_log;
++		//*)
++		
++		int m_pos_hist;     // Position in history (circular buffer)
++		int m_pos_browse;   // Offset while browsing history
++		wxString m_history[ESC_HISTORY_SIZE];
++		wxString m_cur_edit;    // The line currently being edited
++		
++		SQSession m_sqs;
++		
++    protected:
++        void UpdatePromptText( );
++
++	private:
++
++		DECLARE_EVENT_TABLE()
++};
++
++class ExtScriptConsoleLog : public MessageLog
++{
++    public:
++        ExtScriptConsoleLog()
++        {
++            wxBoxSizer* bs = new wxBoxSizer(wxVERTICAL);
++            m_Console = new ExtScriptConsole(this, -1);
++            bs->Add(m_Console, 1, wxEXPAND | wxALL);
++            SetAutoLayout(TRUE);
++            SetSizer(bs);
++
++            ResetLogFont();
++        }
++
++        ~ExtScriptConsoleLog(){}
++
++		virtual void AddLog(const wxString& msg, bool addNewLine = true){}
++        virtual void Clear(){ m_Console->txtConsole->Clear(); }
++		virtual void ResetLogFont()
++		{
++            m_Console->txtConsole->SetFont(GetDefaultLogFont(true));
++		}
++
++        ExtScriptConsole* m_Console;
++};
++
++
++#endif
+Index: src/scripts/base.nut
+===================================================================
+--- src/scripts/base.nut	(revision 0)
++++ src/scripts/base.nut	(revision 0)
+@@ -0,0 +1,348 @@
++
++//
++// Basic generic functions for SQuirrel, GBL by by Arne Steinarson
++//
++
++// Check for empty string/container
++function isempty( a ){
++    //if( a==null ) return true;
++    if( !a ) return true;
++    if( type(a)=="string" && a=="" ) return true;
++    if( type(a)=="array" && a==[] ) return true;
++    if( type(a)=="table" && a=={} ) return true;
++    return false;
++}
++
++// Return true if an element is in the container
++function has( cont, elem ){
++    foreach( ix, e in cont )
++        if( e==elem )
++            return true;
++    return false;
++}
++
++// True if the string/array starts with given rpefix
++function starts_with( str, pref ){
++    return str.slice(0,pref.len())==pref;
++}
++
++// Find index of an element in an string/array
++function arr_find( arr, elem ){
++    for( local i=arr.len()-1; i>=0 ; i-- )
++        if( arr[i]==elem )
++            return i;
++    return -1;
++}
++
++// Splits strictly, "a,," => ["a","",""]  and "" => [""]
++function split_strict( arr, d ){
++    if( arr==null ) return [];
++    local p, plast=0, al=arr.len();
++    local arr_out = [];
++    for( p=0; p<al; p++ ){
++        if( arr[p]==d ){
++            arr_out.append( arr.slice(plast,p) );
++            plast = p+1;
++        }
++    }
++    arr_out.append( arr.slice(plast,p) );
++    return arr_out;
++}
++
++// Return true if an element is in the container
++function count( cont, elem ){
++    local cnt = 0;
++    foreach( ix, e in cont )
++        if( e==elem )
++            cnt++;
++    return cnt;
++}
++
++// Join array parts
++function join( parts, sep ){
++    if( parts==null ) return null;
++    if( !parts.len() ) return "";
++    local i, res = parts[0];
++    if( typeof(sep)=="array" ){
++        for( i=1; i<parts.len(); i++ )
++            res += sep[i-1]+parts[i];
++    }
++    else
++        for( i=1; i<parts.len(); i++ )
++            res += sep+parts[i];
++    return res;
++}
++
++// Count nr of identical elements in start of two arrays
++function count_shared( arr1, arr2 ){
++    local ix = 0;
++    if( typeof arr1!="array" || typeof arr2!="array" ) return null;
++    while( ix<arr1.len() && ix<arr2.len() &&
++           arr1[ix]==arr2[ix] )
++        ix++;
++    return ix;
++}
++
++// Substitues inside a string
++function subst( str, it_find, it_repl ){
++    local last_ix=0, ix = 0;
++    local itf_len = it_find.len();
++    local new_str = "";
++    while( (ix=str.find(it_find,last_ix))!=null ){
++        new_str += str.slice(last_ix,ix);
++        new_str += it_repl;
++        last_ix = ix+itf_len;
++    }
++    new_str += str.slice( last_ix );
++    return new_str;
++}
++
++// Looks for an object in a table, and when found,
++// returns the key. 
++function find_in_table( tbl, obj ){
++    foreach( k, v in tbl )
++        if( v==obj ) 
++            return k;
++    return null;
++}
++
++// Find the class name of an instance or class
++function class_name( v ){
++    if( type(v)=="instance" )
++        v = v.getclass();
++    return find_in_table( this, v );
++}
++
++
++
++// List keys of a table/class/instance
++function listkeys( tbl, kf, vf ){   // Key filter and Value filter
++    if( typeof(tbl)=="instance" )   tbl = tbl.getclass();
++    kf = str2filt(kf);
++    vf = str2filt(vf);
++    foreach( k,v in tbl ){
++        if( (!kf || kf(k)) && (!vf || vf(v)) )
++            println( k );
++    }
++}
++
++// List values of filtered keys of a table/class/instance
++function list( tbl, kf, vf ){
++    if( typeof(tbl)=="instance" )   tbl = tbl.getclass();
++    kf = str2filt(kf);
++    vf = str2filt(vf);
++    foreach( k,v in tbl ){
++        if( (!kf || kf(k)) && (!vf || vf(v)) )
++            println( k + " = " + v );
++    }
++}
++
++// List values in a table, using a key filter
++function listfk( tbl, kf ){
++    return list( tbl, kf, null );
++}
++
++// List values in a table, using a value filter
++function listfv( tbl, vf ){
++    return list( tbl, null, vf );
++}
++
++
++// Filter utils
++class TypeFilt{
++    constructor( type_to_match ){
++        _ttm = type_to_match;
++    }
++    
++    function _call( othis, ... ){
++        if( !vargc ) return false;
++        return type(vargv[0])==_ttm;
++    }
++    _ttm = null;
++}
++
++// Looks for the given string inside the _call argument 
++// each time it is invoked
++class StringFilt{
++    constructor( find_str ){
++        _fs = find_str;
++    }
++    
++    function _call( othis, ... ){
++        if( !vargc || type(vargv[0])!="string" ) return false;
++        return vargv[0].find(_fs)!=null;
++    }
++    _fs = null;
++    _b_find = true;
++}
++
++// Looks for the given string inside the _call argument 
++// each time it is invoked (case insensitive)
++class StringFiltCIS{
++    constructor( find_str ){
++        _fs = find_str.tolower();
++    }
++    
++    function _call( othis, ... ){
++        if( !vargc || type(vargv[0])!="string" ) return false;
++        return vargv[0].tolower().find(_fs)!=null;
++    }
++    _fs = null;
++}
++
++// Looks for a a given regexp inside the string passed to _call
++class RegExpFilt{
++    constructor( re_str ){
++        _re = regexp(re_str);
++    }
++    
++    function _call( othis, ... ){
++        if( !vargc || type(vargv[0])!="string" ) return false;
++        return _re.search(vargv[0],0)!=null;
++    }
++    _re = null;
++}
++
++function str2filt( str ){
++    if( type(str)=="string" ){
++        if( starts_with(str,"str:") )
++            str = StringFilt(str.slice(4));
++        else if( starts_with(str,"stri:") )
++            str = StringFiltCIS(str.slice(5));
++        else if( starts_with(str,"re:") )
++            str = RegExpFilt(str.slice(3));
++        else if( starts_with(str,"type:") )
++            str = TypeFilt(str.slice(5));
++        else 
++            str = StringFilt(str);
++        //else if( starts_with(str,"glob:") )
++        //    str = RegExpFilt(str,slice(3));
++    }
++    return str;
++}
++
++function filter( I, f_or_str ){
++    local ao = []
++    local f = str2filt(f_or_str)
++    foreach( k,v in I )
++        if( f(v) ) ao.push(v);
++    return ao;
++}
++
++/*
++class FiltIter{
++    // 'I' is an iterable object and f can filter
++    constructor( I, f ){
++        _I = I;
++        _f = f;
++    }
++    
++    function _nexti( pi ){
++        local _ni;
++        while(true){
++            ni = _I._next(pi);
++            if( _ni==null ) return null;
++            println( ni + "=" + _I._get(ni) );
++            if( _f(_I._get(ni))==true ) return ni;
++            pi = ni;
++        }
++    }
++    
++    function _get( i ){
++        return _I._get( i );
++    }
++    
++    _I = null;
++    _f = null;
++}
++*/
++
++// Path/filename utils
++function GetPathOf( file ){
++    local sep = file.find("/") ? "/" : "\\";
++    local parts = split(file,sep);
++    return join(parts.slice(0,parts.len()-1), sep);
++}
++
++function GetNameOf( file ){
++    local sep = file.find("/") ? "/" : "\\";
++    local parts = split(file,sep);
++    return split(parts.top(),".")[0];
++}
++
++function GetExtOf( file ){
++    local parts = split(file,".");
++    return parts.len()==2 ? parts[1] : "";
++}
++
++function GetPathInfo( file ){
++    local sep = file.find("/") ? "/" : "\\";
++    local parts = split(file,sep);
++    local name_ext = split(parts.top(),".");
++    local info = {};
++    info.sep <- sep;
++    info.path <- join(parts.slice(0,parts.len()-1), sep);
++    info.name <- name_ext[0];
++    info.ext <- name_ext.len()>1 ? join(name_ext.slice(1,name_ext.len()),".") : "";
++    return info;
++}
++
++
++function val2str( val, rec_depth, opts ){
++    if( rec_depth>0 && type(val)=="array" ) return  arr2str(val,rec_depth,opts);
++    else if( rec_depth>0 && type(val)=="table" ) return  tbl2str(val,rec_depth,opts);
++    else if( type(val)=="string" ) return has(opts,'b') ? val : ("\""+val+"\"");
++    else return val;
++}
++
++/*
++// Note: VarArgs brings instability
++function v2s( val, ... ){
++    local opts = vargc>0 ? vargv[0] : "";
++    return val2str( val, 1, opts );
++}
++*/
++
++function v2s( val, opts ){
++    return val2str( val, 1, opts );
++}
++
++function v2sr( val, opts ){
++    return val2str( val, 10, opts );
++}
++
++function tbl2str( t, rec_depth, opts ){
++    local s = (has(opts,'b') ? "" : "{");
++    local bfirst = true;
++    local print_vert = has(opts,'v' ) ? true : false;
++    local print_bare = has(opts,'b' ) ? true : false;
++    foreach (key,val in t){
++        if( !bfirst ){
++            s+= print_bare ? " " : ", ";
++            if( print_vert ) s+="\n";
++        }
++        else bfirst = false;
++        s += key+"=";
++        s += val2str(val, rec_depth-1,opts);
++    }
++    if( !has(opts,'b') ) s+="}";
++    return s;
++}
++
++function arr2str( a, rec_depth, opts ){
++    local s = has(opts,'b') ? "" : "[";
++    local print_vert = has(opts,'v' ) ? true : false;
++    local print_bare = has(opts,'b' ) ? true : false;
++    foreach (ix,val in a){
++        if( ix && !print_bare ) s += ", ";
++        s += val2str(val,rec_depth-1,opts);
++        if( print_vert ) s+="\n";
++    }
++    if( !print_bare ) s += "]";
++    return s;
++}
++
++function println( str ){
++    print( str+"\n" );
++}
++
+Index: src/scripts/parse.nut
+===================================================================
+--- src/scripts/parse.nut	(revision 0)
++++ src/scripts/parse.nut	(revision 0)
+@@ -0,0 +1,370 @@
++
++function is_digit( ch ){
++    return '0'<=ch && ch<='9';
++}
++
++function is_hex_digit( ch ){
++    return ('0'<=ch && ch<='9') || ('a'<=ch && ch<='f') || ('A'<=ch && ch<='F');
++}
++
++function is_asc_alpha( ch ){
++    return ('a'<=ch && ch<='z') || ('A'<=ch && ch<='Z');
++}
++
++function is_re_string( re ){
++    if( typeof(re)!="string" || re=="" ) return false;
++    foreach( ch in re )
++        if( "?+*[].".find(ch.tochar()) )
++            return true;
++    return false;
++}
++
++function is_glob( re ){
++    if( typeof(re)!="string" || re=="" ) return false;
++    foreach( ch in re )
++        if( "?+*".find(ch.tochar()) )
++            return true;
++    return false;
++}
++
++function is_id_string( str ){
++    if( accept_id(str,0)==str.len() )
++        return true;
++    else
++        return false;
++}
++
++// We should separate this into Win32/Unix
++function is_path_string( str ){
++    local dp, p = 0;
++    while( (dp=accept_id(str,p))>p && dp<str.len() ){
++        if( str[dp]=='.' || str[dp]=='/' || str[dp]=='\\' || str[dp]=='-'  || 
++            (str[dp]==':' && dp==1) )
++            p = dp+1;
++        else 
++            return false;
++    }
++    return dp==str.len();
++}
++
++// Binary operators
++g_sp_2ch_binops <- "<-,<=,>=,==,!=,+=,*=,-=,/=,%=,>>,<<,||,&&";   // Two character binops
++g_sp_1ch_binops <- "+-/*%&|^=<>";   // One character bin ops   
++// Include table op, since we have things like "str".len()
++
++// Accepts a one or two character operator 
++function accept_op( s, p, _2ch_ops, _1ch_ops ){
++    local sl = s.len();
++    // Match a two character operator ?
++    if( sl>p+1 ){
++        local dp, tco = s.slice(p,p+2);
++        for( dp=0; (dp=_2ch_ops.find(tco,dp))!=null; dp++ ){
++            if( !(dp%3) )
++                return p+2;
++        }
++    }
++    // Match a one character operator ?
++    if( sl>p && _1ch_ops.find(s.slice(p,p+1))!=null )
++        return p+1;
++    else 
++        return p;
++}
++
++function accept_binop( s, p ){
++    return accept_op( s, p, g_sp_2ch_binops, g_sp_1ch_binops );
++}
++
++// Unary operators
++g_sp_2ch_unops <- "--,++,::";
++g_sp_1ch_unops <- "~!-";
++
++function accept_unop( s, p ){
++    return accept_op( s, p, g_sp_2ch_unops, g_sp_1ch_unops );
++}
++
++g_ops <- "()+-*/&|^!%=}{<>?.,:;";
++function word_bound_find( str, item, p ){
++    local l=str.len(), li=item.len();
++    while( (p=str.find(item,p))!=null ){
++        if( (!p || str[p-1]<=' ' || g_ops.find(str[p-1].tochar())) &&
++            (p+li==l || str[p+li]<=' ' || g_ops.find(str[p+li].tochar())) )
++            return p;
++        p++;
++    }
++    return null;
++}
++
++function dummy( ){
++    print();
++}
++
++function is_quoted( str ){
++    return str[0]=='"' && str[str.len()-1]=='"';
++}
++
++function quote( str ){
++    return "\""+str+"\"";
++}
++
++// See if this string character at pos is inside quote
++function is_pos_in_quoted( str, pos ){
++    local in_quoted=false;
++    local unescaped = false;
++    local escape = false;
++    foreach( ix, c in str ){
++        if( !in_quoted ){
++            if( c=='"' ) in_quoted = true;          // "
++            else if( c=='@' ) unescaped = true;     // @
++            else unescaped = false;
++        }
++        if( ix==pos ) return in_quoted;
++        if( in_quoted ){   // Inside string, don't look for delimiters
++            if( c=='\\' && !unescaped ) escape = true;    // \
++            else if( c=='"' && !escape ) in_quoted = false; // "
++            else escape = false;
++        }
++    }
++}
++
++
++function split_pres_quoted( str, del ){
++    local arr = [];
++    local dels = []; // Delimiters
++    local s="";
++    local in_quoted=false;
++    local unescaped = false;
++    local escape = false;
++    foreach( c in str ){
++        if( !in_quoted ){
++            if( c=='"' ) in_quoted = true;          // "
++            else if( c=='@' ) unescaped = true;     // @
++            else unescaped = false;
++
++            if( del.find(c.tochar())>=0 ){
++                if( s.len() ){
++                    arr.append(s);
++                    dels.append(c.tochar());
++                }
++                s = "";
++            }
++            else s += c.tochar();
++        }
++        else{   // Inside string, don't look for delimiters
++            if( c=='\\' && !unescaped ) escape = true;    // \
++            else if( c=='"' && !escape ) in_quoted = false; // "
++            else escape = false;
++            s += c.tochar();
++        }
++    }
++    if( s.len() ) arr.append(s);
++    return { segs=arr, delims=dels }
++}
++
++
++function glob_subst( str ){
++    local s = "";
++    local escape = false;
++    foreach( c in str ){
++        // Do the substitution
++        if( !escape ){
++            if( c=='?' ) s += ".";
++            else if( c=='*' ) s += ".*";
++            else if( c=='+' ) s += ".+";
++            else s += c.tochar();
++        }
++        else s += c.tochar();
++
++        if( c=='\\' && !escape ) escape = true;
++        else escape = false;
++    }
++    return s;
++}
++
++
++function accept_space( s, p ){
++    while( p<s.len() && (s[p]==' ' || s[p]=='\t' ) ) 
++        p++;
++    return p;
++}
++
++// Accepts a string "..."  (a string)
++function accept_string( s, p ){
++    local ch, sl = s.len();
++    while( p<sl ){
++        ch = s[p];
++        if( ch=='\"' ) return p;
++        if( ch=='\\' )
++            p++;   // Note: Could check OK esc char
++        p++;
++    }
++    return p;
++}
++
++// Accepts a pair of "..."  (an unescaped string)
++function accept_string_unesc( s, p ){
++    local sl = s.len();
++    while( p<sl ){
++        if( s[p]=='\"' ) return p;
++        p++;
++    }
++    return p;
++}
++
++// Accepts a character constant 'c' or '\e'  
++function accept_char( s, p ){
++    local sl = s.len();
++    if( p==sl ) return p;
++    local ch = s[p];
++    if( ch=='\'' ) return p;    // Invalid
++    return ch=='\\' ? p+2 : p+1;
++}
++
++// Not really unicode compliant
++function is_id_alpha( ch ){
++    return ch=='_' || ('a'<=ch && ch<='z') || ('A'<=ch && ch<='Z');
++}
++
++// Not really unicode compliant
++function is_id_char( ch ){
++    return ('a'<=ch && ch<='z') || ch=='_' || ('A'<=ch && ch<='Z') || ('0'<=ch && ch<='9');
++}
++
++// Accepts an identifier  (like _toolbar_2)
++function accept_id( s, p ){
++    if( !is_id_alpha(s[p]) ) return p;
++    local sl = s.len();
++    for( ++p; p<sl && is_id_char(s[p]); p++ );
++    return p;
++}
++
++
++/*
++    Simplified version of argument parser
++*/
++
++// Accepts comma or space separated list of args
++function accept_slist( s, p ){
++    local ch, sl=s.len(), tp;
++    while( p<sl ){
++        if( (tp=accept_arg(s,p))==null )
++            return null;
++        
++        // No more term or end of string?
++        if( tp==p || tp==sl ) 
++            break;
++
++        // Separating comma is optional
++        if( s[tp]==',' ) p=tp+1;
++        else p=tp;
++    }
++    return tp;
++}
++
++// Accept an enclosed expression (...), [...], {...}
++function accept_enclosed( s, p ){
++    local ch, sl=s.len();
++    local enc = s[p];
++    if( (p=accept_slist(s,p+1))==null ) return null;
++    p = accept_space(s,p);
++    if( p==sl || 
++        (enc=='(' && s[p]!=')') || 
++        (enc=='[' && s[p]!=']') ||
++        (enc=='{' && s[p]!='}') )
++        return null;
++    return p+1;
++}
++
++// Accepts a single arg, based on 'pseudo parsing' 
++// Return null on error
++function accept_arg( s, p ){
++    local ch, sl=s.len(), tp;
++    local last_type = -1;
++    while( p<sl ){
++        ch = s[p];
++        switch( ch ){
++            case '{': 
++            case '[': 
++            case '(': 
++                // This is a term. Is it space separated ?
++                if( last_type&8 && (last_type&7)==1 ) return p;   
++                p = accept_enclosed(s,p); 
++                if(p)p--; 
++                last_type=1; 
++                break;
++
++            case '@': 
++                if( ++p==sl || s[p]!='\"' ) return null;
++            case '\"': 
++            case '\'': 
++                // This is a term. Is it space separated ?
++                if( last_type&8 && (last_type&7)==1 ) return p;   
++                if( ch=='@' ) p = accept_string_unesc(s,p+1), ch='\"'; 
++                else if( ch=='\"' ) p = accept_string(s,p+1); 
++                else p = accept_char(s,p+1); 
++                if( p==sl || s[p]!=ch ) return null;
++                last_type=1; 
++                break;
++
++            case ',': return p; // Argument separator, we're done
++
++            case ' ':
++            case '\t':
++                last_type = last_type|8;
++                break;
++                
++            default:    // Characters and operators
++            {
++                // An op char?
++                if( "+-*/%&|^<>~!=:.?".find(ch.tochar())!=null ){
++                    local tp;
++                    // Only accept binary operator if we have term
++                    if( (last_type&7)==1 ){
++                        if( ch=='.' ) tp = p+1;
++                        else tp = accept_binop(s,p);
++                        last_type = 2;  // Operator
++                        p = tp-1;
++                    }
++                    else{
++                        tp = accept_unop(s,p);
++                        if( tp==p )
++                            return null;
++                        p = tp-1;
++                    }
++                }
++                else if( is_id_char(ch) ){  // Identifier, var or func
++                    if( last_type&8 && (last_type&7)==1 )
++                        return p;   // Last was term and we have space sep not operator
++                    last_type = 1;
++                }
++                else return p;
++            }
++        }
++        if( p==null ) break
++        p++;
++    }
++    return p;
++}
++
++// Accepts comma or space separated list of args
++function collect_args( s, p ){
++    local ch, sl=s.len(), tp=p;
++    local args = [];
++    local a;
++    while( p<sl ){
++        if( (tp=accept_arg(s,p))==null )
++            return null;
++        a = strip( s.slice(p,tp) );
++        if( a.len() ) args.append( a );
++        
++        // No more term or end of string?
++        if( tp==p || tp==sl ) 
++            break;
++
++        // Separating comma is optional
++        if( s[tp]==',' ) p=tp+1;
++        else p=tp;
++    }
++    return {args=args,pos=tp};
++}
++
++
+Index: src/scripts/cb.script
+===================================================================
+--- src/scripts/cb.script	(revision 0)
++++ src/scripts/cb.script	(revision 0)
+@@ -0,0 +1,121 @@
++
++gEM <- GetEditorManager();
++
++// Make sure argument is Squirrel string
++function _s( s ){
++    if( type(s)!="string" )
++        s = s.tostring();
++    return s;
++}
++
++// Make sure argument is a wxString (an instance at least) string
++function _wxs( s ){
++    if( type(s)!="instance" )
++        s = _T(s.tostring());
++    return s;
++}
++
++// Load a script file using Require
++function Load( file ){
++    local bLoaded
++    local exts = ["", ".script", ".nut"]
++    for( local i=0; i<3; i++ ){
++        bLoaded = true
++        try{ 
++            // println( file+exts[i] );
++            Require(_wxs(file+exts[i])) 
++        } catch(_id){
++            bLoaded = false
++        }
++        if( bLoaded ){
++            println( "File loaded OK: "+file+exts[i] )
++            return true
++        }
++    }
++    
++    println( "Failed loading: "+file );
++    return false
++}
++
++// Get Active Editor
++function GAE(){
++	return gEM.GetBuiltinActiveEditor();
++}
++	
++// Get editor for a file	
++// Note: we only want the editor instance, we do NOT want
++// to activate it necessarily.
++function GEF( file ){ 
++    local old_ed = GAE();
++    local ed = gEM.Open(_T(file));
++    if( old_ed ) old_ed.Activate();
++    return ed;
++}
++
++// Edit a file 
++function Edit( file, search_dirs ){
++    if( !IO.FileExists(_T(file.tostring())) ){
++        local path;
++        if( search_dirs!=-1 )
++            path = LocateDataFile( _T(file.tostring()), search_dirs );
++        if( !path || path.Length() )
++            // Look in current folder
++            path = LocateDataFile( _T(file.tostring()), 0x0020 );
++        if( !path || !path.Length() )
++            // Look in scripts user
++            path = LocateDataFile( _T(file.tostring()), 0x0200 );
++        if( !path || !path.Length() )
++            // Look in scripts global
++            path = LocateDataFile( _T(file.tostring()), 0x2000 );
++        if( !path || !path.Length() )
++            // Look in scripts global
++            path = LocateDataFile( _T(file.tostring()), 0x2000 );
++        if( !path || !path.Length() )
++            // Look in Code Blocks base
++            path = LocateDataFile( _T(file.tostring()), 0x0002 );
++        if( !path || !path.Length() )
++            // Look everywhere
++            path = LocateDataFile( _T(file.tostring()), 0xFFFF );
++        file = path;
++    }
++    else file = _T(file.tostring());
++            
++    if( !gEM.Open( file ) || !_s(file).len() )
++        println( "Failed opening file:" + file );
++    else
++        println( "Opened from: " + file );
++}
++
++
++// Register a script in a CB menu
++function RegScriptMenu( menu, script, is_func ){
++	return GetScriptingManager().RegisterScriptMenu( _wxs(menu), _wxs(script), is_func );
++}
++
++// Converts a wxArrayString to an array of strings
++function wxArrStr2Arr( was ){
++    local arr = [];
++    for( local ix=0; ix<was.GetCount(); ix++ )
++        arr.push( was.Item(ix).tostring() );
++    return arr;
++}
++
++// Reads a text file and returns as an array of strings (the lines)
++function ReadTextFile( fn ){
++    local contents = IO.ReadFileContents( _wxs(fn) ).tostring();
++    return split( contents, "\n" );
++}
++    
++// Write text to a file 
++// Contents can be either an array of strings, 
++// a single string or a wxString.
++//
++// Returns true on success. 
++// Note: Unfortunately, wxW throws up an error dialog, even if success
++function WriteTextFile( contents, fn ){
++    // We want to have a long string, if array, join with new line separators
++    if( type(contents)=="array" )
++        contents = join(contents,"\n");
++    return IO.WriteFileContents( _wxs(fn), _wxs(contents) );
++}
++    
+Index: src/scripts/shell.nut
+===================================================================
+--- src/scripts/shell.nut	(revision 0)
++++ src/scripts/shell.nut	(revision 0)
+@@ -0,0 +1,693 @@
++
++function format_func_info( t, is_class ){
++    local s = "("+t.type[0].tochar().toupper()+"): ";
++    if( t.args.len()>0 ){
++        if( is_class ) s+="this+(";
++        else s+="env+(";
++        for( local ix=1; ix<t.args.len(); ix++ ){
++            if( ix>1 ) s+=", ";
++            s += t.args[ix];
++        }
++        s += ") ";
++    }
++    else s += "<no parameter info available>";
++    return s;
++}
++
++// We don't have access to the holding table, so we cannot tell
++// if it's a class function or not. We cannot retrieve
++// member attributes neither.
++function GetFuncInfo( func ){
++    if( typeof(func)!="function" ) return;
++    local t = getfuncinfo(func);
++    print( format_func_info(t,null) );
++}
++
++g_sc_eol_app <- "\n";       // used by ListFuncInfo
++
++// Lists functions for tables, classes & instances (and for all objets that can iterate themselves)
++function ListFuncInfo( tbl, filt ){
++    local is_class = false;
++    if( typeof(tbl)=="instance" )   tbl = tbl.getclass();
++    if( typeof(tbl)=="class" )
++        is_class = true;
++
++    local re_filt;
++    if( filt ){
++        if( is_re_string(filt) ) re_filt=regexp(filt);
++        else if( typeof(filt)=="class" && filt.getclass()=="regexp" )
++            re_filt = filt;
++        else if( typeof(filt)!="string" ){
++            println("Unknown filter: "+typeof(filt));
++            return;
++        }
++        if( re_filt || filt=="" ) filt = null;
++    }
++
++    local t, ix, s, attrs;
++    foreach( k,v in tbl ){
++        if( typeof(v)=="function" &&
++            ((re_filt && re_filt.search(k)!=null) ||
++             (filt && k.find(filt)!=null) ||
++             (!filt && !re_filt)) ){
++            s = "";
++            // Get information from typemask and nparams
++            if( t = getfuncinfo(v) )
++                s += k + format_func_info(t,is_class);
++
++            // See if the function has attributes
++            if( is_class && (attrs=tbl.getattributes(k)) ){
++                if( s.len() ) s += "\n"+k;
++                foreach( ak, av in attrs )
++                    print( s += " ."+ak+"="+av );
++            }
++
++            // If we got neither...
++            if( !s.len() )
++                s = k + " <no info available>";
++            print(s+g_sc_eol_app);
++        }
++    }
++}
++
++
++class LineTransf{
++    constructor(name, level){
++        _name = name;
++        _level = level;
++    }
++
++    // These are like static functions
++    function maketbl(line){ 
++        local semic = (line.len()>0?line[line.len()-1]:0)==';' ? 1 : 0;
++        local t = {}
++        t.prep <- line.slice(0,accept_space(line,0));
++        // If slot assignment, start line processing after <-
++        local tp, pa = line.find("<-"); 
++        if( pa>0 && (tp=accept_id(line, t.prep.len())) && accept_space(line,tp)==pa )
++            t.prep = line.slice(0,accept_space(line,pa+2));
++        t.middle <- line.slice(t.prep.len(),line.len()-semic);
++        t.app <- semic ? ";" : "";
++        t.modified <- null;
++        return t;
++    }
++    
++    // Make a line from the parts
++    function makeline(t){ return t.prep + t.middle + t.app; }
++
++    // This one does the job
++    function transf( t ){ return t; }
++    
++    function enable( do_enable ){ _enabled=do_enable; }
++    function enabled( ){ return _enabled; }
++    
++    function _cmp( other ){
++        return _level-other._level;
++    }
++    
++    function _tostring(  ){
++        return "LineTransf, Lvl:"+_level + " On:"+(_enabled?"(y)":"(n)") + " Name:"+_name;
++    }
++
++    _level = 0;
++    _enabled = true;
++    _name = "";
++}
++
++
++g_lt_arr <- [];     // Global array of line substitutions
++
++// Class not in use, example code
++class PrintShowRecTransf extends LineTransf{
++    constructor() { ::LineTransf.constructor("psr => print(v2sr(...))",0); }
++    function transf( t ){
++        if( isempty(t.prep) && t.middle.find("psr ")==0 ){
++            t.prep = "print(v2sr( ";
++            t.middle = strip(t.middle.slice(3));
++            t.app += " ))";
++            t.modified = true;
++        }
++        return t;
++    }
++}
++
++// Wants overview to see if there is a 'print' in the command - level 2
++class GetFuncInfoTransf extends LineTransf{
++    constructor() { ::LineTransf.constructor("gfi => getfuncinfo(...)",2); }
++    function transf( t ){
++        local p;
++        local add_print = false;
++        if( (p=word_bound_find(t.middle,"gfi",0))>=0 ){
++            t.prep += t.middle.slice(0,p);
++            if( t.prep.find("print")==null ){
++                add_print = true;
++                t.prep += "print(v2sr(";
++            }
++            t.prep += "getfuncinfo( ";
++            t.middle = strip(t.middle.slice(p+3)); //+(p?1:0));
++            t.app = (add_print?" ),\"\"))":" )") + t.app;
++            t.modified = true;
++        }
++        return t;
++    }
++}
++
++// Can be in the middle - level 1
++class ListFuncInfoTransf extends LineTransf{
++    constructor() { ::LineTransf.constructor("lfi => ListFuncInfo(...\"glob\")",1); }
++    function transf( t ){
++        local p;
++        if( (p=word_bound_find(t.middle,"lfi",0))>=0 ){
++            t.prep += t.middle.slice(0,p);
++            t.prep += "ListFuncInfo( ";
++            local arr = split_pres_quoted(t.middle.slice(p+3)," ,").segs;
++            if( arr.len()>1 ){  // We have at least two args, so the first is a table, the second the filter
++                if( !is_quoted(arr[1]) )
++                    arr[1] = quote(glob_subst(arr[1]));
++            }
++            else if( arr.len()==1 ){
++                // We need to sort out if this is a table/class/instance or a filter
++                local is_table = true;
++                if( arr[0]!="this" )    // Note: We could also check the type of the rawget result
++                    try{
++                        local o = ::rawget(arr[0]);
++                        foreach( v in o ){ break; }
++                    } catch(dummy) { is_table=false }
++                if( is_table ) arr.append( "\"\"" );
++                else{
++                    if( !is_quoted(arr[0]) )
++                        arr[0] = quote(glob_subst(arr[0]));
++                    arr.insert(0,"this");
++                }
++            }
++            else    // By default we list everything in the root table
++                arr.extend(["this","\"\""]);
++            t.middle = join( arr,"," );
++            t.app = " )" + t.app;
++            t.modified = true;
++        }
++        return t;
++    }
++}
++
++// An instance cannot use rawget, but can call here
++function is_glob_symb(key){
++    local is_key = true;
++    try{
++        rawget(arg);
++    }catch(dummy) { 
++        is_key = false 
++    }
++    return is_key;
++}
++
++// Can be used to add extra argument transforms
++g_lt_xtra_arg_descs <- []; 
++
++
++//
++// These are the available argument transforms:
++// q - Quotes the argument (if not quoted)  fish => "fish"
++// Q - Quotes the argument (checking that it is suitable) fish => "fish"
++// g - Expand globs/wildcards to regular expressions  *.txt => regexp(@".*\.txt")
++// D - There is a default argument for this parameter
++  
++// Can be in the middle - level 1
++class FuncRuleTransf extends LineTransf{
++    // Note: There is a problem with varargs in Squirrel, 
++    // therefore an array with argument description is passed 
++    // as the last arg.
++    constructor( name, fn_abbr, fn_ext, arg_descs, arg_def_vals, app_end, help) { 
++        if( isempty(name) ) name = fn_abbr+" => " + fn_ext;
++        ::LineTransf.constructor(name,1); 
++        _abbr = fn_abbr;
++        _abbr_len = _abbr.len();
++        _ext = fn_ext;
++        _arg_descs = split_strict(arg_descs,',');
++        _arg_def_vals = arg_def_vals ? arg_def_vals : [];
++        _narg = _arg_descs.len();
++        _app_end = app_end; 
++        _help = help;
++        if( count(_ext,'(')!=count(_app_end,')')-count(_app_end,'(') )
++            println( "Warning: FuncRule ["+_abbr+"] has unbalanced parenthesis." );
++    }
++
++    // The data members
++    _abbr = "";             // The abbreviation
++    _abbr_len = 0;          // Length of it
++    _ext = "";              // The extended name
++    _arg_descs = null;      // Comma separated string of rules to apply on each argument
++    _arg_def_vals = null;   // Array of default values for each arg
++    _narg = 0;              // Number of arguments
++    _app_end = null;        // Append this after the arguments (after closing parenthesis)
++    _help = null;           // Help string
++    
++    function transf( t ){
++        // We must always match at the beginning of the string for function substitution
++        if( starts_with(t.middle,_abbr) ){
++            // Between func and args we can have either '(' or ' '. If no args, ',' is OK
++            //println("m0");
++            local p = 0;
++            local has_paren = false;
++            p = accept_space(t.middle,_abbr_len);
++            if( p==t.middle.len() || t.middle[p]==',' )
++                ;   // Just accept this 
++            else if( t.middle[p]=='(' ){
++                has_paren = true;
++                p++;
++            }
++            else if( p==_abbr_len ) // This means we had neither ' ', ',' or '(' or end of line
++                return t;
++                
++            //println("m1");
++            local atbl = collect_args( t.middle, p );
++            // println( "Args: " + v2sr(atbl,"") );
++            if( atbl==null ) return t;
++            local args = atbl.args;
++            local arg_tail = t.middle.slice(atbl.pos);    // Whatever was not consumed by collect_args
++            if( has_paren ){
++                p = accept_space(arg_tail,0);
++                if( p==arg_tail.len() || arg_tail[p]!=')' ){
++                    prinln( "Unbalanced parenthesis: " + arg_tail );
++                    return t;
++                }
++                arg_tail = arg_tail.slice(p+1);
++            }
++            
++            //println("m2");
++            // Process arguments
++            local prep = t.prep + _ext;
++            local middle = "";
++            local aix, arg_desc="";
++            local arg;
++            for( aix=0; aix<args.len() && aix<_narg; aix++ ){
++                if( aix>0 ) middle += ",";  // Only comma separated for now
++                if( aix<_arg_descs.len() )
++                    arg_desc = _arg_descs[aix];
++                arg = args[aix];
++                if( arg_desc.len() ){
++                    if( arg_desc.find("g")>=0 && !is_quoted(arg) )
++                        arg = glob_subst(arg);
++                    else if( arg_desc.find("q")>=0 && is_id_string(arg) && !is_glob_symb(arg) )
++                        arg = "\"" + arg + "\"";
++                    // Note: 'Q' does not work all that perfectly with '\\' in paths
++                    else if( arg_desc.find("Q")>=0 && is_path_string(arg) && !is_glob_symb(arg) )
++                        arg = "\"" + arg + "\"";
++                    // Apply extra arg transforms
++                    foreach( t in g_lt_xtra_arg_descs ){
++                        if( arg_desc.find(t.chr)!=null )
++                            arg = t.func(arg);
++                    }
++                        
++                    // For func rule, it only makes sense to have comma separate arguments
++                    
++                    //if( arg_desc.find("c")>=0 && aix<at.delims.len() )
++                    //    at.delims[aix] = ",";
++                    //if( arg_desc.find("s")>=0 && aix<at.delims.len() )
++                    //    at.delims[aix] = " ";
++                    
++                    if( arg_desc.find("r")==null )
++                        arg_desc = "";
++                }
++                middle += arg;
++            }
++            
++            //println("m3");
++            // Add default args if we have, and too few given on cmd line
++            // println( aix + ":" + _narg + ":" + _arg_def_vals.len() );
++            while( aix<_narg ){
++                if( aix>0 ) middle += ",";
++                arg_desc = _arg_descs[aix];
++                if( arg_desc.find("D")==null || aix>=_arg_def_vals.len() ){
++                    println("["+_abbr+"]: "+"No default value for parameter: "+aix+" (returning)");
++                    return t;
++                }
++                middle += _arg_def_vals[aix++];
++            }
++            
++            // We have too many arguments. 
++            if( aix<args.len() && arg_desc.find("...")==null ){
++                println("["+_abbr+"]: "+"Too many parameters. Accepts: "+_narg+" (returning)");
++                return t;
++            }
++            
++            // Add remaining (unmodified arguments)
++            while( aix<args.len() ){
++                if( aix>0 ) middle += ',';
++                middle += args[aix++];
++            }
++
++            t.prep = prep + " ";
++            // println( middle );
++            t.middle = middle;
++            t.app = " "+_app_end + arg_tail + t.app;
++            t.modified = true;
++        }
++        return t;
++    }
++}
++
++
++// Should be early - level 0
++class SubstTransf extends LineTransf{
++    constructor( name, abbr, ext, help ) { 
++        if( isempty(name) ) name = abbr+" => " + ext;
++        ::LineTransf.constructor(name,0); 
++        _abbr = abbr;
++        _abbr_len = _abbr.len();
++        _ext = ext;
++        _ext_len = _ext.len();
++        _help = help;
++    }
++
++    _abbr = null;
++    _abbr_len = null;
++    _ext = null;
++    _ext_len = null;
++    _help = null;
++    
++    function transf( t ){
++        // We scan the whole line repeatedly until the abbreviation is not found
++        local p=0;
++        while( (p=word_bound_find(t.middle,_abbr,p))!=null ){
++            if( !is_pos_in_quoted(t.middle,p) ){
++                t.middle = t.middle.slice(0,p) + _ext + t.middle.slice(p+_abbr_len);
++                p += _ext_len;
++                t.modified = true;
++            }
++            else
++                p += _abbr_len;
++        }
++        return t;
++    }
++}
++
++
++// Assumes starting on quote
++function lt_cons_str( line, p, is_unesc ){
++    if( line[p]!='\"' ) return null;
++    local ch;
++    local esc = false;
++    local ll = line.len();
++    if( is_unesc ){
++        while( line[++p]!='\"' && p<ll );
++        return p;
++    }
++
++    for( ++p; p<ll; p++ ){
++        ch = line[p];
++        if( ch=='\\' ){ if( p<ll-1 ) p++; }
++        else if( ch=='\"' ) return p+1;
++    }
++    return p;
++}
++
++// Function also matches this
++function lt_cons_control_stmt( line, p ){
++    local is_for = false;
++    if( line.slice(p,p+3)=="for" && (line[p+4]==' ' || line[p+3]=='(') )
++        is_for = true, p+=3;
++    else if( line.slice(p,p+2)=="if" && (line[p+3]==' ' || line[p+2]=='(') )
++        p+=2;
++    else if( line.slice(p,p+5)=="while" && (line[p+5]==' ' || line[p+5]=='(') )
++        p+=5;
++    else if( line.slice(p,p+5)=="function" && (line[p+8]==' ' || line[p+8]=='(') )
++        p+=8;
++    else
++        return null;
++    
++    local par_lvl = 0;  // Nested parenthesis
++    local is_unesc = false;
++    local ch, ll = line.len();
++    while( p<ll ){
++        ch = line[p];
++        if( ch=='(' ) par_lvl++;
++        else if( ch==')' ) { if( !--par_lvl ) break; }
++        else if( ch=='@' ) is_unesc=true;
++        else if( ch=='\"' ) p=lt_cons_str(line,p,is_unesc)-1, is_unesc=false;
++        else is_unesc=false;
++        p++;
++    }
++    return p<ll ? p+1 : ll; // if p==ll, we have unbalanced parenth
++}
++
++g_lt_indent <- "   ";
++function ltSplitLine( line ){
++    local dp, dp1, p;  // Position during iteration
++    local lsegs=[], ldelims=[];
++    local p, ll = line.len();
++    local cnt=0;
++    local bl_ind = "";
++    local tmp_ind = false;
++    local ch_ind;
++    for( p=0; cnt++<20 && p<ll; p=dp ){
++        p = accept_space(line,p);
++        if( (dp=lt_cons_control_stmt(line,p))!=null ){ 
++            dp = accept_space(line,dp);
++            if( line[dp]=='{' )dp++;
++            //println( "fwi_append: "+line.slice(p,dp) );
++            lsegs.append( bl_ind+(tmp_ind?g_lt_indent:"")+line.slice(p,dp) ); 
++            ldelims.append(""); 
++            if( line[dp-1]=='{' ){ bl_ind += g_lt_indent; }
++            else tmp_ind = true;
++            continue;
++        }
++        // Save the first character on the line, to see if it is a block brace
++        ch_ind = line[p];
++        if( ch_ind=='}' && bl_ind.len() ) bl_ind=bl_ind.slice(0,-g_lt_indent.len());
++        
++        // Look for ';' or '\n' or '}' (that are not tables)
++        local is_unesc = false;    // for @"str" 
++        local ch;
++        local tbl_ind = 0;
++        for( dp=p; dp<ll; dp++ ){
++            ch = line[dp];
++            if( ch=='@' ) is_unesc=true;
++            else if( ch=='\"' ) dp=lt_cons_str(line,dp,is_unesc)-1, is_unesc=false;
++            else if( ch=='{' ) tbl_ind++; // dp = lt_cons_table(line,dp)-1;
++            else if( ch=='}' && tbl_ind>0 ) ch=0, tbl_ind--;
++            else if( ch==';' || ch=='\n' || ch=='}' ) break;
++            else is_unesc = false;
++        }
++        if( ch==';' ) dp++;
++        //println( p+","+dp+" ;lf_append: "+line.slice(p,dp) );
++        lsegs.append(bl_ind + (tmp_ind?g_lt_indent:"") + line.slice(p,dp));
++        ldelims.append(dp<ll?ch.tochar():"");
++        if( ch=='\n' ) dp++;
++        if( ch=='}' ){  // We're adding an extra seg to get the brace on a new line
++            dp++; 
++            lsegs.append("}");
++            ldelims.append("\n");
++            if( bl_ind.len()>0 ) bl_ind=bl_ind.slice(0,-g_lt_indent.len()); 
++        }
++
++        if( ch_ind=='{' ) bl_ind += g_lt_indent;
++        tmp_ind = false;
++    }
++    return { segs=lsegs, delims=ldelims }
++}
++
++function ltProcessLine( line ){
++    local t_segs = ltSplitLine( line );
++    local segs = t_segs.segs;
++    local lines = []; // Start from the beginning 
++
++    // Iterate through all levels (higher levels applied later)
++    local t;
++    foreach( seg in segs ){
++        if( !strip(seg).len() ) continue;
++        t = LineTransf.maketbl(seg);
++        // if( !t.middle.len() ) continue;
++        
++        // For this level, apply transforms until noone modifies anymore
++        local nmod = 0; // Safety valve
++        foreach( vlt in g_lt_arr ){
++            for( local ix=0; ix<vlt.len() && nmod<50; ix++ ){
++                if( vlt[ix].enabled() ){
++                    t = vlt[ix].transf(t);
++                    if( t.modified ){
++                        t.modified = false;
++                        nmod++;
++                        if( vlt[ix]._level>0 )    // Only restart iteration for level higher than 0
++                            ix = 0;         // Level 0 is global substitutions
++                    }
++                }
++            }
++        }
++        seg = LineTransf.makeline(t);
++        if( seg.len() )
++            lines.append( seg );    
++    }
++    
++    return lines;
++}
++
++/*
++// This is a fix for the loop: "for(init; cont; inc) body;" 
++// statement, since it has to be treated as a single line (up to body)
++function lt_fix_for_loops( t_segs ){
++    local segs = t_segs.segs;
++    local delims = t_segs.delims;
++    for( local ix=0; ix<segs.len(); ix++ ){
++        // Merge for statement back
++        if( segs[ix].slice(0,3)=="for" && segs[ix].len()>3 && 
++            (segs[ix][3]=='(' || segs[ix][3]<=' ') ){
++            if( ix==segs.len() ) break;
++            segs[ix] += ";" + segs[ix+1];
++            segs.remove(ix+1);
++            if( ix<delims.len() ) delims.remove(ix); 
++            if( ix==segs.len() ) break;
++            segs[ix] += ";" + segs[ix+1];
++            segs.remove(ix+1);
++            if( ix<delims.len() ) delims.remove(ix);
++
++            // Put ; back on, with empty loop body, it carries meaning.
++            if( ix<delims.len() && delims[ix]==";" ) 
++                segs[ix] += t_segs.delims[ix];
++        }
++        // ToDo: If and while with empty body also depend on semicolons
++    }
++}
++*/
++/*
++function ltDoLine( line ){
++    local t;
++    local t_segs = split_pres_quoted(line,";\n");
++    local segs = t_segs.segs;
++    local lines = []; // Start from the beginning again
++
++    // for loops cannot be split on semicolon
++    lt_fix_for_loops( t_segs );
++
++    // Iterate through all levels (higher levels applied later)
++    foreach( seg in segs ){
++        t = LineTransf.maketbl(strip(seg));
++        if( !t.middle.len() ) continue;
++        // For this level, apply transforms until noone modifies anymore
++        local nmod = 0; // Safety valve
++        foreach( vlt in g_lt_arr ){
++            for( local ix=0; ix<vlt.len() && nmod<20; ix++ ){
++                if( vlt[ix].enabled() ){
++                    t = vlt[ix].transf(t);
++                    if( t.modified ){
++                        t.modified = false;
++                        nmod++;
++                        if( vlt[ix]._level>0 )    // Only restart iteration for level higher than 0
++                            ix = 0;         // Level 0 is global substitutions
++                    }
++                }
++            }
++        }
++        seg = strip(LineTransf.makeline(t));
++        if( seg.len() )
++            lines.append( seg );    // seg+";" );
++    }
++    
++    return lines;
++}
++*/
++
++function ltAdd( lt ){
++    if( !(lt instanceof ::LineTransf) ){ println("Not a LineTransf instance: "+type(lt)); return; }
++    // Remove if old version present
++    ltRemove( lt._name );
++    // Keep in order of increasing _level
++    foreach( ix, v in g_lt_arr ){
++        // Is this subarray of our level
++        if( lt._level==v[0]._level ){
++            v.append(lt);
++            return;
++        }
++        // Should we insert before this one?
++        if( v[0]._level>lt._level ){
++            g_lt_arr.insert( ix, [lt] );
++            return;
++        }
++    }
++    g_lt_arr.append([lt]);
++}
++
++function ltRemove( lt ){
++    local name;
++    if( type(lt)=="string" ){
++        name = strip(lt) + " => ";
++        lt = null;
++    }
++    else if( !(lt instanceof ::LineTransf) ){ 
++        println("Not a LineTransf instance (or its name): "+type(lt)); 
++        return; 
++    }
++    foreach( ix, v in g_lt_arr ){ 
++        foreach( ixx,vv in v ){
++            if( vv==lt || vv._name.slice(0,name.len())==name ||
++                vv._name==name.slice(0,vv._name.len())){
++                v.remove(ixx); 
++                if( v.len()==0 )
++                    g_lt_arr.remove(ix);
++            }
++        }
++    }
++}
++
++function ltAddArgTransform( chr, func ){
++    // First remove it so we don't have it twice afterwards
++    foreach( i, xad in g_lt_xtra_arg_descs ){
++        if( xad.chr==chr )
++            g_lt_xtra_arg_descs.remove(i);
++    }
++    g_lt_xtra_arg_descs.push( {chr=chr, func=func} );
++}
++
++// Can be used if things are out of order
++function ltRollback(){
++    g_lt_arr = [];
++
++    //lt_add( PrintShowRecTransf() );
++    ltAdd( GetFuncInfoTransf() );
++    ltAdd( ListFuncInfoTransf() );
++
++    // Function rules, level 1
++    ltAdd( FuncRuleTransf("set","set", "set(", "qD", ["\"\""], ")", "Set options for this interpreter." ) );                
++    ltAdd( FuncRuleTransf("","p", "print(", ".", null, ")", "Prints one argument, without using parenthesis: p \"Squirrel\"") );                    
++    ltAdd( FuncRuleTransf("","ps", "print(v2s(", ".,D", [null, "\"\""], "))", "Prints one argument, expanding tables/arrays one level: ps [1,2,'b']" ) );   
++    ltAdd( FuncRuleTransf("","psr", "print(v2sr(", ".,D", [null, "\"\""], "))", "Prints one argument, expanding tables/arrays recursively: ps [1,{x=1.0,y=-3, v=[1,2,3]},'b']" ) );   
++    ltAdd( FuncRuleTransf("","plt", "print(v2sr(ltProcessLine(", ".", null, "),\"bv\"))", "Expands command and prints it, without executing it: plt ps ['a',2]" ) );    
++
++    // Simple substitutions, level 0
++    ltAdd( SubstTransf("","echo on", "set(\"echo\")", "Enables echoing expanded command line." ) ); 
++    ltAdd( SubstTransf("","echo off", "set(\"noecho\")", "Disable echoing expanded command line." ) ); 
++    ltAdd( SubstTransf("","exit", "set(\"exit\")", "Exit this interpreter." ) ); 
++    ltAdd( SubstTransf("","lt on", "set(\"lt\")", "Enables command line expansion (preprocessing before sent to Squirrel compiler)." ) ); 
++    ltAdd( SubstTransf("","lt off", "set(\"nolt\")", "Disables command line expansion." ) ); 
++    ltAdd( SubstTransf("","err brief", "set(\"errbrief\")", "Set brief error printing (no stack dump)." ) ); 
++    ltAdd( SubstTransf("","err verb", "set(\"errverb\")", "Set verbose error printing (include stack dump)." ) ); 
++    
++    ltAdd( SubstTransf("","ple", "print(ltGetLastError())", "Print last error (including stackdump)." ) ); 
++    ltAdd( SubstTransf("","pll", "print(v2s(ltGetLastLine(),\"bv\"))", "Print last command line." ) ); // v - Print vertically
++}
++
++function ltList( ){
++    foreach( vlt in g_lt_arr ){
++        foreach( lt in vlt ){
++            println( lt );
++        }
++    }
++}
++
++function ltGetLastLine( ){
++    if( "g_rl_last_line" in this )
++        return g_rl_last_line;
++    else
++        println( "Last line not available" );
++}
++
++function ltGetLastError( ){
++    if( "g_rl_last_error" in this )
++        return g_rl_last_error;
++    else
++        println( "Last error not available" );
++}
++
++// Install basic line transforms
++ltRollback();
++
+Index: src/scripts/cb_shell.script
+===================================================================
+--- src/scripts/cb_shell.script	(revision 0)
++++ src/scripts/cb_shell.script	(revision 0)
+@@ -0,0 +1,47 @@
++
++
++// This allows for transforming function arguments to wxString
++// if we register the argument with "D" option (see "ls" below")
++function ToWxString( arg ){
++    return "_wxs(" + arg + ")";
++}
++
++ltAddArgTransform( "T", ToWxString )
++
++/*
++// Convenient when handling directories
++function QuoteDots( arg ){
++    if( arg=="." || arg==".." )
++        return quote(arg);
++    else
++        return arg;
++}
++ltAddArgTransform( "d", QuoteDots )
++*/
++
++// Adds CodeBlocks specific commands to the SQSession interpreter
++
++ltAdd( FuncRuleTransf("","ls", "print(v2sr(IO.ListDirectory(", "QTD,D", 
++        ["IO.GetCwd()","LISTDIR_DEFAULT"], ").tostring(),\"bv\"))", 
++        "Prints a list of files in current/given CodeBlocks directory" ) );
++
++ltAdd( FuncRuleTransf("","als", "split(IO.ListDirectory(", "QTD,D", 
++        ["IO.GetCwd()","LISTDIR_DEFAULT"], ").tostring(),\"\\n\")", 
++        "Returns an array of files in current/given CodeBlocks directory" ) );
++
++ltAdd( FuncRuleTransf("","cd", "IO.SetCwd(", "QT", null, ")", 
++        "Change working directory in CodeBlocks." ) );
++
++ltAdd( FuncRuleTransf("","edit", "Edit(", "Q,D", [null,-1], ")", 
++        "Edit a file in CodeBlocks." ) );
++
++ltAdd( FuncRuleTransf("","load", "Load(", "Q", null, ")", 
++        "Load file using CodeBlocks 'Require'." ) );
++
++ltAdd( SubstTransf("","pwd", "p _s(IO.GetCwd())", "Print working directory in CodeBlocks" ) ); 
++
++ltAdd( SubstTransf("","editpath", "p GAE().GetFilename()", "Show the path of active editor" ) ); 
++
++ltAdd( FuncRuleTransf("","rls", "_ls <- IO.ListDirectory(", "QTD,D", 
++        ["IO.GetCwd()","LISTDIR_DEFAULT"], ").tostring()", 
++        "Lists files in current CodeBlocks directory" ) );
+Index: src/CodeBlocks.cbp
+===================================================================
+--- src/CodeBlocks.cbp	(revision 3557)
++++ src/CodeBlocks.cbp	(arbetskopia)
+@@ -1999,6 +1999,27 @@
+ 		<Unit filename="sdk\scripting\sqplus\sqplusWin32.h">
+ 			<Option target="SqPlus" />
+ 		</Unit>
++		<Unit filename="sdk\scripting\sqsession\exparr.hpp">
++			<Option target="sdk" />
++		</Unit>
++		<Unit filename="sdk\scripting\sqsession\exparrp.hpp">
++			<Option target="sdk" />
++		</Unit>
++		<Unit filename="sdk\scripting\sqsession\sc.h">
++			<Option target="sdk" />
++		</Unit>
++		<Unit filename="sdk\scripting\sqsession\sqext.cpp">
++			<Option target="sdk" />
++		</Unit>
++		<Unit filename="sdk\scripting\sqsession\sqext.h">
++			<Option target="sdk" />
++		</Unit>
++		<Unit filename="sdk\scripting\sqsession\sqsession.cpp">
++			<Option target="sdk" />
++		</Unit>
++		<Unit filename="sdk\scripting\sqsession\sqsession.h">
++			<Option target="sdk" />
++		</Unit>
+ 		<Unit filename="sdk\scripting\sqstdlib\sqstdaux.cpp">
+ 			<Option target="Squirrel std lib" />
+ 		</Unit>
+@@ -2645,6 +2666,12 @@
+ 		<Unit filename="src\environmentsettingsdlg.h">
+ 			<Option target="src" />
+ 		</Unit>
++		<Unit filename="src\ext_scriptconsole.cpp">
++			<Option target="src" />
++		</Unit>
++		<Unit filename="src\ext_scriptconsole.h">
++			<Option target="src" />
++		</Unit>
+ 		<Unit filename="src\main.cpp">
+ 			<Option target="src" />
+ 		</Unit>
+@@ -2719,12 +2746,6 @@
+ 		</Unit>
+ 		<Extensions>
+ 			<code_completion />
+-			<wxsmith>
+-				<dialog wxs_file="CCDebugInfo.wxs" class="CCDebugInfo" src_file="plugins\codecompletion\ccdebuginfo.cpp" header_file="plugins\codecompletion\ccdebuginfo.h" xrc_file="" edit_mode="Source" />
+-				<dialog wxs_file="VirtualBuildTargetsDlg.wxs" class="VirtualBuildTargetsDlg" src_file="sdk\virtualbuildtargetsdlg.cpp" header_file="sdk\virtualbuildtargetsdlg.h" xrc_file="" edit_mode="Source" />
+-				<panel wxs_file="ScriptConsole.wxs" class="ScriptConsole" src_file="src\scriptconsole.cpp" header_file="src\scriptconsole.h" xrc_file="" edit_mode="Source" />
+-				<configuration app_src_file="" main_resource="" init_all_handlers="necessary" />
+-			</wxsmith>
+ 		</Extensions>
+ 	</Project>
+ </CodeBlocks_project_file>

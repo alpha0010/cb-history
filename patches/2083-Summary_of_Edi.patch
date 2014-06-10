@@ -1,0 +1,42 @@
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(revision 4185)
++++ src/sdk/editormanager.cpp	(working copy)
+@@ -1426,6 +1426,8 @@
+         return -1;
+
+     bool AdvRegex=false;
++    int replacecount=0;
++    int foundcount=0;
+     int flags = 0;
+     CalculateFindReplaceStartEnd(control, data);
+
+@@ -1534,6 +1536,7 @@
+         else
+             break; // done - already wrapped around once
+
++        foundcount++;
+
+         if (confirm)
+         {
+@@ -1579,6 +1582,7 @@
+             if (replace)
+             {
+                 int lengthReplace = data->replaceText.Length();
++                replacecount++;
+                 if (data->regEx)
+                 {
+                     // set target same as selection
+@@ -1632,6 +1636,12 @@
+         }
+     }
+     control->EndUndoAction();
++    wxString msg;
++    if(foundcount==0) msg=_T("No matches found for \"")+data->findText+_T("\"");
++    else if(replacecount==0 && foundcount==1) msg=_T("One match found but not replaced");
++    else msg.Printf(_("Replaced %i of %i matches"), replacecount, foundcount);
++    cbMessageBox(msg, _("Result"), wxICON_INFORMATION);
++    control->SetSCIFocus(true);
+
+     return pos;
+ }

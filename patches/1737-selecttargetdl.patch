@@ -1,0 +1,33 @@
+Index: src/sdk/selecttargetdlg.cpp
+===================================================================
+--- src/sdk/selecttargetdlg.cpp	(revision 3173)
++++ src/sdk/selecttargetdlg.cpp	(working copy)
+@@ -92,6 +92,14 @@
+ 
+ // events
+ 
++#if wxCHECK_VERSION(2, 8, 0)
++void SelectTargetDlg::OnOK(wxCommandEvent& /*event*/)
++{
++    this->wxDialog::SetAffirmativeId(wxID_OK);
++    this->wxDialog::AcceptAndClose();
++} // end of OnOK
++#endif
++
+ void SelectTargetDlg::OnListboxSelection(wxCommandEvent& /*event*/)
+ {
+ 	UpdateSelected();
+Index: src/sdk/selecttargetdlg.h
+===================================================================
+--- src/sdk/selecttargetdlg.h	(revision 3173)
++++ src/sdk/selecttargetdlg.h	(working copy)
+@@ -15,6 +15,9 @@
+ 		void EndModal(int retCode);
+ 		int GetSelection() const { return m_Selected; }
+ 		ProjectBuildTarget* GetSelectionTarget();
++#if wxCHECK_VERSION(2, 8, 0)
++		void OnOK(wxCommandEvent& event);
++#endif
+ 	private:
+ 		void OnListboxSelection(wxCommandEvent& event);
+         void OnCheckboxSelection(wxCommandEvent& event);

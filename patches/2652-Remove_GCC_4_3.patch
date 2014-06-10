@@ -1,0 +1,348 @@
+Index: base/tinyxml/tinyxmlparser.cpp
+===================================================================
+--- base/tinyxml/tinyxmlparser.cpp	(revision 5414)
++++ base/tinyxml/tinyxmlparser.cpp	(working copy)
+@@ -346,7 +346,7 @@
+ 				continue;
+ 			}
+ 
+-			if ( IsWhiteSpace( *p ) || *p == '\n' || *p =='\r' )		// Still using old rules for white space.
++			if ( IsWhiteSpace( *p ) )
+ 				++p;
+ 			else
+ 				break;
+@@ -354,7 +354,7 @@
+ 	}
+ 	else
+ 	{
+-		while ( *p && IsWhiteSpace( *p ) || *p == '\n' || *p =='\r' )
++		while ( IsWhiteSpace( *p ) )
+ 			++p;
+ 	}
+ 
+@@ -1446,7 +1446,7 @@
+ 		// its best, even without them.
+ 		value = "";
+ 		while (    p && *p											// existence
+-				&& !IsWhiteSpace( *p ) && *p != '\n' && *p != '\r'	// whitespace
++				&& !IsWhiteSpace( *p )                          	// whitespace
+ 				&& *p != '/' && *p != '>' )							// tag end
+ 		{
+ 			if ( *p == SINGLE_QUOTE || *p == DOUBLE_QUOTE ) {
+Index: plugins/codecompletion/classbrowserbuilderthread.cpp
+===================================================================
+--- plugins/codecompletion/classbrowserbuilderthread.cpp	(revision 5414)
++++ plugins/codecompletion/classbrowserbuilderthread.cpp	(working copy)
+@@ -362,7 +362,7 @@
+ #endif
+ wxTreeItemId ClassBrowserBuilderThread::AddNodeIfNotThere(wxTreeCtrl* tree, wxTreeItemId parent, const wxString& name, int imgIndex, CBTreeData* data, bool sorted)
+ {
+-    sorted = sorted & tree == m_pTreeTop && data; // sorting only for the top tree
++    sorted = sorted & (tree == m_pTreeTop && data); // sorting only for the top tree
+     SpecialFolder new_type = data->m_SpecialFolder;
+     bool newIsNamespace = data->m_TokenKind == tkNamespace;
+ 
+Index: plugins/codecompletion/parser/parserthread.cpp
+===================================================================
+--- plugins/codecompletion/parser/parserthread.cpp	(revision 5414)
++++ plugins/codecompletion/parser/parserthread.cpp	(working copy)
+@@ -657,7 +657,7 @@
+                         m_EncounteredNamespaces.push(token);
+                     m_Tokenizer.GetToken(); // eat ::
+                 }
+-                else if ((peek==ParserConsts::semicolon || (m_Options.useBuffer && peek.GetChar(0) == _T('(')) && !m_Str.Contains(ParserConsts::dcolon)) && m_pTokens)
++                else if ((peek==ParserConsts::semicolon || ((m_Options.useBuffer && peek.GetChar(0) == _T('(')) && !m_Str.Contains(ParserConsts::dcolon))) && m_pTokens)
+                 {
+ //                    Log("m_Str='"+m_Str+"'");
+ //                    Log("token='"+token+"'");
+Index: plugins/codecompletion/parser/tokenizer.cpp
+===================================================================
+--- plugins/codecompletion/parser/tokenizer.cpp	(revision 5414)
++++ plugins/codecompletion/parser/tokenizer.cpp	(working copy)
+@@ -399,7 +399,7 @@
+             (!m_IsOperator && CurrentChar() == '=') ||
+             (!m_IsOperator && CurrentChar() == '[') ||
+             CurrentChar() == '?' ||
+-            CurrentChar() == '/' && (NextChar() == '/' || NextChar() == '*') )
++            (CurrentChar() == '/' && (NextChar() == '/' || NextChar() == '*') ) )
+     {
+         bool skipPreprocessor = false; // used for #include
+         while (m_Buffer.Mid(m_TokenIndex, 2) == _T("//") ||
+Index: plugins/debuggergdb/gdb_driver.cpp
+===================================================================
+--- plugins/debuggergdb/gdb_driver.cpp	(revision 5414)
++++ plugins/debuggergdb/gdb_driver.cpp	(working copy)
+@@ -783,8 +783,8 @@
+         }
+     }
+ 
+-    if (!want_debug_events &&
+-        output.StartsWith(_T("gdb: ")) ||
++    if ((!want_debug_events &&
++        output.StartsWith(_T("gdb: "))) ||
+         output.StartsWith(_T("Warning: ")) ||
+         output.StartsWith(_T("ContinueDebugEvent ")))
+     {
+Index: sdk/scripting/sqstdlib/sqstdrex.cpp
+===================================================================
+--- sdk/scripting/sqstdlib/sqstdrex.cpp	(revision 5414)
++++ sdk/scripting/sqstdlib/sqstdrex.cpp	(working copy)
+@@ -483,7 +483,7 @@
+ 			return cur;
+ 	}				 
+ 	case OP_WB:
+-		if(str == exp->_bol && !isspace(*str)
++		if((str == exp->_bol && !isspace(*str))
+ 		 || (str == exp->_eol && !isspace(*(str-1)))
+ 		 || (!isspace(*str) && isspace(*(str+1)))
+ 		 || (isspace(*str) && !isspace(*(str+1))) ) {
+Index: sdk/scripting/squirrel/sqapi.cpp
+===================================================================
+--- sdk/scripting/squirrel/sqapi.cpp	(revision 5414)
++++ sdk/scripting/squirrel/sqapi.cpp	(working copy)
+@@ -761,8 +761,9 @@
+ 	if(_table(*self)->Get(key,t)) {
+ 		_table(*self)->Remove(key);
+ 	}
+-	if(pushval != 0)
++	if(pushval != 0) {
+ 		if(pushval)	v->GetUp(-1) = t;
++	}
+ 	else
+ 		v->Pop(1);
+ 	return SQ_OK;
+Index: sdk/scripting/squirrel/sqcompiler.cpp
+===================================================================
+--- sdk/scripting/squirrel/sqcompiler.cpp	(revision 5414)
++++ sdk/scripting/squirrel/sqcompiler.cpp	(working copy)
+@@ -778,7 +778,7 @@
+ 			SQInteger val = _fs->PopTarget();
+ 			SQInteger key = _fs->PopTarget();
+ 			SQInteger attrs = hasattrs ? _fs->PopTarget():-1;
+-			assert(hasattrs && attrs == key-1 || !hasattrs);
++			assert((hasattrs && attrs == key-1) || !hasattrs);
+ 			unsigned char flags = (hasattrs?NEW_SLOT_ATTRIBUTES_FLAG:0)|(isstatic?NEW_SLOT_STATIC_FLAG:0);
+ 			SQInteger table = _fs->TopTarget(); //<<BECAUSE OF THIS NO COMMON EMIT FUNC IS POSSIBLE
+ 			_fs->AddInstruction(_OP_NEWSLOTA, flags, table, key, val);
+Index: sdk/scripting/squirrel/sqvm.cpp
+===================================================================
+--- sdk/scripting/squirrel/sqvm.cpp	(revision 5414)
++++ sdk/scripting/squirrel/sqvm.cpp	(working copy)
+@@ -643,7 +643,7 @@
+ 
+ bool SQVM::IsFalse(SQObjectPtr &o)
+ {
+-	if((type(o) & SQOBJECT_CANBEFALSE) && ( (type(o) == OT_FLOAT) && (_float(o) == SQFloat(0.0)) )
++	if(((type(o) & SQOBJECT_CANBEFALSE) && ( (type(o) == OT_FLOAT) && (_float(o) == SQFloat(0.0)) ))
+ 		|| (_integer(o) == 0) ) { //OT_NULL|OT_INTEGER|OT_BOOL
+ 		return true;
+ 	}
+Index: sdk/wxscintilla/src/scintilla/src/Document.cxx
+===================================================================
+--- sdk/wxscintilla/src/scintilla/src/Document.cxx	(revision 5414)
++++ sdk/wxscintilla/src/scintilla/src/Document.cxx	(working copy)
+@@ -1079,8 +1079,8 @@
+ 					}
+ 					if (found) {
+ 						if ((!word && !wordStart) ||
+-						        word && IsWordAt(pos, pos + lengthFind) ||
+-						        wordStart && IsWordStartAt(pos))
++						        (word && IsWordAt(pos, pos + lengthFind)) ||
++						        (wordStart && IsWordStartAt(pos)))
+ 							return pos;
+ 					}
+ 				}
+@@ -1095,8 +1095,8 @@
+ 					}
+ 					if (found) {
+ 						if ((!word && !wordStart) ||
+-						        word && IsWordAt(pos, pos + lengthFind) ||
+-						        wordStart && IsWordStartAt(pos))
++						        (word && IsWordAt(pos, pos + lengthFind)) ||
++						        (wordStart && IsWordStartAt(pos)))
+ 							return pos;
+ 					}
+ 				}
+Index: sdk/wxscintilla/src/scintilla/src/LexFortran.cxx
+===================================================================
+--- sdk/wxscintilla/src/scintilla/src/LexFortran.cxx	(revision 5414)
++++ sdk/wxscintilla/src/scintilla/src/LexFortran.cxx	(working copy)
+@@ -83,7 +83,7 @@
+ 		// Handle the fix format generically
+ 		int toLineStart = sc.currentPos - posLineStart;
+ 		if (isFixFormat && (toLineStart < 6 || toLineStart > 72)) {
+-			if (toLineStart == 0 && (tolower(sc.ch) == 'c' || sc.ch == '*') || sc.ch == '!') {
++			if ((toLineStart == 0 && (tolower(sc.ch) == 'c' || sc.ch == '*')) || sc.ch == '!') {
+                 if (sc.MatchIgnoreCase("cdec$") || sc.MatchIgnoreCase("*dec$") || sc.MatchIgnoreCase("!dec$") ||
+                     sc.MatchIgnoreCase("cdir$") || sc.MatchIgnoreCase("*dir$") || sc.MatchIgnoreCase("!dir$") ||
+                     sc.MatchIgnoreCase("cms$")  || sc.MatchIgnoreCase("*ms$")  || sc.MatchIgnoreCase("!ms$")  ||
+@@ -252,7 +252,7 @@
+ 				lev = 0;
+ 			else
+ 				lev = 1;
+-	} else if (strcmp(s, "end") == 0 && chNextNonBlank != '='
++	} else if ((strcmp(s, "end") == 0 && chNextNonBlank != '=')
+ 		|| strcmp(s, "endassociate") == 0 || strcmp(s, "endblock") == 0
+ 		|| strcmp(s, "endblockdata") == 0 || strcmp(s, "endselect") == 0
+ 		|| strcmp(s, "enddo") == 0 || strcmp(s, "endenum") ==0
+Index: sdk/wxscintilla/src/scintilla/src/LexOthers.cxx
+===================================================================
+--- sdk/wxscintilla/src/scintilla/src/LexOthers.cxx	(revision 5414)
++++ sdk/wxscintilla/src/scintilla/src/LexOthers.cxx	(working copy)
+@@ -770,7 +770,7 @@
+ 		lev = SC_FOLDLEVELBASE;
+ 	}
+ 	int flagsNext = styler.LevelAt(lineCurrent);
+-	styler.SetLevel(lineCurrent, lev | flagsNext & ~SC_FOLDLEVELNUMBERMASK);
++	styler.SetLevel(lineCurrent, lev | (flagsNext & ~SC_FOLDLEVELNUMBERMASK));
+ }
+ 
+ static void ColouriseMakeLine(
+Index: sdk/wxscintilla/src/scintilla/src/LexPerl.cxx
+===================================================================
+--- sdk/wxscintilla/src/scintilla/src/LexPerl.cxx	(revision 5414)
++++ sdk/wxscintilla/src/scintilla/src/LexPerl.cxx	(working copy)
+@@ -569,7 +569,7 @@
+ 						sc.Forward(ws_skip + 1);
+ 						HereDoc.Quote = delim_ch;
+ 						HereDoc.Quoted = true;
+-					} else if (ws_skip == 0 && setNonHereDoc.Contains(sc.chNext)
++					} else if ((ws_skip == 0 && setNonHereDoc.Contains(sc.chNext))
+ 							   || ws_skip > 0) {
+ 						// left shift << or <<= operator cases
+ 						// restore position if operator
+Index: sdk/wxscintilla/src/scintilla/src/LexProgress.cxx
+===================================================================
+--- sdk/wxscintilla/src/scintilla/src/LexProgress.cxx	(revision 5414)
++++ sdk/wxscintilla/src/scintilla/src/LexProgress.cxx	(working copy)
+@@ -100,7 +100,7 @@
+ 				if (!IsAWordChar(sc.ch) && sc.ch != '-') {
+ 					char s[1000];
+ 					sc.GetCurrentLowered(s, sizeof(s));
+-					if (((sc.state & 0x10) == 0) && keywords2.InList(s) || keywords3.InList(s)) {
++					if ((((sc.state & 0x10) == 0) && keywords2.InList(s)) || keywords3.InList(s)) {
+ 						sc.ChangeState(SCE_4GL_BLOCK | ResetSentenceStart);
+ 					}
+ 					else if (keywords1.InList(s)) {
+Index: sdk/wxscintilla/src/scintilla/src/LexPython.cxx
+===================================================================
+--- sdk/wxscintilla/src/scintilla/src/LexPython.cxx	(revision 5414)
++++ sdk/wxscintilla/src/scintilla/src/LexPython.cxx	(working copy)
+@@ -276,7 +276,7 @@
+ 					hexadecimal = false;
+ 				}
+ 				sc.SetState(SCE_P_NUMBER);
+-			} else if (isascii(sc.ch) && isoperator(static_cast<char>(sc.ch)) || sc.ch == '`') {
++			} else if ((isascii(sc.ch) && isoperator(static_cast<char>(sc.ch))) || sc.ch == '`') {
+ 				sc.SetState(SCE_P_OPERATOR);
+ 			} else if (sc.ch == '#') {
+ 				sc.SetState(sc.chNext == '#' ? SCE_P_COMMENTBLOCK : SCE_P_COMMENTLINE);
+Index: sdk/wxscintilla/src/scintilla/src/LexRuby.cxx
+===================================================================
+--- sdk/wxscintilla/src/scintilla/src/LexRuby.cxx	(revision 5414)
++++ sdk/wxscintilla/src/scintilla/src/LexRuby.cxx	(working copy)
+@@ -784,13 +784,13 @@
+ 				state = SCE_RB_COMMENTLINE;
+ 			} else if (ch == '=') {
+ 				// =begin indicates the start of a comment (doc) block
+-                if (i == 0 || isEOLChar(chPrev)
++                if (i == 0 || (isEOLChar(chPrev)
+                     && chNext == 'b'
+                     && styler.SafeGetCharAt(i + 2) == 'e'
+                     && styler.SafeGetCharAt(i + 3) == 'g'
+                     && styler.SafeGetCharAt(i + 4) == 'i'
+                     && styler.SafeGetCharAt(i + 5) == 'n'
+-                    && !isSafeWordcharOrHigh(styler.SafeGetCharAt(i + 6))) {
++                    && !isSafeWordcharOrHigh(styler.SafeGetCharAt(i + 6)))) {
+                     styler.ColourTo(i - 1, state);
+                     state = SCE_RB_POD;
+ 				} else {
+Index: sdk/wxscintilla/src/scintilla/src/LexTADS3.cxx
+===================================================================
+--- sdk/wxscintilla/src/scintilla/src/LexTADS3.cxx	(revision 5414)
++++ sdk/wxscintilla/src/scintilla/src/LexTADS3.cxx	(working copy)
+@@ -679,7 +679,7 @@
+ static inline bool IsStringTransition(int s1, int s2) {
+         return s1 != s2
+                 && (s1 == SCE_T3_S_STRING || s1 == SCE_T3_X_STRING
+-                        || s1 == SCE_T3_D_STRING && s2 != SCE_T3_X_DEFAULT)
++                        || (s1 == SCE_T3_D_STRING && s2 != SCE_T3_X_DEFAULT))
+                 && s2 != SCE_T3_LIB_DIRECTIVE
+                 && s2 != SCE_T3_MSG_PARAM
+                 && s2 != SCE_T3_HTML_TAG
+Index: sdk/wxscintilla/src/scintilla/src/LexVerilog.cxx
+===================================================================
+--- sdk/wxscintilla/src/scintilla/src/LexVerilog.cxx	(revision 5414)
++++ sdk/wxscintilla/src/scintilla/src/LexVerilog.cxx	(working copy)
+@@ -248,7 +248,7 @@
+                             styler.Match(j, "generate") ||
+                             styler.Match(j, "specify") ||
+                             styler.Match(j, "primitive") ||
+-                            styler.Match(j, "module") && foldAtModule ||
++                            (styler.Match(j, "module") && foldAtModule) ||
+                             styler.Match(j, "begin")) {
+                                 levelNext++;
+                         } else if (styler.Match(j, "endcase") ||
+@@ -259,8 +259,8 @@
+                                    styler.Match(j, "endtable") ||
+                                    styler.Match(j, "endspecify") ||
+                                    styler.Match(j, "endprimitive") ||
+-                                   styler.Match(j, "endmodule") && foldAtModule ||
+-                                   styler.Match(j, "end") && !IsAWordChar(styler.SafeGetCharAt(j+3))) {
++                                   (styler.Match(j, "endmodule") && foldAtModule) ||
++                                   (styler.Match(j, "end") && !IsAWordChar(styler.SafeGetCharAt(j+3)))) {
+                                 levelNext--;
+                         }
+ 		}
+Index: sdk/wxscintilla/src/scintilla/src/PositionCache.cxx
+===================================================================
+--- sdk/wxscintilla/src/scintilla/src/PositionCache.cxx	(revision 5414)
++++ sdk/wxscintilla/src/scintilla/src/PositionCache.cxx	(working copy)
+@@ -126,7 +126,7 @@
+ }
+ 
+ bool LineLayout::InLine(int offset, int line) const {
+-	return ((offset >= LineStart(line)) && (offset < LineStart(line + 1)) ||
++	return (((offset >= LineStart(line)) && (offset < LineStart(line + 1))) ||
+ 		((offset == numCharsInLine) && (line == (lines-1))));
+ }
+ 
+Index: sdk/wxscintilla/src/scintilla/src/RESearch.cxx
+===================================================================
+--- sdk/wxscintilla/src/scintilla/src/RESearch.cxx	(revision 5414)
++++ sdk/wxscintilla/src/scintilla/src/RESearch.cxx	(working copy)
+@@ -875,7 +875,7 @@
+ 			eopat[(int)(*ap++)] = lp;
+ 			break;
+  		case BOW:
+-			if (lp!=bol && iswordc(ci.CharAt(lp-1)) || !iswordc(ci.CharAt(lp)))
++			if ((lp!=bol && iswordc(ci.CharAt(lp-1))) || !iswordc(ci.CharAt(lp)))
+ 				return NOTFOUND;
+ 			break;
+ 		case EOW:
+Index: sdk/wxscintilla/src/scintilla/src/UniConversion.cxx
+===================================================================
+--- sdk/wxscintilla/src/scintilla/src/UniConversion.cxx	(revision 5414)
++++ sdk/wxscintilla/src/scintilla/src/UniConversion.cxx	(working copy)
+@@ -48,7 +48,7 @@
+ 			i++;
+ 			unsigned int xch = 0x10000 + ((uch & 0x3ff) << 10) + (uptr[i] & 0x3ff);
+ 			putf[k++] = static_cast<char>(0xF0 | (xch >> 18));
+-			putf[k++] = static_cast<char>(0x80 | (xch >> 12) & 0x3f);
++			putf[k++] = static_cast<char>(0x80 | ((xch >> 12) & 0x3f));
+ 			putf[k++] = static_cast<char>(0x80 | ((xch >> 6) & 0x3f));
+ 			putf[k++] = static_cast<char>(0x80 | (xch & 0x3f));
+ 		} else {
+Index: sdk/wxscintilla/src/ScintillaWX.cpp
+===================================================================
+--- sdk/wxscintilla/src/ScintillaWX.cpp	(revision 5414)
++++ sdk/wxscintilla/src/ScintillaWX.cpp	(working copy)
+@@ -672,7 +672,7 @@
+     return false;
+ #else
+     if (( (0 != vs.caretWidth) && (sysCaretWidth != vs.caretWidth) )
+-        || (0 != vs.lineHeight) && (sysCaretHeight != vs.lineHeight)) {
++        || ((0 != vs.lineHeight) && (sysCaretHeight != vs.lineHeight))) {
+         return true;
+     }
+ #endif

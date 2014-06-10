@@ -1,0 +1,157 @@
+Index: src/plugins/contrib/DoxyBlocks/DoxyBlocks.h
+===================================================================
+--- src/plugins/contrib/DoxyBlocks/DoxyBlocks.h	(revision 8599)
++++ src/plugins/contrib/DoxyBlocks/DoxyBlocks.h	(working copy)
+@@ -205,6 +205,8 @@
+         void GetBlockCommentStrings(int iBlockComment, wxString &sStartComment, wxString &sMidComment, wxString &sEndComment);
+         void StartComment(cbStyledTextCtrl *control, int &iPos, int iBlockComment, wxString sStartComment, wxString sMidComment, wxString sTagBrief, wxString sIndent);
+         void CommentFunction(cbStyledTextCtrl *control, int &iPos, wxString sMidComment, wxString sTagParam, wxString sTagReturn, wxString sIndent, wxString sParams, wxString sReturn,  wxString sFunction);
++        void CommentFortran(cbStyledTextCtrl *control, int iLine, int &iPos, wxString sMidComment, wxString sTagParam, wxString sTagReturn, wxString sIndent);
++        bool IsLanguageFortran(cbEditor *cbEd);
+         void AddCommentLine(cbStyledTextCtrl *control, int &iPos, wxString sText);
+         wxString ProcessReturnString(wxString sReturn, wxString sFunction);
+         // Autoversioning.
+Index: src/plugins/contrib/DoxyBlocks/AutoDoc.cpp
+===================================================================
+--- src/plugins/contrib/DoxyBlocks/AutoDoc.cpp	(revision 8599)
++++ src/plugins/contrib/DoxyBlocks/AutoDoc.cpp	(working copy)
+@@ -78,10 +78,18 @@
+     // Make the changes undoable in one step.
+     control->BeginUndoAction();
+ 
+-    if(reClass.Matches(sLine)){                                                    // Class MyClass : public ParentClass
++    if(IsLanguageFortran(cbEd)){                                      // Fortran
++        sStartComment = wxT("!>");
++        sMidComment = wxT("!!");
++        sEndComment = wxT("!!");
+         StartComment(control, iPos, iBlockComment, sStartComment, sMidComment, sTagBrief, sIndent);
++        CommentFortran(control, line+1, iPos, sMidComment, sTagParam, sTagReturn, sIndent);
+         AddCommentLine(control, iPos, sIndent + sEndComment);
+     }
++    else if(reClass.Matches(sLine)){                                                    // Class MyClass : public ParentClass
++        StartComment(control, iPos, iBlockComment, sStartComment, sMidComment, sTagBrief, sIndent);
++        AddCommentLine(control, iPos, sIndent + sEndComment);
++    }
+     else if(reStruct.Matches(sLine)){                                            // struct
+         StartComment(control, iPos, iBlockComment, sStartComment, sMidComment, sTagBrief, sIndent);
+         AddCommentLine(control, iPos, sIndent + sEndComment);
+@@ -176,13 +184,20 @@
+             break;
+     }
+ 
++    int iMax = 5;
++    if (IsLanguageFortran(cbEd))
++    {
++        sComment = wxT("!< ");
++        iMax = 3;
++    }
++
+     // Make the changes undoable in one step.
+     control->BeginUndoAction();
+ 
+     control->InsertText(iPos, sComment);
+     // Position the cursor at the text entry position.
+     int i = 0;
+-    while(i < 5){
++    while(i < iMax){
+         control->CharRight();
+         i++;
+     }
+@@ -439,3 +454,84 @@
+ 
+     return sReturn;
+ }
++
++/*! \brief    Add comment lines for a Fortran procedure's parameters.
++ *
++ * \param     control        cbStyledTextCtrl*    The editor's wxStyledTextControl.
++ * \param     iLine          int                  The line on which was clicked.
++ * \param     iPos           int&                 The current editor position.
++ * \param     sMidComment    wxString             The comment tag that starts each line in a block.
++ * \param     sTagParam      wxString             The doxygen tag for a parameter description.
++ * \param     sTagReturn     wxString             The doxygen tag for a return value description.
++ * \param     sIndent        wxString             A string of spaces matching the function's indent level.
++ * \return    void
++ *
++ */
++void DoxyBlocks::CommentFortran(cbStyledTextCtrl *control, int iLine, int &iPos, wxString sMidComment, wxString sTagParam, wxString sTagReturn, wxString sIndent)
++{
++    wxString sSpace(wxT(" "));
++    wxString sLine = control->GetLine(iLine);
++    sLine = sLine.BeforeFirst('!'); //cut comments
++    wxString sLineLw = sSpace+sLine.Lower().Trim(false);
++
++    if (sLineLw.Find(_T(" function ")) != wxNOT_FOUND ||
++        sLineLw.Find(_T(" subroutine ")) != wxNOT_FOUND)
++    {
++        while (sLine.Trim().EndsWith(_T("&")))
++        {
++            iLine++;
++            wxString contLine = control->GetLine(iLine);
++            if (contLine.IsEmpty())
++                break;
++            sLine.Append(contLine.BeforeFirst('!').Trim().Trim(false));
++        }
++        sLine.Replace(_T("&&"),wxEmptyString);
++
++        bool isFunction = false;
++        int idxW = sLineLw.Find(_T(" function "));
++        if (idxW == wxNOT_FOUND)
++            idxW = sLineLw.Find(_T(" subroutine "));
++        else
++            isFunction = true;
++        if (idxW == wxNOT_FOUND)
++            return; // bug in this function
++        wxString sLineShort = sLine.Mid(idxW);
++        int idxParStart = sLineShort.Find(_T("("));
++        int idxParEnd = sLineShort.Find(_T(")"));
++        if (idxParStart == wxNOT_FOUND || idxParEnd == wxNOT_FOUND)
++            return;
++        wxString sParams = sLineShort.Mid(idxParStart+1, idxParEnd-idxParStart-1);
++
++        AddCommentLine(control, iPos, sIndent + sMidComment);
++
++        wxStringTokenizer tokenizerParam(sParams, wxT(" \t\r\n&,"),wxTOKEN_STRTOK);
++        while(tokenizerParam.HasMoreTokens()){
++            wxString sParam = tokenizerParam.GetNextToken();
++            AddCommentLine(control, iPos, sIndent + sMidComment + sTagParam + sSpace + sParam);
++        }
++
++        if (isFunction)
++            AddCommentLine(control, iPos, sIndent + sMidComment + sTagReturn + sSpace);
++    }
++}
++
++/*! \brief    Determine if current editor's language is Fortran.
++ *
++ * \param     cbEd        cbEditor*         The active editor.
++ * \return    bool        True if language is Fortran, else returns false.
++ *
++ */
++bool DoxyBlocks::IsLanguageFortran(cbEditor *cbEd)
++{
++    if (!cbEd)
++        return false;
++    bool isFortran = false;
++    EditorColourSet* theme = cbEd->GetColourSet();
++    if (theme)
++    {
++        wxString strLang = theme->GetLanguageName(cbEd->GetLanguage());
++        if (strLang==_T("Fortran") || strLang==_T("Fortran77"))
++            isFortran = true;
++    }
++    return isFortran;
++}
+Index: src/plugins/contrib/DoxyBlocks/DoxyBlocks-unix.cbp
+===================================================================
+--- src/plugins/contrib/DoxyBlocks/DoxyBlocks-unix.cbp	(revision 8599)
++++ src/plugins/contrib/DoxyBlocks/DoxyBlocks-unix.cbp	(working copy)
+@@ -86,7 +86,7 @@
+ 			</AutoVersioning>
+ 			<DoxyBlocks>
+ 				<comment_style block="3" line="1" />
+-				<doxyfile_project project_number="1.7.655" use_auto_version="1" />
++				<doxyfile_project project_number="1.7.668" use_auto_version="1" />
+ 				<doxyfile_build extract_private="1" extract_static="1" />
+ 				<doxyfile_warnings warn_if_undocumented="1" />
+ 				<doxyfile_output html_help="1" />

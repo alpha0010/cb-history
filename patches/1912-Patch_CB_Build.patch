@@ -1,0 +1,149 @@
+Index: src/sdk/propgrid/Makefile.am
+===================================================================
+--- src/sdk/propgrid/Makefile.am	(revision 3747)
++++ src/sdk/propgrid/Makefile.am	(working copy)
+@@ -1,15 +1,18 @@
+ INCLUDES = $(WX_CXXFLAGS) \
+ 		-I$(top_srcdir)/src/include/propgrid/include
+ 
++AM_CPPFLAGS = -DWXMAKINGLIB_PROPGRID -DwxPG_USE_WXMODULE=0 -DwxPG_COMPATIBILITY_1_0_0
++
+ noinst_LTLIBRARIES = libpropgrid.la
+ 
+ libpropgrid_la_LDFLAGS = -module -version-info 0:1:0 -shared -no-undefined -avoid-version
+ 
+ libpropgrid_la_SOURCES = ./src/propgrid/advprops.cpp \
+-			./src/propgrid/custctrl.cpp \
++			./src/propgrid/extras.cpp \
+ 			./src/propgrid/manager.cpp \
+ 			./src/propgrid/odcombo.cpp \
+-			./src/propgrid/propgrid.cpp
++			./src/propgrid/propgrid.cpp \
++ 			./src/propgrid/props.cpp
+ 
+ EXTRA_DIST = readme-propgrid.txt \
+ 			CHANGES-propgrid.txt
+Index: src/plugins/contrib/wxSmith/wxSmith-unix.cbp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxSmith-unix.cbp	(revision 3747)
++++ src/plugins/contrib/wxSmith/wxSmith-unix.cbp	(working copy)
+@@ -29,6 +29,8 @@
+ 			<Add option="-fPIC" />
+ 			<Add option="-DcbDEBUG" />
+ 			<Add option="-DCB_PRECOMP" />
++			<Add option="-DWXMAKINGLIB_PROPGRID" />
++			<Add option="-DwxPG_COMPATIBILITY_1_0_0" />
+ 			<Add directory="../../../include" />
+ 			<Add directory="../../../include/wxscintilla/include" />
+ 			<Add directory="../../../include/propgrid/include" />
+Index: src/plugins/contrib/wxSmith/wxSmith.cbp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxSmith.cbp	(revision 3747)
++++ src/plugins/contrib/wxSmith/wxSmith.cbp	(working copy)
+@@ -40,6 +40,8 @@
+ 			<Add option="-DWX_PRECOMP" />
+ 			<Add option="-DBUILDING_PLUGIN" />
+ 			<Add option="-DwxUSE_UNICODE" />
++			<Add option="-DWXMAKINGLIB_PROPGRID" />
++			<Add option="-DwxPG_COMPATIBILITY_1_0_0" />
+ 			<Add directory="$(#WX.lib)\gcc_dll$(WX_CFG)\msw$(WX_SUFFIX)" />
+ 			<Add directory="$(#CB.include)" />
+ 			<Add directory="$(#CB.include)\wxscintilla\include" />
+Index: src/plugins/contrib/wxSmith/Makefile.am
+===================================================================
+--- src/plugins/contrib/wxSmith/Makefile.am	(revision 3747)
++++ src/plugins/contrib/wxSmith/Makefile.am	(working copy)
+@@ -1,5 +1,7 @@
+ SUBDIRS = properties wxwidgets
+ 
++AM_CPPFLAGS = -DWXMAKINGLIB_PROPGRID -DwxPG_COMPATIBILITY_1_0_0
++
+ INCLUDES = $(WX_CXXFLAGS) \
+ 		-I$(top_srcdir)/src/include \
+ 		-I$(top_srcdir)/src/include/wxFlatNotebook/include \
+Index: src/CodeBlocks-unix.cbp
+===================================================================
+--- src/CodeBlocks-unix.cbp	(revision 3747)
++++ src/CodeBlocks-unix.cbp	(working copy)
+@@ -120,6 +120,9 @@
+ 				<Option projectResourceIncludeDirsRelation="2" />
+ 				<Compiler>
+ 					<Add directory="include/propgrid/include" />
++					<Add option="-DWXMAKINGLIB_PROPGRID" />
++					<Add option="-DwxPG_USE_WXMODULE=0" />
++					<Add option="-DwxPG_COMPATIBILITY_1_0_0" />
+ 				</Compiler>
+ 			</Target>
+ 			<Target title="sdk">
+@@ -679,7 +682,7 @@
+ 		<Unit filename="include/propgrid/include/wx/propgrid/advprops.h">
+ 			<Option target="sdk" />
+ 		</Unit>
+-		<Unit filename="include/propgrid/include/wx/propgrid/custctrl.h">
++		<Unit filename="include/propgrid/include/wx/propgrid/extras.h">
+ 			<Option target="sdk" />
+ 		</Unit>
+ 		<Unit filename="include/propgrid/include/wx/propgrid/manager.h">
+@@ -2046,7 +2049,7 @@
+ 		<Unit filename="sdk/propgrid/src/propgrid/advprops.cpp">
+ 			<Option target="wxPropertyGrid" />
+ 		</Unit>
+-		<Unit filename="sdk/propgrid/src/propgrid/custctrl.cpp">
++		<Unit filename="sdk/propgrid/src/propgrid/extras.cpp">
+ 			<Option target="wxPropertyGrid" />
+ 		</Unit>
+ 		<Unit filename="sdk/propgrid/src/propgrid/manager.cpp">
+@@ -2058,6 +2061,9 @@
+ 		<Unit filename="sdk/propgrid/src/propgrid/propgrid.cpp">
+ 			<Option target="wxPropertyGrid" />
+ 		</Unit>
++		<Unit filename="sdk/propgrid/src/propgrid/props.cpp">
++            <Option target="wxPropertyGrid" />
++		</Unit>
+ 		<Unit filename="sdk/replacedlg.cpp">
+ 			<Option target="sdk" />
+ 		</Unit>
+Index: src/CodeBlocks.cbp
+===================================================================
+--- src/CodeBlocks.cbp	(revision 3747)
++++ src/CodeBlocks.cbp	(working copy)
+@@ -115,6 +115,11 @@
+ 				<Option object_output=".objs\2.6" />
+ 				<Option type="2" />
+ 				<Option compiler="gcc" />
++				<Compiler>
++					<Add option="-DWXMAKINGLIB_PROPGRID" />
++					<Add option="-DwxPG_USE_WXMODULE=0" />
++					<Add option="-DwxPG_COMPATIBILITY_1_0_0" />
++				</Compiler>
+ 			</Target>
+ 			<Target title="wxFlatNotebook">
+ 				<Option output="sdk\wxFlatNotebook\libwxflatnotebook.a" prefix_auto="0" extension_auto="0" />
+@@ -765,7 +770,7 @@
+ 		<Unit filename="include\propgrid\include\wx\propgrid\advprops.h">
+ 			<Option target="wxPropertyGrid" />
+ 		</Unit>
+-		<Unit filename="include\propgrid\include\wx\propgrid\custctrl.h">
++		<Unit filename="include\propgrid\include\wx\propgrid\extras.h">
+ 			<Option target="wxPropertyGrid" />
+ 		</Unit>
+ 		<Unit filename="include\propgrid\include\wx\propgrid\manager.h">
+@@ -2052,7 +2057,7 @@
+ 		<Unit filename="sdk\propgrid\src\propgrid\advprops.cpp">
+ 			<Option target="wxPropertyGrid" />
+ 		</Unit>
+-		<Unit filename="sdk\propgrid\src\propgrid\custctrl.cpp">
++		<Unit filename="sdk\propgrid\src\propgrid\extras.cpp">
+ 			<Option target="wxPropertyGrid" />
+ 		</Unit>
+ 		<Unit filename="sdk\propgrid\src\propgrid\manager.cpp">
+@@ -2064,6 +2069,9 @@
+ 		<Unit filename="sdk\propgrid\src\propgrid\propgrid.cpp">
+ 			<Option target="wxPropertyGrid" />
+ 		</Unit>
++		<Unit filename="sdk\propgrid\src\propgrid\props.cpp">
++			<Option target="wxPropertyGrid" />
++		</Unit>
+ 		<Unit filename="sdk\replacedlg.cpp">
+ 			<Option target="sdk" />
+ 		</Unit>

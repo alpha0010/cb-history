@@ -1,0 +1,189 @@
+Index: src/sdk/manager.cpp
+===================================================================
+--- src/sdk/manager.cpp	(revision 2174)
++++ src/sdk/manager.cpp	(working copy)
+@@ -50,6 +50,11 @@
+ 
+ #include <wx/toolbar.h>
+ 
++int idEditUndo = XRCID("idEditUndo");
++int idEditRedo = XRCID("idEditRedo");
++int idEditCopy = XRCID("idEditCopy");
++int idEditCut = XRCID("idEditCut");
++int idEditPaste = XRCID("idEditPaste");
+ 
+ 
+ 
+@@ -281,7 +286,80 @@
+     return CfgMgrBldr::GetConfigManager(name_space);
+ }
+ 
++// Allow others to request to disable/enable items on the main toolbar      //pecan 2006/03/13
++void Manager::SetMainMenuRequest(bool Enable, int MenuItem )            //pecan 2006/03/13
++{
++    if (Enable)
++    {
++        if (MenuItem == idEditUndo)  ++MenuUndoSetRequests;
++        if (MenuItem == idEditRedo)  ++MenuRedoSetRequests;
++        if (MenuItem == idEditCopy)  ++MenuCopySetRequests;
++        if (MenuItem == idEditCut )  ++MenuCutSetRequests;
++        if (MenuItem == idEditPaste) ++MenuPasteSetRequests;
++    }
++    else
++    {
++        if (MenuItem == idEditUndo)  {if (MenuUndoSetRequests)  --MenuUndoSetRequests;  }
++        if (MenuItem == idEditRedo)  {if (MenuRedoSetRequests)  --MenuRedoSetRequests;  }
++        if (MenuItem == idEditCopy)  {if (MenuCopySetRequests)  --MenuCopySetRequests;  }
++        if (MenuItem == idEditCut )  {if (MenuCutSetRequests)   --MenuCutSetRequests;   }
++        if (MenuItem == idEditPaste) {if (MenuPasteSetRequests) --MenuPasteSetRequests; }
++    }
++}
++void Manager::SetMainToolbarRequest(bool Enable, int ToolbarItem )      //pecan 2006/03/13
++{
++    if (Enable)
++    {
++        if (ToolbarItem == idEditUndo)  ++ToolbarUndoSetRequests;
++        if (ToolbarItem == idEditRedo)  ++ToolbarRedoSetRequests;
++        if (ToolbarItem == idEditCopy)  ++ToolbarCopySetRequests;
++        if (ToolbarItem == idEditCut )  ++ToolbarCutSetRequests;
++        if (ToolbarItem == idEditPaste) ++ToolbarPasteSetRequests;
++    }
++    else
++    {
++        if (ToolbarItem == idEditUndo)  {if (ToolbarUndoSetRequests)  --ToolbarUndoSetRequests;  }
++        if (ToolbarItem == idEditRedo)  {if (ToolbarRedoSetRequests)  --ToolbarRedoSetRequests;  }
++        if (ToolbarItem == idEditCopy)  {if (ToolbarCopySetRequests)  --ToolbarCopySetRequests;  }
++        if (ToolbarItem == idEditCut )  {if (ToolbarCutSetRequests)   --ToolbarCutSetRequests;   }
++        if (ToolbarItem == idEditPaste) {if (ToolbarPasteSetRequests) --ToolbarPasteSetRequests; }
++    }
++}
+ 
++// Return count of disable/enable request for the main toolbar              //pecan 2006/03/13
++int  Manager::GetMainMenuSetRequests(int MenuItem)                          //pecan 2006/03/13
++{
++    if (MenuItem == idEditUndo)  return MenuUndoSetRequests;
++    if (MenuItem == idEditRedo)  return MenuRedoSetRequests;
++    if (MenuItem == idEditCopy)  return MenuCopySetRequests;
++    if (MenuItem == idEditCut )  return MenuCutSetRequests;
++    if (MenuItem == idEditPaste) return MenuPasteSetRequests;
++    return 0;
++}
++int  Manager::GetMainToolbarSetRequests(int ToolbarItem)                    //pecan 2006/03/13
++{
++    if (ToolbarItem == idEditUndo)  return ToolbarUndoSetRequests;
++    if (ToolbarItem == idEditRedo)  return ToolbarRedoSetRequests;
++    if (ToolbarItem == idEditCopy)  return ToolbarCopySetRequests;
++    if (ToolbarItem == idEditCut )  return ToolbarCutSetRequests;
++    if (ToolbarItem == idEditPaste) return ToolbarPasteSetRequests;
++    return 0;
++}
++
+ bool Manager::appShuttingDown = false;
+ bool Manager::blockYields = false;
+ bool Manager::isBatch = false;
++
++// Reference counts of requests to set Menu/Tool items
++// from plugins and other windows
++int  Manager::MenuUndoSetRequests     = 0;
++int  Manager::MenuRedoSetRequests     = 0;
++int  Manager::MenuCutSetRequests      = 0;
++int  Manager::MenuCopySetRequests     = 0;
++int  Manager::MenuPasteSetRequests    = 0;
++
++int  Manager::ToolbarUndoSetRequests  = 0;
++int  Manager::ToolbarRedoSetRequests  = 0;
++int  Manager::ToolbarCutSetRequests   = 0;
++int  Manager::ToolbarCopySetRequests  = 0;
++int  Manager::ToolbarPasteSetRequests = 0;
+Index: src/sdk/manager.h
+===================================================================
+--- src/sdk/manager.h	(revision 2174)
++++ src/sdk/manager.h	(working copy)
+@@ -39,7 +39,19 @@
+     static bool appShuttingDown;
+     static bool blockYields;
+     static bool isBatch;
++    static int  Manager::MenuUndoSetRequests;                  //pecan 2006/03/13
++    static int  Manager::MenuRedoSetRequests;
++    static int  Manager::MenuCutSetRequests;
++    static int  Manager::MenuCopySetRequests;
++    static int  Manager::MenuPasteSetRequests;
+ 
++    static int  Manager::ToolbarUndoSetRequests;
++    static int  Manager::ToolbarRedoSetRequests;
++    static int  Manager::ToolbarCutSetRequests;
++    static int  Manager::ToolbarCopySetRequests;
++    static int  Manager::ToolbarPasteSetRequests;
++
++
+     Manager();
+     ~Manager();
+ 
+@@ -115,6 +127,13 @@
+ 
+     static void AddonToolBar(wxToolBar* toolBar,wxString resid);
+     static bool isToolBar16x16(wxToolBar* toolBar);
++
++    // Requests to disable/enable items on the main toolbar         //pecan 2006/03/13
++    static void SetMainMenuRequest(bool EnableDisable, int MenuItem );
++    static void SetMainToolbarRequest(bool EnableDisable, int MenuItem );
++    static int  GetMainMenuSetRequests(int MenuItem);
++    static int  GetMainToolbarSetRequests(int MenuItem);
++
+ };
+ 
+ template <class MgrT> class Mgr
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(revision 2174)
++++ src/src/main.cpp	(working copy)
+@@ -643,7 +643,7 @@
+ 	Manager::Get()->GetEditorManager()->CreateMenu(mbar);
+ 	Manager::Get()->GetMessageManager()->CreateMenu(mbar);
+ 
+-	// ask all plugins to rebuild their menus
++	// ask all plugins to ref their menus
+ 	PluginElementsArray plugins = Manager::Get()->GetPluginManager()->GetPlugins();
+ 	for (unsigned int i = 0; i < plugins.GetCount(); ++i)
+ 	{
+@@ -2639,6 +2639,7 @@
+     }
+     // Dont block other routines from using copy/paste menu                 //pecan 2006/3/3
+     wxWindow* pFocused = wxWindow::FindFocus();                             //pecan 2006/3/3
++    Manager* pMgr = Manager::Get();
+     if (pFocused && ed && (pFocused == ed->GetControl()) )                  //pecan 2006/3/3
+     {
+         mbar->Enable(idEditUndo, eb && canUndo);
+@@ -2647,6 +2648,14 @@
+         mbar->Enable(idEditCopy, eb && hasSel);
+         mbar->Enable(idEditPaste, eb && canPaste);
+     }                                                                       //pecan 2006/3/3
++    else
++    {
++        mbar->Enable(idEditUndo,  pMgr->GetMainMenuSetRequests(idEditUndo));
++        mbar->Enable(idEditRedo,  pMgr->GetMainMenuSetRequests(idEditRedo));
++        mbar->Enable(idEditCut,   pMgr->GetMainMenuSetRequests(idEditCut));
++        mbar->Enable(idEditCopy,  pMgr->GetMainMenuSetRequests(idEditCopy));
++        mbar->Enable(idEditPaste, pMgr->GetMainMenuSetRequests(idEditPaste));
++    }
+     mbar->Enable(idEditSwapHeaderSource, ed);
+     mbar->Enable(idEditGotoMatchingBrace, ed);
+     mbar->Enable(idEditHighlightMode, ed);
+@@ -2699,6 +2708,17 @@
+             m_pToolbar->EnableTool(idEditPaste, eb && canPaste);
+         }
+     }                                                                       //pecan 2006/03/3
++    else
++    {
++        if (m_pToolbar)
++        {
++            m_pToolbar->EnableTool(idEditUndo,  pMgr->GetMainToolbarSetRequests(idEditUndo));
++            m_pToolbar->EnableTool(idEditRedo,  pMgr->GetMainToolbarSetRequests(idEditRedo));
++            m_pToolbar->EnableTool(idEditCut,   pMgr->GetMainToolbarSetRequests(idEditCut));
++            m_pToolbar->EnableTool(idEditCopy,  pMgr->GetMainToolbarSetRequests(idEditCopy));
++            m_pToolbar->EnableTool(idEditPaste, pMgr->GetMainToolbarSetRequests(idEditPaste));
++        }
++    }
+ 
+ 	event.Skip();
+ }

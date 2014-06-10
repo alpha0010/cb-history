@@ -1,0 +1,76 @@
+Index: src/plugins/compilergcc/compilergcc.h
+===================================================================
+--- src/plugins/compilergcc/compilergcc.h	(revision 3652)
++++ src/plugins/compilergcc/compilergcc.h	(working copy)
+@@ -256,6 +256,7 @@
+ 		CompilerErrors m_Errors;
+ 		wxString m_LastTargetName;
+         bool m_NotifiedMaxErrors;
++        wxLongLong m_StartTimer;
+ 
+         // build state management
+ 		cbProject* m_pBuildingProject; // +
+Index: src/plugins/compilergcc/compileroptionsdlg.cpp
+===================================================================
+--- src/plugins/compilergcc/compileroptionsdlg.cpp	(revision 3652)
++++ src/plugins/compilergcc/compileroptionsdlg.cpp	(working copy)
+@@ -246,7 +246,7 @@
+         // global settings
+         SetLabel(_("Compiler Settings"));
+         sizer->Show(tree,false);
+-        sizer->Remove(tree);
++        sizer->Detach(tree);
+         nb->DeletePage(6); // remove "Make" page
+         nb->DeletePage(3); // remove "Commands" page
+     }
+Index: src/plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- src/plugins/compilergcc/compilergcc.cpp	(revision 3652)
++++ src/plugins/compilergcc/compilergcc.cpp	(working copy)
+@@ -728,7 +728,11 @@
+     wxString binPath = pathList.FindAbsoluteValidPath(gcc);
+     // it seems, under Win32, the above command doesn't search in paths with spaces...
+     // look directly for the file in question in masterPath
++#if wxCHECK_VERSION(2, 8, 0)
++    if (binPath.IsEmpty() || !(pathList.Index(wxPathOnly(binPath)) != wxNOT_FOUND))
++#else
+     if (binPath.IsEmpty() || !pathList.Member(wxPathOnly(binPath)))
++#endif
+     {
+         if (wxFileExists(masterPath + sep + _T("bin") + sep + gcc))
+             binPath = masterPath + sep + _T("bin");
+@@ -750,7 +754,11 @@
+         }
+     }
+ 
++#if wxCHECK_VERSION(2, 8, 0)
++    if (binPath.IsEmpty() || !(pathList.Index(wxPathOnly(binPath)) != wxNOT_FOUND))
++#else
+     if (binPath.IsEmpty() || !pathList.Member(wxPathOnly(binPath)))
++#endif
+     {
+         m_EnvironmentMsg << _("Can't find compiler executable in your search path for ") << compiler->GetName() << _T('\n');
+         Manager::Get()->GetMessageManager()->DebugLog(_T("Can't find compiler executable in your search path (%s)..."), compiler->GetName().c_str());
+@@ -1357,7 +1365,8 @@
+     {
+         ClearLog();
+         DoClearErrors();
+-        wxStartTimer();
++        // wxStartTimer();
++        m_StartTimer = wxGetLocalTimeMillis();
+     }
+     Manager::Yield();
+ }
+@@ -3386,7 +3395,11 @@
+             m_BuildJobTargetsList.pop();
+ 
+ 
+-        long int elapsed = wxGetElapsedTime() / 1000;
++        // long int elapsed = wxGetElapsedTime() / 1000;
++        wxLongLong localTime = wxGetLocalTimeMillis();
++        wxLongLong duration = localTime - m_StartTimer;
++        long int elapsed = duration.ToLong();
++        elapsed /= 1000;
+         int mins = elapsed / 60;
+         int secs = (elapsed % 60);
+         wxString msg = wxString::Format(_("Process terminated with status %d (%d minutes, %d seconds)"), exitCode, mins, secs);

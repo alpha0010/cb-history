@@ -1,0 +1,14 @@
+--- codeblocks-1.0svn.orig/src/plugins/compilergcc/compilergcc.cpp	2008-04-29 18:27:30.000000000 +0200
++++ codeblocks-1.0svn.work/src/plugins/compilergcc/compilergcc.cpp	2008-06-15 11:59:16.000000000 +0200
+@@ -1784,7 +1784,10 @@
+ 				{
+ 					// set LD_LIBRARY_PATH
+ 					command << LIBRARY_ENVVAR << _T("=$") << LIBRARY_ENVVAR << _T(':');
+-					command << GetDynamicLinkerPathForTarget(target) << strSPACE;
++					// we have to quote the string, just escape the spaces does not work
++					wxString strLinkerPath=GetDynamicLinkerPathForTarget(target);
++					QuoteStringIfNeeded(strLinkerPath);
++					command << strLinkerPath << strSPACE;
+ 				}
+             }
+         }

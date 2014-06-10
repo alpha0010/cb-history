@@ -1,0 +1,588 @@
+Index: BrowseTracker.cbp
+===================================================================
+--- BrowseTracker.cbp	(revision 7478)
++++ BrowseTracker.cbp	(working copy)
+@@ -11,8 +11,9 @@
+ 				<Option object_output="..\..\..\.objs\plugins\contrib\BrowseTracker" />
+ 				<Option type="3" />
+ 				<Option compiler="gcc" />
+-				<Option parameters="--debug-log --multiple-instance -na -ns -nd" />
++				<Option parameters='--personality=&quot;lite&quot; --debug-log --multiple-instance -na -ns -nd' />
+ 				<Option host_application="..\..\..\devel\codeblocks.exe" />
++				<Option run_host_application_in_terminal="0" />
+ 				<Compiler>
+ 					<Add option="-Wall" />
+ 					<Add option="-pipe" />
+@@ -47,12 +48,59 @@
+ 				</Linker>
+ 				<ExtraCommands>
+ 					<Add after="zip -j9 ..\..\..\devel\share\codeblocks\BrowseTracker.zip manifest.xml" />
++					<Add after="zip -jq9 ..\..\..\devel\share\codeblocks\BrowseTracker.zip BrowseTrackerToolbar.xrc" />
++					<Add after="zip -Rq9 ..\..\..\devel\share\codeblocks\BrowseTracker.zip images\*.png images\16x16\*.png" />
+ 					<Mode after="always" />
+ 				</ExtraCommands>
+ 			</Target>
++			<Target title="debug">
++				<Option output="..\..\..\devel\share\codeblocks\plugins\BrowseTracker.dll" prefix_auto="0" extension_auto="0" />
++				<Option object_output="..\..\..\.objs\plugins\contrib\BrowseTracker" />
++				<Option type="3" />
++				<Option compiler="gcc" />
++				<Option parameters='--personality=&quot;lite&quot; --debug-log --multiple-instance -na -ns -nd' />
++				<Option host_application="..\..\..\devel\codeblocks.exe" />
++				<Option run_host_application_in_terminal="0" />
++				<Compiler>
++					<Add option="-Wall" />
++					<Add option="-g" />
++					<Add option="-pipe" />
++					<Add option="-mthreads" />
++					<Add option="-fmessage-length=0" />
++					<Add option="-fexceptions" />
++					<Add option="-Winvalid-pch" />
++					<Add option="-DBUILDING_PLUGIN" />
++					<Add option="-DHAVE_W32API_H" />
++					<Add option="-D__WXMSW__" />
++					<Add option="-DWXUSINGDLL" />
++					<Add option="-DcbDEBUG" />
++					<Add option="-DCB_PRECOMP" />
++					<Add option="-DWX_PRECOMP" />
++					<Add option="-DwxUSE_UNICODE" />
++					<Add option="-DNO_LOGGING" />
++					<Add option="-DWXMAKINGDLL_PROPGRID" />
++					<Add option="-DwxPG_USE_WXMODULE=0" />
++					<Add directory="..\..\..\include" />
++					<Add directory="..\..\..\sdk\wxscintilla\include" />
++					<Add directory="$(#WX.include)" />
++					<Add directory="$(#WX.lib)\gcc_dll$(WX_CFG)\msw$(WX_SUFFIX)" />
++				</Compiler>
++				<Linker>
++					<Add option="-Wl,--enable-auto-import" />
++					<Add option="-mthreads" />
++					<Add library="wxmsw28$(WX_SUFFIX)" />
++					<Add library="codeblocks" />
++					<Add directory="..\..\..\devel" />
++					<Add directory="$(#WX.lib)\gcc_dll$(WX_CFG)" />
++				</Linker>
++				<ExtraCommands>
++					<Add after="zip -j9 ..\..\..\devel\share\codeblocks\BrowseTracker.zip manifest.xml" />
++					<Mode after="always" />
++				</ExtraCommands>
++			</Target>
+ 			<Environment>
++				<Variable name="WX_CFG" value="" />
+ 				<Variable name="WX_SUFFIX" value="u" />
+-				<Variable name="WX_CFG" value="" />
+ 			</Environment>
+ 		</Build>
+ 		<VirtualTargets>
+@@ -69,6 +117,7 @@
+ 		<Unit filename="BrowseTrackerDefs.h" />
+ 		<Unit filename="BrowseTrackerLayout.cpp" />
+ 		<Unit filename="BrowseTrackerLayout.h" />
++		<Unit filename="BrowseTrackerToolbar.xrc" />
+ 		<Unit filename="BrowseXpms.h" />
+ 		<Unit filename="ConfigPanel.cpp" />
+ 		<Unit filename="ConfigPanel.h" />
+@@ -81,7 +130,9 @@
+ 		<Unit filename="ProjectData.h" />
+ 		<Unit filename="Version.cpp" />
+ 		<Unit filename="Version.h" />
+-		<Unit filename="manifest.xml" />
++		<Unit filename="manifest.xml">
++			<Option target="default" />
++		</Unit>
+ 		<Extensions>
+ 			<code_completion />
+ 			<envvars />
+Index: BrowseTracker.cpp
+===================================================================
+--- BrowseTracker.cpp	(revision 7478)
++++ BrowseTracker.cpp	(working copy)
+@@ -135,6 +135,11 @@
+     int idMenuTrackerDump           = wxNewId();
+     #endif
+     int idEditBookmarksToggle = XRCID("idEditBookmarksToggle");
++
++    int idToolMarkToggle = XRCID("idMarkToggle");
++    int idToolMarkPrev = XRCID("idMarkPrev");
++    int idToolMarkNext = XRCID("idMarkNext");
++    int idToolMarksClear = XRCID("idMarksClear");
+ };
+ 
+ // ----------------------------------------------------------------------------
+@@ -142,7 +147,11 @@
+ // ----------------------------------------------------------------------------
+ BEGIN_EVENT_TABLE(BrowseTracker, cbPlugin)
+ 
+-	//-EVT_UPDATE_UI(idMenuViewTracker, BrowseTracker::OnUpdateUI)
++	EVT_UPDATE_UI(idToolMarkToggle, BrowseTracker::OnUpdateUI)
++	EVT_UPDATE_UI(idToolMarkPrev,   BrowseTracker::OnUpdateUI)
++	EVT_UPDATE_UI(idToolMarkNext,   BrowseTracker::OnUpdateUI)
++	EVT_UPDATE_UI(idToolMarksClear, BrowseTracker::OnUpdateUI)
++
+     EVT_IDLE(                BrowseTracker::OnIdle)
+ 	// --
+ 	// The following replaced by OnMenuTrackerSelect() dialog popup
+@@ -164,6 +173,11 @@
+    #endif
+    // -- BOOK Marks --
+     EVT_MENU(idEditBookmarksToggle, BrowseTracker::OnBook_MarksToggle)
++
++    EVT_TOOL(idToolMarkToggle,  BrowseTracker::OnMenuToggleBrowseMark)
++    EVT_TOOL(idToolMarkPrev,   BrowseTracker::OnMenuBrowseMarkPrevious)
++    EVT_TOOL(idToolMarkNext,   BrowseTracker::OnMenuBrowseMarkNext)
++    EVT_TOOL(idToolMarksClear,  BrowseTracker::OnMenuClearAllBrowse_Marks)
+ END_EVENT_TABLE()
+ 
+ // ----------------------------------------------------------------------------
+@@ -196,6 +210,10 @@
+     m_bAppShutdown = false;
+     m_nProjectClosingFileCount = 0;
+     m_LastEbDeactivated = 0;
++    m_BrowseMarkCount = -1;
++
++    if (!Manager::LoadResource(_T("BrowseTracker.zip")))
++        NotifyMissingFile(_T("BrowseTracker.zip"));
+ }
+ // ----------------------------------------------------------------------------
+ BrowseTracker::~BrowseTracker()
+@@ -222,6 +240,10 @@
+     m_nBrowseMarkPreviousSentry = 0;
+     m_nBrowseMarkNextSentry = 0;
+     m_OnEditorEventHookIgnoreMarkerChanges = true; //used to avoid editor hook overhead
++    m_bProjectClosing = false;
++    m_BrowseMarkCount = -1;
++    m_pMenuBar = 0;
++    m_pToolBar = 0;
+ 
+     m_LoadingProjectFilename = wxT("");
+     m_pEdMgr = Manager::Get()->GetEditorManager();
+@@ -369,7 +391,7 @@
+         m_pJumpTracker = 0;
+     }
+ 
+-    if ( m_InitDone )
++    if (m_InitDone)
+     {
+         Manager::Get()->GetLogManager()->Log(_T("BrowseTracker Released"));
+ 
+@@ -425,6 +447,7 @@
+         m_ProjectDataHash.clear();
+ 
+     }
++
+ 	m_InitDone = false;
+ }
+ // ----------------------------------------------------------------------------
+@@ -469,7 +492,23 @@
+      LOGIT(wxT("Menubar[%p]idMenuViewTracker[%d]"),menuBar, idMenuViewTracker);
+     #endif
+ 
++    idx = menuBar->FindMenu(_("&Edit"));
++    if (idx != wxNOT_FOUND)
++    {
++        wxMenu* editMenu = menuBar->GetMenu(idx);
++        idx = editMenu->FindItem(_("&Bookmarks"));
++
++        // main menu will be automatically recreated after plugin disable
++        editMenu->Destroy(idx);
++    }
++
+ 	m_InitDone = true;
++
++    EditorBase* eb = m_pEdMgr->GetActiveEditor();
++    if (eb) {
++        CodeBlocksEvent evtea(cbEVT_EDITOR_ACTIVATED, -1, 0, eb);
++        //OnEditorActivated(evtea);
++    }
+ }
+ // ----------------------------------------------------------------------------
+ void BrowseTracker::BuildModuleMenu(const ModuleType type, wxMenu* popup, const FileTreeData* /*data*/)
+@@ -483,6 +522,13 @@
+     if (not IsAttached() ) return;
+     if (type != mtEditorManager) return;
+ 
++    // delete default menu item
++    int idx = popup->FindItem(_T("&Bookmarks"));
++    if (idx != wxNOT_FOUND)
++    {
++        popup->Destroy(idx);
++    }
++
+     // obtain ptr to menus menu
+     wxMenuBar* pMenuBar = Manager::Get()->GetAppFrame()->GetMenuBar();
+     wxMenu* pbtMenu = 0;
+@@ -517,6 +563,27 @@
+ 
+ }//BuildModuleMenu
+ // ----------------------------------------------------------------------------
++
++bool BrowseTracker::BuildToolBar(wxToolBar* toolBar)
++// ----------------------------------------------------------------------------
++{
++    if (m_pJumpTracker) {
++        m_pJumpTracker->BuildToolBar(toolBar);
++    }
++
++    m_pToolBar = toolBar;
++
++    if (!m_IsAttached || !toolBar)
++    {
++        return false;
++    }
++    wxString is16x16 = Manager::isToolBar16x16(toolBar) ? _T("_16x16") : _T("");
++    Manager::Get()->AddonToolBar(toolBar,_T("browse_tracker_toolbar") + is16x16);
++    m_pToolBar->Realize();
++
++    return true;
++}
++// ----------------------------------------------------------------------------
+ int BrowseTracker::Configure()
+ // ----------------------------------------------------------------------------
+ {
+@@ -796,7 +863,7 @@
+                 OnMenuBrowseMarkPrevious( event ); //retry
+             }
+         }//if
+-    }while(0);//if do
++    } while(0);
+ 
+     m_nBrowseMarkPreviousSentry = 0;
+ 
+@@ -844,7 +911,7 @@
+                 OnMenuBrowseMarkNext( event ); // retry
+             }
+         }//if
+-    }while(0);//if do
++    } while(0);
+ 
+     m_nBrowseMarkNextSentry = 0;
+ 
+@@ -866,6 +933,22 @@
+     if ( GetBrowseMarkerId() == BOOKMARK_MARKER ) ClearLineBookMark();
+ }
+ // ----------------------------------------------------------------------------
++void BrowseTracker::OnMenuToggleBrowseMark(wxCommandEvent& event) {
++// ----------------------------------------------------------------------------
++    EditorBase* eb = Manager::Get()->GetEditorManager()->GetActiveEditor();
++    cbEditor* cbed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
++
++    if (cbed) {
++        cbStyledTextCtrl* control = cbed->GetControl();
++        int line = control->GetCurrentLine();
++
++        if (LineHasBrowseMarker(control, line))
++            ClearLineBrowseMark(true);
++        else
++            RecordBrowseMark(eb);
++    }
++}
++// ----------------------------------------------------------------------------
+ void BrowseTracker::ClearLineBrowseMark(bool removeScreenMark)
+ // ----------------------------------------------------------------------------
+ {
+@@ -875,7 +958,7 @@
+     ///LOGIT( _T("BT ClearBrowseMark") );
+     EditorBase* eb = Manager::Get()->GetEditorManager()->GetActiveEditor();
+     cbEditor* cbed = Manager::Get()->GetEditorManager()->GetBuiltinEditor(eb);
+-    if (cbed) do
++    if (cbed)
+     {
+         if (m_EbBrowse_MarksHash.find(eb) != m_EbBrowse_MarksHash.end() )
+         {
+@@ -891,7 +974,7 @@
+             LOGIT( _T("BT ClearLineBROWSEMark Current Line[%d]"),m_CurrScrLine );
+             #endif
+         }
+-    }while(0);
++    }
+ }
+ ////// ----------------------------------------------------------------------------
+ ////void BrowseTracker::ClearLineBrowseMark(int posn)
+@@ -1009,7 +1092,8 @@
+             cbStyledTextCtrl* control = cbed->GetControl();
+             BrowseMarks& EdBrowse_Marks = *m_EbBrowse_MarksHash[eb];
+             EdBrowse_Marks.ClearAllBrowse_Marks();
+-            if (clearScreenMarks) control->MarkerDeleteAll( GetBrowseMarkerId());
++            if (clearScreenMarks)
++                control->MarkerDeleteAll( GetBrowseMarkerId());
+             #if defined(LOGGING)
+             LOGIT( _T("BT ClearAllBrowseMarks()") );
+             #endif
+@@ -1168,7 +1252,7 @@
+                 if ( m_IsMouseDoubleClick) break;
+                 wxLongLong mouseDwellMillisecs = ::wxGetLocalTimeMillis() - m_MouseDownTime;
+                 if (mouseDwellMillisecs >= m_LeftMouseDelay)
+-                        RecordBrowseMark(eb);
++                    RecordBrowseMark(eb);
+                 break;
+             }//if useOnlyLeftMouse
+ 
+@@ -1600,7 +1684,30 @@
+ void BrowseTracker::OnUpdateUI(wxUpdateUIEvent& event)
+ // ----------------------------------------------------------------------------
+ {
+-    // unused
++    if (Manager::Get()->IsAppShuttingDown())
++        return;
++
++    EditorBase* eb = Manager::Get()->GetEditorManager()->GetActiveEditor();
++    if (m_EbBrowse_MarksHash.find(eb) != m_EbBrowse_MarksHash.end())
++    {
++        int count = m_EbBrowse_MarksHash[eb]->GetMarkCount();
++        if (count != m_BrowseMarkCount) {
++            m_BrowseMarkCount = count;
++            m_pToolBar->EnableTool(idToolMarkToggle, true);
++            m_pToolBar->EnableTool(idToolMarkNext, m_BrowseMarkCount > 0);
++            m_pToolBar->EnableTool(idToolMarkPrev, m_BrowseMarkCount > 0);
++            m_pToolBar->EnableTool(idToolMarksClear, m_BrowseMarkCount > 0);
++        }
++    }
++    else
++    {
++        m_BrowseMarkCount = -1;
++        m_pToolBar->EnableTool(idToolMarkToggle, false);
++        m_pToolBar->EnableTool(idToolMarkNext, false);
++        m_pToolBar->EnableTool(idToolMarkPrev, false);
++        m_pToolBar->EnableTool(idToolMarksClear, false);
++    }
++
+     event.Skip();
+ }
+ // ----------------------------------------------------------------------------
+@@ -1615,16 +1722,18 @@
+     // This used to be done by the CB editor manager, but someone removed the UI hook.
+     if (m_bAppShutdown)
+         return;
+-    if ((not Manager::Get()->IsAppShuttingDown()) && m_UpdateUIFocusEditor)
++
++    if ((!Manager::Get()->IsAppShuttingDown()) && m_UpdateUIFocusEditor)
+     {
+         if (m_UpdateUIFocusEditor)
+         {
+             EditorBase* eb = m_UpdateUIFocusEditor;
+             m_UpdateUIFocusEditor = 0;
+-            if (not eb) return;
+-            if (not IsEditorBaseOpen(eb)) return;
+-            if( Manager::Get()->GetEditorManager()->GetActiveEditor() not_eq eb )
+-            {   Manager::Get()->GetEditorManager()->SetActiveEditor(eb);
++            if (!eb || !IsEditorBaseOpen(eb))
++                return;
++            if (Manager::Get()->GetEditorManager()->GetActiveEditor() != eb )
++            {
++                Manager::Get()->GetEditorManager()->SetActiveEditor(eb);
+                 eb->SetFocus();
+                 #if defined(LOGGING)
+                 LOGIT( _T("BT OnIdle Focused Editor[%p] Title[%s]"), eb, eb->GetTitle().c_str() );
+@@ -1803,7 +1912,7 @@
+ 
+ }//OnEditorClosed
+ // ----------------------------------------------------------------------------
+-void BrowseTracker::OnWindowSetFocus(wxFocusEvent& WXUNUSED(event))
++void BrowseTracker::OnWindowSetFocus(wxFocusEvent& /*WXUNUSED*/(event))
+ // ----------------------------------------------------------------------------
+ {
+     #if defined(LOGGING)
+@@ -1983,6 +2092,7 @@
+     if ( not IsBrowseMarksEnabled() )
+         return;
+     m_bProjectClosing = false;
++    m_BrowseMarkCount = -1;
+ 
+     cbProject* pProject = event.GetProject();
+ 
+@@ -2257,9 +2367,9 @@
+     if (loading)
+     {
+         // dont record CB activated editors while project is loading
+-        //-------------------------------
++        //----  ------------------------------------------------------------------------------------------------
+         m_bProjectIsLoading = true;
+-        //-------------------------------
++        //----  ------------------------------------------------------------------------------------------------
+ 
+         m_LoadingProjectFilename = project->GetFilename();
+ 
+@@ -2661,7 +2771,7 @@
+     return 0;
+ }
+ // ----------------------------------------------------------------------------
+-void BrowseTracker::DumpHash( const wxString /*hashType*/)
++void BrowseTracker::DumpHash( const wxString hashType)
+ // ----------------------------------------------------------------------------
+ {
+ 
+Index: BrowseTracker.h
+===================================================================
+--- BrowseTracker.h	(revision 7478)
++++ BrowseTracker.h	(working copy)
+@@ -125,7 +125,7 @@
+ 		 * @param toolBar the wxToolBar to create items on
+ 		 * @return The plugin should return true if it needed the toolbar, false if not
+ 		*/
+-		bool BuildToolBar(wxToolBar* /*toolBar*/){ return false; }
++		bool BuildToolBar(wxToolBar* toolBar);/*{ return false; }*/
+ 	protected:
+ 		/** Any descendent plugin should override this virtual method and
+ 		 * perform any necessary initialization. This method is called by
+@@ -223,6 +223,7 @@
+         void OnMenuBrowseMarkNext(wxCommandEvent& event);
+         void OnMenuRecordBrowseMark(wxCommandEvent& event);
+         void OnMenuClearBrowseMark(wxCommandEvent& event);
++        void OnMenuToggleBrowseMark(wxCommandEvent& event);
+         void OnMenuClearAllBrowse_Marks(wxCommandEvent& event);
+         void OnMenuSortBrowse_Marks( wxCommandEvent& event);
+         void OnMenuSettings( wxCommandEvent& event);
+@@ -232,7 +233,7 @@
+ 		void TrackEditorForward();
+         void OnMouseKeyEvent(wxMouseEvent& event);
+ 
+-        //-- BOOK marks
++        //---- BOOK marks --------------------------------------------------------------------------------------
+         void AddBook_Mark(EditorBase* eb, int line = -1);
+         void OnBook_MarksToggle(wxCommandEvent& event);
+         void CloneBookMarkFromEditor( int line );
+@@ -274,6 +275,7 @@
+         ProjectManager* m_pPrjMgr;
+ 		wxWindow*       m_pAppWin;
+         wxMenuBar*      m_pMenuBar;
++        wxToolBar*      m_pToolBar;
+         wxString        m_ConfigFolder;
+         wxString        m_ExecuteFolder;
+         wxString        m_AppName;
+@@ -325,6 +327,7 @@
+         bool            m_bProjectClosing;      // project close in progress
+         bool            m_bAppShutdown;
+         int             m_nProjectClosingFileCount;
++        int             m_BrowseMarkCount;
+ 
+         JumpTracker*    m_pJumpTracker;
+ 
+Index: JumpTracker.cpp
+===================================================================
+--- JumpTracker.cpp	(revision 7478)
++++ JumpTracker.cpp	(working copy)
+@@ -31,6 +31,9 @@
+     int idMenuJumpNext = wxNewId();
+     int idMenuJumpClear = wxNewId();
+     int idMenuJumpDump = wxNewId();
++
++    int idToolJumpPrev = XRCID("idJumpPrev");
++    int idToolJumpNext = XRCID("idJumpNext");
+ }
+ 
+ // ----------------------------------------------------------------------------
+@@ -68,6 +71,7 @@
+     m_bProjectClosing = false;
+     m_IsAttached = false;
+     m_bJumpInProgress = false;
++    m_pToolBar = 0;
+ 
+ }
+ // ----------------------------------------------------------------------------
+@@ -108,19 +112,16 @@
+ 
+     wxWindow* appWin = Manager::Get()->GetAppWindow();
+     appWin->PushEventHandler(this);
+-    appWin->Connect(idMenuJumpBack, -1, wxEVT_COMMAND_MENU_SELECTED,
+-            (wxObjectEventFunction) (wxEventFunction) (wxCommandEventFunction)
+-            &JumpTracker::OnMenuJumpBack, 0, this);
+-    appWin->Connect(idMenuJumpNext, -1, wxEVT_COMMAND_MENU_SELECTED,
+-            (wxObjectEventFunction) (wxEventFunction) (wxCommandEventFunction)
+-            &JumpTracker::OnMenuJumpNext, 0, this);
+-    appWin->Connect(idMenuJumpClear, -1, wxEVT_COMMAND_MENU_SELECTED,
+-            (wxObjectEventFunction) (wxEventFunction) (wxCommandEventFunction)
+-            &JumpTracker::OnMenuJumpClear, 0, this);
+-    appWin->Connect(idMenuJumpDump, -1, wxEVT_COMMAND_MENU_SELECTED,
+-            (wxObjectEventFunction) (wxEventFunction) (wxCommandEventFunction)
+-            &JumpTracker::OnMenuJumpDump, 0, this);
++    appWin->Connect(idMenuJumpBack, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(JumpTracker::OnMenuJumpBack), 0, this);
++    appWin->Connect(idMenuJumpNext, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(JumpTracker::OnMenuJumpNext), 0, this);
++    appWin->Connect(idMenuJumpClear, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(JumpTracker::OnMenuJumpClear), 0, this);
++    appWin->Connect(idMenuJumpDump, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(JumpTracker::OnMenuJumpDump), 0, this);
+ 
++    appWin->Connect(idToolJumpPrev, wxEVT_COMMAND_TOOL_CLICKED, wxCommandEventHandler(JumpTracker::OnMenuJumpBack), 0, this);
++    appWin->Connect(idToolJumpNext, wxEVT_COMMAND_TOOL_CLICKED, wxCommandEventHandler(JumpTracker::OnMenuJumpNext), 0, this);
++    appWin->Connect(idToolJumpPrev, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(JumpTracker::OnUpdateUI), 0, this);
++    appWin->Connect(idToolJumpNext, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(JumpTracker::OnUpdateUI), 0, this);
++
+     // Codeblocks Events registration
+     Manager::Get()->RegisterEventSink(cbEVT_EDITOR_UPDATE_UI   , new cbEventFunctor<JumpTracker, CodeBlocksEvent>(this, &JumpTracker::OnEditorUpdateEvent));
+     Manager::Get()->RegisterEventSink(cbEVT_EDITOR_ACTIVATED, new cbEventFunctor<JumpTracker, CodeBlocksEvent>(this, &JumpTracker::OnEditorActivated));
+@@ -145,18 +146,16 @@
+     OnMenuJumpClear(evt);
+ 
+     wxWindow* appWin = Manager::Get()->GetAppWindow();
+-    appWin->Disconnect(idMenuJumpBack, -1, wxEVT_COMMAND_MENU_SELECTED,
+-            (wxObjectEventFunction) (wxEventFunction) (wxCommandEventFunction)
+-            &JumpTracker::OnMenuJumpBack, 0, this);
+-    appWin->Disconnect(idMenuJumpNext, -1, wxEVT_COMMAND_MENU_SELECTED,
+-            (wxObjectEventFunction) (wxEventFunction) (wxCommandEventFunction)
+-            &JumpTracker::OnMenuJumpNext, 0, this);
+-    appWin->Disconnect(idMenuJumpClear, -1, wxEVT_COMMAND_MENU_SELECTED,
+-            (wxObjectEventFunction) (wxEventFunction) (wxCommandEventFunction)
+-            &JumpTracker::OnMenuJumpClear, 0, this);
+-    appWin->Disconnect(idMenuJumpDump, -1, wxEVT_COMMAND_MENU_SELECTED,
+-            (wxObjectEventFunction) (wxEventFunction) (wxCommandEventFunction)
+-            &JumpTracker::OnMenuJumpDump, 0, this);
++    appWin->Disconnect(idMenuJumpBack, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(JumpTracker::OnMenuJumpBack), 0, this);
++    appWin->Disconnect(idMenuJumpNext, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(JumpTracker::OnMenuJumpNext), 0, this);
++    appWin->Disconnect(idMenuJumpClear, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(JumpTracker::OnMenuJumpClear), 0, this);
++    appWin->Disconnect(idMenuJumpDump, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(JumpTracker::OnMenuJumpDump), 0, this);
++
++    appWin->Disconnect(idToolJumpPrev, wxEVT_COMMAND_TOOL_CLICKED, wxCommandEventHandler(JumpTracker::OnMenuJumpBack), 0, this);
++    appWin->Disconnect(idToolJumpNext, wxEVT_COMMAND_TOOL_CLICKED, wxCommandEventHandler(JumpTracker::OnMenuJumpNext), 0, this);
++    appWin->Disconnect(idToolJumpPrev, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(JumpTracker::OnUpdateUI), 0, this);
++    appWin->Disconnect(idToolJumpNext, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(JumpTracker::OnUpdateUI), 0, this);
++
+     appWin->RemoveEventHandler(this);
+ 
+ }
+@@ -200,9 +199,10 @@
+     //-NotImplemented(_T("JumpTracker::BuildModuleMenu()"));
+ }
+ // ----------------------------------------------------------------------------
+-bool JumpTracker::BuildToolBar(wxToolBar* /*toolBar*/)
++bool JumpTracker::BuildToolBar(wxToolBar* toolBar)
+ // ----------------------------------------------------------------------------
+ {
++    m_pToolBar = toolBar;
+     //The application is offering its toolbar for your plugin,
+     //to add any toolbar items you want...
+     //Append any items you need on the toolbar...
+@@ -357,6 +357,16 @@
+ 
+ }//OnProjectActivatedEvent
+ // ----------------------------------------------------------------------------
++void JumpTracker::OnUpdateUI(wxUpdateUIEvent& event) {
++// ----------------------------------------------------------------------------
++    int count = m_ArrayOfJumpData.GetCount();
++
++    m_pToolBar->EnableTool(idToolJumpNext, count > 0 && m_Cursor != count - 1);
++    m_pToolBar->EnableTool(idToolJumpPrev, count > 0 && m_Cursor != 0);
++
++    event.Skip();
++}
++// ----------------------------------------------------------------------------
+ void JumpTracker::JumpDataAdd(const wxString& filename, const long posn, const long lineNum)
+ // ----------------------------------------------------------------------------
+ {
+Index: JumpTracker.h
+===================================================================
+--- JumpTracker.h	(revision 7478)
++++ JumpTracker.h	(working copy)
+@@ -104,6 +104,7 @@
+         void OnStartShutdown(CodeBlocksEvent& event);
+         void OnProjectClosing(CodeBlocksEvent& event);
+         void OnProjectActivatedEvent(CodeBlocksEvent& event);
++        void OnUpdateUI(wxUpdateUIEvent& event);
+ 
+         // Menu events
+         void OnMenuJumpBack(wxCommandEvent &event);
+@@ -118,6 +119,7 @@
+         void JumpDataAdd(const wxString& filename, const long posn, const long edlineNum);
+         int  JumpDataContains(const wxString& filename, const long posn);
+ 
++        wxToolBar*      m_pToolBar;
+         wxLogWindow*    m_pPlgnLog;
+         wxString m_FilenameLast;
+         long     m_PosnLast;

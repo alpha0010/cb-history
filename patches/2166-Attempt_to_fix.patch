@@ -1,0 +1,107 @@
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbar.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbar.cpp	(revision 4430)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbar.cpp	(working copy)
+@@ -178,6 +178,12 @@
+         case wxsCPP: Decl.Add(_T("<wx/toolbar.h>")); break;
+         default: wxsCodeMarks::Unknown(_T("wxsToolBar::OnEnumDeclFiles"),Language);
+     }
++
++    for ( int i=0; i<GetChildCount(); i++ )
++    {
++        wxsItem* Child = GetChild(i);
++        Child->EnumDeclFiles(Decl, Def, Language);
++    }
+ }
+ 
+ bool wxsToolBar::OnCanAddToResource(wxsItemResData* Data,bool ShowMessage)
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbaritem.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbaritem.cpp	(revision 4430)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbaritem.cpp	(working copy)
+@@ -94,8 +94,8 @@
+                         default:     ItemType = _T("wxITEM_CHECK");  break;
+                     }
+ 
+-                    wxString BitmapCode  = m_Bitmap.BuildCode(true,_T(""),Language,wxART_TOOLBAR);
+-                    wxString Bitmap2Code = m_Bitmap2.BuildCode(true,_T(""),Language,wxART_TOOLBAR);
++                    wxString BitmapCode  = m_Bitmap.BuildCode(true,_T(""),Language,wxART_MAKE_CLIENT_ID(wxART_TOOLBAR));
++                    wxString Bitmap2Code = m_Bitmap2.BuildCode(true,_T(""),Language,wxART_MAKE_CLIENT_ID(wxART_TOOLBAR));
+                     if ( BitmapCode.IsEmpty() )  BitmapCode  = _T("wxNullBitmap");
+                     if ( Bitmap2Code.IsEmpty() ) Bitmap2Code = _T("wxNullBitmap");
+ 
+@@ -124,6 +124,15 @@
+     }
+ }
+ 
++void wxsToolBarItem::OnEnumDeclFiles(wxArrayString& Decl,wxArrayString& Def,wxsCodingLang Language)
++{
++    switch ( Language )
++    {
++        case wxsCPP: Decl.Add(_T("<wx/artprov.h>")); break;
++        default: wxsCodeMarks::Unknown(_T("wxsToolBarItem::OnEnumDeclFiles"),Language);
++    }
++}
++
+ void wxsToolBarItem::OnEnumToolProperties(long Flags)
+ {
+ 
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbaritem.h
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbaritem.h	(revision 4430)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbaritem.h	(working copy)
+@@ -14,7 +14,7 @@
+ 
+         virtual void OnBuildCreatingCode(wxString& Code,const wxString& WindowParent,wxsCodingLang Language);
+         virtual void OnEnumToolProperties(long Flags);
+-        virtual void OnEnumDeclFiles(wxArrayString& Decl,wxArrayString& Def,wxsCodingLang Language) {}
++        virtual void OnEnumDeclFiles(wxArrayString& Decl,wxArrayString& Def,wxsCodingLang Language);
+         virtual bool OnIsPointer() { return true; }
+         virtual bool OnCanAddToResource(wxsItemResData* Data,bool ShowMessage) { return false; }
+         virtual bool OnXmlWrite(TiXmlElement* Element,bool IsXRC,bool IsExtra);
+Index: src/plugins/contrib/wxSmith/wxwidgets/properties/wxsbitmapiconproperty.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/properties/wxsbitmapiconproperty.cpp	(revision 4430)
++++ src/plugins/contrib/wxSmith/wxwidgets/properties/wxsbitmapiconproperty.cpp	(working copy)
+@@ -48,7 +48,7 @@
+     }
+ 
+     wxString TempClient = Client.empty() ? DefaultClient : Client;
+-    return wxArtProvider::GetBitmap(wxART_MAKE_ART_ID_FROM_STR(Id),TempClient,Size);
++    return wxArtProvider::GetBitmap(wxART_MAKE_ART_ID_FROM_STR(Id), wxART_MAKE_CLIENT_ID_FROM_STR(TempClient),Size);
+ }
+ 
+ wxString wxsBitmapIconData::BuildCode(bool NoResize,const wxString& SizeCode,wxsCodingLang Language,const wxString& DefaultClient)
+@@ -74,16 +74,28 @@
+             }
+             else
+             {
+-                Code << _T("wxArtProvider::GetBitmap(wxART_MAKE_ART_ID_FROM_STR(") << wxsCodeMarks::WxString(wxsCPP,Id) << _T("),");
+-                if ( Client.empty() )
++
++                Code << _T("wxArtProvider::GetBitmap(");
++                if(wxsCodeMarks::ValidateIdentifier(Language, Id))
+                 {
+-                    Code << wxsCodeMarks::WxString(wxsCPP,DefaultClient,false);
++                    Code << _T("wxART_MAKE_ART_ID(") << Id << _T("), ");
+                 }
+                 else
+                 {
+-                    Code << wxsCodeMarks::WxString(wxsCPP,Client,false);
++                    Code << _T("wxART_MAKE_ART_ID_FROM_STR(") << wxsCodeMarks::WxString(wxsCPP,Id) << _T("), ");
+                 }
+ 
++                wxString TempClient = Client.empty() ? DefaultClient : Client;
++
++                if(wxsCodeMarks::ValidateIdentifier(Language, TempClient))
++                {
++                    Code << _T("wxART_MAKE_CLIENT_ID(") << TempClient << _T(")");
++                }
++                else
++                {
++                    Code << wxsCodeMarks::WxString(Language,TempClient) << _T(")");
++                }
++
+                 if ( !NoResize )
+                 {
+                     Code << _T(",") << SizeCode;

@@ -1,0 +1,53 @@
+Index: src/plugins/debuggergdb/backtracedlg.cpp
+===================================================================
+--- src/plugins/debuggergdb/backtracedlg.cpp	(revision 5142)
++++ src/plugins/debuggergdb/backtracedlg.cpp	(working copy)
+@@ -110,12 +110,10 @@
+ 
+ void BacktraceDlg::OnJump(wxCommandEvent& event)
+ {
+-    wxListEvent evt;
+-    OnDblClick(evt);
+-}
++// removed tpetrov
++//    wxListEvent evt;
++//    OnDblClick(evt);
+ 
+-void BacktraceDlg::OnDblClick(wxListEvent& event)
+-{
+     wxListCtrl* lst = XRCCTRL(*this, "lstTrace", wxListCtrl);
+     if (lst->GetSelectedItemCount() == 0)
+         return;
+@@ -136,6 +134,32 @@
+         m_pDbg->SyncEditor(file, atoi(line.mb_str()), false);
+ }
+ 
++void BacktraceDlg::OnDblClick(wxListEvent& event)
++{
++    wxCommandEvent evt;
++    OnSwitchFrame(evt);
++
++// moved to OnJump, by tpetrov
++//    wxListCtrl* lst = XRCCTRL(*this, "lstTrace", wxListCtrl);
++//    if (lst->GetSelectedItemCount() == 0)
++//        return;
++//
++//    // find selected item index
++//    int index = lst->GetNextItem(-1,
++//                                 wxLIST_NEXT_ALL,
++//                                 wxLIST_STATE_SELECTED);
++//
++//    wxListItem info;
++//    info.m_itemId = index;
++//    info.m_mask = wxLIST_MASK_TEXT;
++//    info.m_col = 3;
++//    wxString file = lst->GetItem(info) ? info.m_text : _T("");
++//    info.m_col = 4;
++//    wxString line = lst->GetItem(info) ? info.m_text : _T("");
++//    if (!file.IsEmpty() && !line.IsEmpty())
++//        m_pDbg->SyncEditor(file, atoi(line.mb_str()), false);
++}
++
+ void BacktraceDlg::OnSave(wxCommandEvent& event)
+ {
+     wxFileDialog dlg(this,

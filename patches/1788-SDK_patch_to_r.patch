@@ -1,0 +1,263 @@
+Index: src/sdk/editarraystringdlg.cpp
+===================================================================
+--- src/sdk/editarraystringdlg.cpp	(revision 3832)
++++ src/sdk/editarraystringdlg.cpp	(working copy)
+@@ -57,7 +57,7 @@
+ 	{
+ 		wxListBox* list = XRCCTRL(*this, "lstItems", wxListBox);
+ 		m_Array.Clear();
+-		for (int i = 0; i < list->GetCount(); ++i)
++		for (cbItemCount i = 0; i < list->GetCount(); ++i)
+ 		{
+ 			m_Array.Add(list->GetString(i));
+ 		}
+Index: src/sdk/editarrayorderdlg.cpp
+===================================================================
+--- src/sdk/editarrayorderdlg.cpp	(revision 3832)
++++ src/sdk/editarrayorderdlg.cpp	(working copy)
+@@ -67,7 +67,7 @@
+     wxListBox* list = XRCCTRL(*this, "lstItems", wxListBox);
+ 
+     XRCCTRL(*this, "btnMoveUp", wxButton)->Enable(list->GetSelection() > 0);
+-    XRCCTRL(*this, "btnMoveDown", wxButton)->Enable(list->GetSelection() >= 0 && list->GetSelection() < list->GetCount() - 1);
++    XRCCTRL(*this, "btnMoveDown", wxButton)->Enable(list->GetSelection() >= 0 && list->GetSelection() < (int)(list->GetCount()) - 1);
+ }
+ 
+ void EditArrayOrderDlg::OnMoveUp(wxCommandEvent& event)
+@@ -89,7 +89,7 @@
+     wxListBox* list = XRCCTRL(*this, "lstItems", wxListBox);
+     int sel = list->GetSelection();
+ 
+-    if (sel < list->GetCount() - 1)
++    if (sel < (int)(list->GetCount()) - 1)
+     {
+         wxString tmp = list->GetString(sel);
+         list->Delete(sel);
+@@ -105,7 +105,7 @@
+         wxListBox* list = XRCCTRL(*this, "lstItems", wxListBox);
+ 
+         m_Array.Clear();
+-        for (int i = 0; i < list->GetCount(); ++i)
++        for (cbItemCount i = 0; i < list->GetCount(); ++i)
+             m_Array.Add(list->GetString(i));
+     }
+ 
+Index: src/sdk/editarrayfiledlg.cpp
+===================================================================
+--- src/sdk/editarrayfiledlg.cpp	(revision 3832)
++++ src/sdk/editarrayfiledlg.cpp	(working copy)
+@@ -67,7 +67,7 @@
+ 	{
+ 		wxListBox* list = XRCCTRL(*this, "lstItems", wxListBox);
+ 		m_Array.Clear();
+-		for (int i = 0; i < list->GetCount(); ++i)
++		for (cbItemCount i = 0; i < list->GetCount(); ++i)
+ 		{
+ 			m_Array.Add(list->GetString(i));
+ 		}
+Index: src/sdk/multiselectdlg.cpp
+===================================================================
+--- src/sdk/multiselectdlg.cpp	(revision 3832)
++++ src/sdk/multiselectdlg.cpp	(working copy)
+@@ -79,7 +79,7 @@
+ {
+ 	int count = 0;
+     wxCheckListBox* lst = XRCCTRL(*this, "lstItems", wxCheckListBox);
+-	for (int i = 0; i < lst->GetCount(); ++i)
++	for (cbItemCount i = 0; i < lst->GetCount(); ++i)
+ 	{
+         if (lst->IsChecked(i))
+             ++count;
+@@ -93,7 +93,7 @@
+ {
+     wxArrayString ret;
+     wxCheckListBox* lst = XRCCTRL(*this, "lstItems", wxCheckListBox);
+-	for (int i = 0; i < lst->GetCount(); ++i)
++	for (cbItemCount i = 0; i < lst->GetCount(); ++i)
+ 	{
+         if (lst->IsChecked(i))
+             ret.Add(lst->GetString(i));
+@@ -105,7 +105,7 @@
+ {
+     wxArrayInt ret;
+     wxCheckListBox* lst = XRCCTRL(*this, "lstItems", wxCheckListBox);
+-	for (int i = 0; i < lst->GetCount(); ++i)
++	for (cbItemCount i = 0; i < lst->GetCount(); ++i)
+ 	{
+         if (lst->IsChecked(i))
+             ret.Add(i);
+@@ -119,7 +119,7 @@
+         return;
+ 	wxArrayString wilds = GetArrayFromString(wild, _T(";"));
+     wxCheckListBox* lst = XRCCTRL(*this, "lstItems", wxCheckListBox);
+-	for (int i = 0; i < lst->GetCount(); ++i)
++	for (cbItemCount i = 0; i < lst->GetCount(); ++i)
+ 	{
+ 		if (clearOld || !lst->IsChecked(i))
+ 		{
+@@ -167,7 +167,7 @@
+ void MultiSelectDlg::OnToggle(wxCommandEvent& /*event*/)
+ {
+     wxCheckListBox* lst = XRCCTRL(*this, "lstItems", wxCheckListBox);
+-	for (int i = 0; i < lst->GetCount(); ++i)
++	for (cbItemCount i = 0; i < lst->GetCount(); ++i)
+ 	{
+         lst->Check(i, !lst->IsChecked(i));
+ 	}
+@@ -177,7 +177,7 @@
+ void MultiSelectDlg::OnSelectAll(wxCommandEvent& /*event*/)
+ {
+     wxCheckListBox* lst = XRCCTRL(*this, "lstItems", wxCheckListBox);
+-	for (int i = 0; i < lst->GetCount(); ++i)
++	for (cbItemCount i = 0; i < lst->GetCount(); ++i)
+ 	{
+         lst->Check(i, true);
+ 	}
+@@ -187,7 +187,7 @@
+ void MultiSelectDlg::OnDeselectAll(wxCommandEvent& /*event*/)
+ {
+     wxCheckListBox* lst = XRCCTRL(*this, "lstItems", wxCheckListBox);
+-	for (int i = 0; i < lst->GetCount(); ++i)
++	for (cbItemCount i = 0; i < lst->GetCount(); ++i)
+ 	{
+         lst->Check(i, false);
+ 	}
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 3832)
++++ src/sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -781,7 +781,7 @@
+     {
+         m_AutoCompMap.erase(it);
+         lstKeyword->Delete(sel);
+-        if (sel >= lstKeyword->GetCount())
++        if (sel >= ((int)lstKeyword->GetCount()))
+             sel = lstKeyword->GetCount() - 1;
+         lstKeyword->SetSelection(sel);
+         if (sel != -1)
+Index: src/sdk/projectoptionsdlg.cpp
+===================================================================
+--- src/sdk/projectoptionsdlg.cpp	(revision 3832)
++++ src/sdk/projectoptionsdlg.cpp	(working copy)
+@@ -754,7 +754,7 @@
+     ProjectBuildTarget* target = m_Project->GetBuildTarget(targetIdx);
+ 
+     wxCheckListBox* list = XRCCTRL(*this, "lstFiles", wxCheckListBox);
+-    for (int i = 0; i < list->GetCount(); ++i)
++    for (cbItemCount i = 0; i < list->GetCount(); ++i)
+ 	{
+ 		ProjectFile* pf = m_Project->GetFile(i);
+ 		list->Check(i, !list->IsChecked(i));
+@@ -917,7 +917,7 @@
+     base->RemoveBuildScript(script);
+     int isel = ctrl->GetSelection();
+     ctrl->Delete(isel);
+-    ctrl->SetSelection(isel < ctrl->GetCount() ? isel : --isel );
++    ctrl->SetSelection(isel < ((int)ctrl->GetCount()) ? isel : --isel );
+ }
+ 
+ void ProjectOptionsDlg::OnPlatform(wxCommandEvent& event)
+@@ -978,7 +978,7 @@
+ void ProjectOptionsDlg::OnScriptMoveDown(wxSpinEvent& event)
+ {
+     wxListBox* ctrl = XRCCTRL(*this, "lstPreScripts", wxListBox);
+-    if (!ctrl || ctrl->GetSelection() == ctrl->GetCount() - 1)
++    if (!ctrl || ctrl->GetSelection() == (int)(ctrl->GetCount()) - 1)
+         return;
+ 
+ 	wxTreeCtrl* tc = XRCCTRL(*this, "tcOverview", wxTreeCtrl);
+Index: src/sdk/virtualbuildtargetsdlg.cpp
+===================================================================
+--- src/sdk/virtualbuildtargetsdlg.cpp	(revision 3832)
++++ src/sdk/virtualbuildtargetsdlg.cpp	(working copy)
+@@ -57,7 +57,7 @@
+     if (!lstTargets->IsEnabled())
+         return;
+     wxArrayString checked;
+-    for (int i = 0; i < lstTargets->GetCount(); ++i)
++    for (cbItemCount i = 0; i < lstTargets->GetCount(); ++i)
+     {
+         if (lstTargets->IsChecked(i))
+             checked.Add(lstTargets->GetString(i));
+Index: src/sdk/replacedlg.cpp
+===================================================================
+--- src/sdk/replacedlg.cpp	(revision 3832)
++++ src/sdk/replacedlg.cpp	(working copy)
+@@ -147,7 +147,7 @@
+ void ReplaceDlg::SaveComboValues(wxComboBox* combo, const wxString& configKey)
+ {
+ 	wxArrayString values;
+-	for (int i = 0; (i < combo->GetCount()) && (i < 10); ++i)
++	for (cbItemCount i = 0; (i < combo->GetCount()) && (i < 10); ++i)
+ 	{
+ 		if (!combo->GetString(i).IsEmpty())
+ 			values.Add(combo->GetString(i));
+Index: src/sdk/projectfileoptionsdlg.cpp
+===================================================================
+--- src/sdk/projectfileoptionsdlg.cpp	(revision 3832)
++++ src/sdk/projectfileoptionsdlg.cpp	(working copy)
+@@ -346,7 +346,7 @@
+     {
+         m_ProjectFile->buildTargets.Clear();
+         wxCheckListBox *list = XRCCTRL(*this, "lstTargets", wxCheckListBox);
+-        for (int i = 0; i < list->GetCount(); i++)
++        for (cbItemCount i = 0; i < list->GetCount(); i++)
+         {
+             if (list->IsChecked(i))
+                 m_ProjectFile->AddBuildTarget(list->GetString(i));
+Index: src/sdk/projectdepsdlg.cpp
+===================================================================
+--- src/sdk/projectdepsdlg.cpp	(revision 3832)
++++ src/sdk/projectdepsdlg.cpp	(working copy)
+@@ -73,7 +73,7 @@
+     Manager::Get()->GetProjectManager()->ClearProjectDependencies(thisprj);
+ 
+     // now set the the new deps
+-    for (int i = 0; i < lst->GetCount(); ++i)
++    for (cbItemCount i = 0; i < lst->GetCount(); ++i)
+     {
+         if (!lst->IsChecked(i))
+             continue;
+Index: src/sdk/configuretoolsdlg.cpp
+===================================================================
+--- src/sdk/configuretoolsdlg.cpp	(revision 3832)
++++ src/sdk/configuretoolsdlg.cpp	(working copy)
+@@ -92,7 +92,7 @@
+ 	const wxListBox* list = XRCCTRL(*this, "lstTools", wxListBox);
+ 	bool hasSel = list->GetSelection() != -1;
+ 	bool notFirst = list->GetSelection() > 0;
+-	bool notLast = (list->GetSelection() < list->GetCount() -1) && hasSel;
++	bool notLast = (list->GetSelection() < (int)(list->GetCount()) -1) && hasSel;
+ 
+ 	XRCCTRL(*this, "btnEdit", wxButton)->Enable(hasSel);
+ 	XRCCTRL(*this, "btnRemove", wxButton)->Enable(hasSel);
+Index: src/sdk/finddlg.cpp
+===================================================================
+--- src/sdk/finddlg.cpp	(revision 3832)
++++ src/sdk/finddlg.cpp	(working copy)
+@@ -140,7 +140,7 @@
+ 	else
+ 		combo = XRCCTRL(*this, "cmbFind1", wxComboBox);
+     wxArrayString previous;
+-    for (int i = 0; (i < combo->GetCount()) && (i < 10); ++i)
++    for (cbItemCount i = 0; (i < combo->GetCount()) && (i < 10); ++i)
+     {
+         if (!combo->GetString(i).IsEmpty())
+             previous.Add(combo->GetString(i));
+Index: src/include/globals.h
+===================================================================
+--- src/include/globals.h	(revision 3832)
++++ src/include/globals.h	(working copy)
+@@ -309,4 +309,12 @@
+     extern DLLIMPORT windows_version_t WindowsVersion();
+ };
+ 
++
++// Item counts in GUI components were changed in 2.7.0
++#if wxCHECK_VERSION(2,8,0)
++    typedef unsigned int cbItemCount;
++#else
++    typedef int cbItemCount;
++#endif
++
+ #endif // SDK_GLOBALS_H

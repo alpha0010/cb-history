@@ -1,0 +1,119 @@
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(revision 4103)
++++ src/sdk/editormanager.cpp	(working copy)
+@@ -32,6 +32,7 @@
+     #include <wx/splitter.h>
+     #include <wx/imaglist.h>
+     #include <wx/regex.h>
++    #include <wx/listctrl.h>
+ 
+     #include "editormanager.h" // class's header file
+     #include "configmanager.h"
+Index: src/plugins/debuggergdb/breakpointsdlg.cpp
+===================================================================
+--- src/plugins/debuggergdb/breakpointsdlg.cpp	(revision 4103)
++++ src/plugins/debuggergdb/breakpointsdlg.cpp	(working copy)
+@@ -1,4 +1,5 @@
+ #include <sdk.h>
++#include <wx/listctrl.h>
+ #include "breakpointsdlg.h"
+ #include <manager.h>
+ #include <editormanager.h>
+Index: src/plugins/debuggergdb/debuggerdriver.h
+===================================================================
+--- src/plugins/debuggergdb/debuggerdriver.h	(revision 4103)
++++ src/plugins/debuggergdb/debuggerdriver.h	(working copy)
+@@ -1,6 +1,12 @@
+ #ifndef DEBUGGERDRIVER_H
+ #define DEBUGGERDRIVER_H
+ 
++#ifndef WX_PRECOMP
++#   ifdef __WXMSW__
++#       include <wx/msw/wrapwin.h>  // Needed to prevent GetCommandLine define bug.
++#   endif
++#endif
++
+ #include "debugger_defs.h"
+ #include <wx/regex.h>
+ #include <globals.h>
+Index: src/plugins/compilergcc/compilerBCC.cpp
+===================================================================
+--- src/plugins/compilergcc/compilerBCC.cpp	(revision 4103)
++++ src/plugins/compilergcc/compilerBCC.cpp	(working copy)
+@@ -6,6 +6,7 @@
+ #include <wx/intl.h>
+ #include <wx/regex.h>
+ #include <wx/msw/registry.h>
++#include <wx/log.h>             // wxLogNull
+ 
+ CompilerBCC::CompilerBCC()
+     : Compiler(_("Borland C++ Compiler (5.5, 5.82)"), _T("bcc"))
+Index: src/plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- src/plugins/compilergcc/compilergcc.cpp	(revision 4103)
++++ src/plugins/compilergcc/compilergcc.cpp	(working copy)
+@@ -26,6 +26,8 @@
+ 
+ #include <sdk.h>
+ #include <prep.h>
++#include <wx/gauge.h>     // Needs to be before compilergcc.h if NOPCH on wxMSW
++#include <wx/listctrl.h>
+ #include "compilergcc.h"
+ #include <manager.h>
+ #include <sdk_events.h>
+@@ -46,7 +48,6 @@
+ #include <wx/button.h>
+ #include <wx/stattext.h>
+ #include <wx/statline.h>
+-#include <wx/gauge.h>
+ #include "makefilegenerator.h"
+ #include "compileroptionsdlg.h"
+ #include "directcommands.h"
+Index: src/plugins/compilergcc/compilerOWgenerator.cpp
+===================================================================
+--- src/plugins/compilergcc/compilerOWgenerator.cpp	(revision 4103)
++++ src/plugins/compilergcc/compilerOWgenerator.cpp	(working copy)
+@@ -1,6 +1,13 @@
+ #ifdef __WXMSW__ // For Windows Only
+ 
+ #include <sdk.h>
++#ifndef CB_PRECOMP
++#   include "compiler.h"
++#   include "cbproject.h"
++#   include "projectbuildtarget.h"
++#   include "messagemanager.h"
++#   include "macrosmanager.h"
++#endif
+ #include "compileoptionsbase.h"
+ #include "compilerOWgenerator.h"
+ 
+Index: src/include/manager.h
+===================================================================
+--- src/include/manager.h	(revision 4103)
++++ src/include/manager.h	(working copy)
+@@ -9,6 +9,12 @@
+ #ifndef MANAGER_H
+ #define MANAGER_H
+ 
++#ifndef WX_PRECOMP
++#   ifdef __WXMSW__
++#       include <wx/msw/wrapwin.h>  // Needed to prevent Yield define bug.
++#   endif
++#endif
++
+ #include <wx/event.h>
+ #include <wx/cmdline.h>
+ #include "settings.h"
+Index: src/include/newfromtemplatedlg.h
+===================================================================
+--- src/include/newfromtemplatedlg.h	(revision 4103)
++++ src/include/newfromtemplatedlg.h	(working copy)
+@@ -8,6 +8,7 @@
+ 
+ class wxChoice;
+ class wxListCtrl;
++class wxListEvent;
+ class ProjectTemplateLoader;
+ 
+ class NewFromTemplateDlg : public wxDialog

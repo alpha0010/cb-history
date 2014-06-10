@@ -1,0 +1,64 @@
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 2890)
++++ src/sdk/editorconfigurationdlg.cpp	(arbetskopia)
+@@ -213,7 +213,12 @@
+     wxString key;
+     key.Printf(_T("/default_code/set%d"), IdxToFileType[m_DefCodeFileType]);
+     XRCCTRL(*this, "txtDefCode", wxTextCtrl)->SetValue(cfg->Read(key, wxEmptyString));
++#ifdef __WXMAC__
++    // 8 point is not readable on Mac OS X, increase font size:
++    wxFont tmpFont(10, wxMODERN, wxNORMAL, wxNORMAL);
++#else
+     wxFont tmpFont(8, wxMODERN, wxNORMAL, wxNORMAL);
++#endif
+     XRCCTRL(*this, "txtDefCode", wxTextCtrl)->SetFont(tmpFont);
+ 	// read them all in the array
+ 	for(size_t idx = 0; idx < sizeof(IdxToFileType)/sizeof(*IdxToFileType); ++ idx)
+@@ -457,7 +462,12 @@
+ 
+ void EditorConfigurationDlg::UpdateSampleFont(bool askForNewFont)
+ {
++#ifdef __WXMAC__
++    // 8 point is not readable on Mac OS X, increase font size:
++    wxFont tmpFont(10, wxMODERN, wxNORMAL, wxNORMAL);
++#else
+     wxFont tmpFont(8, wxMODERN, wxNORMAL, wxNORMAL);
++#endif
+     wxString fontstring = Manager::Get()->GetConfigManager(_T("editor"))->Read(_T("/font"), wxEmptyString);
+ 
+     if (!fontstring.IsEmpty())
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 2890)
++++ src/sdk/cbeditor.cpp	(arbetskopia)
+@@ -819,7 +819,12 @@
+ 
+     ConfigManager* mgr = Manager::Get()->GetConfigManager(_T("editor"));
+ 
++#ifdef __WXMAC__
++    // 8 point is not readable on Mac OS X, increase font size:
++    wxFont font(10, wxMODERN, wxNORMAL, wxNORMAL);
++#else
+     wxFont font(8, wxMODERN, wxNORMAL, wxNORMAL);
++#endif
+     wxString fontstring = mgr->Read(_T("/font"), wxEmptyString);
+     int eolmode = wxSCI_EOL_CRLF;
+     if (!fontstring.IsEmpty())
+Index: src/sdk/messagelog.cpp
+===================================================================
+--- src/sdk/messagelog.cpp	(revision 2890)
++++ src/sdk/messagelog.cpp	(arbetskopia)
+@@ -49,7 +49,12 @@
+ 
+ wxFont MessageLog::GetDefaultLogFont(bool fixedPitchFont)
+ {
++#ifdef __WXMAC__
++    // 8 point is not readable on Mac OS X, increase font size:
++    int size = Manager::Get()->GetConfigManager(_T("message_manager"))->ReadInt(_T("/log_font_size"), 10);
++#else
+     int size = Manager::Get()->GetConfigManager(_T("message_manager"))->ReadInt(_T("/log_font_size"), 8);
++#endif
+     wxFont font(size,
+                 fixedPitchFont ? wxFONTFAMILY_MODERN : wxFONTFAMILY_DEFAULT,
+                 wxFONTSTYLE_NORMAL,

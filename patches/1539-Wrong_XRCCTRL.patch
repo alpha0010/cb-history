@@ -1,0 +1,395 @@
+Index: src/include/globals.h
+===================================================================
+--- src/include/globals.h	(Revision 3882)
++++ src/include/globals.h	(Arbeitskopie)
+@@ -309,4 +309,15 @@
+     extern DLLIMPORT windows_version_t WindowsVersion();
+ };
+ 
++#ifdef __WXDEBUG__
++//This is equivalent to XRCCTRL, but doesn't cause an assert failure
++//if the control doesn't exist, so use it instead of XRCCTRL
++//if you check the existence yourself
++#define XRCCTRL_OR_NULL(window, id, type) \
++    (wxDynamicCast((window).FindWindow(XRCID(id)), type))
++#else
++#define XRCCTRL_OR_NULL(window, id, type) \
++    XRCCTRL(window, id, type)
++#endif // __WXDEBUG__
++
+ #endif // SDK_GLOBALS_H
+Index: src/plugins/compilergcc/compileroptionsdlg.cpp
+===================================================================
+--- src/plugins/compilergcc/compileroptionsdlg.cpp	(Revision 3882)
++++ src/plugins/compilergcc/compileroptionsdlg.cpp	(Arbeitskopie)
+@@ -230,7 +230,7 @@
+         XRCCTRL(*this, "lblBuildScriptsNote", wxStaticText)->Show(hasBuildScripts);
+     }
+ 
+-    wxChoice* cmb = XRCCTRL(*this, "cmbBuildMethod", wxChoice);
++    wxChoice* cmb = XRCCTRL_OR_NULL(*this, "cmbBuildMethod", wxChoice);
+     if (cmb)
+     {
+         // build method is always "direct" now
+@@ -441,7 +441,7 @@
+ 
+ void CompilerOptionsDlg::DoFillVars()
+ {
+-    wxListBox* lst = XRCCTRL(*this, "lstVars", wxListBox);
++    wxListBox* lst = XRCCTRL_OR_NULL(*this, "lstVars", wxListBox);
+     if (!lst)
+         return;
+     lst->Clear();
+@@ -462,38 +462,38 @@
+ 
+ void CompilerOptionsDlg::DoFillOthers()
+ {
+-    wxCheckBox* chk = XRCCTRL(*this, "chkIncludeFileCwd", wxCheckBox);
++    wxCheckBox* chk = XRCCTRL_OR_NULL(*this, "chkIncludeFileCwd", wxCheckBox);
+     if (chk)
+         chk->SetValue(Manager::Get()->GetConfigManager(_T("compiler"))->ReadBool(_T("/include_file_cwd"), false));
+ 
+-    chk = XRCCTRL(*this, "chkIncludePrjCwd", wxCheckBox);
++    chk = XRCCTRL_OR_NULL(*this, "chkIncludePrjCwd", wxCheckBox);
+     if (chk)
+         chk->SetValue(Manager::Get()->GetConfigManager(_T("compiler"))->ReadBool(_T("/include_prj_cwd"), false));
+ 
+-    chk = XRCCTRL(*this, "chkSaveHtmlLog", wxCheckBox);
++    chk = XRCCTRL_OR_NULL(*this, "chkSaveHtmlLog", wxCheckBox);
+     if (chk)
+         chk->SetValue(Manager::Get()->GetConfigManager(_T("compiler"))->ReadBool(_T("/save_html_build_log"), false));
+ 
+-    chk = XRCCTRL(*this, "chkFullHtmlLog", wxCheckBox);
++    chk = XRCCTRL_OR_NULL(*this, "chkFullHtmlLog", wxCheckBox);
+     if (chk)
+         chk->SetValue(Manager::Get()->GetConfigManager(_T("compiler"))->ReadBool(_T("/save_html_build_log/full_command_line"), false));
+ 
+-    chk = XRCCTRL(*this, "chkBuildProgressBar", wxCheckBox);
++    chk = XRCCTRL_OR_NULL(*this, "chkBuildProgressBar", wxCheckBox);
+     if (chk)
+         chk->SetValue(Manager::Get()->GetConfigManager(_T("compiler"))->ReadBool(_T("/build_progress/bar"), false));
+ 
+-    chk = XRCCTRL(*this, "chkBuildProgressPerc", wxCheckBox);
++    chk = XRCCTRL_OR_NULL(*this, "chkBuildProgressPerc", wxCheckBox);
+     if (chk)
+         chk->SetValue(Manager::Get()->GetConfigManager(_T("compiler"))->ReadBool(_T("/build_progress/percentage"), false));
+ 
+-    wxSpinCtrl* spn = XRCCTRL(*this, "spnParallelProcesses", wxSpinCtrl);
++    wxSpinCtrl* spn = XRCCTRL_OR_NULL(*this, "spnParallelProcesses", wxSpinCtrl);
+     if (spn)
+     {
+         spn->SetRange(1, 16);
+         spn->SetValue(Manager::Get()->GetConfigManager(_T("compiler"))->ReadInt(_T("/parallel_processes"), 1));
+     }
+ 
+-    spn = XRCCTRL(*this, "spnMaxErrors", wxSpinCtrl);
++    spn = XRCCTRL_OR_NULL(*this, "spnMaxErrors", wxSpinCtrl);
+     if (spn)
+     {
+         spn->SetRange(0, 1000);
+@@ -737,7 +737,7 @@
+         m_LinkerOptions = compiler->GetLinkerOptions();
+         m_LinkLibs = compiler->GetLinkLibs();
+ 
+-        wxChoice* cmb = XRCCTRL(*this, "cmbLogging", wxChoice);
++        wxChoice* cmb = XRCCTRL_OR_NULL(*this, "cmbLogging", wxChoice);
+         if (cmb)
+             cmb->SetSelection((int)compiler->GetSwitches().logging);
+     }
+@@ -797,7 +797,7 @@
+     ArrayString2TextCtrl(m_LinkerOptions, XRCCTRL(*this, "txtLinkerOptions", wxTextCtrl));
+ 
+     // only if "Commands" page exists
+-    if (XRCCTRL(*this, "txtCmdBefore", wxTextCtrl))
++    if (XRCCTRL_OR_NULL(*this, "txtCmdBefore", wxTextCtrl))
+     {
+         ArrayString2TextCtrl(CommandsBeforeBuild, XRCCTRL(*this, "txtCmdBefore", wxTextCtrl));
+         ArrayString2TextCtrl(CommandsAfterBuild, XRCCTRL(*this, "txtCmdAfter", wxTextCtrl));
+@@ -885,7 +885,7 @@
+         compiler->SetLinkerOptions(m_LinkerOptions);
+         compiler->SetLinkLibs(m_LinkLibs);
+ 
+-        wxChoice* cmb = XRCCTRL(*this, "cmbLogging", wxChoice);
++        wxChoice* cmb = XRCCTRL_OR_NULL(*this, "cmbLogging", wxChoice);
+         if (cmb)
+         {
+             CompilerSwitches switches = compiler->GetSwitches();
+@@ -899,7 +899,7 @@
+         wxArrayString CommandsBeforeBuild;
+         wxArrayString CommandsAfterBuild;
+         bool AlwaysUsePost = false;
+-        if (XRCCTRL(*this, "txtCmdBefore", wxTextCtrl))
++        if (XRCCTRL_OR_NULL(*this, "txtCmdBefore", wxTextCtrl))
+         {
+             AlwaysUsePost = XRCCTRL(*this, "chkAlwaysRunPost", wxCheckBox)->GetValue();
+             DoGetCompileOptions(CommandsBeforeBuild, XRCCTRL(*this, "txtCmdBefore", wxTextCtrl));
+@@ -969,7 +969,7 @@
+     compiler->SetMasterPath(masterPath);
+     compiler->SetOptions(m_Options); //LDC : DOES NOT BELONG HERE !!!
+     // and the extra paths
+-    wxListBox* control = XRCCTRL(*this, "lstExtraPaths", wxListBox);
++    wxListBox* control = XRCCTRL_OR_NULL(*this, "lstExtraPaths", wxListBox);
+     if (control)
+     {
+         // get all listBox entries in array String
+@@ -1075,7 +1075,7 @@
+     // as a consequence might need to be re-enabled when another target/project is chosen in the tree)
+     if(compilerIdx != -1)
+     {
+-        if(wxChoicebook* nb = XRCCTRL(*this, "nbMain", wxChoicebook))
++        if(wxChoicebook* nb = XRCCTRL_OR_NULL(*this, "nbMain", wxChoicebook))
+         {
+             nb->Enable();
+         }
+@@ -1108,7 +1108,7 @@
+         }
+         else
+         { // the user cancelled and wants to keep the compiler
+-            if(wxChoicebook* nb = XRCCTRL(*this, "nbMain", wxChoicebook))
++            if(wxChoicebook* nb = XRCCTRL_OR_NULL(*this, "nbMain", wxChoicebook))
+             {
+                 nb->Disable();
+             }
+@@ -1267,7 +1267,7 @@
+ 
+ wxListBox* CompilerOptionsDlg::GetDirsListBox()
+ {
+-    wxNotebook* nb = XRCCTRL(*this, "nbDirs", wxNotebook);
++    wxNotebook* nb = XRCCTRL_OR_NULL(*this, "nbDirs", wxNotebook);
+     if (!nb)
+         return 0;
+     switch (nb->GetSelection())
+@@ -1694,7 +1694,7 @@
+ 
+ void CompilerOptionsDlg::OnRemoveLibClick(wxCommandEvent& /*event*/)
+ {
+-    wxListBox* lstLibs = XRCCTRL(*this, "lstLibs", wxListBox);
++    wxListBox* lstLibs = XRCCTRL_OR_NULL(*this, "lstLibs", wxListBox);
+     if (!lstLibs || lstLibs->GetSelection() < 0)
+         return;
+     if (cbMessageBox(_("Remove library '")+lstLibs->GetStringSelection()+_("' from the list?"), _("Confirmation"), wxICON_QUESTION | wxOK | wxCANCEL) == wxID_OK)
+@@ -1706,7 +1706,7 @@
+ 
+ void CompilerOptionsDlg::OnClearLibClick(wxCommandEvent& /*event*/)
+ {
+-    wxListBox* lstLibs = XRCCTRL(*this, "lstLibs", wxListBox);
++    wxListBox* lstLibs = XRCCTRL_OR_NULL(*this, "lstLibs", wxListBox);
+     if (!lstLibs || lstLibs->GetCount() == 0)
+         return;
+     if (cbMessageBox(_("Remove all libraries from the list?"), _("Confirmation"), wxICON_QUESTION | wxOK | wxCANCEL) == wxID_OK)
+@@ -1720,7 +1720,7 @@
+ {
+     if (!m_pProject)
+         return;
+-    wxListBox* lstLibs = XRCCTRL(*this, "lstLibs", wxListBox);
++    wxListBox* lstLibs = XRCCTRL_OR_NULL(*this, "lstLibs", wxListBox);
+     if (!lstLibs || lstLibs->GetCount() == 0)
+         return;
+ 
+@@ -1764,7 +1764,7 @@
+     if (path.IsEmpty())
+         return;
+ 
+-    wxListBox* control = XRCCTRL(*this, "lstExtraPaths", wxListBox);
++    wxListBox* control = XRCCTRL_OR_NULL(*this, "lstExtraPaths", wxListBox);
+     if (control)
+     {
+         // get all listBox entries in array String
+@@ -1784,7 +1784,7 @@
+ 
+ void CompilerOptionsDlg::OnEditExtraPathClick(wxCommandEvent& /*event*/)
+ {
+-    wxListBox* control = XRCCTRL(*this, "lstExtraPaths", wxListBox);
++    wxListBox* control = XRCCTRL_OR_NULL(*this, "lstExtraPaths", wxListBox);
+     if (!control || control->GetSelection() < 0)
+         return;
+ 
+@@ -1818,7 +1818,7 @@
+ 
+ void CompilerOptionsDlg::OnRemoveExtraPathClick(wxCommandEvent& /*event*/)
+ {
+-    wxListBox* control = XRCCTRL(*this, "lstExtraPaths", wxListBox);
++    wxListBox* control = XRCCTRL_OR_NULL(*this, "lstExtraPaths", wxListBox);
+     if (!control || control->GetSelection() < 0)
+         return;
+     control->Delete(control->GetSelection());
+@@ -1827,7 +1827,7 @@
+ 
+ void CompilerOptionsDlg::OnClearExtraPathClick(wxCommandEvent& /*event*/)
+ {
+-    wxListBox* control = XRCCTRL(*this, "lstExtraPaths", wxListBox);
++    wxListBox* control = XRCCTRL_OR_NULL(*this, "lstExtraPaths", wxListBox);
+     if (!control || control->IsEmpty())
+         return;
+ 
+@@ -1912,19 +1912,19 @@
+     // see who called us
+     wxTextCtrl* obj = 0L;
+     if (event.GetId() == XRCID("btnCcompiler"))
+-        obj = XRCCTRL(*this, "txtCcompiler", wxTextCtrl);
++        obj = XRCCTRL_OR_NULL(*this, "txtCcompiler", wxTextCtrl);
+     else if (event.GetId() == XRCID("btnCPPcompiler"))
+-        obj = XRCCTRL(*this, "txtCPPcompiler", wxTextCtrl);
++        obj = XRCCTRL_OR_NULL(*this, "txtCPPcompiler", wxTextCtrl);
+     else if (event.GetId() == XRCID("btnLinker"))
+-        obj = XRCCTRL(*this, "txtLinker", wxTextCtrl);
++        obj = XRCCTRL_OR_NULL(*this, "txtLinker", wxTextCtrl);
+     else if (event.GetId() == XRCID("btnLibLinker"))
+-        obj = XRCCTRL(*this, "txtLibLinker", wxTextCtrl);
++        obj = XRCCTRL_OR_NULL(*this, "txtLibLinker", wxTextCtrl);
+     else if (event.GetId() == XRCID("btnDebugger"))
+-        obj = XRCCTRL(*this, "txtDebugger", wxTextCtrl);
++        obj = XRCCTRL_OR_NULL(*this, "txtDebugger", wxTextCtrl);
+     else if (event.GetId() == XRCID("btnResComp"))
+-        obj = XRCCTRL(*this, "txtResComp", wxTextCtrl);
++        obj = XRCCTRL_OR_NULL(*this, "txtResComp", wxTextCtrl);
+     else if (event.GetId() == XRCID("btnMake"))
+-        obj = XRCCTRL(*this, "txtMake", wxTextCtrl);
++        obj = XRCCTRL_OR_NULL(*this, "txtMake", wxTextCtrl);
+ 
+     if (!obj)
+         return; // called from invalid caller
+@@ -2001,7 +2001,7 @@
+     XRCCTRL(*this, "spnLibs", wxSpinButton)->Enable(en);
+ 
+     // add/edit/delete/clear vars
+-    if (XRCCTRL(*this, "lstVars", wxListBox))
++    if (XRCCTRL_OR_NULL(*this, "lstVars", wxListBox))
+     {
+         en = XRCCTRL(*this, "lstVars", wxListBox)->GetSelection() >= 0;
+         XRCCTRL(*this, "btnEditVar", wxButton)->Enable(en);
+@@ -2020,7 +2020,7 @@
+     XRCCTRL(*this, "cmbResDirsPolicy", wxChoice)->Enable(en);
+ 
+     // compiler set buttons
+-    if (XRCCTRL(*this, "btnAddCompiler", wxButton)) // only if exist
++    if (XRCCTRL_OR_NULL(*this, "btnAddCompiler", wxButton)) // only if exist
+     {
+         en = !data; // global options selected
+         int idx = XRCCTRL(*this, "cmbCompiler", wxChoice)->GetSelection();
+@@ -2038,7 +2038,7 @@
+     }
+ 
+     // "others" tab
+-    if (XRCCTRL(*this, "chkSaveHtmlLog", wxCheckBox)) // page exists?
++    if (XRCCTRL_OR_NULL(*this, "chkSaveHtmlLog", wxCheckBox)) // page exists?
+     {
+         XRCCTRL(*this, "chkFullHtmlLog", wxCheckBox)->Enable(XRCCTRL(*this, "chkSaveHtmlLog", wxCheckBox)->IsChecked());
+     }
+@@ -2051,19 +2051,19 @@
+     CompilerFactory::SaveSettings();
+ 
+     //others
+-    wxCheckBox* chk = XRCCTRL(*this, "chkIncludeFileCwd", wxCheckBox);
++    wxCheckBox* chk = XRCCTRL_OR_NULL(*this, "chkIncludeFileCwd", wxCheckBox);
+     if (chk)
+         Manager::Get()->GetConfigManager(_T("compiler"))->Write(_T("/include_file_cwd"), (bool)chk->IsChecked());
+-    chk = XRCCTRL(*this, "chkIncludePrjCwd", wxCheckBox);
++    chk = XRCCTRL_OR_NULL(*this, "chkIncludePrjCwd", wxCheckBox);
+     if (chk)
+         Manager::Get()->GetConfigManager(_T("compiler"))->Write(_T("/include_prj_cwd"), (bool)chk->IsChecked());
+-    chk = XRCCTRL(*this, "chkSaveHtmlLog", wxCheckBox);
++    chk = XRCCTRL_OR_NULL(*this, "chkSaveHtmlLog", wxCheckBox);
+     if (chk)
+         Manager::Get()->GetConfigManager(_T("compiler"))->Write(_T("/save_html_build_log"), (bool)chk->IsChecked());
+-    chk = XRCCTRL(*this, "chkFullHtmlLog", wxCheckBox);
++    chk = XRCCTRL_OR_NULL(*this, "chkFullHtmlLog", wxCheckBox);
+     if (chk)
+         Manager::Get()->GetConfigManager(_T("compiler"))->Write(_T("/save_html_build_log/full_command_line"), (bool)chk->IsChecked());
+-    chk = XRCCTRL(*this, "chkBuildProgressBar", wxCheckBox);
++    chk = XRCCTRL_OR_NULL(*this, "chkBuildProgressBar", wxCheckBox);
+     if (chk)
+     {
+         Manager::Get()->GetConfigManager(_T("compiler"))->Write(_T("/build_progress/bar"), (bool)chk->IsChecked());
+@@ -2072,13 +2072,13 @@
+ 		else
+ 			m_Compiler->RemoveBuildProgressBar();
+     }
+-    chk = XRCCTRL(*this, "chkBuildProgressPerc", wxCheckBox);
++    chk = XRCCTRL_OR_NULL(*this, "chkBuildProgressPerc", wxCheckBox);
+     if (chk)
+     {
+         Manager::Get()->GetConfigManager(_T("compiler"))->Write(_T("/build_progress/percentage"), (bool)chk->IsChecked());
+         m_Compiler->m_LogBuildProgressPercentage = chk->IsChecked();
+     }
+-    wxSpinCtrl* spn = XRCCTRL(*this, "spnParallelProcesses", wxSpinCtrl);
++    wxSpinCtrl* spn = XRCCTRL_OR_NULL(*this, "spnParallelProcesses", wxSpinCtrl);
+     if (spn)
+     {
+         if (m_Compiler->IsRunning())
+@@ -2089,7 +2089,7 @@
+             m_Compiler->ReAllocProcesses();
+         }
+     }
+-    spn = XRCCTRL(*this, "spnMaxErrors", wxSpinCtrl);
++    spn = XRCCTRL_OR_NULL(*this, "spnMaxErrors", wxSpinCtrl);
+     if (spn)
+         Manager::Get()->GetConfigManager(_T("compiler"))->Write(_T("/max_reported_errors"), (int)spn->GetValue());
+ 
+Index: src/sdk/selecttargetdlg.cpp
+===================================================================
+--- src/sdk/selecttargetdlg.cpp	(Revision 3882)
++++ src/sdk/selecttargetdlg.cpp	(Arbeitskopie)
+@@ -110,7 +110,7 @@
+ 
+ void SelectTargetDlg::OnHostApplicationButtonClick(wxCommandEvent& /*event*/)
+ {
+-    if(wxTextCtrl* obj = XRCCTRL(*this, "txtHostApp", wxTextCtrl))
++    if(wxTextCtrl* obj = XRCCTRL_OR_NULL(*this, "txtHostApp", wxTextCtrl))
+     {
+         wxFileDialog* dlg = new wxFileDialog(this,
+                             _("Select host application"),
+Index: src/sdk/finddlg.cpp
+===================================================================
+--- src/sdk/finddlg.cpp	(Revision 3882)
++++ src/sdk/finddlg.cpp	(Arbeitskopie)
+@@ -307,8 +307,8 @@
+ 
+ void FindDlg::OnFindChange(wxNotebookEvent& event)
+ {
+-    wxComboBox* cmbFind1 = XRCCTRL(*this, "cmbFind1", wxComboBox);
+-    wxComboBox* cmbFind2 = XRCCTRL(*this, "cmbFind2", wxComboBox);
++    wxComboBox* cmbFind1 = XRCCTRL_OR_NULL(*this, "cmbFind1", wxComboBox);
++    wxComboBox* cmbFind2 = XRCCTRL_OR_NULL(*this, "cmbFind2", wxComboBox);
+ 
+     if (cmbFind1 && cmbFind2)
+     {
+@@ -350,9 +350,9 @@
+ {
+     wxComboBox* cbp = 0;
+     if (IsFindInFiles())
+-        cbp = XRCCTRL(*this, "cmbFind2", wxComboBox);
++        cbp = XRCCTRL_OR_NULL(*this, "cmbFind2", wxComboBox);
+     else
+-        cbp = XRCCTRL(*this, "cmbFind1", wxComboBox);
++        cbp = XRCCTRL_OR_NULL(*this, "cmbFind1", wxComboBox);
+ 
+     if (cbp != 0) cbp->SetFocus();
+     event.Skip();
+Index: src/sdk/replacedlg.cpp
+===================================================================
+--- src/sdk/replacedlg.cpp	(Revision 3882)
++++ src/sdk/replacedlg.cpp	(Arbeitskopie)
+@@ -257,8 +257,8 @@
+ 
+ void ReplaceDlg::OnFindChange(wxNotebookEvent& event)
+ {
+-    wxComboBox* cmbFind1 = XRCCTRL(*this, "cmbFind1", wxComboBox);
+-    wxComboBox* cmbFind2 = XRCCTRL(*this, "cmbFind2", wxComboBox);
++    wxComboBox* cmbFind1 = XRCCTRL_OR_NULL(*this, "cmbFind1", wxComboBox);
++    wxComboBox* cmbFind2 = XRCCTRL_OR_NULL(*this, "cmbFind2", wxComboBox);
+ 
+     if (cmbFind1 && cmbFind2)
+     {
+@@ -286,9 +286,9 @@
+ {
+     wxComboBox* cbp = 0;
+     if (IsFindInFiles())
+-        cbp = XRCCTRL(*this, "cmbFind2", wxComboBox);
++        cbp = XRCCTRL_OR_NULL(*this, "cmbFind2", wxComboBox);
+     else
+-        cbp = XRCCTRL(*this, "cmbFind1", wxComboBox);
++        cbp = XRCCTRL_OR_NULL(*this, "cmbFind1", wxComboBox);
+ 
+     if (cbp != 0) cbp->SetFocus();
+     event.Skip();

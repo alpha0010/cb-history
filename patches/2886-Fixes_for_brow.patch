@@ -1,0 +1,52 @@
+Index: src/plugins/contrib/BrowseTracker/BrowseTracker.cpp
+===================================================================
+--- src/plugins/contrib/BrowseTracker/BrowseTracker.cpp	(revision 5986)
++++ src/plugins/contrib/BrowseTracker/BrowseTracker.cpp	(working copy)
+@@ -215,8 +215,7 @@
+ 	m_InitDone = false;
+ 	m_CurrEditorIndex = 0;
+ 	m_LastEditorIndex = MaxEntries-1;
+-	m_apEditors.Alloc(MaxEntries);
+-	for (int i=0; i<MaxEntries ; ++i ) m_apEditors[i] = 0;
++	m_apEditors.SetCount(MaxEntries, 0);
+ 	m_nBrowsedEditorCount = 0;
+ 	m_UpdateUIFocusEditor = 0;
+ 	m_nRemoveEditorSentry = 0;
+@@ -504,11 +503,11 @@
+         int menuId = item->GetId();
+         wxString menuLabel = item->GetLabel();
+         ///LOGIT( _T("BT OnContextMenu insert[%s]"),menuLabel.c_str() );
+-        wxMenuItem* pContextItem= new wxMenuItem(0, menuId, menuLabel);
++        wxMenuItem* pContextItem= new wxMenuItem(sub_menu, menuId, menuLabel);
+         sub_menu->Append( pContextItem );
+     }
+     popup->AppendSeparator();
+-    pbtMenuItem = new wxMenuItem(0, wxID_ANY, _("Browse Tracker"), _T(""), wxITEM_NORMAL);
++    pbtMenuItem = new wxMenuItem(sub_menu, wxID_ANY, _("Browse Tracker"), _T(""), wxITEM_NORMAL);
+     pbtMenuItem->SetSubMenu(sub_menu);
+     popup->Append(pbtMenuItem);
+ 
+@@ -2181,7 +2180,7 @@
+         tmpArray.Alloc(MaxEntries);
+         // copy current editors & clear for compression
+         for (int i = 0; i<MaxEntries; ++i)
+-        {   tmpArray[i] = m_apEditors[i];
++        {   tmpArray.Add(m_apEditors[i]);
+             m_apEditors[i] = 0;
+         }//for
+         m_CurrEditorIndex = 0;
+Index: src/plugins/contrib/BrowseTracker/BrowseMarks.cpp
+===================================================================
+--- src/plugins/contrib/BrowseTracker/BrowseMarks.cpp	(revision 5986)
++++ src/plugins/contrib/BrowseTracker/BrowseMarks.cpp	(working copy)
+@@ -65,9 +65,7 @@
+     //LOGIT( _T("BT BrowseMarks[%s][%s]"),m_filePath.c_str() ,m_fileShortName.c_str() );
+     //#endif
+ 
+-    m_EdPosnArray.Alloc(MaxEntries);
+-    for (int i=0; i < MaxEntries; ++i )
+-    	m_EdPosnArray[i] = -1;
++    m_EdPosnArray.SetCount(MaxEntries, -1);
+     m_currIndex = 0;    //index of current entry
+     m_lastIndex = MaxEntries-1;    //index for insertion of new browse marks
+     m_pEdMgr = Manager::Get()->GetEditorManager();

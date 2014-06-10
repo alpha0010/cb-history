@@ -1,0 +1,642 @@
+From fbff639e6e1ca7ca3cd36877551cab3bc4cfac79 Mon Sep 17 00:00:00 2001
+From: =?utf-8?q?Dan=20Hor=C3=A1k?= <dan@danny.cz>
+Date: Sat, 16 May 2009 18:20:06 +0200
+Subject: [PATCH] use CB_SDK_INCLUDES variable for common set of include directories used in Makefile.am
+
+---
+ configure.in                                       |    3 +++
+ src/plugins/astyle/Makefile.am                     |    6 ++----
+ src/plugins/autosave/Makefile.am                   |    4 +---
+ src/plugins/classwizard/Makefile.am                |    4 +---
+ src/plugins/codecompletion/Makefile.am             |    6 ++----
+ src/plugins/compilergcc/Makefile.am                |    4 +---
+ src/plugins/contrib/AutoVersioning/Makefile.am     |    4 +---
+ src/plugins/contrib/BrowseTracker/Makefile.am      |    4 +---
+ src/plugins/contrib/HexEditor/Makefile.am          |    4 +---
+ src/plugins/contrib/IncrementalSearch/Makefile.am  |    4 +---
+ src/plugins/contrib/ThreadSearch/Makefile.am       |    4 +---
+ src/plugins/contrib/Valgrind/Makefile.am           |    4 +---
+ src/plugins/contrib/byogames/Makefile.am           |    4 +---
+ src/plugins/contrib/cb_koders/Makefile.am          |    4 +---
+ src/plugins/contrib/codesnippets/Makefile.am       |    4 +---
+ src/plugins/contrib/codestat/Makefile.am           |    4 +---
+ src/plugins/contrib/dragscroll/Makefile.am         |    6 ++----
+ src/plugins/contrib/envvars/Makefile.am            |    4 +---
+ src/plugins/contrib/headerfixup/Makefile.am        |    4 +---
+ src/plugins/contrib/help_plugin/Makefile.am        |    4 +---
+ src/plugins/contrib/keybinder/Makefile.am          |    4 +---
+ src/plugins/contrib/lib_finder/Makefile.am         |    4 +---
+ src/plugins/contrib/profiler/Makefile.am           |    4 +---
+ src/plugins/contrib/regex_testbed/Makefile.am      |    4 +---
+ src/plugins/contrib/source_exporter/Makefile.am    |    4 +---
+ src/plugins/contrib/symtab/Makefile.am             |    4 +---
+ src/plugins/contrib/wxSmith/plugin/Makefile.am     |    4 +---
+ src/plugins/contrib/wxSmith/properties/Makefile.am |    4 +---
+ src/plugins/contrib/wxSmith/wxwidgets/Makefile.am  |    4 +---
+ .../contrib/wxSmith/wxwidgets/defitems/Makefile.am |    4 +---
+ .../wxSmith/wxwidgets/properties/Makefile.am       |    4 +---
+ .../contrib/wxSmithContribItems/Makefile.am        |    4 +---
+ src/plugins/debuggergdb/Makefile.am                |    4 +---
+ src/plugins/defaultmimehandler/Makefile.am         |    4 +---
+ src/plugins/openfileslist/Makefile.am              |    4 +---
+ src/plugins/projectsimporter/Makefile.am           |    4 +---
+ src/plugins/scriptedwizard/Makefile.am             |    4 +---
+ src/plugins/todo/Makefile.am                       |    4 +---
+ src/plugins/xpmanifest/Makefile.am                 |    4 +---
+ src/sdk/Makefile.am                                |    4 +---
+ src/src/Makefile.am                                |    4 +---
+ 41 files changed, 46 insertions(+), 123 deletions(-)
+
+diff --git a/configure.in b/configure.in
+index 114e822..a2c9b79 100644
+--- a/configure.in
++++ b/configure.in
+@@ -194,6 +194,9 @@ CPPFLAGS="$CPPFLAGS -Ulinux -Uunix"
+ CXXFLAGS="$CXXFLAGS $PCH_FLAGS $PIC_FLAGS -fexceptions"
+ AC_SUBST(codeblocks_PCH_FLAGS, "$PCH_FLAGS")
+ 
++CB_SDK_INCLUDES="\$(WX_CXXFLAGS) -I\$(top_srcdir)/src/include -I\$(top_srcdir)/src/include/wxscintilla/include"
++AC_SUBST(CB_SDK_INCLUDES)
++
+ dnl AM_PATH_GTK(1.2.7, ,
+ dnl             AC_MSG_ERROR(Cannot find GTK: Is gtk-config in path?),
+ dnl             gthread)
+diff --git a/src/plugins/astyle/Makefile.am b/src/plugins/astyle/Makefile.am
+index 55b5f75..9670d00 100644
+--- a/src/plugins/astyle/Makefile.am
++++ b/src/plugins/astyle/Makefile.am
+@@ -1,9 +1,7 @@
+ SUBDIRS = resources
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/plugins/astyle/astyle \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES) \
++		-I$(top_srcdir)/src/plugins/astyle/astyle
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ 
+diff --git a/src/plugins/autosave/Makefile.am b/src/plugins/autosave/Makefile.am
+index b8aea57..c14a83f 100644
+--- a/src/plugins/autosave/Makefile.am
++++ b/src/plugins/autosave/Makefile.am
+@@ -1,6 +1,4 @@
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES)
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ 
+diff --git a/src/plugins/classwizard/Makefile.am b/src/plugins/classwizard/Makefile.am
+index 41fbaf4..bbf9fec 100644
+--- a/src/plugins/classwizard/Makefile.am
++++ b/src/plugins/classwizard/Makefile.am
+@@ -1,8 +1,6 @@
+ SUBDIRS = resources
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES)
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ 
+diff --git a/src/plugins/codecompletion/Makefile.am b/src/plugins/codecompletion/Makefile.am
+index f5149fe..3419ae7 100644
+--- a/src/plugins/codecompletion/Makefile.am
++++ b/src/plugins/codecompletion/Makefile.am
+@@ -1,9 +1,7 @@
+ SUBDIRS = resources
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxFlatNotebook/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES) \
++		-I$(top_srcdir)/src/include/wxFlatNotebook/include
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ 
+diff --git a/src/plugins/compilergcc/Makefile.am b/src/plugins/compilergcc/Makefile.am
+index a1940de..ce4aadc 100644
+--- a/src/plugins/compilergcc/Makefile.am
++++ b/src/plugins/compilergcc/Makefile.am
+@@ -1,8 +1,6 @@
+ SUBDIRS = depslib resources
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include \
++INCLUDES = $(CB_SDK_INCLUDES) \
+ 		-I$(top_srcdir)/src/include/scripting/include \
+ 		-I$(top_srcdir)/src/include/scripting/sqplus \
+ 		-I$(top_srcdir)/src/plugins/compilergcc/depslib/src
+diff --git a/src/plugins/contrib/AutoVersioning/Makefile.am b/src/plugins/contrib/AutoVersioning/Makefile.am
+index 281add3..c6853c4 100644
+--- a/src/plugins/contrib/AutoVersioning/Makefile.am
++++ b/src/plugins/contrib/AutoVersioning/Makefile.am
+@@ -1,6 +1,4 @@
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES)
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ 
+diff --git a/src/plugins/contrib/BrowseTracker/Makefile.am b/src/plugins/contrib/BrowseTracker/Makefile.am
+index c3eff39..7fee137 100644
+--- a/src/plugins/contrib/BrowseTracker/Makefile.am
++++ b/src/plugins/contrib/BrowseTracker/Makefile.am
+@@ -1,6 +1,4 @@
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES)
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ 
+diff --git a/src/plugins/contrib/HexEditor/Makefile.am b/src/plugins/contrib/HexEditor/Makefile.am
+index 24efe5a..7f55790 100644
+--- a/src/plugins/contrib/HexEditor/Makefile.am
++++ b/src/plugins/contrib/HexEditor/Makefile.am
+@@ -1,6 +1,4 @@
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES)
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ 
+diff --git a/src/plugins/contrib/IncrementalSearch/Makefile.am b/src/plugins/contrib/IncrementalSearch/Makefile.am
+index 2842e5d..6047b8f 100644
+--- a/src/plugins/contrib/IncrementalSearch/Makefile.am
++++ b/src/plugins/contrib/IncrementalSearch/Makefile.am
+@@ -1,6 +1,4 @@
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES)
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ 
+diff --git a/src/plugins/contrib/ThreadSearch/Makefile.am b/src/plugins/contrib/ThreadSearch/Makefile.am
+index f583587..5e32646 100644
+--- a/src/plugins/contrib/ThreadSearch/Makefile.am
++++ b/src/plugins/contrib/ThreadSearch/Makefile.am
+@@ -1,8 +1,6 @@
+ SUBDIRS = resources
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include \
++INCLUDES = $(CB_SDK_INCLUDES) \
+ 		-I$(top_srcdir)/src/include/wxFlatNotebook/include
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+diff --git a/src/plugins/contrib/Valgrind/Makefile.am b/src/plugins/contrib/Valgrind/Makefile.am
+index 99ef953..adee2da 100644
+--- a/src/plugins/contrib/Valgrind/Makefile.am
++++ b/src/plugins/contrib/Valgrind/Makefile.am
+@@ -1,8 +1,6 @@
+ SUBDIRS = resources
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES)
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ 
+diff --git a/src/plugins/contrib/byogames/Makefile.am b/src/plugins/contrib/byogames/Makefile.am
+index 0ca1515..344f82a 100644
+--- a/src/plugins/contrib/byogames/Makefile.am
++++ b/src/plugins/contrib/byogames/Makefile.am
+@@ -1,6 +1,4 @@
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES)
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ 
+diff --git a/src/plugins/contrib/cb_koders/Makefile.am b/src/plugins/contrib/cb_koders/Makefile.am
+index c426a8c..eec3c22 100644
+--- a/src/plugins/contrib/cb_koders/Makefile.am
++++ b/src/plugins/contrib/cb_koders/Makefile.am
+@@ -1,6 +1,4 @@
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES)
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ 
+diff --git a/src/plugins/contrib/codesnippets/Makefile.am b/src/plugins/contrib/codesnippets/Makefile.am
+index ce1b313..b9fc3f7 100644
+--- a/src/plugins/contrib/codesnippets/Makefile.am
++++ b/src/plugins/contrib/codesnippets/Makefile.am
+@@ -1,9 +1,7 @@
+ SUBDIRS = resources
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
++INCLUDES = $(CB_SDK_INCLUDES) \
+         $(WX_GTK2_CFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include \
+ 		-I$(top_srcdir)/src/plugins/contrib/codesnippets \
+ 		-I$(top_srcdir)/src/plugins/contrib/codesnippets/Search \
+ 		-I$(top_srcdir)/src/plugins/contrib/codesnippets/editor \
+diff --git a/src/plugins/contrib/codestat/Makefile.am b/src/plugins/contrib/codestat/Makefile.am
+index 2973f05..8c27453 100644
+--- a/src/plugins/contrib/codestat/Makefile.am
++++ b/src/plugins/contrib/codestat/Makefile.am
+@@ -1,8 +1,6 @@
+ SUBDIRS = resources
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES)
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ 
+diff --git a/src/plugins/contrib/dragscroll/Makefile.am b/src/plugins/contrib/dragscroll/Makefile.am
+index 82a2599..0005993 100644
+--- a/src/plugins/contrib/dragscroll/Makefile.am
++++ b/src/plugins/contrib/dragscroll/Makefile.am
+@@ -1,7 +1,5 @@
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/src \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES) \
++		-I$(top_srcdir)/src/src
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ 
+diff --git a/src/plugins/contrib/envvars/Makefile.am b/src/plugins/contrib/envvars/Makefile.am
+index 89f6ee3..b2490ed 100644
+--- a/src/plugins/contrib/envvars/Makefile.am
++++ b/src/plugins/contrib/envvars/Makefile.am
+@@ -1,6 +1,4 @@
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES)
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ pkgdata_DATA = envvars.zip
+diff --git a/src/plugins/contrib/headerfixup/Makefile.am b/src/plugins/contrib/headerfixup/Makefile.am
+index 8bd9551..362949d 100644
+--- a/src/plugins/contrib/headerfixup/Makefile.am
++++ b/src/plugins/contrib/headerfixup/Makefile.am
+@@ -1,6 +1,4 @@
+-INCLUDES = $(WX_CXXFLAGS) \
+-           -I$(top_srcdir)/src/include \
+-           -I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES)
+ 
+ CXXFLAGS = @CXXFLAGS@  -O0
+ 
+diff --git a/src/plugins/contrib/help_plugin/Makefile.am b/src/plugins/contrib/help_plugin/Makefile.am
+index 4ae8f1e..5789de5 100644
+--- a/src/plugins/contrib/help_plugin/Makefile.am
++++ b/src/plugins/contrib/help_plugin/Makefile.am
+@@ -7,9 +7,7 @@ if ! HAVE_ZLIB
+ SUBDIRS += zlib
+ endif
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include \
++INCLUDES = $(CB_SDK_INCLUDES) \
+ 		-I$(top_srcdir)/src/include/scripting/include \
+ 		-I$(top_srcdir)/src/include/scripting/bindings \
+ 		-I$(top_srcdir)/src/include/scripting/sqplus \
+diff --git a/src/plugins/contrib/keybinder/Makefile.am b/src/plugins/contrib/keybinder/Makefile.am
+index 2102535..c4275e7 100644
+--- a/src/plugins/contrib/keybinder/Makefile.am
++++ b/src/plugins/contrib/keybinder/Makefile.am
+@@ -1,6 +1,4 @@
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES)
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ 
+diff --git a/src/plugins/contrib/lib_finder/Makefile.am b/src/plugins/contrib/lib_finder/Makefile.am
+index c14aa6e..f36b6b3 100644
+--- a/src/plugins/contrib/lib_finder/Makefile.am
++++ b/src/plugins/contrib/lib_finder/Makefile.am
+@@ -1,8 +1,6 @@
+ SUBDIRS = lib_finder
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include \
++INCLUDES = $(CB_SDK_INCLUDES) \
+ 		-I$(top_srcdir)/src/include/wxFlatNotebook/include \
+ 		-I$(top_srcdir)/src/include/scripting/include \
+ 		-I$(top_srcdir)/src/include/scripting/sqplus \
+diff --git a/src/plugins/contrib/profiler/Makefile.am b/src/plugins/contrib/profiler/Makefile.am
+index 976d786..4bf23eb 100644
+--- a/src/plugins/contrib/profiler/Makefile.am
++++ b/src/plugins/contrib/profiler/Makefile.am
+@@ -1,8 +1,6 @@
+ SUBDIRS = resources
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES)
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ 
+diff --git a/src/plugins/contrib/regex_testbed/Makefile.am b/src/plugins/contrib/regex_testbed/Makefile.am
+index b40a078..5ebe3b1 100644
+--- a/src/plugins/contrib/regex_testbed/Makefile.am
++++ b/src/plugins/contrib/regex_testbed/Makefile.am
+@@ -1,6 +1,4 @@
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES)
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ pkgdata_DATA = RegExTestbed.zip
+diff --git a/src/plugins/contrib/source_exporter/Makefile.am b/src/plugins/contrib/source_exporter/Makefile.am
+index 9e2ea11..5c2316f 100644
+--- a/src/plugins/contrib/source_exporter/Makefile.am
++++ b/src/plugins/contrib/source_exporter/Makefile.am
+@@ -1,8 +1,6 @@
+ SUBDIRS = wxPdfDocument
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include \
++INCLUDES = $(CB_SDK_INCLUDES) \
+ 		-I$(top_srcdir)/src/plugins/contrib/source_exporter/wxPdfDocument/include \
+ 		-include "sdk.h"
+ 
+diff --git a/src/plugins/contrib/symtab/Makefile.am b/src/plugins/contrib/symtab/Makefile.am
+index 45f2eea..8e8b04c 100644
+--- a/src/plugins/contrib/symtab/Makefile.am
++++ b/src/plugins/contrib/symtab/Makefile.am
+@@ -1,8 +1,6 @@
+ SUBDIRS = resources
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES)
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ 
+diff --git a/src/plugins/contrib/wxSmith/plugin/Makefile.am b/src/plugins/contrib/wxSmith/plugin/Makefile.am
+index 24959dc..2ae46d1 100644
+--- a/src/plugins/contrib/wxSmith/plugin/Makefile.am
++++ b/src/plugins/contrib/wxSmith/plugin/Makefile.am
+@@ -1,9 +1,7 @@
+ AM_CPPFLAGS = -DWXMAKINGLIB_PROPGRID
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
++INCLUDES = $(CB_SDK_INCLUDES) \
+ 		-I$(top_srcdir)/src/include/wxFlatNotebook/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include \
+ 		-I$(top_srcdir)/src/plugins/contrib/propgrid/include
+ 
+ pluginlib_LTLIBRARIES = libwxsmith.la
+diff --git a/src/plugins/contrib/wxSmith/properties/Makefile.am b/src/plugins/contrib/wxSmith/properties/Makefile.am
+index 72e1b28..d4e6db2 100644
+--- a/src/plugins/contrib/wxSmith/properties/Makefile.am
++++ b/src/plugins/contrib/wxSmith/properties/Makefile.am
+@@ -1,8 +1,6 @@
+ AM_CPPFLAGS = -DWXMAKINGLIB_PROPGRID
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include \
++INCLUDES = $(CB_SDK_INCLUDES) \
+ 		-I$(top_srcdir)/src/plugins/contrib/wxSmith/propgrid/contrib/include
+ 
+ noinst_LTLIBRARIES = libwxsmith_properties.la
+diff --git a/src/plugins/contrib/wxSmith/wxwidgets/Makefile.am b/src/plugins/contrib/wxSmith/wxwidgets/Makefile.am
+index c4fd28e..58055d9 100644
+--- a/src/plugins/contrib/wxSmith/wxwidgets/Makefile.am
++++ b/src/plugins/contrib/wxSmith/wxwidgets/Makefile.am
+@@ -2,10 +2,8 @@ SUBDIRS = defitems icons properties
+ 
+ AM_CPPFLAGS = -DWXMAKINGLIB_PROPGRID
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
++INCLUDES = $(CB_SDK_INCLUDES) \
+ 		-I$(top_srcdir)/src/include/wxFlatNotebook/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include \
+ 		-I$(top_srcdir)/src/include/wxFlatNotebook \
+ 		-I$(top_srcdir)/src/include/scripting/include \
+ 		-I$(top_srcdir)/src/include/scripting/squirrel \
+diff --git a/src/plugins/contrib/wxSmith/wxwidgets/defitems/Makefile.am b/src/plugins/contrib/wxSmith/wxwidgets/defitems/Makefile.am
+index 2e1efca..0f57489 100644
+--- a/src/plugins/contrib/wxSmith/wxwidgets/defitems/Makefile.am
++++ b/src/plugins/contrib/wxSmith/wxwidgets/defitems/Makefile.am
+@@ -1,9 +1,7 @@
+ AM_CPPFLAGS = -DWXMAKINGLIB_PROPGRID
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
++INCLUDES = $(CB_SDK_INCLUDES) \
+ 		-I$(top_srcdir)/src/include/wxFlatNotebook/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include \
+ 		-I$(top_srcdir)/src/include/wxFlatNotebook \
+ 		-I$(top_srcdir)/src/plugins/contrib/wxSmith/propgrid/contrib/include
+ 
+diff --git a/src/plugins/contrib/wxSmith/wxwidgets/properties/Makefile.am b/src/plugins/contrib/wxSmith/wxwidgets/properties/Makefile.am
+index 2c13415..3efb838 100644
+--- a/src/plugins/contrib/wxSmith/wxwidgets/properties/Makefile.am
++++ b/src/plugins/contrib/wxSmith/wxwidgets/properties/Makefile.am
+@@ -1,9 +1,7 @@
+ AM_CPPFLAGS = -DWXMAKINGLIB_PROPGRID
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
++INCLUDES = $(CB_SDK_INCLUDES) \
+ 		-I$(top_srcdir)/src/include/wxFlatNotebook/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include \
+ 		-I$(top_srcdir)/src/include/wxFlatNotebook \
+ 		-I$(top_srcdir)/src/plugins/contrib/wxSmith/propgrid/contrib/include
+ 
+diff --git a/src/plugins/contrib/wxSmithContribItems/Makefile.am b/src/plugins/contrib/wxSmithContribItems/Makefile.am
+index 31998cf..32ee98d 100644
+--- a/src/plugins/contrib/wxSmithContribItems/Makefile.am
++++ b/src/plugins/contrib/wxSmithContribItems/Makefile.am
+@@ -1,9 +1,7 @@
+ AM_CPPFLAGS = -DWXMAKINGLIB_PROPGRID
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
++INCLUDES = $(CB_SDK_INCLUDES) \
+ 		-I$(top_srcdir)/src/include/wxFlatNotebook/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include \
+ 		-I$(top_srcdir)/src/plugins/contrib/wxSmith \
+ 		-I$(top_srcdir)/src/plugins/contrib/wxSmith/propgrid/contrib/include \
+ 		-I$(srcdir)/wxchart/wxchart-1.0/include \
+diff --git a/src/plugins/debuggergdb/Makefile.am b/src/plugins/debuggergdb/Makefile.am
+index 8044cf2..c9da903 100644
+--- a/src/plugins/debuggergdb/Makefile.am
++++ b/src/plugins/debuggergdb/Makefile.am
+@@ -1,9 +1,7 @@
+ SUBDIRS = resources
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
++INCLUDES = $(CB_SDK_INCLUDES) \
+ 		$(WX_GTK2_CFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include \
+ 		-I$(top_srcdir)/src/include/scripting/include \
+     	-I$(top_srcdir)/src/include/scripting/sqplus
+ 
+diff --git a/src/plugins/defaultmimehandler/Makefile.am b/src/plugins/defaultmimehandler/Makefile.am
+index 7b3c777..fe36a0c 100644
+--- a/src/plugins/defaultmimehandler/Makefile.am
++++ b/src/plugins/defaultmimehandler/Makefile.am
+@@ -1,8 +1,6 @@
+ SUBDIRS = resources
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES)
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ 
+diff --git a/src/plugins/openfileslist/Makefile.am b/src/plugins/openfileslist/Makefile.am
+index 6779282..6058111 100644
+--- a/src/plugins/openfileslist/Makefile.am
++++ b/src/plugins/openfileslist/Makefile.am
+@@ -1,6 +1,4 @@
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES)
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ 
+diff --git a/src/plugins/projectsimporter/Makefile.am b/src/plugins/projectsimporter/Makefile.am
+index 7e6643e..03e037f 100644
+--- a/src/plugins/projectsimporter/Makefile.am
++++ b/src/plugins/projectsimporter/Makefile.am
+@@ -1,8 +1,6 @@
+ SUBDIRS = resources
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES)
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ 
+diff --git a/src/plugins/scriptedwizard/Makefile.am b/src/plugins/scriptedwizard/Makefile.am
+index 26b7ff3..0510de6 100644
+--- a/src/plugins/scriptedwizard/Makefile.am
++++ b/src/plugins/scriptedwizard/Makefile.am
+@@ -1,8 +1,6 @@
+ SUBDIRS = resources
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include \
++INCLUDES = $(CB_SDK_INCLUDES) \
+ 		-I$(top_srcdir)/src/include/scripting/include \
+ 		-I$(top_srcdir)/src/include/scripting/sqplus
+ 
+diff --git a/src/plugins/todo/Makefile.am b/src/plugins/todo/Makefile.am
+index 38361d0..8a6cb41 100644
+--- a/src/plugins/todo/Makefile.am
++++ b/src/plugins/todo/Makefile.am
+@@ -1,8 +1,6 @@
+ SUBDIRS = resources
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES)
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ 
+diff --git a/src/plugins/xpmanifest/Makefile.am b/src/plugins/xpmanifest/Makefile.am
+index 9375ca8..c2df95d 100644
+--- a/src/plugins/xpmanifest/Makefile.am
++++ b/src/plugins/xpmanifest/Makefile.am
+@@ -1,6 +1,4 @@
+-INCLUDES = $(WX_CXXFLAGS) \
+-		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxscintilla/include
++INCLUDES = $(CB_SDK_INCLUDES)
+ 
+ pluginlibdir = $(pkglibdir)/plugins
+ 
+diff --git a/src/plugins/contrib/codesnippets/resources/Makefile.am b/src/plugins/contrib/codesnippets/resources/Makefile.am
+index 86fc6aa..0a1e1a3 100644
+--- a/src/plugins/contrib/codesnippets/resources/Makefile.am
++++ b/src/plugins/contrib/codesnippets/resources/Makefile.am
+@@ -1,7 +1,5 @@
+-INCLUDES = $(WX_CXXFLAGS) \
++INCLUDES = $(CB_SDK_INCLUDES) \
+         $(WX_GTK2_CFLAGS) \
+-               -I$(top_srcdir)/src/include \
+-               -I$(top_srcdir)/src/include/wxscintilla/include \
+                -I$(top_srcdir)/src/plugins/contrib/codesnippets \
+                -I$(top_srcdir)/src/plugins/contrib/codesnippets/Search \
+                -I$(top_srcdir)/src/plugins/contrib/codesnippets/editor \
+diff --git a/src/plugins/contrib/wxSmith/Makefile.am b/src/plugins/contrib/wxSmith/Makefile.am
+index c7efdf4..6ca613c 100644
+--- a/src/plugins/contrib/wxSmith/Makefile.am
++++ b/src/plugins/contrib/wxSmith/Makefile.am
+@@ -2,10 +2,8 @@ SUBDIRS = propgrid properties wxwidgets . plugin
+
+ AM_CPPFLAGS = -DWXMAKINGLIB_PROPGRID
+
+-INCLUDES = $(WX_CXXFLAGS) \
+-               -I$(top_srcdir)/src/include \
++INCLUDES = $(CB_SDK_INCLUDES) \
+                -I$(top_srcdir)/src/include/wxFlatNotebook/include \
+-               -I$(top_srcdir)/src/include/wxscintilla/include \
+                 -I$(top_srcdir)/src/include/scripting/include \
+                 -I$(top_srcdir)/src/include/scripting/squirrel \
+                 -I$(top_srcdir)/src/include/scripting/sqplus \
+diff --git a/src/sdk/Makefile.am b/src/sdk/Makefile.am
+index 31dbf57..6fcacc5 100644
+--- a/src/sdk/Makefile.am
++++ b/src/sdk/Makefile.am
+@@ -1,8 +1,6 @@
+ SUBDIRS = scripting wxscintilla wxFlatNotebook resources
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-			-I$(top_srcdir)/src/include \
+-			-I$(top_srcdir)/src/include/wxscintilla/include \
++INCLUDES = $(CB_SDK_INCLUDES) \
+ 			-I$(top_srcdir)/src/include/tinyxml \
+ 			-I$(top_srcdir)/src/include/scripting/include \
+ 			-I$(top_srcdir)/src/include/scripting/sqplus \
+diff --git a/src/src/Makefile.am b/src/src/Makefile.am
+index ed0d76c..208fd90 100644
+--- a/src/src/Makefile.am
++++ b/src/src/Makefile.am
+@@ -1,8 +1,6 @@
+ SUBDIRS = wxAUI resources
+ 
+-INCLUDES = $(WX_CXXFLAGS) \
+-			-I$(top_srcdir)/src/include/wxscintilla/include \
+-			-I$(top_srcdir)/src/include \
++INCLUDES = $(CB_SDK_INCLUDES) \
+ 			-I$(top_srcdir)/src/include/scripting/include \
+ 			-I$(top_srcdir)/src/include/scripting/sqplus \
+ 			-I$(top_srcdir)/src/include/wxFlatNotebook/include \
+-- 
+1.6.0.6
+

@@ -1,0 +1,55 @@
+Index: src/plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- src/plugins/compilergcc/compilergcc.cpp	(revision 2530)
++++ src/plugins/compilergcc/compilergcc.cpp	(working copy)
+@@ -201,6 +201,7 @@
+ 	m_RunAfterCompile(false),
+ 	m_LastExitCode(0),
+ 	m_HasTargetAll(false),
++	m_NotifiedMaxErrors(false),
+ 	m_pBuildingProject(0),
+ 	m_BuildingProjectIdx(0),
+ 	m_BuildingTargetIdx(0),
+@@ -1355,6 +1356,7 @@
+ {
+ 	m_Errors.Clear();
+ 	m_pListLog->Clear();
++	m_NotifiedMaxErrors = false;
+ }
+ 
+ int CompilerGCC::RunSingleFile(const wxString& filename)
+@@ -2802,17 +2804,17 @@
+ 
+     // if max_errors reached, display a one-time message and do not log anymore
+     size_t maxErrors = Manager::Get()->GetConfigManager(_T("compiler"))->ReadInt(_T("/max_reported_errors"), 50);
+-    if (maxErrors > 0)
++    if (maxErrors > 0 && m_Errors.GetCount(cltError) == maxErrors)
+     {
+-        if (m_Errors.GetCount(cltError) > maxErrors)
+-            return;
+-        else if (m_Errors.GetCount(cltError) == maxErrors)
++        if (!m_NotifiedMaxErrors)
+         {
++            m_NotifiedMaxErrors = true;
++
+             // if we reached the max errors count, notify about it
+             LogWarningOrError(cltNormal, 0, wxEmptyString, wxEmptyString, _("More errors follow but not being shown."));
+             LogWarningOrError(cltNormal, 0, wxEmptyString, wxEmptyString, _("Edit the max errors limit in compiler options..."));
+-            return;
+         }
++        return;
+     }
+ 
+ 	Compiler* compiler = CompilerFactory::GetCompiler(m_CompilerId);
+Index: src/plugins/compilergcc/compilergcc.h
+===================================================================
+--- src/plugins/compilergcc/compilergcc.h	(revision 2530)
++++ src/plugins/compilergcc/compilergcc.h	(working copy)
+@@ -209,6 +209,7 @@
+ 		CompilerErrors m_Errors;
+ 		bool m_HasTargetAll;
+ 		wxString m_LastTargetName;
++        bool m_NotifiedMaxErrors;
+ 
+         // state management
+ 		cbProject* m_pBuildingProject;

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 2877 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #2877 <small>2009-12-27 18:53:43</small></h3>
+          <h4>techy</h4>
+          CompilerOptionsDlg acesses tabs that don't exist (debug5)
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="2877-CompilerOption.patch">2877-CompilerOption.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Bugfix</dd>
+            <dt>Status</dt><dd>Accepted</dd>
+            <dt>Close date</dt><dd>2010-01-14 08:16:10</dd>
+            <dt>Assigned to</dt><dd>mortenmacfly</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">techy 2009-12-27 18:53:53</div>
+        <div class="panel-body">
+          <p>CompilerOptionsDlg is used in three situations - 1. global options, 2. project options, 3. target options. Depending on its use, some tabs are deleted in the constructor. This patch makes sure that objects from the non-existing tabs are not accessed in the rest of the code.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2009-12-28 19:33:10</div>
+        <div class="panel-body">
+          <p>I don't really get whats wrong with trying to obtain the control instead of verifying a project is present. What if we change the possibilities to set in case (absense) of a project? I am not sure about this one...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">techy 2009-12-28 23:37:52</div>
+        <div class="panel-body">
+          <p>The problem here is that XRCCTRL goes through the existing wxObjects and tries to find the object with the given id. If it doesn't find one, it raises an assertion (useful for instance if you called XRCCTRL on something you haven't loaded yet with wxXmlResource::Get()-&gt;LoadPanel() ). Because DeletePage() really physically deletes all the objects present in he page, you get the assertion here as well because these objects cannot be found in memory. From what I have seen, you don't even have guaranteed that you get NULL when the resource is not found:</p>
+          <p>// This macro returns pointer to particular control in dialog</p>
+          <p>// created using XML resources. You can use it to set/get values from</p>
+          <p>// controls.</p>
+          <p>// Example:</p>
+          <p>//    wxDialog dlg;</p>
+          <p>//    wxXmlResource::Get()-&gt;LoadDialog(&amp;dlg, mainFrame, "my_dialog");</p>
+          <p>//    XRCCTRL(dlg, "my_textctrl", wxTextCtrl)-&gt;SetValue(wxT("default value"));</p>
+          <p>#define XRCCTRL(window, id, type) \</p>
+          <p>(wxStaticCast((window).FindWindow(XRCID(id)), type))</p>
+          <p>An alternative solution would be to use some flags (initialized in constructor) determining the presence of a tab and have code like</p>
+          <p>if (m_thisPageIsPresent) {</p>
+          <p>//do this</p>
+          <p>}</p>
+          <p>if (m_thatPageIsPresent) {</p>
+          <p>//do that</p>
+          <p>}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

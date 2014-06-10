@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 997 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #997 <small>2006-04-14 15:07:18</small></h3>
+          <h4>mortenmacfly</h4>
+          Add support for the LCC compiler
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="997-Add_support_for.patch">997-Add_support_for.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::FeatureAdd</dd>
+            <dt>Status</dt><dd>Accepted</dd>
+            <dt>Close date</dt><dd>2008-05-05 12:48:14</dd>
+            <dt>Assigned to</dt><dd></dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2006-04-14 15:07:38</div>
+        <div class="panel-body">
+          <p>Alright, I have completed the work on LCC so far. It works for me but with some restrictions where I see no workaround. Allthough I know that I repeat myself on several aspects I'd like to point out all issues and possible solutions for the sake of completeness.</p>
+          <p>1.) Issue: Different versions of LCC:</p>
+          <p>There are at least two versions of LCC that make sense to support under Win32:</p>
+          <p>This is lcc-win32 and lcc-win32, patches by The MathWorks (Matlab) company. The implementation of how I've done it considers only the compiler/linker switches that are compatible to both versions. I leave additional switches up to the user, he should know about them anyway (at least in the case of Matlab).</p>
+          <p>2.) Issue: Setup of libpath via registry</p>
+          <p>The "default" LCC compiler requires specific entries in the registry. These are the path to the include files and the path to the LCC library files. It is not enough to provide them via the "-I" or the "-L" switch. The installer will setup these entries the right way. If they are not set at least the linker will ask the user to inpout the libpath manually via stdin. This is not possible with C::B so the compilation simply stops at that point until the user hits "break". The Matlab variant has a "-libpath" switch to provide the LCC with the path.</p>
+          <p>Possible solution: I have had an idea on how to make this issue more bullet prove. I'd like to propose that on the main compiler configuration page there should be a label that can be individually set by the compiler plugin(s) to inform the user  about specific / compatibility issues. The label should have a red font but may contain no text (in fact initially it should be empty). The compiler plugins could set the label via something like:</p>
+          <p>m_Switches.issueInfo = _T("Warning: The LCC compiler requires...");</p>
+          <p>3.) Issue: The resource compiler cannot handle path names</p>
+          <p>A command issued like:</p>
+          <p>lrc MyRes.rc /oC:\MyFolder\.obj\MyRes.res</p>
+          <p>or:</p>
+          <p>lrc MyRes.rc /o.obj\MyRes.res</p>
+          <p>will NOT work. The file MyRes.res will be put into the directory where MyRes.rc is. This is quite nasty because that means as soon as I have a resource file to be compiled I have to place the object files in the same directory where the source code is, otherwise the linker is provided the wrong path for the resource objects. This applies to all Matlab stuff because every DLL created for Matlab depends on at least one resource file.</p>
+          <p>Possible solution: Add the possibility to setup the path for resource files seperately from object files. It won't work to add a include path switch to the linker because the object files are provided via the relative path.</p>
+          <p>4.) Issue: The generic switch is different for the LCC tools</p>
+          <p>The resource compiler expects the "/" switch, all other tools are proposed to use via the "-" switch but (fortunately) can also handle the "/" switch. Anyway: This should really be thought of for the compiler re-design. Also, that is is theoretically possible that the switches are case sensitive, thus e.g. the compiler requires "-i" and the resource compiler "/I".</p>
+          <p>Alltogether I have to say that I don't understand why the creators of LCC implement such incompatibilities and different interfaces. Anyway: We have to cope with that and hope it's going to be changed in the future. I've sent them feature requests accordingly.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2006-04-24 17:14:14</div>
+        <div class="panel-body">
+          <p>Compatibility update for Matlab LCC support.</p>
+          <p>This update will refine the settings of the LCC compiler to support the Matlab LCC version, too. The Matlab LCC compiler is a patched variant of LCC-Win32.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2006-05-09 09:01:14</div>
+        <div class="panel-body">
+          <p>Unfortunately, the problems you listed do not allow us to add this to our sources, at least for now (we 'll see with the new compiler framework).</p>
+          <p>Thanks anyway.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2006-05-09 09:09:42</div>
+        <div class="panel-body">
+          <p>Yes, I understand - and I would have wondered if it would have been applied. Anyway: I'm glad you read the notes which may give you the one or other hint how different compiler can be... Maybe some information can be considered in the new compiler framework...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2006-05-11 12:07:05</div>
+        <div class="panel-body">
+          <p>Updated the patch to be compatible with current SVN head. In addition it will now compile under Linux without errors, too (allthough LCC is not supported there yet). Some minor improvements to be more Matlab/LCC-Win32 friendly.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,243 @@
+Index: src/plugins/codecompletion/codecompletion.cpp
+===================================================================
+--- src/plugins/codecompletion/codecompletion.cpp	(revision 6490)
++++ src/plugins/codecompletion/codecompletion.cpp	(working copy)
+@@ -1723,7 +1723,9 @@
+             tmpsearch.AddItem(token->DisplayName(), token);
+         }
+     }
+-    IncrementalSelectListDlg dlg(Manager::Get()->GetAppWindow(), tokens, _("Select function..."), _("Please select function to go to:"));
++    IncrementalSelectIteratorStringArray iterator(tokens);
++    IncrementalSelectListDlg dlg(Manager::Get()->GetAppWindow(), iterator,
++                                 _("Select function..."), _("Please select function to go to:"));
+     PlaceWindow(&dlg);
+     if (dlg.ShowModal() == wxID_OK)
+     {
+Index: src/sdk/projectmanager.cpp
+===================================================================
+--- src/sdk/projectmanager.cpp	(revision 6490)
++++ src/sdk/projectmanager.cpp	(working copy)
+@@ -2322,6 +2322,29 @@
+     }
+ }
+ 
++struct ProjectFileRelativePathCmp
++{
++    bool operator()(ProjectFile* f1, ProjectFile* f2)
++    {
++        return f1->relativeFilename.Cmp(f2->relativeFilename) < 0;
++    }
++};
++struct ProjectFileAbsolutePathCmp
++{
++    bool operator()(ProjectFile* f1, ProjectFile* f2)
++    {
++        return f1->file.GetFullPath().Cmp(f2->file.GetFullPath()) < 0;
++    }
++};
++
++struct ProjectFileAbsolutePathEqual
++{
++    bool operator()(ProjectFile* f1, ProjectFile* f2)
++    {
++        return f1->file.GetFullPath() == f2->file.GetFullPath();
++    }
++};
++
+ void ProjectManager::OnGotoFile(wxCommandEvent& /*event*/)
+ {
+     if (!m_pActiveProject)
+@@ -2330,19 +2353,58 @@
+         return;
+     }
+ 
+-    wxArrayString files;
+-    for (int i = 0; i < m_pActiveProject->GetFilesCount(); ++i)
+-        files.Add(m_pActiveProject->GetFile(i)->relativeFilename);
++//    wxArrayString files;
++    typedef std::vector<ProjectFile*> ProjectFiles;
++    ProjectFiles files;
++    for (size_t proj_index = 0; proj_index < m_pProjects->GetCount(); ++proj_index)
++    {
++        cbProject *project = (*m_pProjects)[proj_index];
++        for (int i = 0; i < project->GetFilesCount(); ++i)
++            files.push_back(project->GetFile(i));
++    }
+ 
+-    IncrementalSelectListDlg dlg(Manager::Get()->GetAppWindow(), files, _("Select file..."), _("Please select file to open:"));
+-    PlaceWindow(&dlg);
+-    if (dlg.ShowModal() == wxID_OK)
++    if(!files.empty())
++    {
++        std::sort(files.begin(), files.end(), ProjectFileAbsolutePathCmp());
++        ProjectFiles::iterator last = std::unique(files.begin(), files.end(), ProjectFileAbsolutePathEqual());
++
++        if(last != files.end())
++        {
++            files.erase(last, files.end());
++        }
++
++        std::sort(files.begin(), files.end(), ProjectFileRelativePathCmp());
++    }
++
++    class Iterator : public IncrementalSelectIterator
++    {
++        public:
++            Iterator(ProjectFiles &files) : m_files(files)
++            {
++            }
++
++            virtual long GetCount() const
+     {
+-        ProjectFile* pf = m_pActiveProject->GetFileByFilename(dlg.GetStringSelection(), true);
+-        if (pf)
++                return m_files.size();
++            }
++            virtual wxString GetItem(long index) const
+         {
+-            DoOpenFile(pf, pf->file.GetFullPath());
++                return m_files[index]->relativeFilename;
+         }
++        private:
++            ProjectFiles &m_files;
++
++    };
++
++    Iterator iterator(files);
++    IncrementalSelectListDlg dlg(Manager::Get()->GetAppWindow(), iterator,
++                                 _("Select file..."), _("Please select file to open:"));
++    PlaceWindow(&dlg);
++    if (dlg.ShowModal() == wxID_OK)
++    {
++        long selection = dlg.GetSelection();
++        if(selection != -1)
++            DoOpenFile(files[selection], files[selection]->file.GetFullPath());
+     }
+ }
+ 
+Index: src/sdk/incrementalselectlistdlg.cpp
+===================================================================
+--- src/sdk/incrementalselectlistdlg.cpp	(revision 6490)
++++ src/sdk/incrementalselectlistdlg.cpp	(working copy)
+@@ -77,11 +77,12 @@
+     EVT_LISTBOX_DCLICK(XRCID("lstItems"), IncrementalSelectListDlg::OnSelect)
+ END_EVENT_TABLE()
+ 
+-IncrementalSelectListDlg::IncrementalSelectListDlg(wxWindow* parent, const wxArrayString& items, const wxString& caption, const wxString& message)
++IncrementalSelectListDlg::IncrementalSelectListDlg(wxWindow* parent, const IncrementalSelectIterator& iterator,
++                                                   const wxString& caption, const wxString& message)
+     : m_pMyEvtHandler(0L),
+     m_List(0L),
+     m_Text(0L),
+-    m_Items(items)
++    m_Iterator(iterator)
+ {
+     wxXmlResource::Get()->LoadObject(this, parent, _T("dlgIncrementalSelectList"),_T("wxScrollingDialog"));
+     if (!caption.IsEmpty())
+@@ -112,9 +113,13 @@
+     return m_List->GetStringSelection();
+ }
+ 
+-int IncrementalSelectListDlg::GetSelection()
++long IncrementalSelectListDlg::GetSelection()
+ {
+-    return m_List->GetSelection();
++    int selection = m_List->GetSelection();
++    if (selection == wxNOT_FOUND)
++        return wxNOT_FOUND;
++    else
++        return reinterpret_cast<long>(m_List->GetClientData(selection));
+ }
+ 
+ void IncrementalSelectListDlg::FillList()
+@@ -125,16 +130,20 @@
+     wxString search(wxT("*") + m_Text->GetValue().Lower() + wxT("*"));
+ 
+     wxArrayString result;
+-    //Manager::Get()->GetLogManager()->Log(mltDevDebug, "FillList(): '%s'", search.c_str());
++    wxArrayLong indexes;
++
+     m_List->Clear();
+-    for (unsigned int i = 0; i < m_Items.GetCount(); ++i)
++    for (int i = 0; i < m_Iterator.GetCount(); ++i)
+     {
++        wxString const &item = m_Iterator.GetItem(i);
+         // 2 for before and after stars =~ empty string
+-        if ((search.Length()==2) || m_Items[i].Lower().Matches(search.c_str()))
+-            result.Add(m_Items[i]);
+-//          m_List->Append(m_Items[i]);
++        if ((search.Length()==2) || item.Lower().Matches(search.c_str()))
++        {
++            result.Add(item);
++            indexes.Add(i);
++        }
+     }
+-    m_List->Set(result);
++    m_List->Set(result, reinterpret_cast<void**>(&indexes[0]));
+     if (m_List->GetCount())
+         m_List->SetSelection(0);
+     Thaw();
+Index: src/include/incrementalselectlistdlg.h
+===================================================================
+--- src/include/incrementalselectlistdlg.h	(revision 6490)
++++ src/include/incrementalselectlistdlg.h	(working copy)
+@@ -12,14 +12,19 @@
+ #include <wx/listbox.h>
+ 
+ class myHandler; // forward decl
++class IncrementalSelectIterator; // forward decl
++
+ 
+ class DLLIMPORT IncrementalSelectListDlg : public wxScrollingDialog
+ {
+ 	public:
+-		IncrementalSelectListDlg(wxWindow* parent, const wxArrayString& items, const wxString& caption = wxEmptyString, const wxString& message = wxEmptyString);
++        IncrementalSelectListDlg(wxWindow* parent,
++                                 const IncrementalSelectIterator& iterator,
++                                 const wxString& caption = wxEmptyString,
++                                 const wxString& message = wxEmptyString);
+ 		virtual ~IncrementalSelectListDlg();
+ 		wxString GetStringSelection();
+-		int GetSelection();
++		long GetSelection();
+ 	protected:
+ 		void FillList();
+ 		void OnSearch(wxCommandEvent& event);
+@@ -28,7 +33,7 @@
+ 		myHandler* m_pMyEvtHandler;
+ 		wxListBox* m_List;
+ 		wxTextCtrl* m_Text;
+-		const wxArrayString& m_Items;
++        const IncrementalSelectIterator &m_Iterator;
+ 	private:
+ 		DECLARE_EVENT_TABLE();
+ };
+@@ -56,5 +61,28 @@
+ 		DECLARE_EVENT_TABLE();
+ };
+ 
++
++class DLLIMPORT IncrementalSelectIterator
++{
++    public:
++        virtual ~IncrementalSelectIterator() {}
++
++        virtual long GetCount() const = 0;
++        virtual wxString GetItem(long index) const = 0;
++};
++
++class DLLIMPORT IncrementalSelectIteratorStringArray : public IncrementalSelectIterator
++{
++    public:
++        IncrementalSelectIteratorStringArray(const wxArrayString& array) : m_Array(array)
++        {
++        }
++
++        virtual long GetCount() const { return m_Array.GetCount(); }
++        virtual wxString GetItem(long index) const { return m_Array[index]; }
++    private:
++        const wxArrayString& m_Array;
++};
++
+ #endif // INCREMENTALSELECTLISTDLG_H
+ 

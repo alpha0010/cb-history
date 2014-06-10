@@ -1,0 +1,105 @@
+Index: src/plugins/codecompletion/codecompletion.cpp
+===================================================================
+--- src/plugins/codecompletion/codecompletion.cpp	(revision 5986)
++++ src/plugins/codecompletion/codecompletion.cpp	(working copy)
+@@ -1896,45 +1896,78 @@
+         parser = m_NativeParser.FindParserFromActiveProject(); // get parser of active project, then
+     }
+ 
++    wxArrayString foundSet;
+     if (parser)
+     {
+         // search in all parser's include dirs
+-        wxString tmp;
+-        wxArrayString FoundSet = parser->FindFileInIncludeDirs(NameUnderCursor);
+-        if(FoundSet.GetCount() > static_cast<size_t>(1))
+-        {    // more then 1 hit : let the user choose
+-            SelectIncludeFile Dialog(Manager::Get()->GetAppWindow());
+-            Dialog.AddListEntries(FoundSet);
+-            PlaceWindow(&Dialog);
+-            if(Dialog.ShowModal() == wxID_OK)
++        foundSet = parser->FindFileInIncludeDirs(NameUnderCursor);
++    }
++
++    // look in the same dir as the source file
++    wxFileName fname = NameUnderCursor;
++    NormalizePath(fname, LastIncludeFileFrom);
++    if (wxFileExists(fname.GetFullPath()) )
++    {
++        foundSet.Add(fname.GetFullPath());
++    }
++
++    // search for the file in project files
++	cbProject* project = Manager::Get()->GetProjectManager()->GetActiveProject();
++	if (project)
++	{
++        for (int i = 0; i < project->GetFilesCount(); ++i)
++        {
++            ProjectFile* pf = project->GetFile(i);
++            if (!pf)
++                continue;
++
++            if (IsSuffixOfPath(NameUnderCursor, pf->file.GetFullPath()))
+             {
+-              tmp = Dialog.GetIncludeFile();
++                foundSet.Add(pf->file.GetFullPath());
+             }
++        }
++	}
++
++    // Remove duplicates
++    for (int i = 0; i < foundSet.Count() - 1; i++)
++    {
++        for (int j = i + 1; j < foundSet.Count(); )
++        {
++            if (foundSet.Item(i) == foundSet.Item(j))
++            {
++                foundSet.RemoveAt(j);
++            }
+             else
+             {
+-                return; // user cancelled the dialog...
++                j++;
+             }
+         }
+-        else if(FoundSet.GetCount())
++    }
++
++    wxString selectedFile;
++    if (foundSet.GetCount() > 1)
++    {    // more than 1 hit : let the user choose
++        SelectIncludeFile Dialog(Manager::Get()->GetAppWindow());
++        Dialog.AddListEntries(foundSet);
++        PlaceWindow(&Dialog);
++        if(Dialog.ShowModal() == wxID_OK)
+         {
+-            tmp = FoundSet[0];
++            selectedFile = Dialog.GetIncludeFile();
+         }
+-
+-        if (!tmp.IsEmpty())
++        else
+         {
+-            EditorManager* edMan = Manager::Get()->GetEditorManager();
+-            edMan->Open(tmp);
+-            return;
++            return; // user cancelled the dialog...
+         }
+     }
++    else if (foundSet.GetCount() == 1)
++    {
++        selectedFile = foundSet[0];
++    }
+ 
+-    // look in the same dir as the source file
+-    wxFileName fname = NameUnderCursor;
+-    fname.Assign(wxFileName(LastIncludeFileFrom).GetPath(wxPATH_GET_SEPARATOR) + NameUnderCursor);
+-    if (wxFileExists(fname.GetFullPath()))
++    if (!selectedFile.IsEmpty())
+     {
+         EditorManager* edMan = Manager::Get()->GetEditorManager();
+-        edMan->Open(fname.GetFullPath());
++        edMan->Open(selectedFile);
+         return;
+     }
+ 

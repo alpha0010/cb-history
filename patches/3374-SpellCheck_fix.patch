@@ -1,0 +1,44 @@
+Index: src/sdk/cbstyledtextctrl.cpp
+===================================================================
+--- src/sdk/cbstyledtextctrl.cpp	(revision 8587)
++++ src/sdk/cbstyledtextctrl.cpp	(working copy)
+@@ -468,6 +468,7 @@
+     int style = GetStyleAt(pos);
+     event.SetInt(style);
+     event.SetEditor(editor);
++    event.SetExtraLong(0); // allow plugins to recommend each other not to cancel a tooltip
+     Manager::Get()->GetPluginManager()->NotifyPlugins(event);
+ }
+ 
+Index: src/plugins/codecompletion/codecompletion.cpp
+===================================================================
+--- src/plugins/codecompletion/codecompletion.cpp	(revision 8587)
++++ src/plugins/codecompletion/codecompletion.cpp	(working copy)
+@@ -2513,7 +2513,7 @@
+         return;
+     }
+ 
+-    if (ed->GetControl()->CallTipActive())
++    if (ed->GetControl()->CallTipActive() && event.GetExtraLong() == 0)
+         ed->GetControl()->CallTipCancel();
+ //        CCLogger::Get()->DebugLog(F(_T("CodeCompletion::OnEditorTooltip: %p"), ed));
+     /* NOTE: The following 2 lines of codes can fix [Bug #11785].
+@@ -2604,6 +2604,7 @@
+                 pos = lnStart;
+ 
+             ed->GetControl()->CallTipShow(pos, calltip);
++            event.SetExtraLong(1);
+             TRACE(calltip);
+         }
+     }
+Index: src/plugins/contrib/SpellChecker/SpellCheckerPlugin.cpp
+===================================================================
+--- src/plugins/contrib/SpellChecker/SpellCheckerPlugin.cpp	(revision 8587)
++++ src/plugins/contrib/SpellChecker/SpellCheckerPlugin.cpp	(working copy)
+@@ -832,4 +832,6 @@
+         pos = lnStart;
+ 
+     stc->CallTipShow(pos, tip);
++    event.SetExtraLong(1); // notify CC not to cancel this tooltip
++    event.Skip();
+ }

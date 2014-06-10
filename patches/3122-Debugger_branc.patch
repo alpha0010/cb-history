@@ -1,0 +1,270 @@
+Index: src/plugins/debuggergdb/cdb_commands.h
+===================================================================
+--- src/plugins/debuggergdb/cdb_commands.h	(revision 6930)
++++ src/plugins/debuggergdb/cdb_commands.h	(working copy)
+@@ -20,6 +20,7 @@
+ #include "disassemblydlg.h"
+ #include "parsewatchvalue.h"
+ 
++static wxRegEx reProcessInf(_T("id:[ \t]+([A-Fa-f0-9]+)[ \t]+create"));
+ static wxRegEx reWatch(_T("(\\+0x[A-Fa-f0-9]+ )"));
+ static wxRegEx reBT1(_T("([0-9]+) ([A-Fa-f0-9]+) ([A-Fa-f0-9]+) ([^[]*)"));
+ static wxRegEx reBT2(_T("\\[([A-z]:)(.*) @ ([0-9]+)\\]"));
+@@ -127,15 +128,51 @@
+         }
+ };
+ 
++ /**
++  * Command to find the PID of the active child
++  */
++  class CdbCmd_GetPID : public DebuggerCmd
++{
++    public:
++        /** @param file The file to debug. */
++        CdbCmd_GetPID(DebuggerDriver* driver)
++            : DebuggerCmd(driver)
++        {
++            m_Cmd << _T("|.");
++        }
++        void ParseOutput(const wxString& output)
++        {
++            // Output:
++            // <decimal process num> id: <hex PID> create name: <process name>
++            wxArrayString lines = GetArrayFromString(output, _T('\n'));
++            for (unsigned int i = 0; i < lines.GetCount(); ++i)
++            {
++            	if (reProcessInf.Matches(lines[i]))
++				{
++					wxString hexID = reProcessInf.GetMatch(lines[i],1);
++
++					long pid;
++					if (hexID.ToLong(&pid,16))
++					{
++						m_pDriver->SetChildPID(pid);
++					}
++				}
++            }
++        }
++};
++
+ /**
+   * Command to the attach to a process.
+   */
+ class CdbCmd_AttachToProcess : public DebuggerCmd
+ {
++	private:
++		int m_pid;
+     public:
+         /** @param file The file to debug. */
+         CdbCmd_AttachToProcess(DebuggerDriver* driver, int pid)
+-            : DebuggerCmd(driver)
++            : DebuggerCmd(driver),
++            m_pid(pid)
+         {
+             m_Cmd << _T("attach ") << wxString::Format(_T("%d"), pid);
+         }
+@@ -149,7 +186,10 @@
+             for (unsigned int i = 0; i < lines.GetCount(); ++i)
+             {
+                 if (lines[i].StartsWith(_T("Attaching")))
++				{
+                     m_pDriver->Log(lines[i]);
++                    m_pDriver->SetChildPID(m_pid);
++				}
+                 else if (lines[i].StartsWith(_T("Can't ")))
+                 {
+                     // log this and quit debugging
+@@ -181,6 +221,23 @@
+ };
+ 
+ /**
++  * Command to continue execution and notify the debugger plugin.
++  */
++class CdbCmd_Continue : public DebuggerCmd
++{
++    public:
++        /** @param bp The breakpoint to set. */
++        CdbCmd_Continue(DebuggerDriver* driver)
++            : DebuggerCmd(driver,_T("g"))
++        {
++        }
++        virtual void Action()
++        {
++            m_pDriver->NotifyDebuggeeContinued();
++        }
++};
++
++/**
+   * Command to add a breakpoint.
+   */
+ class CdbCmd_AddBreakpoint : public DebuggerCmd
+Index: src/plugins/debuggergdb/cdb_driver.cpp
+===================================================================
+--- src/plugins/debuggergdb/cdb_driver.cpp	(revision 6930)
++++ src/plugins/debuggergdb/cdb_driver.cpp	(working copy)
+@@ -22,9 +22,10 @@
+ #include <globals.h>
+ #include <infowindow.h>
+ 
+-#define CDB_PROMPT0 _T("0:000>")
+-#define CDB_PROMPT1 _T("0:001>")
++//#define DEBUG_CDB_COMMANDS
++#define ENABLE_WORKINGDIR_WORKAROUND
+ 
++static wxRegEx rePrompt(_T("([0-9]+:){1,2}[0-9]+>"));
+ static wxRegEx reBP(_T("Breakpoint ([0-9]+) hit"));
+ // one stack frame (to access current file; is there another way???)
+ //  # ChildEBP RetAddr
+@@ -33,6 +34,7 @@
+ 
+ CDB_driver::CDB_driver(DebuggerGDB* plugin)
+     : DebuggerDriver(plugin),
++    m_Debuggee(wxEmptyString),
+     m_IsStarted(false)
+ {
+     //ctor
+@@ -72,7 +74,14 @@
+     cmd << _T(' ') << debuggee;
+ 
+     if (!m_WorkingDir.IsEmpty())
++	{
+         wxSetWorkingDirectory(m_WorkingDir);
++#ifdef ENABLE_WORKINGDIR_WORKAROUND
++        // Because of the lack of ChDir functionality for a process which has already been launched,
++        // do a dodgy workaround by starting with a dummy version of the process, then starting in the right folder later.
++        m_Debuggee.assign(debuggee);
++#endif
++	}
+ 
+     return cmd;
+ }
+@@ -116,7 +125,29 @@
+ 
+ void CDB_driver::Prepare(bool /*isConsole*/)
+ {
+-    // default initialization
++	// The very first command won't get the right output back due to the spam on CDB launch.
++	// Throw in a dummy command to flush the output buffer.
++	m_QueueBusy = true;
++	QueueCommand(new DebuggerCmd(this,_T(".echo Clear buffer")),High);
++
++#ifdef ENABLE_WORKINGDIR_WORKAROUND
++	if (!m_Debuggee.IsEmpty())
++	{
++		// Workaround for setting the correct working dir:
++		wxString cmd = _T(".kill; .createdir ");
++		cmd << m_WorkingDir;
++		QueueCommand(new DebuggerCmd(this,cmd)); // Kill the process and CD to the right place
++
++		cmd = _T(".create ");
++		cmd << m_Debuggee << _T("; g");
++		QueueCommand(new DebuggerCmd(this,cmd)); // Restart the process in the correct directory
++
++		m_Debuggee.Clear();
++	}
++#endif
++
++	// Either way, get the PID of the child
++	QueueCommand(new CdbCmd_GetPID(this));
+ }
+ 
+ void CDB_driver::Start(bool /*breakOnEntry*/)
+@@ -143,7 +174,7 @@
+ void CDB_driver::Continue()
+ {
+     ResetCursor();
+-    QueueCommand(new DebuggerCmd(this, _T("g")));
++    QueueCommand(new CdbCmd_Continue(this));
+     m_IsStarted = true;
+ }
+ 
+@@ -315,17 +346,19 @@
+ 
+     m_pDBG->DebugLog(output);
+ 
+-    int idx = buffer.First(CDB_PROMPT0);
+-    if (idx == wxNOT_FOUND)
+-        idx = buffer.First(CDB_PROMPT1);
+-    if (idx != wxNOT_FOUND)
+-    {
++    if (rePrompt.Matches(buffer))
++	{
++		int idx = buffer.First(rePrompt.GetMatch(buffer));
++		cbAssert(idx != wxNOT_FOUND);
+         m_ProgramIsStopped = true;
+         m_QueueBusy = false;
+         DebuggerCmd* cmd = CurrentCommand();
+         if (cmd)
+         {
+-//            Log(_T("Command parsing output: ") + buffer.Left(idx));
++#ifdef DEBUG_CDB_COMMANDS
++			Log(_T("* Command: ") + cmd->m_Cmd);
++			Log(_T("* Parsing output: \n") + buffer.Left(idx));
++#endif
+             RemoveTopCommand(false);
+             buffer.Remove(idx);
+             if (buffer[buffer.Length() - 1] == _T('\n'))
+@@ -373,26 +406,20 @@
+         else if (reBP.Matches(lines[i]))
+         {
+             Log(lines[i]);
+-
+-            long int bpNum;
+-            reBP.GetMatch(lines[i], 1).ToLong(&bpNum);
+-            DebuggerBreakpoint* bp = m_pDBG->GetState().GetBreakpointByNumber(bpNum);
+-            if (bp)
+-            {
+-                // force cursor notification because we don't have an actual address
+-                // available...
+-                m_Cursor.address = _T("deadbeef");
+-
+-                m_Cursor.file = bp->filename;
+-                m_Cursor.line = bp->line + 1;
+-//                if (bp->temporary)
+-//                    m_pDBG->GetState().RemoveBreakpoint(bp->index);
+-            }
+-            else
+-                Log(wxString::Format(_T("Breakpoints inconsistency detected!\nNothing known about breakpoint %ld"), bpNum));
+-            m_Cursor.changed = true;
+-            notifyChange = true;
++            // Code breakpoint / assert
++            m_pDBG->BringCBToFront();
++            Manager::Get()->GetDebuggerManager()->ShowBacktraceDialog();
++            DoBacktrace(true);
++            break;
+         }
++        else if (lines[i].Contains(_T("Break instruction exception")) && !m_pDBG->IsTemporaryBreak())
++        {
++        	// Code breakpoint / assert
++            m_pDBG->BringCBToFront();
++            Manager::Get()->GetDebuggerManager()->ShowBacktraceDialog();
++            DoBacktrace(true);
++            break;
++        }
+     }
+ 
+     if (notifyChange)
+Index: src/plugins/debuggergdb/cdb_driver.h
+===================================================================
+--- src/plugins/debuggergdb/cdb_driver.h	(revision 6930)
++++ src/plugins/debuggergdb/cdb_driver.h	(working copy)
+@@ -60,6 +60,7 @@
+     private:
+         void DoBacktrace(bool switchToFirst);
+     private:
++    	wxString m_Debuggee;
+         bool m_IsStarted;
+ };
+ 
+Index: src/plugins/debuggergdb/debuggergdb.h
+===================================================================
+--- src/plugins/debuggergdb/debuggergdb.h	(revision 6930)
++++ src/plugins/debuggergdb/debuggergdb.h	(working copy)
+@@ -80,6 +80,7 @@
+         bool Validate(const wxString& line, const char cb);
+         bool IsRunning() const { return m_pProcess; }
+         bool IsStopped() const;
++        bool IsTemporaryBreak() const {return m_TemporaryBreak;}
+         int GetExitCode() const { return m_LastExitCode; }
+ 
+         cbWatch* AddWatch(const wxString& symbol);

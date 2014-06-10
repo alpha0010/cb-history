@@ -1,0 +1,109 @@
+Index: src/plugins/todo/addtododlg.cpp
+===================================================================
+--- src/plugins/todo/addtododlg.cpp	(revision 2976)
++++ src/plugins/todo/addtododlg.cpp	(working copy)
+@@ -26,10 +26,18 @@
+     }
+     if (m_Types.Index(_T("TODO")) == wxNOT_FOUND)
+         cmb->Append(_T("TODO"));
++    if (m_Types.Index(_T("@todo")) == wxNOT_FOUND)
++        cmb->Append(_T("@todo"));
++    if (m_Types.Index(_T("\\todo")) == wxNOT_FOUND)
++        cmb->Append(_T("\\todo"));
+     if (m_Types.Index(_T("FIXME")) == wxNOT_FOUND)
+         cmb->Append(_T("FIXME"));
+     if (m_Types.Index(_T("NOTE")) == wxNOT_FOUND)
+         cmb->Append(_T("NOTE"));
++    if (m_Types.Index(_T("@note")) == wxNOT_FOUND)
++        cmb->Append(_T("@note"));
++    if (m_Types.Index(_T("\\note")) == wxNOT_FOUND)
++        cmb->Append(_T("\\note"));
+ 
+     wxString lastType = Manager::Get()->GetConfigManager(_T("todo_list"))->Read(_T("last_used_type"));
+     wxString lastStyle = Manager::Get()->GetConfigManager(_T("todo_list"))->Read(_T("last_used_style"));
+Index: src/plugins/todo/addtododlg.h
+===================================================================
+--- src/plugins/todo/addtododlg.h	(revision 2976)
++++ src/plugins/todo/addtododlg.h	(working copy)
+@@ -17,9 +17,10 @@
+ enum ToDoCommentType
+ {
+     tdctCpp = 0, // C++ style,
+-    tdctC, // C style
++    tdctC,       // C style
++    tdctDoxygen, // Doxygen style
+     tdctWarning, // compiler warning
+-    tdctError // compiler error
++    tdctError    // compiler error
+ };
+ 
+ class AddTodoDlg : public wxDialog
+Index: src/plugins/todo/resources/add_todo.xrc
+===================================================================
+--- src/plugins/todo/resources/add_todo.xrc	(revision 2976)
++++ src/plugins/todo/resources/add_todo.xrc	(working copy)
+@@ -73,6 +73,7 @@
+               <content>
+                 <item>C++ style comment</item>
+                 <item>C style comment</item>
++                <item>Doxygen style comment</item>
+                 <item>Compiler warning</item>
+                 <item>Compiler error</item>
+               </content>
+@@ -137,4 +138,4 @@
+     </object>
+     <style>wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER</style>
+   </object>
+-</resource>
+\ No newline at end of file
++</resource>
+Index: src/plugins/todo/todolist.cpp
+===================================================================
+--- src/plugins/todo/todolist.cpp	(revision 2976)
++++ src/plugins/todo/todolist.cpp	(working copy)
+@@ -151,7 +151,6 @@
+ 
+ bool ToDoList::BuildToolBar(wxToolBar* toolBar)
+ {
+-	//NotImplemented("ToDoList::BuildToolBar()");
+ 	return false;
+ }
+ 
+@@ -170,12 +169,17 @@
+ 
+ 	Manager::Get()->GetConfigManager(_T("todo_list"))->Read(_T("types"), &m_Types);
+ 
+-	if(m_Types.GetCount()==0)
++	if(m_Types.GetCount() == 0)
+ 	{
+         m_Types.Add(_T("TODO"));
++        m_Types.Add(_T("@todo"));
++        m_Types.Add(_T("\\todo"));
+         m_Types.Add(_T("FIXME"));
+         m_Types.Add(_T("NOTE"));
++        m_Types.Add(_T("@note"));
++        m_Types.Add(_T("\\note"));
+ 	}
++
+     SaveTypes();
+ }
+ 
+@@ -282,6 +286,9 @@
+ 		case tdctCpp:
+ 			buffer << _T("// ");
+ 			break;
++        case tdctDoxygen:
++            buffer << _T("/// ");
++            break;
+ 		case tdctWarning:
+ 			buffer << _T("#warning ");
+ 			break;
+@@ -317,7 +324,7 @@
+     if (CmtType == tdctWarning || CmtType == tdctError)
+         buffer << _T("");
+ 
+-    else if (CmtType == tdctC)// || dlg.GetPosition() == tdpCurrent)
++    else if (CmtType == tdctC)
+ 		buffer << _T(" */");
+ 
+ 	// add newline char(s), only if dlg.GetPosition() != tdpCurrent

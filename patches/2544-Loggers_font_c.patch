@@ -1,0 +1,31 @@
+Index: src/sdk/loggers.cpp
+===================================================================
+--- src/sdk/loggers.cpp	(revision 5177)
++++ src/sdk/loggers.cpp	(working copy)
+@@ -87,6 +87,9 @@
+     style[critical].SetTextColour(*wxWHITE);
+     style[critical].SetBackgroundColour(*wxRED);
+     style[spacer].SetFont(small_font);
++
++    // Tell control about the font change
++    control->SetFont(default_font);
+ };
+ 
+ void TextCtrlLogger::Append(const wxString& msg, Logger::level lv)
+@@ -234,6 +237,16 @@
+ 
+     style[spacer].font = small_font;
+     style[pagetitle] = style[caption];
++
++    // Tell control and items about the font change
++    control->SetFont(default_font);
++    for (int i=0; i<control->GetItemCount(); ++i)
++    {
++        wxFont font = control->GetItemFont(i);
++        font.SetPointSize(size);
++        control->SetItemFont( i, font );
++    }//for
++
+ }
+ 
+ void ListCtrlLogger::Append(const wxString& msg, Logger::level lv)

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 1731 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #1731 <small>2006-12-18 19:08:13</small></h3>
+          <h4>stahta01</h4>
+          scripting patch for wxWidgets 2.8
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="1731-scripting_patc.patch">1731-scripting_patc.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Refinement</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2007-01-02 11:02:46</dd>
+            <dt>Assigned to</dt><dd>mandrav</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">stahta01 2006-12-18 19:10:17</div>
+        <div class="panel-body">
+          <p>Patches to src/sdk/scripting/bindings sc_wxtypes.cpp and sc_globals.cpp  for mainly wxColour minor changes. Tim S</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">stahta01 2006-12-18 22:55:25</div>
+        <div class="panel-body">
+          <p>Problem 1: This statement did NOT work with wxW2.8.0</p>
+          <p>wxColour&amp; c = sa.GetParamCount() == 2 ? *SqPlus::GetInstance&lt;wxColour&gt;(v, 2) : *wxBLACK;</p>
+          <p>Error 1: invalid initialization of reference of type 'wxColour&amp;' from expression of type 'const wxColour'</p>
+          <p>Solution 1: Changed "wxColour&amp; c =" to "wxColour c =", note I am NOT sure if this is a valid fix, but it compiles now.</p>
+          <p>Change 2: The constructor of wxColour has a added parameter of alpha.</p>
+          <p>wxColour(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha=wxALPHA_OPAQUE)</p>
+          <p>Problem 2: Caused func&lt;WXC_SET&gt;(&amp;wxColour::Set, "Set");  to fail.</p>
+          <p>Solution 2: Added 4th parameter to typedef void(wxColour::*WXC_SET).</p>
+          <p>Tim S</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">killerbot 2006-12-27 10:45:07</div>
+        <div class="panel-body">
+          <p>Yiannis could you have a look at this patch for the scripting, I am not so confident in that area.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2007-01-02 10:02:59</div>
+        <div class="panel-body">
+          <p>Regarding problem1, seems like they changed wxBLACK from "wxColour*" to "const wxColour*".</p>
+          <p>The way to fix it (w/out using #ifdef) is to just change "wxColour&amp; c = ..." to "const wxColour&amp; c = ...".</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">killerbot 2007-01-02 11:02:46</div>
+        <div class="panel-body">
+          <p>applied with the suggestion from Yiannis</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

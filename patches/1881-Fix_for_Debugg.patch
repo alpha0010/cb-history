@@ -1,0 +1,66 @@
+The follow fixes Bug reports 9655 & 10077 crashes in Debugger
+
+The problem occurs when OnGDBTerminate frees m_pDriver while OnGDBOutput still has messages to process.
+
+Index: debuggergdb.cpp
+===================================================================
+--- debuggergdb.cpp	(revision 3590)
++++ debuggergdb.cpp	(working copy)
+@@ -227,7 +227,8 @@
+     m_pBreakpointsWindow(0),
+     m_pExamineMemoryDlg(0),
+     m_pThreadsDlg(0),
+-    m_pProject(0)
++    m_pProject(0),
++    m_GDBInputKnt(0)
+ {
+     if(!Manager::LoadResource(_T("debugger.zip")))
+     {
+@@ -1909,12 +1910,19 @@
+ 
+ void DebuggerGDB::OnGDBOutput(wxCommandEvent& event)
+ {
++    ++m_GDBInputKnt;
+     wxString msg = event.GetString();
+     if (!msg.IsEmpty())
+     {
+ //        Manager::Get()->GetMessageManager()->Log(m_PageIndex, _T("O>>> %s"), msg.c_str());
+         ParseOutput(msg);
+     }
++    --m_GDBInputKnt;
++    if ( (not m_pProcess) && m_State.HasDriver() && (m_GDBInputKnt==0) )
++    {   m_State.StopDriver();
++        DebugLog(wxT("ParseOutput() closed m_State.Driver"));
++    }
++
+ }
+ 
+ void DebuggerGDB::OnGDBError(wxCommandEvent& event)
+@@ -1937,7 +1945,14 @@
+ //    m_pProcess = 0L;
+ 
+     ClearActiveMarkFromAllEditors();
+-    m_State.StopDriver();
++    // closing the GDB driver here causes crashes because input msgs
++    // are still queued up in OnGDBOutput/ParseOutput //(pecan 2007/2/09)
++    //-m_State.StopDriver();
++    if ( (not m_pProcess) && m_State.HasDriver() && (m_GDBInputKnt==0) )
++    {   m_State.StopDriver();
++        DebugLog(wxT("OnGDBTerminate() closed m_State.Driver"));
++    }
++
+     Manager::Get()->GetMessageManager()->Log(m_PageIndex, _("Debugger finished with status %d"), m_LastExitCode);
+ 
+     if (m_NoDebugInfo)
+Index: debuggergdb.h
+===================================================================
+--- debuggergdb.h	(revision 3590)
++++ debuggergdb.h	(working copy)
+@@ -204,6 +204,7 @@
+         SearchDirsMap m_SearchDirs;
+ 
+         int m_HookId; // project loader hook ID
++        int m_GDBInputKnt;
+ 
+ 		DECLARE_EVENT_TABLE()
+ };

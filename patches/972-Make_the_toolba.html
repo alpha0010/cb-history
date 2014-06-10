@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 972 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #972 <small>2006-03-29 21:41:08</small></h3>
+          <h4>olorin</h4>
+          Make the toolbars have their "best" size
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="972-Make_the_toolba.patch">972-Make_the_toolba.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Refinement</dd>
+            <dt>Status</dt><dd>Accepted</dd>
+            <dt>Close date</dt><dd>2006-03-31 09:42:30</dd>
+            <dt>Assigned to</dt><dd></dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">olorin 2006-03-29 21:46:12</div>
+        <div class="panel-body">
+          <p>After switching to wxWidgets 2.6.3 all my C::B toolbars looked the same size (much higher and wider than necessary, about 790x26 pixels for "small icons" settings, while height should be 22 and width depends on the toolbar itself, but in general is much shorter). This caused also some repaint problems, with areas not being repainted.</p>
+          <p>This patch should fix this problem.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">olorin 2006-03-29 22:16:06</div>
+        <div class="panel-body">
+          <p>I don't want to start a void discussion, it's just my curiosity: I saw some duplicated code about toolbar creation. Could the BuildToolbar prototype be changed? My idea would be to pass a bool to specify if small or big icons are used, and thus avoid setting bitmap size, and later retrieving the "flag" by inspecting that size itself. and then add a common function, shared by the main frame and the plugins, that does all the work, taking a pointer to the owner, a xrc basename and a bool for small/big icons as arguments and returning the respective toolbar.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">olorin 2006-04-06 21:05:10</div>
+        <div class="panel-body">
+          <p>Please apply the patch as it is: for main toolbar</p>
+          <p>m_pToolbar-&gt;SetBestFittingSize();</p>
+          <p>should follow</p>
+          <p>m_pToolbar-&gt;Realize();</p>
+          <p>as this last call restores the oversized width. This is the procedure used for the plugins toolbars, which display the right width.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,56 @@
+Hellow.
+Thank you very much for nice tool.
+
+ClassBrowser::UpdateView's bug is the following.
+
+void ClassBrowser::UpdateView()
+{
+    m_pActiveProject = 0;
+    m_ActiveFilename.Clear();
+    if (m_pParser && !Manager::isappShuttingDown())
+   {
+        m_pActiveProject = Manager::Get()->GetProjectManager()->GetActiveProject();
+        cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
+        if (ed)
+        {
+// This line is the cause of bug.
+            m_ActiveFilename = ed->GetFilename().BeforeLast(_T('.'));
+            m_ActiveFilename.Append(_T('.'));
+        }
+        BuildTree();
+    }
+    else
+        m_Tree->DeleteAllItems();
+}
+
+If the file name is C:\Work\new\SIP\wifi\Phonex-wifi-3.1\OnePhone\pub\Makefile, the m_ActiveFilename becomes C:\Work\new\SIP\wifi\Phonex-wifi-3.
+This make the all files reparsed, and this cause the Code::Blocks to stop any operation.
+
+So, i made some fix as the following.
+
+void ClassBrowser::UpdateView()
+{
+    m_pActiveProject = 0;
+    m_ActiveFilename.Clear();
+    if (m_pParser && !Manager::isappShuttingDown())
+   {
+        m_pActiveProject = Manager::Get()->GetProjectManager()->GetActiveProject();
+        cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
+        if (ed)
+        {
+// This line is the cause of bug.
+            //m_ActiveFilename = ed->GetFilename().BeforeLast(_T('.'));
+
+            m_ActiveFilename = ed->GetFilename().AfterLast(_T('\\'));
+            m_ActiveFilename = ed->GetFilename().BeforeLast(_T('\\')) + _T('\\') + m_ActiveFilename.BeforeLast(_T('.'));
+            
+            m_ActiveFilename.Append(_T('.'));
+        }
+        BuildTree();
+    }
+    else
+        m_Tree->DeleteAllItems();
+}
+
+Best regards
+Sangwoo Jin

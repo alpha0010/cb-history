@@ -1,0 +1,31 @@
+Index: trunk/src/plugins/scriptedwizard/wiz.cpp
+===================================================================
+--- trunk/src/plugins/scriptedwizard/wiz.cpp	(revision 7152)
++++ trunk/src/plugins/scriptedwizard/wiz.cpp	(working copy)
+@@ -735,7 +735,25 @@
+     // create the file with the passed contents
+     wxFileName::Mkdir(fname.GetPath(),0777,wxPATH_MKDIR_FULL);
+     wxFile f(fname.GetFullPath(), wxFile::write);
+-    if (cbWrite(f, contents + _T('\n'), wxFONTENCODING_UTF8))
++    //read EOL mode
++    static const int default_eol = platform::windows ? wxSCI_EOL_CRLF : wxSCI_EOL_LF; // Windows takes CR+LF, other platforms LF only
++    int eolmode = Manager::Get()->GetConfigManager(_T("editor"))->ReadInt(_T("/eol/eolmode"), default_eol);
++    wxString eol_str;
++    if (eolmode == 2)
++    {
++        eol_str = _T("\n");
++    }
++    else if (eolmode == 1)
++    {
++        eol_str = _T("\r");
++    }
++    else
++    {
++        eol_str = _T("\r\n");
++    }
++
++
++    if (cbWrite(f, contents + eol_str, wxFONTENCODING_UTF8))
+         return fname.GetFullPath(); // success
+     return wxEmptyString; // failed
+ }

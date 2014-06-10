@@ -1,0 +1,232 @@
+Index: debuggergdb.cpp
+===================================================================
+--- debuggergdb.cpp	(revision 5679)
++++ debuggergdb.cpp	(working copy)
+@@ -13,6 +13,8 @@
+ #include <wx/dialog.h>
+ #include <wx/msgdlg.h>
+ #include <wx/tokenzr.h>
++#include "tinyxml/tinyxml.h"
++#include "tinyxml/tinywxuni.h"
+ 
+ #include <manager.h>
+ #include <configmanager.h>
+@@ -532,6 +534,8 @@
+     Manager::Get()->RegisterEventSink(cbEVT_COMPILER_FINISHED, new cbEventFunctor<DebuggerGDB, CodeBlocksEvent>(this, &DebuggerGDB::OnCompilerFinished));
+ 
+     Manager::Get()->RegisterEventSink(cbEVT_BUILDTARGET_SELECTED, new cbEventFunctor<DebuggerGDB, CodeBlocksEvent>(this, &DebuggerGDB::OnBuildTargetSelected));
++
++    Manager::Get()->RegisterEventSink(cbEVT_PROJECT_OPEN, new cbEventFunctor<DebuggerGDB, CodeBlocksEvent>(this, &DebuggerGDB::OnProjectOpened));
+ }
+ 
+ void DebuggerGDB::OnRelease(bool appShutDown)
+@@ -2757,7 +2761,154 @@
+         }
+     }
+ }
++void DebuggerGDB::OnProjectOpened(CodeBlocksEvent& event)
++{
++    // allow others to catch this
++    event.Skip();
+ 
++    LoadStateFromFile(event.GetProject());
++
++}
++bool DebuggerGDB::SaveStateToFile(cbProject* prj){
++    //There are two types of state we should save:
++    //1, breakpoints
++    //2, watches
++
++    //Create a file according to the m_pProject
++    wxString projectFilename = prj->GetFilename();
++    if (projectFilename.IsEmpty())
++        return false;
++    //saved file name&extention
++    wxFileName fname(projectFilename);
++    fname.SetExt(_T("bps"));
++
++    //XML file IO
++    const char* ROOT_TAG = "Debugger_layout_file";
++
++    TiXmlDocument doc;
++    doc.SetCondenseWhiteSpace(false);
++    doc.InsertEndChild(TiXmlDeclaration("1.0", "UTF-8", "yes"));
++    TiXmlElement* rootnode = static_cast<TiXmlElement*>(doc.InsertEndChild(TiXmlElement(ROOT_TAG)));
++    if (!rootnode)
++        return false;
++
++    //Save breakpoints, get breakpoints_list
++    TiXmlElement* breakpointsidx = static_cast<TiXmlElement*>(rootnode->InsertEndChild(TiXmlElement("BreakpointsList")));
++    BreakpointsList &breakPointsList = m_State.GetBreakpointsList();
++    for (int i = breakPointsList.GetCount() - 1; i >= 0; --i)
++    {
++        DebuggerBreakpoint* bp = breakPointsList[i];
++        //Only save the breakpoints belong to the current project
++        if (bp->userData == prj)
++        {
++            TiXmlElement* node = static_cast<TiXmlElement*>(breakpointsidx->InsertEndChild(TiXmlElement("Breakpoint")));
++            //Change the absolute location to relative location
++            wxFileName location(bp->filename);
++            location.MakeRelativeTo(prj->GetBasePath());
++            //Add file and line
++            node->SetAttribute("file", cbU2C(location.GetFullPath()));
++            node->SetAttribute("position", bp->line);
++        }
++    }
++
++    //Save Watches
++    TiXmlElement* watchesidx = static_cast<TiXmlElement*>(rootnode->InsertEndChild(TiXmlElement("WatchesList")));
++    size_t wc = (m_pTree->GetWatches()).GetCount();
++    if (wc>0)
++    {
++            // iterate over each watch and write them to the file buffer
++        for (size_t i = 0; i < wc; ++i)
++        {
++            Watch& w = (m_pTree->GetWatches())[i];
++            TiXmlElement* node = static_cast<TiXmlElement*>(watchesidx->InsertEndChild(TiXmlElement("Watch")));
++            node->SetAttribute("variable", cbU2C(w.keyword));
++        }
++
++    }
++
++    //Save XML to harddisk
++    return cbSaveTinyXMLDocument(&doc, fname.GetFullPath());
++
++}
++
++bool DebuggerGDB::LoadStateFromFile(cbProject* prj){
++
++
++    wxString projectFilename = prj->GetFilename();
++    if (projectFilename.IsEmpty())
++        return false;
++    wxFileName fname(projectFilename);
++    fname.SetExt(_T("bps"));
++
++    //Open XML file
++    TiXmlDocument doc;
++    if (!TinyXML::LoadDocument(fname.GetFullPath(), &doc))
++        return false;
++
++    TiXmlElement* root;
++    TiXmlElement* elem;
++    TiXmlElement* group;
++
++
++    root = doc.FirstChildElement("Debugger_layout_file");
++    if (!root)
++    {
++        return false;
++    }
++
++    //Load breakpoints
++    group = root->FirstChildElement("BreakpointsList");
++    elem = group->FirstChildElement("Breakpoint");
++
++    while (elem)
++    {
++        wxString location = cbC2U(elem->Attribute("file"));
++        ProjectFile* pf;
++        if (location.IsEmpty())
++        {
++            break;
++        }
++        else
++            pf = prj->GetFileByFilename(location);
++
++        wxString filenamePath = pf->file.GetFullPath();
++
++        int line = 0;
++        if (not elem->QueryIntAttribute("position", &line) == TIXML_SUCCESS)
++            break;
++
++        cbEditor* ed = Manager::Get()->GetEditorManager()->IsBuiltinOpen( filenamePath );
++        if (ed==NULL){
++            m_State.AddBreakpoint(filenamePath,line); //add breakpoints silentsly
++        }
++        else{
++            ed->AddBreakpoint(line);
++
++        }
++        elem = elem->NextSiblingElement();
++    }
++
++
++    //Load watches
++    group = group->NextSiblingElement("WatchesList");
++    elem = group->FirstChildElement("Watch");
++
++    while (elem)
++    {
++        wxString watchName = cbC2U(elem->Attribute("variable"));
++
++        if (watchName.IsEmpty())
++            break;
++        else
++            m_pTree->AddWatch(watchName);
++
++        elem = elem->NextSiblingElement();
++    }
++
++    return true;
++
++}
++
+ void DebuggerGDB::OnProjectClosed(CodeBlocksEvent& event)
+ {
+     // allow others to catch this
+@@ -2770,6 +2921,9 @@
+     // the same for remote debugging
+     GetRemoteDebuggingMap(event.GetProject()).clear();
+ 
++    SaveStateToFile(event.GetProject());
++
++    m_pTree->DeleteAllWatches();
+     // remove all breakpoints belonging to the closed project
+     m_State.RemoveAllProjectBreakpoints(event.GetProject());
+     if (m_pBreakpointsWindow)
+Index: debuggergdb.h
+===================================================================
+--- debuggergdb.h	(revision 5679)
++++ debuggergdb.h	(working copy)
+@@ -59,6 +59,10 @@
+         void OnAttach(); // fires when the plugin is attached to the application
+         void OnRelease(bool appShutDown); // fires when the plugin is released from the application
+ 
++
++        bool SaveStateToFile(cbProject* prj);
++        bool LoadStateFromFile(cbProject* prj);
++
+         void RunCommand(int cmd);
+         void Disassemble();
+         void Registers();
+@@ -154,6 +158,7 @@
+         void OnValueTooltip(CodeBlocksEvent& event);
+         void OnEditorOpened(CodeBlocksEvent& event);
+         void OnProjectActivated(CodeBlocksEvent& event);
++        void OnProjectOpened(CodeBlocksEvent& event);
+         void OnProjectClosed(CodeBlocksEvent& event);
+         void OnCompilerStarted(CodeBlocksEvent& event);
+         void OnCompilerFinished(CodeBlocksEvent& event);
+Index: debuggerstate.h
+===================================================================
+--- debuggerstate.h	(revision 5679)
++++ debuggerstate.h	(working copy)
+@@ -26,7 +26,7 @@
+ 
+ 		/// Check so see if Driver exists before getting it
+ 		bool HasDriver();
+-		
++
+ 		/// Will always return a driver, or throw a code assertion error
+ 		// (to fix multiple bugs in use of GetDriver without checking return value)
+         DebuggerDriver* GetDriver();
+@@ -42,6 +42,8 @@
+         void RemoveAllBreakpoints(const wxString& file, bool deleteit = true);
+         void RemoveAllProjectBreakpoints(cbProject* prj);
+ 
++        BreakpointsList& GetBreakpointsList(){return m_Breakpoints;};
++
+         // helpers to keep in sync with the editors
+         int RemoveBreakpointsRange(const wxString& file, int startline, int endline);
+         void ShiftBreakpoints(const wxString& file, int startline, int nroflines);

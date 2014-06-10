@@ -1,0 +1,31 @@
+Index: src/plugins/contrib/keybinder/keybinder.cpp
+===================================================================
+--- src/plugins/contrib/keybinder/keybinder.cpp (revision 3479)
++++ src/plugins/contrib/keybinder/keybinder.cpp (working copy)
+@@ -2113,7 +2113,7 @@           
+        wxString str;           
+                                
+        // is the remove button to be enabled ?
+-    m_pRemoveBtn->Enable(m_pBindings->GetSelection() >= 0);
++    m_pRemoveBtn->Enable(m_pBindings->GetSelection() != wxNOT_FOUND);
+     m_pRemoveAllBtn->Enable(m_pBindings->GetCount() > 0);
+                                
+        // is the assign button to be enabled ?
+@@ -2545,11 +2545,16 @@         
+ void wxKeyConfigPanel::OnRemoveKey(wxCommandEvent &)
+ // ----------------------------------------------------------------------------
+ {                              
++       // Check if there is a selected shortcut:
++       int selection = m_pBindings->GetSelection();
++       if (selection == wxNOT_FOUND)
++               return; // Nothing to do.
++                               
+        // now the user has modified the currently selected profile...
+        m_bProfileHasBeenModified = TRUE;
+                                
+        // remove the selected shortcut
+-       GetSelCmd()->RemoveShortcut(m_pBindings->GetSelection());
++       GetSelCmd()->RemoveShortcut(selection);
+                                
+        // and update the list of the key bindings
+        FillInBindings();       

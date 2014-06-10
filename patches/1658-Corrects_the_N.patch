@@ -1,0 +1,47 @@
+Index: plugins/debuggergdb/gdb_driver.cpp
+===================================================================
+--- plugins/debuggergdb/gdb_driver.cpp	(revision 3258)
++++ plugins/debuggergdb/gdb_driver.cpp	(working copy)
+@@ -22,7 +22,7 @@
+ static wxRegEx reThreadSwitch(_T("^\\[Switching to thread .*\\]#0[ \t]+(0x[A-z0-9]+) in (.*) from (.*)"));
+ static wxRegEx reThreadSwitch2(_T("^\\[Switching to thread .*\\]#0[ \t]+(0x[A-z0-9]+) in (.*) from (.*):([0-9]+)"));
+ #ifdef __WXMSW__
+-    static wxRegEx reBreak(_T("([A-z]:)([^:]+):([0-9]+):[0-9]+:[begmidl]+:(0x[0-9A-z]+)"));
++    static wxRegEx reBreak(_T("..([A-z]:)([^:]+):([0-9]+):[0-9]+:[begmidl]+:(0x[0-9A-z]+)"));
+ #else
+     static wxRegEx reBreak(_T("\032\032([^:]+):([0-9]+):[0-9]+:[begmidl]+:(0x[0-9A-z]+)"));
+ #endif
+@@ -130,6 +130,7 @@
+     wxString cmd;
+     cmd << debugger;
+     cmd << _T(" -nx");          // don't run .gdbinit
++    cmd << _T(" -readnow ");    // read symbol table immediately
+     cmd << _T(" -fullname ");   // report full-path filenames when breaking
+     cmd << _T(" -quiet");       // don't display version on startup
+     cmd << _T(" -args ") << debuggee;
+@@ -141,6 +142,7 @@
+     wxString cmd;
+     cmd << debugger;
+     cmd << _T(" -nx");          // don't run .gdbinit
++    cmd << _T(" -readnow ");    // read symbol table immediately
+     cmd << _T(" -fullname ");   // report full-path filenames when breaking
+     cmd << _T(" -quiet");       // don't display version on startup
+     cmd << _T(" -pid=") << wxString::Format(_T("%d"), pid);
+Index: plugins/debuggergdb/debuggerstate.cpp
+===================================================================
+--- plugins/debuggergdb/debuggerstate.cpp	(revision 3258)
++++ plugins/debuggergdb/debuggerstate.cpp	(working copy)
+@@ -104,10 +104,11 @@
+         }
+         else
+         {
+-        	// for foreign files, we still should use a relative path
++        	// for foreign files, we should use an absolute path
+         	wxFileName f(filename);
+-        	f.MakeRelativeTo(prj->GetBasePath());
++        	f.MakeAbsolute();
+         	fname = f.GetFullPath();
++        	fname.Replace(_T("\\"), _T("/"));
+         }
+     }
+     return fname;

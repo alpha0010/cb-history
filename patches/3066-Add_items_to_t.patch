@@ -1,0 +1,70 @@
+Index: src/plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- src/plugins/compilergcc/compilergcc.cpp	(revision 6571)
++++ src/plugins/compilergcc/compilergcc.cpp	(working copy)
+@@ -623,8 +623,11 @@
+     if (!data || data->GetKind() == FileTreeData::ftdkUndefined)
+     {
+         // popup menu in empty space in ProjectManager
++        if (menu->GetMenuItemCount() > 0)
++            menu->AppendSeparator();
+         menu->Append(idMenuCompileAll, _("Build workspace"));
+         menu->Append(idMenuRebuildAll, _("Rebuild workspace"));
++        menu->Append(idMenuCleanAll, _("Clean workspace"));
+     }
+     else if (data && data->GetKind() == FileTreeData::ftdkProject)
+     {
+Index: src/plugins/contrib/wxSmith/wxsmith.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxsmith.cpp	(revision 6571)
++++ src/plugins/contrib/wxSmith/wxsmith.cpp	(working copy)
+@@ -310,7 +310,7 @@
+     }
+ }
+ 
+-void wxSmith::BuildModuleMenu(const ModuleType type, wxMenu* menu, const FileTreeData* data)
++void wxSmith::BuildModuleMenu(const ModuleType type, wxMenu* menu, const FileTreeData* /*data*/)
+ {
+ }
+ 
+Index: src/plugins/contrib/ThreadSearch/ThreadSearch.cpp
+===================================================================
+--- src/plugins/contrib/ThreadSearch/ThreadSearch.cpp	(revision 6571)
++++ src/plugins/contrib/ThreadSearch/ThreadSearch.cpp	(working copy)
+@@ -409,7 +409,7 @@
+ }
+ 
+ 
+-void ThreadSearch::BuildModuleMenu(const ModuleType type, wxMenu* pMenu, const FileTreeData* data)
++void ThreadSearch::BuildModuleMenu(const ModuleType type, wxMenu* pMenu, const FileTreeData* /*data*/)
+ {
+     wxMenuItem* pMenuItem = NULL;
+     if (!pMenu || !IsAttached())
+Index: src/plugins/codecompletion/codecompletion.cpp
+===================================================================
+--- src/plugins/codecompletion/codecompletion.cpp	(revision 6571)
++++ src/plugins/codecompletion/codecompletion.cpp	(working copy)
+@@ -370,7 +370,7 @@
+     return ReturnValue;
+ }
+ 
+-void CodeCompletion::BuildModuleMenu(const ModuleType type, wxMenu* menu, const FileTreeData* data)
++void CodeCompletion::BuildModuleMenu(const ModuleType type, wxMenu* menu, const FileTreeData* /*data*/)
+ {
+     // if not attached, exit
+     if (!menu || !IsAttached() || !m_InitDone)
+Index: src/sdk/projectmanager.cpp
+===================================================================
+--- src/sdk/projectmanager.cpp	(revision 6571)
++++ src/sdk/projectmanager.cpp	(working copy)
+@@ -692,6 +692,10 @@
+         menu.Append(idMenuTreeSaveAsWorkspace, _("Save workspace as..."));
+         menu.AppendSeparator();
+         menu.Append(idMenuFindFile, _("Find file..."));
++
++        // ask any plugins to add items in this menu
++        Manager::Get()->GetPluginManager()->AskPluginsForModuleMenu(mtProjectManager, &menu, NULL);
++
+         menu.AppendSeparator();
+         menu.Append(idMenuTreeCloseWorkspace, _("Close workspace"));
+     }

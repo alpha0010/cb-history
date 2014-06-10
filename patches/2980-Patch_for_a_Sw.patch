@@ -1,0 +1,19 @@
+Index: sdk/editormanager.cpp
+===================================================================
+--- sdk/editormanager.cpp	(revision 6202)
++++ sdk/editormanager.cpp	(working copy)
+@@ -969,6 +969,14 @@
+         if (    ((ftActive == ftHeader) && (ftTested == ftSource))
+              || ((ftActive == ftSource) && (ftTested == ftHeader)) )
+         {
++            if(candidateFile.GetPath() != activeFile.GetPath()) // Check if we are not in the same Directory
++            {
++                wxArrayString fileArray;
++                wxDir::GetAllFiles(candidateFile.GetPath(wxPATH_GET_VOLUME), &fileArray, candidateFile.GetName() + _T(".*"), wxDIR_FILES | wxDIR_HIDDEN);
++                for (unsigned i = 0; i< fileArray.GetCount(); i++)                          // if in this directory there is already
++                    if(wxFileName(fileArray[i]).GetFullName() == activeFile.GetFullName())  // a headerfile (or sourcefile) for our candidatefile
++                        return false;                                                       // it can't be our candidatefile
++            }
+             if (candidateFile.FileExists())
+                 return true;
+         }

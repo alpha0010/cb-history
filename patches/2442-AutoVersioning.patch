@@ -1,0 +1,207 @@
+Index: src/plugins/contrib/AutoVersioning/AutoVersioning.cpp
+===================================================================
+--- src/plugins/contrib/AutoVersioning/AutoVersioning.cpp	(revision 5005)
++++ src/plugins/contrib/AutoVersioning/AutoVersioning.cpp	(working copy)
+@@ -65,7 +65,6 @@
+     ProjectLoaderHooks::HookFunctorBase* AutoVerHook =
+       new ProjectLoaderHooks::HookFunctor<AutoVersioning>(this, &AutoVersioning::OnProjectLoadingHook);
+     m_AutoVerHookId = ProjectLoaderHooks::RegisterHook(AutoVerHook);
+-    m_IsCurrentProjectVersioned = false;
+     m_Modified = false;
+     m_Project = 0;
+ } // end of constructor
+@@ -128,11 +127,11 @@
+ 		// TODO (KILLERBOT) : should we have default values, in case something would be missing ?
+ 		// OPTI : we could choose not to write out default values in the xml --> smaller cbp
+ 		avConfig Config;
+-		m_IsCurrentProjectVersioned = false; // default not active unless we find xml for it
++		m_IsVersioned[project] = false; // default not active unless we find xml for it
+ 		const TiXmlElement* Node = elem->FirstChildElement("AutoVersioning");
+ 		if (Node)
+ 		{
+-			m_IsCurrentProjectVersioned = true;
++			m_IsVersioned[project] = true;
+ 			TiXmlHandle Handle(const_cast<TiXmlElement*>(Node));
+ 			if(const TiXmlElement* pElem = Handle.FirstChildElement("Scheme").ToElement())
+ 			{
+@@ -215,7 +214,6 @@
+         }
+ 		m_ProjectMap[project] = Config;
+ 		m_ProjectMapVersionState[project] = VersionState;
+-		m_Project = project;
+ 	}
+ 	else
+ 	{
+@@ -226,7 +224,7 @@
+ 		// if plugins that use that element are not loaded atm).
+ 		// so, instead of blindly inserting the element, we must first check it's
+ 		// not already there (and if it is, clear its contents)
+-		if(m_IsCurrentProjectVersioned)
++		if(m_IsVersioned[project])
+ 		{
+ 			TiXmlElement* node = elem->FirstChildElement("AutoVersioning");
+ 			if (!node)
+@@ -281,7 +279,8 @@
+ 	if (IsAttached())
+ 	{
+ 		m_ProjectMap.erase(event.GetProject());
+-		m_ProjectMapVersionState.erase(event.GetProject());
++		m_ProjectMapVersionState.erase(event.GetProject());
++        m_IsVersioned.erase(event.GetProject());
+ 		if(m_Project == event.GetProject())
+ 		{   // should always be the case (??? we hope ??)
+ 		    m_Project = 0;
+@@ -294,7 +293,7 @@
+ // be activated and each has the compilerstarted/Finished ?????
+ void AutoVersioning::OnCompilerStarted(CodeBlocksEvent& event)
+ {
+-    if (m_Project && IsAttached() && m_IsCurrentProjectVersioned)
++    if (m_Project && IsAttached() && m_IsVersioned[event.GetProject()])
+     {
+ 		if (m_Modified)
+ 		{
+@@ -317,7 +316,7 @@
+ 
+ void AutoVersioning::OnCompilerFinished(CodeBlocksEvent& event)
+ {
+-    if (m_Project && IsAttached() && m_IsCurrentProjectVersioned)
++    if (m_Project && IsAttached() && m_IsVersioned[event.GetProject()])
+ 	{
+ 		++(GetVersionState().Values.BuildCount);
+ 	}
+@@ -325,7 +324,7 @@
+ 
+ void AutoVersioning::OnTimerVerify(wxTimerEvent& event)
+ {
+-    if (m_Project && IsAttached() && m_IsCurrentProjectVersioned)
++    if (m_Project && IsAttached() && m_IsVersioned[m_Project])
+     {
+ 		if (!m_Modified)
+ 		{
+@@ -348,7 +347,7 @@
+     {
+         if (m_Project)
+         {
+-            if (m_IsCurrentProjectVersioned)
++            if (m_IsVersioned[m_Project])
+             {
+                 SetVersionAndSettings(*m_Project, true);
+                 UpdateVersionHeader();
+@@ -357,8 +356,20 @@
+             {
+                 if (wxMessageBox(_("Configure the project \"") + m_Project->GetTitle() + _("\" for Autoversioning?"),_("Autoversioning"),wxYES_NO) == wxYES)
+                 {
++                    if(wxFileExists(m_Project->GetBasePath() + _T("version.h")))
++                    {
++                        wxMessageBox(
++                         _T("The header version.h already exist on your projects path. "
++                            "The content will be overwritten by the the version info generated code."
++                            "\n\nYou can change the default version.h file on the \"Settings\" Tab."
++                           ),
++                         _T("Warning"),
++                         wxICON_EXCLAMATION  | wxOK
++                        );
++                    }
++
+ 					// we activated
+-					m_IsCurrentProjectVersioned = true;
++					m_IsVersioned[m_Project] = true;
+ 					// just becasue we activated the project becomes modified
+ 					m_Project->SetModified();
+ 
+@@ -382,7 +393,7 @@
+ 
+ void AutoVersioning::OnMenuCommitChanges(wxCommandEvent&)
+ {
+-    if (m_Project && IsAttached() && m_IsCurrentProjectVersioned)
++    if (m_Project && IsAttached() && m_IsVersioned[m_Project])
+     {
+         if(m_Modified)
+         {
+@@ -406,7 +417,7 @@
+             {
+                 event.Enable(true);
+             }
+-            else if (m_IsCurrentProjectVersioned)
++            else if (m_IsVersioned[m_Project])
+             {
+                 if (m_Modified)
+                 {
+@@ -528,9 +539,15 @@
+ {
+     m_timerStatus->Stop();
+ 
++    //Declares the header guard to be used based on the filename
++    wxFileName filename(cbC2U(GetConfig().Settings.HeaderPath.c_str()));
++    wxString headerGuard = filename.GetName() + _T("_") + filename.GetExt();
++    headerGuard.Replace(_T(" "), _T("_"), true);
++    headerGuard.UpperCase();
++
+     wxString headerOutput = _T("");
+-    headerOutput << _T("#ifndef VERSION_H") << _T("\n");
+-    headerOutput << _T("#define VERSION_H") << _T("\n");
++    headerOutput << _T("#ifndef ") << headerGuard << _T("\n");
++    headerOutput << _T("#define ") << headerGuard  << _T("\n");
+     headerOutput << _T("\n");
+ 
+     if(cbC2U(GetConfig().Settings.Language.c_str()) == _T("C++"))
+@@ -610,9 +627,9 @@
+         headerOutput << _T("}") << _T("\n");
+     }
+ 
+-    headerOutput << _T("#endif //VERSION_h\n");
++    headerOutput << _T("#endif //") << headerGuard << _T("\n");
+ 
+-    m_versionHeaderPath = FileNormalize(cbC2U(GetConfig().Settings.HeaderPath.c_str()),m_Project->GetBasePath());;
++    m_versionHeaderPath = FileNormalize(cbC2U(GetConfig().Settings.HeaderPath.c_str()),m_Project->GetBasePath());
+     wxFile versionHeaderFile(m_versionHeaderPath, wxFile::write);
+     versionHeaderFile.Write(headerOutput);
+     versionHeaderFile.Close();
+@@ -622,7 +639,7 @@
+ 
+ void AutoVersioning::CommitChanges()
+ {
+-    if (m_Project && IsAttached() && m_IsCurrentProjectVersioned)
++    if (m_Project && IsAttached() && m_IsVersioned[m_Project])
+     {
+         if (m_Modified)
+         {
+Index: src/plugins/contrib/AutoVersioning/AutoVersioning.h
+===================================================================
+--- src/plugins/contrib/AutoVersioning/AutoVersioning.h	(revision 5005)
++++ src/plugins/contrib/AutoVersioning/AutoVersioning.h	(working copy)
+@@ -56,10 +56,10 @@
+     wxTimer* m_timerStatus;
+     int m_AutoVerHookId; //!< project loader hook ID
+     std::map<cbProject*, avConfig> m_ProjectMap;
+-    std::map<cbProject*, avVersionState> m_ProjectMapVersionState;
++    std::map<cbProject*, avVersionState> m_ProjectMapVersionState;
++    std::map<cbProject*, bool> m_IsVersioned;
+     cbProject* m_Project; // keeps track of the last 'activated' project
+     bool m_Modified; // have some settings been modified
+-    bool m_IsCurrentProjectVersioned;
+     /// fires when a project is being loaded / saved
+     void OnProjectLoadingHook(cbProject* project, TiXmlElement* elem, bool loading);
+ 
+Index: src/plugins/contrib/AutoVersioning/manifest.xml
+===================================================================
+--- src/plugins/contrib/AutoVersioning/manifest.xml	(revision 5005)
++++ src/plugins/contrib/AutoVersioning/manifest.xml	(working copy)
+@@ -3,7 +3,7 @@
+     <SdkVersion major="1" minor="10" release="0" />
+     <Plugin name="AutoVersioning">
+         <Value title="AutoVersioning" />
+-        <Value version="1.1" />
++        <Value version="1.2" />
+         <Value description="Auto increments the version and build number of your application every time a change has been made and stores it in version.h with easy to use variable declarations. Also have a feature for committing changes a la SVN style, a version scheme editor and a change log generator.
+ 
+ Example:
+@@ -40,7 +40,7 @@
+ 	  static const char SVN_REVISION[]
+ 	  static const char SVN_DATE[]
+ " />
+-        <Value author="JGM" />
++        <Value author="Jefferson Gonzalez" />
+         <Value authorEmail="jgmdev@gmail.com" />
+         <Value authorWebsite="" />
+         <Value thanksTo="Killerbot - Code Optimizations, conversion from version.ini to project file and many more...

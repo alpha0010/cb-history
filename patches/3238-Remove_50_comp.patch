@@ -1,0 +1,284 @@
+Index: src/plugins/codecompletion/cc_test/nativeparser_test.cpp
+===================================================================
+--- src/plugins/codecompletion/cc_test/nativeparser_test.cpp	(revision 8124)
++++ src/plugins/codecompletion/cc_test/nativeparser_test.cpp	(working copy)
+@@ -18,13 +18,6 @@
+ #endif
+ 
+ #ifdef CC_PARSER_TEST
+-//    #define ADDTOKEN(format, args...) \
+-//            CCLogger::Get()->AddToken(F(format, ##args))
+-//    #define TRACE(format, args...) \
+-//            CCLogger::Get()->DebugLog(F(format, ##args))
+-//    #define TRACE2(format, args...) \
+-//            CCLogger::Get()->DebugLog(F(format, ##args))
+-
+     #define ADDTOKEN(format, args...) \
+             wxLogMessage(F(format, ##args))
+     #define TRACE(format, args...) \
+Index: src/plugins/codecompletion/nativeparser_base.cpp
+===================================================================
+--- src/plugins/codecompletion/nativeparser_base.cpp	(revision 8124)
++++ src/plugins/codecompletion/nativeparser_base.cpp	(working copy)
+@@ -27,13 +27,6 @@
+ #endif
+ 
+ #ifdef CC_PARSER_TEST
+-//    #define ADDTOKEN(format, args...) \
+-//            CCLogger::Get()->AddToken(F(format, ##args))
+-//    #define TRACE(format, args...) \
+-//            CCLogger::Get()->DebugLog(F(format, ##args))
+-//    #define TRACE2(format, args...) \
+-//            CCLogger::Get()->DebugLog(F(format, ##args))
+-
+     #define ADDTOKEN(format, args...) \
+             wxLogMessage(F(format, ##args))
+     #define TRACE(format, args...) \
+Index: src/plugins/contrib/BrowseTracker/BrowseTrackerLayout.cpp
+===================================================================
+--- src/plugins/contrib/BrowseTracker/BrowseTrackerLayout.cpp	(revision 8124)
++++ src/plugins/contrib/BrowseTracker/BrowseTrackerLayout.cpp	(working copy)
+@@ -260,13 +260,13 @@
+             cursor->SetAttribute("position", f->editorPos);
+             cursor->SetAttribute("topLine", f->editorTopLine);
+ 
+-            EditorBase* eb = 0;
++            ////EditorBase* eb = 0;
+             // write out a string of browse mark positions
+             #if defined(LOGGING)
+             ////LOGIT( _T("ProjectFilename[%s]"),f->file.GetFullPath().c_str() );
+             #endif
+ 
+-            eb = Manager::Get()->GetEditorManager()->GetEditor(f->file.GetFullPath());
++            ////eb = Manager::Get()->GetEditorManager()->GetEditor(f->file.GetFullPath());
+             #if defined(LOGGING)
+             ////if (eb) LOGIT( _T("EditorBase Filename[%d][%s]"), i, eb->GetFilename().c_str() );
+             #endif
+Index: src/plugins/contrib/BrowseTracker/BrowseTracker.cpp
+===================================================================
+--- src/plugins/contrib/BrowseTracker/BrowseTracker.cpp	(revision 8124)
++++ src/plugins/contrib/BrowseTracker/BrowseTracker.cpp	(working copy)
+@@ -1692,12 +1692,12 @@
+         cbEditor* cbed = Manager::Get()->GetEditorManager()->GetBuiltinEditor(eb);
+         if (not cbed) return;
+ 
+-        cbStyledTextCtrl* control = 0;
+-        if (cbed) control = cbed->GetControl();
+         // validate cbProject has been set
+         cbProject* pcbProject = GetProject( eb );
+         #if defined(LOGGING)
+-         LOGIT( _T("BT OnEditorOpen ebase[%p]cbed[%p]stc[%p]proj[%p][%s]"), eb, cbed, control, pcbProject, eb->GetShortName().c_str() );
++        cbStyledTextCtrl* control = 0;
++        if (cbed) control = cbed->GetControl();
++        LOGIT( _T("BT OnEditorOpen ebase[%p]cbed[%p]stc[%p]proj[%p][%s]"), eb, cbed, control, pcbProject, eb->GetShortName().c_str() );
+         #endif
+ 
+         // stow opened editor info in the ProjectData class
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsbitmapcombobox.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsbitmapcombobox.cpp	(revision 8124)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsbitmapcombobox.cpp	(working copy)
+@@ -77,9 +77,6 @@
+         wxsBitmapComboBoxEvents,
+         wxsBitmapComboBoxStyles)
+ {
+-int         i,n;
+-wxString    ss;
+-
+ // default values
+ 
+     mImageList = _("<none>");
+@@ -115,7 +112,7 @@
+ // bitmaps have to added after the wxsImages' and wxsImageList's were added
+ // note: first 2 items in mItems are used only in the dialog
+ 
+-    for(i=2; i<mItems.GetCount(); i++) {
++    for(i=2; i<(int)mItems.GetCount(); ++i) {
+         ss = mItems.Item(i);
+         ParseComboItem(ss, tt, n);
+ 
+@@ -163,7 +160,7 @@
+ // add items to combo-box
+ // note: first 2 items are used only in the dialog
+ 
+-    for(i=2; i<mItems.GetCount(); i++) {
++    for(i=2; i<(int)mItems.GetCount(); ++i) {
+         ss = mItems.Item(i);
+         ParseComboItem(ss, tt, n);
+ 
+@@ -217,7 +214,6 @@
+ int             i,n;
+ wxsItemResData  *res;
+ wxsTool         *tool;
+-wxsImageList    *ilist;
+ wxString        ss, tt;
+ 
+ // start the list with a chance to de-select any old list
+@@ -281,7 +277,7 @@
+ //------------------------------------------------------------------------------
+ 
+ void wxsBitmapComboBox::ParseComboItem(wxString inSource, wxString &outItem, int &outIndex) {
+-int         i,n;
++int         i;
+ long        ll;
+ wxString    ss, tt;
+ 
+Index: src/plugins/contrib/wxSmith/wxwidgets/wxsitem.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/wxsitem.cpp	(revision 8124)
++++ src/plugins/contrib/wxSmith/wxwidgets/wxsitem.cpp	(working copy)
+@@ -946,11 +946,7 @@
+ 
+                         default:
+                         {
+-                            #if wxCHECK_VERSION(2, 9, 0)
+                             Result.Append(*Fmt);
+-                            #else
+-                            *Result.Append(*Fmt);
+-                            #endif
+                         }
+                     }
+                     Fmt++;
+Index: src/plugins/contrib/wxSmith/wxwidgets/properties/wxsimagelisteditordlg.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/properties/wxsimagelisteditordlg.cpp	(revision 8124)
++++ src/plugins/contrib/wxSmith/wxwidgets/properties/wxsimagelisteditordlg.cpp	(working copy)
+@@ -1330,7 +1330,7 @@
+  */
+ void wxsImageListEditorDlg::ArrayToImageList(wxArrayString &inArray, wxImageList &outList)
+ {
+-    int             i, n;
++    int             i;
+     int             w, h;
+     long            ll;
+     wxBitmap        bmp;
+@@ -1378,7 +1378,7 @@
+         }
+         else{                                      // end of XPM data; start next block of data
+             ArrayToBitmap(aa, bmp);
+-            n = list->Add(bmp);
++            list->Add(bmp);
+             aa.Clear();
+             aa.Add(ss);
+         }
+Index: src/plugins/contrib/wxSmithContribItems/wximagebutton/wxsimagebutton.cpp
+===================================================================
+--- src/plugins/contrib/wxSmithContribItems/wximagebutton/wxsimagebutton.cpp	(revision 8124)
++++ src/plugins/contrib/wxSmithContribItems/wximagebutton/wxsimagebutton.cpp	(working copy)
+@@ -208,7 +208,6 @@
+ static const wxChar    *pImageNames[128];
+ static wxString         sIndexNames[1024];
+ static const wxChar    *pIndexNames[1024];
+-static long             iIndexNames[1024];
+ 
+ // find available images, and pointer to current imagelist
+ 
+@@ -241,7 +240,6 @@
+     n = 0;
+     sIndexNames[n] = _("<none>");
+     pIndexNames[n] = (const wxChar *) sIndexNames[n];
+-    iIndexNames[n] = -1;
+     n += 1;
+     if (ilist == NULL) k = 0;
+     else               k = ilist->GetCount();
+@@ -249,7 +247,6 @@
+     for(int i = 0; i < k; ++i) {
+         sIndexNames[n].Printf(_("%d"), i);
+         pIndexNames[n] = (const wxChar *) sIndexNames[n];
+-        iIndexNames[n] = i;
+         n += 1;
+     };
+     pIndexNames[n] = NULL;
+Index: src/plugins/contrib/codesnippets/snippetsconfig.cpp
+===================================================================
+--- src/plugins/contrib/codesnippets/snippetsconfig.cpp	(revision 8124)
++++ src/plugins/contrib/codesnippets/snippetsconfig.cpp	(working copy)
+@@ -527,7 +527,6 @@
+ // ----------------------------------------------------------------------------
+ {
+     wxFrame* frame;
+-    SEditorManager* edMgr;
+     if ( (index < 0) or (index > GetEditorManagerCount()) )
+         return 0;
+     // iterate over all the elements in the class
+@@ -538,7 +537,6 @@
+         if (i == index)
+         {
+             frame = it->first;
+-            edMgr = it->second;
+             return frame;
+         }
+         ++i;
+@@ -549,7 +547,6 @@
+ SEditorManager* CodeSnippetsConfig::GetEditorManager(const int index)
+ // ----------------------------------------------------------------------------
+ {
+-    wxFrame* frame;
+     SEditorManager* edMgr;
+     if ( (index < 0) or (index > GetEditorManagerCount()) )
+         return 0;
+@@ -560,7 +557,6 @@
+     {
+         if (i == index)
+         {
+-            frame = it->first;
+             edMgr = it->second;
+             return edMgr;
+         }
+Index: src/plugins/contrib/codesnippets/editsnippetframe.cpp
+===================================================================
+--- src/plugins/contrib/codesnippets/editsnippetframe.cpp	(revision 8124)
++++ src/plugins/contrib/codesnippets/editsnippetframe.cpp	(working copy)
+@@ -644,7 +644,7 @@
+ ////            return;
+ ////        }
+ 
+-    m_OncloseWindowEntries = (m_OncloseWindowEntries<1)? 0 : --m_OncloseWindowEntries;
++    m_OncloseWindowEntries = ((m_OncloseWindowEntries<1)? 0 : m_OncloseWindowEntries - 1);
+ 
+ }
+ //// ----------------------------------------------------------------------------
+Index: src/plugins/contrib/keybinder/cbkeybinder.cpp
+===================================================================
+--- src/plugins/contrib/keybinder/cbkeybinder.cpp	(revision 8124)
++++ src/plugins/contrib/keybinder/cbkeybinder.cpp	(working copy)
+@@ -406,7 +406,7 @@
+         return m_mergeEnabled;
+     }
+     // enable Merge
+-    m_mergeEnabled  = (m_mergeEnabled < 0 ? 1 : ++m_mergeEnabled );
++    m_mergeEnabled  = (m_mergeEnabled < 0 ? 1 : m_mergeEnabled + 1);
+     // StartMergetTimer removed for testing 2007/05/10
+     //  re-enables 2007/05/31 to record plugin menu key changes
+     StartMergeTimer( 15 );
+Index: src/src/switcherdlg.cpp
+===================================================================
+--- src/src/switcherdlg.cpp	(revision 8124)
++++ src/src/switcherdlg.cpp	(working copy)
+@@ -492,8 +492,6 @@
+     wxPaintDC dc(this);
+ #endif
+ 
+-    wxRect rect = GetClientRect();
+-
+     if (m_items.GetColumnCount() == 0)
+         CalculateLayout(dc);
+ 
+Index: src/src/notebookstyles.cpp
+===================================================================
+--- src/src/notebookstyles.cpp	(revision 8124)
++++ src/src/notebookstyles.cpp	(working copy)
+@@ -336,13 +336,6 @@
+     int drawn_tab_height = tabPoints[0].y - tabPoints[2].y;
+ 
+     int text_offset = tab_x + 8;
+-    int close_button_width = 0;
+-    if (close_button_state != wxAUI_BUTTON_STATE_HIDDEN)
+-#if wxCHECK_VERSION(2, 9, 3)
+-        close_button_width = m_activeCloseBmp.GetWidth();
+-#else
+-        close_button_width = m_active_close_bmp.GetWidth();
+-#endif
+ 
+     int bitmap_offset = 0;
+     if (page.bitmap.IsOk())

@@ -1,0 +1,148 @@
+Index: src/sdk/propgrid/include/wx/propgrid/odcombo.h
+===================================================================
+--- src/sdk/propgrid/include/wx/propgrid/odcombo.h	(revision 3173)
++++ src/sdk/propgrid/include/wx/propgrid/odcombo.h	(working copy)
+@@ -474,10 +474,17 @@
+ 
+     // wxControlWithItems methods
+     virtual void Clear();
++#if wxCHECK_VERSION(2, 7, 0)
++    virtual void Delete(unsigned int n);
++    virtual unsigned int GetCount() const;
++    virtual wxString GetString(unsigned int n) const;
++    virtual void SetString(unsigned int n, const wxString& s);
++#else    
+     virtual void Delete(int n);
+     virtual int GetCount() const;
+     virtual wxString GetString(int n) const;
+     virtual void SetString(int n, const wxString& s);
++#endif    
+     virtual int FindString(const wxString& s) const;
+     virtual void Select(int n);
+     virtual int GetSelection() const;
+@@ -508,11 +515,19 @@
+     void ClearClientDatas();
+ 
+     virtual int DoAppend(const wxString& item);
++#if wxCHECK_VERSION(2, 7, 0)   
++    virtual int DoInsert(const wxString& item, unsigned int pos);
++    virtual void DoSetItemClientData(unsigned int n, void* clientData);
++    virtual void* DoGetItemClientData(unsigned int n) const;
++    virtual void DoSetItemClientObject(unsigned int n, wxClientData* clientData);
++    virtual wxClientData* DoGetItemClientObject(unsigned int n) const;
++#else    
+     virtual int DoInsert(const wxString& item, int pos);
+     virtual void DoSetItemClientData(int n, void* clientData);
+     virtual void* DoGetItemClientData(int n) const;
+     virtual void DoSetItemClientObject(int n, wxClientData* clientData);
+     virtual wxClientData* DoGetItemClientObject(int n) const;
++#endif
+ 
+     // popup interface
+     wxComboPopupInterface*  m_popupInterface;
+Index: src/sdk/propgrid/src/propgrid/odcombo.cpp
+===================================================================
+--- src/sdk/propgrid/src/propgrid/odcombo.cpp	(revision 3173)
++++ src/sdk/propgrid/src/propgrid/odcombo.cpp	(working copy)
+@@ -2795,7 +2795,11 @@
+     GetTextCtrl()->SetValue(wxEmptyString);
+ }
+ 
++#if wxCHECK_VERSION(2, 7, 0)
++void wxPGOwnerDrawnComboBox::Delete(unsigned int n)
++#else
+ void wxPGOwnerDrawnComboBox::Delete(int n)
++#endif
+ {
+     if ( m_hasIntValue )
+     {
+@@ -2817,13 +2821,20 @@
+     }
+ }
+ 
++#if wxCHECK_VERSION(2, 7, 0)
++unsigned int wxPGOwnerDrawnComboBox::GetCount() const
++#else
+ int wxPGOwnerDrawnComboBox::GetCount() const
++#endif
+ {
+     wxASSERT ( m_popupInterface );
+     return m_popupInterface->GetCount();
+ }
+-
++#if wxCHECK_VERSION(2, 7, 0)
++wxString wxPGOwnerDrawnComboBox::GetString(unsigned int n) const
++#else
+ wxString wxPGOwnerDrawnComboBox::GetString(int n) const
++#endif
+ {
+     wxCHECK_MSG( (n >= 0) && (n < GetCount()), wxEmptyString, _T("invalid index in wxPGOwnerDrawnComboBox::GetString") );
+     return m_popupInterface->GetString(n);
+@@ -2833,7 +2844,11 @@
+     return wxEmptyString;*/
+ }
+ 
++#if wxCHECK_VERSION(2, 7, 0)
++void wxPGOwnerDrawnComboBox::SetString(unsigned int n, const wxString& s)
++#else
+ void wxPGOwnerDrawnComboBox::SetString(int n, const wxString& s)
++#endif
+ {
+     wxCHECK_RET( (n >= 0) && (n < GetCount()), _T("invalid index in wxPGOwnerDrawnComboBox::SetString") );
+     m_popupInterface->SetString(n,s);
+@@ -2899,8 +2914,11 @@
+ 
+     return pos;
+ }
+-
++#if wxCHECK_VERSION(2, 7, 0)
++int wxPGOwnerDrawnComboBox::DoInsert(const wxString& item, unsigned int pos)
++#else
+ int wxPGOwnerDrawnComboBox::DoInsert(const wxString& item, int pos)
++#endif
+ {
+     wxCHECK_MSG(!(GetWindowStyle() & wxCB_SORT), -1, wxT("can't insert into sorted list"));
+     wxCHECK_MSG((pos>=0) && (pos<=GetCount()), -1, wxT("invalid index"));
+@@ -2910,13 +2928,20 @@
+     return pos;
+ }
+ 
++#if wxCHECK_VERSION(2, 7, 0)
++void wxPGOwnerDrawnComboBox::DoSetItemClientData(unsigned int n, void* clientData)
++#else
+ void wxPGOwnerDrawnComboBox::DoSetItemClientData(int n, void* clientData)
++#endif
+ {
+     m_clientDatas.SetCount(n+1,NULL);
+     m_clientDatas[n] = clientData;
+ }
+-
++#if wxCHECK_VERSION(2, 7, 0)
++void *wxPGOwnerDrawnComboBox::DoGetItemClientData(unsigned int n) const
++#else
+ void *wxPGOwnerDrawnComboBox::DoGetItemClientData(int n) const
++#endif
+ {
+     if ( (int)m_clientDatas.GetCount() > n )
+         return m_clientDatas[n];
+@@ -2924,12 +2949,19 @@
+     return NULL;
+ }
+ 
++#if wxCHECK_VERSION(2, 7, 0)
++void wxPGOwnerDrawnComboBox::DoSetItemClientObject(unsigned int n, wxClientData* clientData)
++#else
+ void wxPGOwnerDrawnComboBox::DoSetItemClientObject(int n, wxClientData* clientData)
++#endif
+ {
+     DoSetItemClientData(n, (void*) clientData);
+ }
+-
++#if wxCHECK_VERSION(2, 7, 0)
++wxClientData* wxPGOwnerDrawnComboBox::DoGetItemClientObject(unsigned int n) const
++#else
+ wxClientData* wxPGOwnerDrawnComboBox::DoGetItemClientObject(int n) const
++#endif
+ {
+     return (wxClientData*) DoGetItemClientData(n);
+ }

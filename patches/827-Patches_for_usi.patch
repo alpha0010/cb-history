@@ -1,0 +1,120 @@
+Index: D:/codeblocks/src/plugins/astyle/astyleconfigdlg.h
+===================================================================
+--- D:/codeblocks/src/plugins/astyle/astyleconfigdlg.h	(revision 1995)
++++ D:/codeblocks/src/plugins/astyle/astyleconfigdlg.h	(working copy)
+@@ -23,7 +23,7 @@
+         void OnStyleChange(wxCommandEvent& event);
+         void OnPreview(wxCommandEvent& event);
+ 
+-        virtual wxString GetTitle(){ return _T("Source formatter"); }
++        virtual wxString GetTitle(){ return _("Source formatter"); }
+         virtual wxString GetBitmapBaseName(){ return _T("astyle-plugin"); }
+         virtual void OnApply(){ SaveSettings(); }
+         virtual void OnCancel(){}
+Index: D:/codeblocks/src/plugins/codecompletion/ccoptionsdlg.h
+===================================================================
+--- D:/codeblocks/src/plugins/codecompletion/ccoptionsdlg.h	(revision 1995)
++++ D:/codeblocks/src/plugins/codecompletion/ccoptionsdlg.h	(working copy)
+@@ -18,7 +18,7 @@
+ 		CCOptionsDlg(wxWindow* parent, NativeParser* np);
+ 		virtual ~CCOptionsDlg();
+ 
+-        virtual wxString GetTitle(){ return _T("Code-completion and class-browser"); }
++        virtual wxString GetTitle(){ return _("Code-completion and class-browser"); }
+         virtual wxString GetBitmapBaseName(){ return _T("generic-plugin"); }
+         virtual void OnApply();
+         virtual void OnCancel(){}
+Index: D:/codeblocks/src/plugins/compilergcc/compileroptionsdlg.h
+===================================================================
+--- D:/codeblocks/src/plugins/compilergcc/compileroptionsdlg.h	(revision 1995)
++++ D:/codeblocks/src/plugins/compilergcc/compileroptionsdlg.h	(working copy)
+@@ -30,7 +30,7 @@
+ 		CompilerOptionsDlg(wxWindow* parent, CompilerGCC* compiler, cbProject* project = 0L, ProjectBuildTarget* target = 0L);
+ 		~CompilerOptionsDlg();
+ 
+-        virtual wxString GetTitle(){ return _T("Global compiler settings"); }
++        virtual wxString GetTitle(){ return _("Global compiler settings"); }
+         virtual wxString GetBitmapBaseName(){ return _T("compiler"); }
+         virtual void OnApply();
+         virtual void OnCancel(){}
+Index: D:/codeblocks/src/plugins/debuggergdb/debuggeroptionsdlg.h
+===================================================================
+--- D:/codeblocks/src/plugins/debuggergdb/debuggeroptionsdlg.h	(revision 1995)
++++ D:/codeblocks/src/plugins/debuggergdb/debuggeroptionsdlg.h	(working copy)
+@@ -19,7 +19,7 @@
+ 		DebuggerOptionsDlg(wxWindow* parent, DebuggerGDB* plugin);
+ 		virtual ~DebuggerOptionsDlg();
+ 
+-        virtual wxString GetTitle(){ return _T("Debugger settings"); }
++        virtual wxString GetTitle(){ return _("Debugger settings"); }
+         virtual wxString GetBitmapBaseName(){ return _T("debugger"); }
+         virtual void OnApply();
+         virtual void OnCancel(){}
+Index: D:/codeblocks/src/plugins/defaultmimehandler/editmimetypesdlg.h
+===================================================================
+--- D:/codeblocks/src/plugins/defaultmimehandler/editmimetypesdlg.h	(revision 1995)
++++ D:/codeblocks/src/plugins/defaultmimehandler/editmimetypesdlg.h	(working copy)
+@@ -19,7 +19,7 @@
+ 		EditMimeTypesDlg(wxWindow* parent, MimeTypesArray& array);
+ 		virtual ~EditMimeTypesDlg();
+ 
+-        virtual wxString GetTitle(){ return _T("Files extension handling"); }
++        virtual wxString GetTitle(){ return _("Files extension handling"); }
+         virtual wxString GetBitmapBaseName(){ return _T("extensions"); }
+         virtual void OnApply();
+         virtual void OnCancel(){}
+Index: D:/codeblocks/src/sdk/filegroupsandmasks.cpp
+===================================================================
+--- D:/codeblocks/src/sdk/filegroupsandmasks.cpp	(revision 1995)
++++ D:/codeblocks/src/sdk/filegroupsandmasks.cpp	(working copy)
+@@ -90,10 +90,10 @@
+ 	{
+         FileGroups* fg = m_Groups[i];
+         wxString key;
+-        key << _("/file_groups/group") << wxString::Format(_T("%d"), i) << _T("/") << _T("name");
++        key << _T("/file_groups/group") << wxString::Format(_T("%d"), i) << _T("/") << _T("name");
+ 		conf->Write(key, fg->groupName);
+         key.Clear();
+-        key << _("/file_groups/group") << wxString::Format(_T("%d"), i) << _T("/") << _T("mask");
++        key << _T("/file_groups/group") << wxString::Format(_T("%d"), i) << _T("/") << _T("mask");
+ 		conf->Write(key, GetStringFromArray(fg->fileMasks, _T(";")));
+ 	}
+ }
+Index: D:/codeblocks/src/sdk/globals.cpp
+===================================================================
+--- D:/codeblocks/src/sdk/globals.cpp	(revision 1995)
++++ D:/codeblocks/src/sdk/globals.cpp	(working copy)
+@@ -513,7 +513,7 @@
+ wxString cbC2U(const char* str)
+ {
+ #if wxUSE_UNICODE
+-    return wxString(str, wxConvLocal);
++    return wxString(str, wxConvUTF8);
+ #else
+     return wxString(str);
+ #endif
+@@ -523,7 +523,7 @@
+ wxWX2MBbuf cbU2C(const wxString& str)
+ {
+ #if wxUSE_UNICODE
+-    return str.mb_str(wxConvLocal);
++    return str.mb_str(wxConvUTF8);
+ #else
+     return (wxChar*)str.mb_str();
+ #endif
+Index: D:/codeblocks/src/src/dlgabout.cpp
+===================================================================
+--- D:/codeblocks/src/src/dlgabout.cpp	(revision 1995)
++++ D:/codeblocks/src/src/dlgabout.cpp	(working copy)
+@@ -50,9 +50,9 @@
+ 	wxString file = ConfigManager::ReadDataPath() + _T("/images/splash.png");
+ 	bmp.LoadFile(file, wxBITMAP_TYPE_PNG);
+ 	XRCCTRL(*this, "lblTitle", wxStaticBitmap)->SetBitmap(bmp);
+-	XRCCTRL(*this, "lblBuildTimestamp", wxStaticText)->SetLabel(wxString(_T("Build: ")) + g_AppBuildTimestamp);
++	XRCCTRL(*this, "lblBuildTimestamp", wxStaticText)->SetLabel(wxString(_("Build: ")) + g_AppBuildTimestamp);
+ 	XRCCTRL(*this, "txtDescription", wxTextCtrl)->SetValue(description);
+-	XRCCTRL(*this, "txtThanksTo", wxTextCtrl)->SetValue(_T(
++	XRCCTRL(*this, "txtThanksTo", wxTextCtrl)->SetValue(_(
+         "Developers:\n"
+         "--------------\n"
+         "Yiannis Mandravellos: Project leader - Core developer\n"

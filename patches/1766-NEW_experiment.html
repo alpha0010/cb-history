@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 1766 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #1766 <small>2006-12-27 19:06:22</small></h3>
+          <h4>stahta01</h4>
+          NEW (experimental) wxSmith patch for wxWidgets 2.8
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="1766-NEW_experiment.patch">1766-NEW_experiment.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::Refinement</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2007-02-25 22:00:23</dd>
+            <dt>Assigned to</dt><dd></dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">stahta01 2006-12-27 19:10:14</div>
+        <div class="panel-body">
+          <p>This patch is NOT for the wxSmith contained in the nightly builds. Tim S</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">stahta01 2006-12-27 19:19:57</div>
+        <div class="panel-body">
+          <p>Change 1: WXWIN_COMPATIBILITY_2_4 is turn off by default under wxWidgets 2.8</p>
+          <p>Problem 1: This makes wxHIDE_READONLY undefined.</p>
+          <p>Solution 1: Added #if (WXWIN_COMPATIBILITY_2_4) blocks around wxHIDE_READONLY.</p>
+          <p>Change 2: wxFontEnumerator::GetFacenames returns wxArrayString instead of wxArrayString*</p>
+          <p>Solution 2: Added code</p>
+          <p>#if wxCHECK_VERSION(2, 8, 0)</p>
+          <p>wxArrayString faceNames = Enumer.GetFacenames();</p>
+          <p>#else</p>
+          <p>wxArrayString&amp; faceNames = *Enumer.GetFacenames();</p>
+          <p>#endif</p>
+          <p>And use faceNames where GetFacenames was used.</p>
+          <p>Problem 3: wxWidgets 2.8 does NOT like WX_DEFINE_ARRAY(bool,wxArrayBool)</p>
+          <p>Solution 3: Replaced it with WX_DEFINE_ARRAY_INT(bool,wxArrayBool)</p>
+          <p>Change 4: OnCancel method removed from wxDialog.</p>
+          <p>Problem 4: wxsArrayStringEditorDlg was using it.</p>
+          <p>Solution 4: Created wxsArrayStringEditorDlg::OnCancel method, note I am not sure if my code in the OnCancel method is correct.</p>
+          <p>Tim S</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">stahta01 2007-01-14 08:55:36</div>
+        <div class="panel-body">
+          <p>Updated patch because of Linux compile errors do to changes to wxSmith and use of wxWidgets 2.8.1.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">stahta01 2007-01-21 03:39:20</div>
+        <div class="panel-body">
+          <p>Changed patch to work with current wxSmith in SVN 3526</p>
+          <p>Tim S</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">horakdan 2007-01-26 11:55:47</div>
+        <div class="panel-body">
+          <p>I had to update the patch when compiling CB revision 3540</p>
+          <p>- removed the qualifier from the OnCancel method</p>
+          <p>--- src/plugins/contrib/wxSmith/properties/wxsarraystringeditordlg.h	(revision 3526)</p>
+          <p>+++ src/plugins/contrib/wxSmith/properties/wxsarraystringeditordlg.h	(working copy)</p>
+          <p>@@ -27,6 +27,9 @@</p>
+          <p>//(*Handlers(wxsArrayStringEditorDlg)</p>
+          <p>void OnOK(wxCommandEvent&amp; event);</p>
+          <p>+#if wxCHECK_VERSION(2, 8, 0)</p>
+          <p>+        void OnCancel(wxCommandEvent&amp; event);</p>
+          <p>+#endif</p>
+          <p>//*)</p>
+          <p>//(*Declarations(wxsArrayStringEditorDlg)</p>
+          <p>- no guard when including wx/notebook.h</p>
+          <p>Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsnotebook.cpp</p>
+          <p>===================================================================</p>
+          <p>--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsnotebook.cpp	(revision 3526)</p>
+          <p>+++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsnotebook.cpp	(working copy)</p>
+          <p>@@ -21,6 +21,7 @@</p>
+          <p>* $HeadURL$</p>
+          <p>*/</p>
+          <p>+#include &lt;wx/notebook.h&gt;</p>
+          <p>+</p>
+          <p>#include "wxsnotebook.h"</p>
+          <p>#include "../../wxsadvqppchild.h"</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

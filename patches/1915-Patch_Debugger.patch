@@ -1,0 +1,32 @@
+Index: src/plugins/debuggergdb/debuggergdb.cpp
+===================================================================
+--- src/plugins/debuggergdb/debuggergdb.cpp	(revision 3652)
++++ src/plugins/debuggergdb/debuggergdb.cpp	(working copy)
+@@ -662,7 +662,11 @@
+     wxString binPath = pathList.FindAbsoluteValidPath(gdb);
+     // it seems, under Win32, the above command doesn't search in paths with spaces...
+     // look directly for the file in question in masterPath
++#if wxCHECK_VERSION(2, 8, 0)
++    if (binPath.IsEmpty() || !(pathList.Index(wxPathOnly(binPath)) != wxNOT_FOUND))
++#else
+     if (binPath.IsEmpty() || !pathList.Member(wxPathOnly(binPath)))
++#endif
+     {
+         if (wxFileExists(masterPath + wxFILE_SEP_PATH + _T("bin") + wxFILE_SEP_PATH + gdb))
+             binPath = masterPath + wxFILE_SEP_PATH + _T("bin");
+Index: src/plugins/debuggergdb/gdb_tipwindow.cpp
+===================================================================
+--- src/plugins/debuggergdb/gdb_tipwindow.cpp	(revision 3652)
++++ src/plugins/debuggergdb/gdb_tipwindow.cpp	(working copy)
+@@ -536,7 +536,11 @@
+     const wxRect& rectBound = m_parent->m_rectBound;
+ 
+     if ( rectBound.width &&
++#if wxCHECK_VERSION(2, 8, 0)
++            !rectBound.Contains(ClientToScreen(event.GetPosition())) )
++#else
+             !rectBound.Inside(ClientToScreen(event.GetPosition())) )
++#endif
+     {
+         // mouse left the bounding rect, disappear
+         m_parent->Close();

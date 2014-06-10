@@ -1,0 +1,257 @@
+Index: src/sdk/replacedlg.cpp
+===================================================================
+--- src/sdk/replacedlg.cpp	(revision 4064)
++++ src/sdk/replacedlg.cpp	(working copy)
+@@ -46,6 +46,8 @@
+ BEGIN_EVENT_TABLE(ReplaceDlg, wxDialog)
+     EVT_NOTEBOOK_PAGE_CHANGED(XRCID("nbReplace"), ReplaceDlg::OnFindChange)
+ 	EVT_CHECKBOX(XRCID("chkRegEx1"), 	ReplaceDlg::OnRegEx)
++    EVT_BUTTON(XRCID("btnBrowsePath"),  ReplaceDlg::OnBrowsePath)
++    EVT_RADIOBOX(XRCID("rbScope2"),     ReplaceDlg::OnRadioBox)
+ 	EVT_ACTIVATE(                       ReplaceDlg::OnActivate)
+ END_EVENT_TABLE()
+
+@@ -256,6 +258,37 @@
+         return XRCCTRL(*this, "rbScope1", wxRadioBox)->GetSelection();
+ }
+
++bool ReplaceDlg::GetRecursive() const
++{
++    return XRCCTRL(*this, "chkSearchRecursively", wxCheckBox)->IsChecked();
++}
++
++bool ReplaceDlg::GetHidden() const
++{
++    return XRCCTRL(*this, "chkSearchHidden", wxCheckBox)->IsChecked();
++}
++
++wxString ReplaceDlg::GetSearchPath() const
++{
++    return XRCCTRL(*this, "txtSearchPath", wxTextCtrl)->GetValue();
++}
++
++wxString ReplaceDlg::GetSearchMask() const
++{
++    return XRCCTRL(*this, "txtSearchMask", wxTextCtrl)->GetValue();
++}
++
++void ReplaceDlg::UpdateUI()
++{
++    bool on = XRCCTRL(*this, "rbScope2", wxRadioBox)->GetSelection() == 2; // find in search path
++    XRCCTRL(*this, "txtSearchPath", wxTextCtrl)->Enable(on);
++    XRCCTRL(*this, "txtSearchMask", wxTextCtrl)->Enable(on);
++    XRCCTRL(*this, "btnBrowsePath", wxButton)->Enable(on);
++    XRCCTRL(*this, "chkSearchRecursively", wxCheckBox)->Enable(on);
++    XRCCTRL(*this, "chkSearchHidden", wxCheckBox)->Enable(on);
++} // end of UpdateUI
++
++
+ // events
+
+ void ReplaceDlg::OnFindChange(wxNotebookEvent& event)
+@@ -285,6 +318,20 @@
+         XRCCTRL(*this, "rbDirection", wxRadioBox)->Enable(!XRCCTRL(*this, "chkRegEx1", wxCheckBox)->GetValue());
+ }
+
++void ReplaceDlg::OnBrowsePath(wxCommandEvent& event)
++{
++    wxString txtSearchPath = XRCCTRL(*this, "txtSearchPath", wxTextCtrl)->GetValue();
++    wxString dir = ChooseDirectory(0, _("Select search path"), txtSearchPath);
++    if (!dir.IsEmpty())
++        XRCCTRL(*this, "txtSearchPath", wxTextCtrl)->SetValue(dir);
++}
++
++void ReplaceDlg::OnRadioBox(wxCommandEvent& event)
++{
++    UpdateUI();
++    event.Skip();
++}
++
+ void ReplaceDlg::OnActivate(wxActivateEvent& event)
+ {
+     wxComboBox* cbp = 0;
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(revision 4064)
++++ src/sdk/editormanager.cpp	(working copy)
+@@ -1672,8 +1672,25 @@
+                 filesList.Add(ed->GetFilename());
+         }
+     }
+-    else if (data->scope == 2) // find in workspace
++    else if (data->scope == 2) // find in custom search path and mask
+     {
++        // fill the search list with the files found under the search path
++        int flags = wxDIR_FILES |
++                    (data->recursiveSearch ? wxDIR_DIRS : 0) |
++                    (data->hiddenSearch ? wxDIR_HIDDEN : 0);
++        wxArrayString masks = GetArrayFromString(data->searchMask);
++        if (!masks.GetCount())
++            masks.Add(_T("*"));
++        unsigned int count = masks.GetCount();
++        wxLogNull ln; // no logging
++        for (unsigned int i = 0; i < count; ++i)
++        {
++            // wxDir::GetAllFiles() does *not* clear the array, so it suits us just fine ;)
++            wxDir::GetAllFiles(data->searchPath, &filesList, masks[i], flags);
++        }
++    }
++    else if (data->scope == 3) // find in workspace
++    {
+         // loop over all the projects in the workspace (they are contained in the ProjectManager)
+         const ProjectsArray* pProjects = Manager::Get()->GetProjectManager()->GetProjects();
+         if(pProjects)
+Index: src/sdk/resources/replace_dialog.xrc
+===================================================================
+--- src/sdk/resources/replace_dialog.xrc	(revision 4064)
++++ src/sdk/resources/replace_dialog.xrc	(working copy)
+@@ -232,12 +232,113 @@
+                         <content>
+                           <item>&amp;Project files</item>
+                           <item>&amp;Open files</item>
++                          <item>Search path (below)</item>
+                           <item>Workspace files</item>
+                         </content>
+                       </object>
+                     </object>
+                   </object>
+                 </object>
++                    <object class="sizeritem">
++                        <flag>wxGROW|wxLEFT|wxRIGHT|wxBOTTOM</flag>
++                        <border>8</border>
++                        <option>1</option>
++                        <object class="wxStaticBoxSizer" name="wxID_ANY">
++                            <orient>wxVERTICAL</orient>
++                            <label>Search path</label>
++                            <object class="sizeritem">
++                                <flag>wxGROW|wxALL</flag>
++                                <border>4</border>
++                                <object class="wxFlexGridSizer">
++                                    <cols>3</cols>
++                                    <rows>2</rows>
++                                    <vgap>4</vgap>
++                                    <hgap>0</hgap>
++                                    <growablecols>1</growablecols>
++                                    <object class="sizeritem">
++                                        <flag>wxALIGN_LEFT|wxALIGN_TOP|wxRIGHT|wxTOP|wxADJUST_MINSIZE</flag>
++                                        <border>4</border>
++                                        <object class="wxStaticText" name="wxID_STATIC">
++                                            <label>Path:</label>
++                                        </object>
++                                    </object>
++                                    <object class="sizeritem">
++                                        <flag>wxGROW|wxGROW</flag>
++                                        <border>0</border>
++                                        <option>1</option>
++                                        <object class="wxTextCtrl" name="txtSearchPath">
++                                        </object>
++                                    </object>
++                                    <object class="sizeritem">
++                                        <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                        <border>0</border>
++                                        <object class="wxButton" name="btnBrowsePath">
++                                            <size>24,-1</size>
++                                            <label>...</label>
++                                        </object>
++                                    </object>
++                                    <object class="sizeritem">
++                                        <flag>wxALIGN_LEFT|wxALIGN_TOP|wxRIGHT|wxTOP|wxADJUST_MINSIZE</flag>
++                                        <border>4</border>
++                                        <object class="wxStaticText" name="wxID_STATIC">
++                                            <label>Mask:</label>
++                                        </object>
++                                    </object>
++                                    <object class="sizeritem">
++                                        <flag>wxGROW|wxGROW</flag>
++                                        <border>0</border>
++                                        <option>1</option>
++                                        <object class="wxTextCtrl" name="txtSearchMask">
++                                        </object>
++                                    </object>
++                                    <object class="spacer">
++                                        <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                        <border>0</border>
++                                    </object>
++                                    <object class="spacer">
++                                        <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                                        <border>0</border>
++                                    </object>
++                                    <object class="sizeritem">
++                                        <flag>wxALIGN_LEFT|wxALIGN_TOP|wxADJUST_MINSIZE</flag>
++                                        <border>0</border>
++                                        <object class="wxStaticText" name="wxID_STATIC">
++                                            <fg>#800000</fg>
++                                            <label>Example mask: *.cpp;*.h</label>
++                                        </object>
++                                    </object>
++                                </object>
++                            </object>
++                            <object class="sizeritem">
++                                <flag>wxGROW|wxLEFT|wxRIGHT|wxBOTTOM</flag>
++                                <border>4</border>
++                                <object class="wxBoxSizer">
++                                    <orient>wxHORIZONTAL</orient>
++                                    <object class="sizeritem">
++                                        <flag>wxALIGN_TOP</flag>
++                                        <border>0</border>
++                                        <object class="wxCheckBox" name="chkSearchRecursively">
++                                            <label>Recurse subdirectories</label>
++                                            <checked>0</checked>
++                                        </object>
++                                    </object>
++                                    <object class="spacer">
++                                        <flag>wxGROW</flag>
++                                        <border>0</border>
++                                        <option>1</option>
++                                    </object>
++                                    <object class="sizeritem">
++                                        <flag>wxALIGN_TOP</flag>
++                                        <border>0</border>
++                                        <object class="wxCheckBox" name="chkSearchHidden">
++                                            <label>Hidden files</label>
++                                            <checked>0</checked>
++                                        </object>
++                                    </object>
++                                </object>
++                            </object>
++                        </object>
++                    </object>
+               </object>
+             </object>
+           </object>
+Index: src/include/replacedlg.h
+===================================================================
+--- src/include/replacedlg.h	(revision 4064)
++++ src/include/replacedlg.h	(working copy)
+@@ -24,15 +24,27 @@
+ 		int GetDirection() const;
+ 		int GetOrigin() const;
+ 		int GetScope() const;
+-		bool GetRecursive() const{ return false; }
+-		bool GetHidden() const{ return false; }
+-		wxString GetSearchPath() const{ return wxEmptyString; }
+-		wxString GetSearchMask() const{ return wxEmptyString; }
++//		bool GetRecursive() const{ return false; }
++//		bool GetHidden() const{ return false; }
++//		wxString GetSearchPath() const{ return wxEmptyString; }
++//		wxString GetSearchMask() const{ return wxEmptyString; }
++//
++//		void OnFindChange(wxNotebookEvent& event);
++//		void OnRegEx(wxCommandEvent& event);
++//		void OnActivate(wxActivateEvent& event);
++		bool GetRecursive() const; // for find in search path
++		bool GetHidden() const; // for find in search path
++		wxString GetSearchPath() const; // for find in search path
++		wxString GetSearchMask() const; // for find in search path
++		void UpdateUI();
+
+ 		void OnFindChange(wxNotebookEvent& event);
+ 		void OnRegEx(wxCommandEvent& event);
++		void OnBrowsePath(wxCommandEvent& event);
++		void OnRadioBox(wxCommandEvent& event);
+ 		void OnActivate(wxActivateEvent& event);
+
++
+ 	private:
+         bool m_Complete;
+ 		void FillComboWithLastValues(wxComboBox* combo, const wxString& configKey);

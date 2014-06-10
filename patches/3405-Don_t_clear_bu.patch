@@ -1,0 +1,45 @@
+Index: src/plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- src/plugins/compilergcc/compilergcc.cpp	(wersja 8784)
++++ src/plugins/compilergcc/compilergcc.cpp	(kopia robocza)
+@@ -1536,7 +1543,7 @@
+     return wxEmptyString;
+ }
+ 
+-void CompilerGCC::DoPrepareQueue(bool clearLog)
++void CompilerGCC::DoPrepareQueue(bool clearLog, bool clearErrors)
+ {
+     if (m_CommandQueue.GetCount() == 0)
+     {
+@@ -1545,7 +1552,8 @@
+ 
+         if (clearLog)
+             ClearLog();
+-        DoClearErrors();
++        if(clearErrors)
++            DoClearErrors();
+         // wxStartTimer();
+         m_StartTime = wxGetLocalTimeMillis();
+     }
+@@ -1753,7 +1761,7 @@
+     {
+         target = m_pProject->GetBuildTarget(m_pProject->GetActiveBuildTarget());
+     }
+-    DoPrepareQueue();
++    DoPrepareQueue(true, false);
+     if (   !(target && (   target->GetTargetType() == ttCommandsOnly // do not require compiler for commands-only target
+                         || target->GetCompilerID() == wxT("null") )) // do not require compiler for "No Compiler" (why would you?)
+         && !CompilerValid(target) )
+Index: src/plugins/compilergcc/compilergcc.h
+===================================================================
+--- src/plugins/compilergcc/compilergcc.h	(wersja 8784)
++++ src/plugins/compilergcc/compilergcc.h	(kopia robocza)
+@@ -178,7 +178,7 @@
+         void SaveOptions();
+         void LoadOptions();
+         void DoRegisterCompilers();
+-        void DoPrepareQueue(bool clearLog=true);
++        void DoPrepareQueue(bool clearLog=true, bool clearErrors=true);
+         void NotifyCleanProject(const wxString& target);
+         void NotifyCleanWorkspace();
+         int DoRunQueue();

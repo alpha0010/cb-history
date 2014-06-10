@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 2748 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #2748 <small>2009-04-28 18:11:14</small></h3>
+          <h4>raybert</h4>
+          workspace file improvements
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="2748-workspace_file.patch">2748-workspace_file.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Refinement</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2012-05-28 19:52:42</dd>
+            <dt>Assigned to</dt><dd>killerbot</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">killerbot 2012-05-28 19:52:42</div>
+        <div class="panel-body">
+          <p>applied</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">raybert 2009-04-28 18:27:49</div>
+        <div class="panel-body">
+          <p>This patch is intended mainly to avoid (arguably) unnecessary modifications to the workspace file that would impact the user's VCS with unnecessary commits.</p>
+          <p>It also provides a couple of minor usability improvements.</p>
+          <p>This patch is being discussed in the forum @ <a href="http://forums.codeblocks.org/index.php/topic,10395.msg71559.html#msg71559">http://forums.codeblocks.org/index.php/topic,10395.msg71559.html#msg71559</a></p>
+          <p>It addresses the following:</p>
+          <p>* CB currently writes workspace files with paths that contain the native path separator for the platform it is running on.  When sharing the workspace across multiple platforms this sometimes results in a modified workspace file where the only change is the slashes.  This also makes it difficult to compare versions of files.  This patch forces forward slashes to be used consistently in the workspace file regardless of which platform CB is running on.</p>
+          <p>* CB currently saves the active project to the workspace file.  This causes the same problems as discussed above.  This patch introduces a new file (*.workspace.layout) and saves the active project there instead of in the WS file.</p>
+          <p>* CB currently changes the active build target whenever the active project is changed (if the newly activated project has a different active target).  This is confusing and error prone as the user isn't expecting the setting that he/she made to be changed without his/her knowledge.  To address this, this patch introduces the concept of a "preferred target".  Whenever the user selects a new build target the selection is saved internally as the "preferred target".  When the user changes the active project, CB will attempt to keep the "preferred target" active.  If the newly activated project doesn't have a target with the same name, its last active target is re-activated.  The "preferred target" is also saved in the new "workspace layout" file and re-used the next time the workspace is loaded.</p>
+          <p>* This patch also prevents CB from listing build targets that are not supported on the current platform from appearing in the drop down box or the menu.  (Note: If the active project does not have any target that supports the current platform, the target list will be empty.)</p>
+          <p>~ray</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">raybert 2009-04-29 15:09:54</div>
+        <div class="panel-body">
+          <p>Minor update that replaces warning dialogs for workspace layout file load/save failures with debug logging.  The load failure would happen whenever an old project was opened with a patched CB.  The workspace layout file is not vital for anything and therefore doesn't warrant a warning dialog.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

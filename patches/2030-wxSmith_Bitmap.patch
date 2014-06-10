@@ -1,0 +1,72 @@
+Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.cpp
+===================================================================
+--- plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.cpp	(revision 4051)
++++ plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.cpp	(working copy)
+@@ -280,6 +280,7 @@
+     Parent->m_Help = Menu->m_Help;
+     Parent->m_Enabled = Menu->m_Enabled;
+     Parent->m_Checked = Menu->m_Checked;
++    Parent->m_Bitmap = Menu->m_Bitmap;
+ 
+     wxsEvents& Events = Menu->GetEvents();
+     if ( Events.GetCount()>0 )
+@@ -566,6 +567,7 @@
+         if ( UseHelp        ) Menu->m_Help = Item->m_Help;
+         if ( UseEnabled     ) Menu->m_Enabled = Item->m_Enabled;
+         if ( UseChecked     ) Menu->m_Checked = Item->m_Checked;
++        Menu->m_Bitmap = Item->m_Bitmap;
+ 
+         wxsEvents& Events = Menu->GetEvents();
+         if ( Events.GetCount()>0 )
+Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.h
+===================================================================
+--- plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.h	(revision 4051)
++++ plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.h	(working copy)
+@@ -54,6 +54,7 @@
+             wxString  m_Label;
+             wxString  m_Accelerator;
+             wxString  m_Help;
++            wxsBitmapData m_Bitmap;
+             wxString  m_ExtraCode;
+             bool      m_Enabled;
+             bool      m_Checked;
+Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenuitem.cpp
+===================================================================
+--- plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenuitem.cpp	(revision 4051)
++++ plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenuitem.cpp	(working copy)
+@@ -107,6 +107,12 @@
+                         m_Help.c_str(),
+                         ItemType);
+ 
++                    if ( !m_Bitmap.IsEmpty() )
++                    {
++                        wxString BmpCode = m_Bitmap.BuildCode(true,wxEmptyString,Language,wxART_OTHER);
++                        Codef(_T("%ASetBitmap(%s);\n"), BmpCode.c_str());
++                    }
++
+                     Codef(_T("%MAppend(%v);\n"),GetVarName().c_str());
+                     if ( !m_Enabled )
+                     {
+@@ -166,6 +172,10 @@
+             WXS_SHORT_STRING(wxsMenuItem,m_Help,_T("Help text"),_T("help"),_T(""),false);
+             WXS_BOOL(wxsMenuItem,m_Enabled,_T("Enabled"),_T("enabled"),true);
+             if ( m_Type == Check ) { WXS_BOOL(wxsMenuItem,m_Checked,_T("Checked"),_T("checked"),false); }
++            if ( m_Type == Normal )
++            {
++                WXS_BITMAP(wxsMenuItem,m_Bitmap,_("Bitmap"),_T("bitmap"),_T("wxART_OTHER"))
++            }
+             break;
+ 
+         default:;
+Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenuitem.h
+===================================================================
+--- plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenuitem.h	(revision 4051)
++++ plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenuitem.h	(working copy)
+@@ -41,6 +41,7 @@
+         wxString m_Help;                            ///< \brief Help string
+         bool     m_Enabled;                         ///< \brief True to make item enabled
+         bool     m_Checked;                         ///< \brief True to make this item checked
++        wxsBitmapData m_Bitmap;                     ///< \brief Bitmap associated with this menu item
+ 
+         friend class wxsMenuEditor;
+ };

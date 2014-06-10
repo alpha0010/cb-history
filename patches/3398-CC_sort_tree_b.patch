@@ -1,0 +1,109 @@
+Index: src/plugins/codecompletion/cctreectrl.cpp
+===================================================================
+--- src/plugins/codecompletion/cctreectrl.cpp	(wersja 8739)
++++ src/plugins/codecompletion/cctreectrl.cpp	(kopia robocza)
+@@ -70,6 +70,9 @@
+         case bstScope:
+             Compare = &CBScopeCompare;
+             break;
++        case bstLine:
++            Compare = &CBLineCompare;
++            break;
+         case bstNone:
+         default:
+             Compare = &CBNoCompare;
+@@ -119,6 +122,25 @@
+     return rhs->m_Token->m_Scope - lhs->m_Token->m_Scope;
+ }
+ 
++int CCTreeCtrl::CBLineCompare (CCTreeCtrlData* lhs, CCTreeCtrlData* rhs)
++{
++    if (!lhs || !rhs)
++        return 1;
++    if (lhs->m_SpecialFolder != sfToken || rhs->m_SpecialFolder != sfToken)
++        return -1;
++    if (!lhs->m_Token || !rhs->m_Token)
++        return 1;
++    if (lhs->m_Token->m_FileIdx == rhs->m_Token->m_FileIdx)
++    {
++        return (lhs->m_Token->m_Line > rhs->m_Token->m_Line) * 2 - 1; // from 0,1 to -1,1
++    }
++    else
++    {
++        return (lhs->m_Token->m_FileIdx > rhs->m_Token->m_FileIdx) * 2 - 1;
++    }
++        
++}
++
+ int CCTreeCtrl::CBNoCompare(cb_unused CCTreeCtrlData* lhs, cb_unused CCTreeCtrlData* rhs)
+ {
+     return 0;
+Index: src/plugins/codecompletion/cctreectrl.h
+===================================================================
+--- src/plugins/codecompletion/cctreectrl.h	(wersja 8739)
++++ src/plugins/codecompletion/cctreectrl.h	(kopia robocza)
+@@ -77,6 +77,7 @@
+     static int CBAlphabetCompare(CCTreeCtrlData* lhs, CCTreeCtrlData* rhs);
+     static int CBKindCompare    (CCTreeCtrlData* lhs, CCTreeCtrlData* rhs);
+     static int CBScopeCompare   (CCTreeCtrlData* lhs, CCTreeCtrlData* rhs);
++    static int CBLineCompare    (CCTreeCtrlData* lhs, CCTreeCtrlData* rhs);
+     static int CBNoCompare      (CCTreeCtrlData* lhs, CCTreeCtrlData* rhs);
+ 
+     int OnCompareItems(const wxTreeItemId& item1, const wxTreeItemId& item2);
+Index: src/plugins/codecompletion/classbrowser.cpp
+===================================================================
+--- src/plugins/codecompletion/classbrowser.cpp	(wersja 8739)
++++ src/plugins/codecompletion/classbrowser.cpp	(kopia robocza)
+@@ -89,6 +89,7 @@
+ int idCBSortByAlpabet          = wxNewId();
+ int idCBSortByKind             = wxNewId();
+ int idCBSortByScope            = wxNewId();
++int idCBSortByLine             = wxNewId();
+ int idCBBottomTree             = wxNewId();
+ int idThreadEvent              = wxNewId();
+ 
+@@ -122,6 +123,7 @@
+     EVT_MENU(idCBSortByAlpabet,                          ClassBrowser::OnSetSortType)
+     EVT_MENU(idCBSortByKind,                             ClassBrowser::OnSetSortType)
+     EVT_MENU(idCBSortByScope,                            ClassBrowser::OnSetSortType)
++    EVT_MENU(idCBSortByLine,                             ClassBrowser::OnSetSortType)
+     EVT_MENU(idCBBottomTree,                             ClassBrowser::OnCBViewMode)
+ 
+     EVT_COMMAND(idThreadEvent, wxEVT_COMMAND_ENTER,      ClassBrowser::OnThreadEvent)
+@@ -341,6 +343,7 @@
+     menu->AppendCheckItem(idCBSortByAlpabet, _("Sort alphabetically"));
+     menu->AppendCheckItem(idCBSortByKind,    _("Sort by kind"));
+     menu->AppendCheckItem(idCBSortByScope,   _("Sort by access"));
++    menu->AppendCheckItem(idCBSortByLine,    _("Sort by line"));
+ 
+     const BrowserSortType& bst = options.sortType;
+     switch (bst)
+@@ -354,6 +357,9 @@
+         case bstScope:
+             menu->Check(idCBSortByScope,   true);
+             break;
++        case bstLine:
++            menu->Check(idCBSortByLine,    true);
++            break;
+         case bstNone:
+         default:
+             menu->Check(idCBNoSort,        true);
+@@ -697,6 +703,7 @@
+     if      (event.GetId() == idCBSortByAlpabet) bst = bstAlphabet;
+     else if (event.GetId() == idCBSortByKind)    bst = bstKind;
+     else if (event.GetId() == idCBSortByScope)   bst = bstScope;
++    else if (event.GetId() == idCBSortByLine)    bst = bstLine;
+     else                                         bst = bstNone;
+ 
+     if (m_Parser)
+Index: src/plugins/codecompletion/parser/parser.h
+===================================================================
+--- src/plugins/codecompletion/parser/parser.h	(wersja 8739)
++++ src/plugins/codecompletion/parser/parser.h	(kopia robocza)
+@@ -107,6 +107,7 @@
+     bstAlphabet = 0, /// alphabetical
+     bstKind,         /// class, function, macros
+     bstScope,        /// public, protected, private
++    bstLine,         /// code like order 
+     bstNone
+ };

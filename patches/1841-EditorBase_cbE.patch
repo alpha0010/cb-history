@@ -1,0 +1,172 @@
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 3507)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -1710,7 +1710,7 @@
+ void cbEditor::Undo()
+ {
+     wxASSERT(m_pControl);
+-    m_pControl->Undo();
++    GetControl()->Undo();
+ }
+ 
+ void cbEditor::Redo()
+@@ -1740,32 +1740,45 @@
+ bool cbEditor::CanUndo() const
+ {
+     wxASSERT(m_pControl);
+-    return m_pControl->CanUndo();
++    return GetControl()->CanUndo();
+ }
+ 
+ bool cbEditor::CanRedo() const
+ {
+     wxASSERT(m_pControl);
+-    return m_pControl->CanRedo();
++    return GetControl()->CanRedo();
+ }
+ 
+-bool cbEditor::HasSelection() const
++bool cbEditor::CanCut() const
+ {
+     wxASSERT(m_pControl);
+-    cbStyledTextCtrl* control = GetControl();
+-    return control->GetSelectionStart() != control->GetSelectionEnd();
++    return HasSelection() && !GetControl()->GetReadOnly();
+ }
+ 
++bool cbEditor::CanCopy() const
++{
++    wxASSERT(m_pControl);
++    return HasSelection();
++}
++
+ bool cbEditor::CanPaste() const
+ {
+     wxASSERT(m_pControl);
+ #ifdef __WXGTK__
+     return true;
+ #else
+-    return m_pControl->CanPaste();
++    return GetControl()->CanPaste();
+ #endif
+ }
+ 
++bool cbEditor::HasSelection() const
++{
++    wxASSERT(m_pControl);
++    cbStyledTextCtrl* control = GetControl();
++    return control->GetSelectionStart() != control->GetSelectionEnd();
++}
++
++
+ bool cbEditor::LineHasMarker(int marker, int line) const
+ {
+     if (line == -1)
+Index: src/sdk/cbeditor.h
+===================================================================
+--- src/sdk/cbeditor.h	(revision 3507)
++++ src/sdk/cbeditor.h	(working copy)
+@@ -273,8 +273,10 @@
+         void Paste();
+         bool CanUndo() const;
+         bool CanRedo() const;
++        bool CanCut() const;
++        bool CanCopy() const;
++        bool CanPaste() const;
+         bool HasSelection() const;
+-        bool CanPaste() const;
+ 
+ 		// Workaround for shift-tab bug in wx2.4.2
+ 		void DoIndent(); /// Indents current line/block
+Index: src/sdk/editorbase.h
+===================================================================
+--- src/sdk/editorbase.h	(revision 3507)
++++ src/sdk/editorbase.h	(working copy)
+@@ -224,17 +224,30 @@
+           */
+         virtual bool CanRedo() const { return false; }
+ 
+-        /** Is there a selection?
++        /** Is there something to cut?
+           *
+-          * @return True if there is text/object selected, false if not.
++          * @return True if there is something to cut and the document is not read only, false if not.
+           */
+-        virtual bool HasSelection() const { return false; }
++        virtual bool CanCut() const { return false; }
+ 
++        /** Is there something to copy?
++          *
++          * @return True if there is something to copy, false if not.
++          */
++        virtual bool CanCopy() const { return false; }
++
+         /** Is there something to paste?
+           *
+           * @return True if there is something to paste, false if not.
+           */
+         virtual bool CanPaste() const { return false; }
++
++        /** Is there a selection?
++          *
++          * @return True if there is text/object selected, false if not.
++          */
++        virtual bool HasSelection() const { return false; }
++
+     protected:
+         /** Initializes filename data.
+           * @param filename The editor's filename for initialization.
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(revision 3507)
++++ src/src/main.cpp	(working copy)
+@@ -3158,12 +3158,15 @@
+         return;
+     }
+ 
+-    cbEditor* ed = NULL;
+-    EditorBase* eb = NULL;
+-    bool hasSel = false;
++    cbEditor* ed = 0;
++    EditorBase* eb = 0;
++
+     bool canUndo = false;
+     bool canRedo = false;
++    bool canCut = false;
++    bool canCopy = false;
+     bool canPaste = false;
++
+     int eolMode = -1;
+ 
+     if(Manager::Get()->GetEditorManager() && !Manager::isappShuttingDown())
+@@ -3180,14 +3183,15 @@
+     {
+         canUndo = eb->CanUndo();
+         canRedo = eb->CanRedo();
+-        hasSel = eb->HasSelection();
++        canCut = eb->CanCut();
++        canCopy = eb->CanCopy();
+         canPaste = eb->CanPaste();
+     }
+ 
+     mbar->Enable(idEditUndo, eb && canUndo);
+     mbar->Enable(idEditRedo, eb && canRedo);
+-    mbar->Enable(idEditCut, eb && hasSel);
+-    mbar->Enable(idEditCopy, eb && hasSel);
++    mbar->Enable(idEditCut, eb && canCut);
++    mbar->Enable(idEditCopy, eb && canCopy);
+     mbar->Enable(idEditPaste, eb && canPaste);
+     mbar->Enable(idEditSwapHeaderSource, ed);
+     mbar->Enable(idEditGotoMatchingBrace, ed);
+@@ -3234,8 +3238,8 @@
+     {
+         m_pToolbar->EnableTool(idEditUndo, eb && canUndo);
+         m_pToolbar->EnableTool(idEditRedo, eb && canRedo);
+-        m_pToolbar->EnableTool(idEditCut, eb && hasSel);
+-        m_pToolbar->EnableTool(idEditCopy, eb && hasSel);
++        m_pToolbar->EnableTool(idEditCut, eb && canCut);
++        m_pToolbar->EnableTool(idEditCopy, eb && canCopy);
+         m_pToolbar->EnableTool(idEditPaste, eb && canPaste);
+     }
+ 

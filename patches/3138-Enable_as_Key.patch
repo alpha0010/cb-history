@@ -1,0 +1,57 @@
+Index: /home/emp002660/prog/sourceforge/codeblocks3/src/plugins/contrib/keybinder/keybinder.h
+===================================================================
+--- /home/emp002660/prog/sourceforge/codeblocks3/src/plugins/contrib/keybinder/keybinder.h	(Revision 7038)
++++ /home/emp002660/prog/sourceforge/codeblocks3/src/plugins/contrib/keybinder/keybinder.h	(Arbeitskopie)
+@@ -97,7 +97,12 @@
+ 
+     wxKeyBind(const wxString &key) {
+         m_nFlags = StringToKeyModifier(key);
+-        m_nKeyCode = StringToKeyCode(key.AfterLast('+').AfterLast('-'));
++        if (key.Last() == '-')
++            m_nKeyCode = '-';
++        else if (key.Last() == '+')
++            m_nKeyCode = '+';
++        else
++            m_nKeyCode = StringToKeyCode(key.AfterLast('+').AfterLast('-'));
+     }
+ 
+     virtual void DeepCopy(const wxKeyBind &p) {
+@@ -730,9 +735,9 @@
+ public:
+ 
+     wxKeyBinder() {}
+-    wxKeyBinder(const wxKeyBinder &tocopy) : wxObject(tocopy)
+-    {
+-    	DeepCopy(tocopy);
++    wxKeyBinder(const wxKeyBinder &tocopy) : wxObject(tocopy)
++    {
++    	DeepCopy(tocopy);
+ 	}
+ 
+ 
+@@ -951,8 +956,8 @@
+         : wxKeyBinder(), m_strName(name), m_strDescription(desc) {}
+ 
+     wxKeyProfile(const wxKeyProfile &tocopy) : wxKeyBinder(tocopy)
+-	{
+-		DeepCopy(tocopy);
++	{
++		DeepCopy(tocopy);
+ 	}
+ 
+     virtual ~wxKeyProfile() {}
+@@ -1189,7 +1194,13 @@
+     //! Returns TRUE if this window is containing a valid key combination.
+     bool IsValidKeyComb() const {
+         //-return !GetValue().IsEmpty() && GetValue().Last() != '+';
+-        return !GetValue().IsEmpty() && GetValue().Last() != '-';
++        if (GetValue().IsEmpty())
++            return false;
++
++        if( (GetValue().Last() == '-') && (GetValue()[GetValue().Length() - 2] != '-') )
++            return false;
++
++        return true;
+     }
+ 
+ private:

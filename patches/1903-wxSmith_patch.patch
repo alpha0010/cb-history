@@ -1,0 +1,274 @@
+Index: src/plugins/contrib/wxSmith/wxwidgets/wxwidgetsguiconfigpanel.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/wxwidgetsguiconfigpanel.cpp	(revision 3669)
++++ src/plugins/contrib/wxSmith/wxwidgets/wxwidgetsguiconfigpanel.cpp	(working copy)
+@@ -144,7 +144,11 @@
+         _("XRC files (*.xrc)|*.xrc|"
+           "Zipped files (*.zip)|*.zip|"
+           "All files (*)|*"),
+-        wxOPEN|wxFILE_MUST_EXIST|wxHIDE_READONLY);
++        wxOPEN | wxFILE_MUST_EXIST
++#if WXWIN_COMPATIBILITY_2_4
++        | wxHIDE_READONLY
++#endif
++    );
+
+     if ( !FileName.empty() )
+     {
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxssplitterwindow.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxssplitterwindow.cpp	(revision 3669)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxssplitterwindow.cpp	(working copy)
+@@ -58,7 +58,9 @@
+         WXS_ST(wxSP_3D)
+         WXS_ST(wxSP_3DSASH)
+         WXS_ST(wxSP_3DBORDER)
++#if WXWIN_COMPATIBILITY_2_6
+         WXS_ST(wxSP_FULLSASH)
++#endif
+         WXS_ST(wxSP_BORDER)
+         WXS_ST(wxSP_NOBORDER)
+         WXS_ST(wxSP_PERMIT_UNSPLIT)
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstextctrl.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstextctrl.cpp	(revision 3669)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstextctrl.cpp	(working copy)
+@@ -56,7 +56,12 @@
+     //    WXS_ST(wxTE_DONTWRAP)
+
+     // Not in Help file but in XRC file, assume applying to all platform
++
++#if WXWIN_COMPATIBILITY_2_6
+         WXS_ST(wxTE_LINEWRAP)
++#else
++        WXS_ST(wxTE_CHARWRAP)
++#endif // WXWIN_COMPATIBILITY_2_6
+     WXS_ST_END()
+
+
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsdialog.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsdialog.cpp	(revision 3669)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsdialog.cpp	(working copy)
+@@ -32,13 +32,13 @@
+         WXS_ST(wxSTAY_ON_TOP)
+         WXS_ST(wxCAPTION)
+         WXS_ST(wxDEFAULT_DIALOG_STYLE)
+-        WXS_ST(wxTHICK_FRAME)
++     //   WXS_ST(wxTHICK_FRAME)// replaced by wxRESIZE_BORDER in 2.6
+         WXS_ST(wxSYSTEM_MENU)
+         WXS_ST(wxRESIZE_BORDER)
+-        WXS_ST(wxRESIZE_BOX)
++     //   WXS_ST(wxRESIZE_BOX) // replaced by wxMAXIMIZE_BOX in 2.6
+         WXS_ST(wxCLOSE_BOX)
+-        WXS_ST(wxDIALOG_MODAL)
+-        WXS_ST(wxDIALOG_MODELESS)
++     //   WXS_ST(wxDIALOG_MODAL)    // removed in 2.6
++     //   WXS_ST(wxDIALOG_MODELESS) // removed in 2.6
+         WXS_ST(wxDIALOG_NO_PARENT)
+         WXS_ST(wxTAB_TRAVERSAL)
+         WXS_ST(wxWS_EX_VALIDATE_RECURSIVELY)
+@@ -50,7 +50,7 @@
+     // on WXMSW wxDIALOG_EX_METAL only for WXMAC
+     // NOTE (cyberkoa#1#):  wxDIALOG_EX_CONTEXTHELP & wxDIALOG_EX_METAL are
+     // extended style which need 2 steps construction
+-        WXS_ST_MASK(wxNO_3D,wxsSFWin,0,true)
++     //   WXS_ST_MASK(wxNO_3D,wxsSFWin,0,true) // removed in 2.6
+         WXS_EXST_MASK(wxDIALOG_EX_CONTEXTHELP,wxsSFWin,0,true)
+         WXS_EXST_MASK(wxDIALOG_EX_METAL,wxsSFOSX,0,true)
+     WXS_ST_END()
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsscrolledwindow.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsscrolledwindow.cpp	(revision 3669)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsscrolledwindow.cpp	(working copy)
+@@ -31,7 +31,7 @@
+         WXS_ST_CATEGORY("wxScrolledWindow")
+         WXS_ST(wxHSCROLL)
+         WXS_ST(wxVSCROLL)
+-        WXS_ST(wxNO_3D)
++     //   WXS_ST(wxNO_3D)      // removed in 2.6
+         WXS_ST(wxTAB_TRAVERSAL)
+         WXS_EXST(wxWS_EX_VALIDATE_RECURSIVELY)
+     WXS_ST_END()
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxspanel.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxspanel.cpp	(revision 3669)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxspanel.cpp	(working copy)
+@@ -29,7 +29,7 @@
+
+     WXS_ST_BEGIN(wxsPanelStyles,_T("wxTAB_TRAVERSAL"))
+         WXS_ST_CATEGORY("wxPanel")
+-        WXS_ST(wxNO_3D)
++     //   WXS_ST(wxNO_3D)      // removed in 2.6
+         WXS_ST(wxTAB_TRAVERSAL)
+         WXS_ST(wxWANTS_CHARS)
+         WXS_EXST(wxWS_EX_VALIDATE_RECURSIVELY)
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsframe.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsframe.cpp	(revision 3669)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsframe.cpp	(working copy)
+@@ -33,10 +33,10 @@
+         WXS_ST(wxCAPTION)
+         WXS_ST(wxDEFAULT_DIALOG_STYLE)
+         WXS_ST(wxDEFAULT_FRAME_STYLE)
+-        WXS_ST(wxTHICK_FRAME)
++     //   WXS_ST(wxTHICK_FRAME)// replaced by wxRESIZE_BORDER in 2.6
+         WXS_ST(wxSYSTEM_MENU)
+         WXS_ST(wxRESIZE_BORDER)
+-        WXS_ST(wxRESIZE_BOX)
++     //   WXS_ST(wxRESIZE_BOX) // replaced by wxMAXIMIZE_BOX in 2.6
+         WXS_ST(wxCLOSE_BOX)
+
+         WXS_ST(wxFRAME_NO_TASKBAR)
+Index: src/plugins/contrib/wxSmith/wxwidgets/wxsitemeditor.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/wxsitemeditor.cpp	(revision 3669)
++++ src/plugins/contrib/wxSmith/wxwidgets/wxsitemeditor.cpp	(working copy)
+@@ -570,7 +570,7 @@
+
+     if ( !Enabled || !Selected )
+     {
+-        Btn->SetLabel(Original);
++        Btn->SetBitmapLabel(Original);
+     }
+     else
+     {
+@@ -578,7 +578,7 @@
+         wxMemoryDC DC;
+         DC.SelectObject(Copy);
+         DC.DrawBitmap(m_SelectedImg,0,0);
+-        Btn->SetLabel(Copy);
++        Btn->SetBitmapLabel(Copy);
+     }
+
+     Btn->Enable(Enabled);
+@@ -587,15 +587,15 @@
+
+ void wxsItemEditor::RebuildQuickPropsIcon()
+ {
+-    m_QuickPanelBtn->SetLabel( m_QuickPropsOpen ? m_QuickPropsImgClose : m_QuickPropsImgOpen );
++    m_QuickPanelBtn->SetBitmapLabel( m_QuickPropsOpen ? m_QuickPropsImgClose : m_QuickPropsImgOpen );
+ }
+
+ void wxsItemEditor::RebuildIcons()
+ {
+     RebuildInsTypeIcons();
+     RebuildQuickPropsIcon();
+-    m_DelBtn->SetLabel(m_DelImg);
+-    m_PreviewBtn->SetLabel(m_PreviewImg);
++    m_DelBtn->SetBitmapLabel(m_DelImg);
++    m_PreviewBtn->SetBitmapLabel(m_PreviewImg);
+     BuildPalette(m_WidgetsSet);
+     Layout();
+ }
+Index: src/plugins/contrib/wxSmith/wxwidgets/properties/wxscolourproperty.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/properties/wxscolourproperty.cpp	(revision 3669)
++++ src/plugins/contrib/wxSmith/wxwidgets/properties/wxscolourproperty.cpp	(working copy)
+@@ -128,7 +128,11 @@
+         wxSYS_COLOUR_MENUBAR
+     };
+
++#if defined(wxPG_VERSION) && wxPG_VERSION > 1099
++    WX_PG_IMPLEMENT_PROPERTY_CLASS(wxsMyColourProperty,wxEnumProperty,wxColourPropertyValue,const wxColourPropertyValue&,Choice)
++#else
+     WX_PG_IMPLEMENT_PROPERTY_CLASS(wxsMyColourProperty,wxColourPropertyValue,const wxColourPropertyValue&,Choice)
++#endif
+
+     wxsMyColourPropertyClass::wxsMyColourPropertyClass( const wxString& label, const wxString& name,
+         const wxColourPropertyValue& value )
+@@ -181,7 +185,11 @@
+                 (int)m_value.m_colour.Red(),(int)m_value.m_colour.Green(),(int)m_value.m_colour.Blue());
+             return temp;
+         }
++#if defined(wxPG_VERSION) && wxPG_VERSION > 1099
++        return m_choices.GetLabel(m_index);
++#else
+         return m_constants->GetLabel(m_index);
++#endif
+     }
+
+     wxSize wxsMyColourPropertyClass::GetImageSize() const
+Index: src/plugins/contrib/wxSmith/wxwidgets/properties/wxsfontproperty.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/properties/wxsfontproperty.cpp	(revision 3669)
++++ src/plugins/contrib/wxSmith/wxwidgets/properties/wxsfontproperty.cpp	(working copy)
+@@ -39,10 +39,15 @@
+     wxString Face;
+     wxFontEnumerator Enumer;
+     Enumer.EnumerateFacenames();
++#if wxCHECK_VERSION(2, 8, 0)
++        wxArrayString faceNames = Enumer.GetFacenames();
++#else
++        wxArrayString& faceNames = *Enumer.GetFacenames();
++#endif
+     size_t Count = Faces.Count();
+     for ( size_t i = 0; i<Count; i++ )
+     {
+-        if ( Enumer.GetFacenames()->Index(Faces[i]) != wxNOT_FOUND )
++        if ( faceNames.Index(Faces[i]) != wxNOT_FOUND )
+         {
+             Face = Faces[i];
+             break;
+Index: src/plugins/contrib/wxSmith/wxwidgets/properties/wxsarraystringcheckproperty.h
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/properties/wxsarraystringcheckproperty.h	(revision 3669)
++++ src/plugins/contrib/wxSmith/wxwidgets/properties/wxsarraystringcheckproperty.h	(working copy)
+@@ -3,7 +3,11 @@
+
+ #include "../../properties/wxsproperties.h"
+
+-WX_DEFINE_ARRAY(bool,wxArrayBool);
++#if wxCHECK_VERSION(2, 8, 0)
++    WX_DEFINE_ARRAY_INT(bool,wxArrayBool);
++#else
++    WX_DEFINE_ARRAY(bool,wxArrayBool);
++#endif
+
+ /** \brief Property for editing arrays of strings with checked option
+  *
+Index: src/plugins/contrib/wxSmith/wxwidgets/properties/wxsbitmapiconeditordlg.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/properties/wxsbitmapiconeditordlg.cpp	(revision 3669)
++++ src/plugins/contrib/wxSmith/wxwidgets/properties/wxsbitmapiconeditordlg.cpp	(working copy)
+@@ -115,7 +115,7 @@
+     Data(_Data)
+ {
+ 	//(*Initialize(wxsBitmapIconEditorDlg)
+-	Create(parent,id,_("Image editor"),wxDefaultPosition,wxDefaultSize,wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxRESIZE_BOX,_T("id"));
++    Create(parent,id,_("Image editor"),wxDefaultPosition,wxDefaultSize,wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxMAXIMIZE_BOX,_T("id"));
+ 	BoxSizer1 = new wxBoxSizer(wxVERTICAL);
+ 	BoxSizer5 = new wxBoxSizer(wxHORIZONTAL);
+ 	StaticBoxSizer1 = new wxStaticBoxSizer(wxHORIZONTAL,this,_("Image options"));
+Index: src/plugins/contrib/wxSmith/properties/wxsarraystringeditordlg.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/properties/wxsarraystringeditordlg.cpp	(revision 3669)
++++ src/plugins/contrib/wxSmith/properties/wxsarraystringeditordlg.cpp	(working copy)
+@@ -100,3 +100,10 @@
+
+     EndModal(wxID_OK);
+ }
++
++#if wxCHECK_VERSION(2, 8, 0)
++void wxsArrayStringEditorDlg::OnCancel(wxCommandEvent& event)
++{
++    EndModal(wxID_CANCEL);
++}
++#endif
+Index: src/plugins/contrib/wxSmith/properties/wxsarraystringeditordlg.h
+===================================================================
+--- src/plugins/contrib/wxSmith/properties/wxsarraystringeditordlg.h	(revision 3669)
++++ src/plugins/contrib/wxSmith/properties/wxsarraystringeditordlg.h	(working copy)
+@@ -25,6 +25,12 @@
+ 		void OnOK(wxCommandEvent& event);
+ 		//*)
+
++#if wxCHECK_VERSION(2, 8, 0)
++        //(*Handlers(wxsArrayStringEditorDlg)
++        void OnCancel(wxCommandEvent& event);
++        //*)
++#endif
++
+ 		//(*Declarations(wxsArrayStringEditorDlg)
+ 		wxTextCtrl* Items;
+ 		//*)

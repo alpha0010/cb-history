@@ -1,0 +1,390 @@
+Index: src/sdk/pluginsconfigurationdlg.cpp
+===================================================================
+--- src/sdk/pluginsconfigurationdlg.cpp	(revision 3130)
++++ src/sdk/pluginsconfigurationdlg.cpp	(working copy)
+@@ -44,6 +44,7 @@
+ #include <wx/dirdlg.h>
+ #include <wx/progdlg.h>
+ #include <wx/filename.h>
++#include <wx/html/htmlwin.h>
+ 
+ #include "pluginsconfigurationdlg.h" // class's header file
+ 
+@@ -61,7 +62,7 @@
+     EVT_BUTTON(XRCID("btnInstall"), PluginsConfigurationDlg::OnInstall)
+     EVT_BUTTON(XRCID("btnUninstall"), PluginsConfigurationDlg::OnUninstall)
+     EVT_BUTTON(XRCID("btnExport"), PluginsConfigurationDlg::OnExport)
+-    EVT_BUTTON(XRCID("btnInfo"), PluginsConfigurationDlg::OnInfo)
++    EVT_LIST_ITEM_SELECTED(XRCID("lstPlugins"), PluginsConfigurationDlg::OnSelect)
+ 
+     EVT_UPDATE_UI(-1, PluginsConfigurationDlg::OnUpdateUI)
+ END_EVENT_TABLE()
+@@ -87,6 +88,31 @@
+     }
+     XRCCTRL(*this, "chkInstallGlobally", wxCheckBox)->SetValue(globalInstall);
+     XRCCTRL(*this, "chkInstallConfirmation", wxCheckBox)->SetValue(confirmation);
++    
++    // Set default font size based on system default font size
++#ifdef __linux__
++    /* NOTE (mandrav#1#): wxWidgets documentation on wxHtmlWindow::SetFonts(),
++    states that the sizes array accepts values from -2 to +4.
++    My tests (under linux at least) have showed that it actually
++    expects real point sizes. */
++    
++	wxFont systemFont = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
++	int sizes[7] = {};
++	for (int i = 0; i < 7; ++i)
++        sizes[i] = systemFont.GetPointSize();
++	XRCCTRL(*this, "htmlInfo", wxHtmlWindow)->SetFonts(wxEmptyString, wxEmptyString, &sizes[0]);
++#endif
++
++    wxString initialInfo;
++    initialInfo << _T("<html><body><font color=\"#0000AA\">");
++    initialInfo << _("Tip: The above list allows for multiple selections.");
++    initialInfo << _T("</font><br /><br /><i><font color=\"#696969\">");
++    initialInfo << _("Have you saved your work first?");
++    initialInfo << _T("<br />\n");
++    initialInfo << _("All functionality in this dialog is to be considered as &quot;experimental&quot;.");
++    initialInfo << _T("</font></i><br /></body></html>\n");
++
++    XRCCTRL(*this, "htmlInfo", wxHtmlWindow)->SetPage(initialInfo);
+ }
+ 
+ void PluginsConfigurationDlg::FillList()
+@@ -357,7 +383,7 @@
+         cbMessageBox(_("Failed exporting one or more plugins:\n\n") + failure, _("Warning"), wxICON_WARNING);
+ }
+ 
+-void PluginsConfigurationDlg::OnInfo(wxCommandEvent& event)
++void PluginsConfigurationDlg::OnSelect(wxListEvent& event)
+ {
+     wxListCtrl* list = XRCCTRL(*this, "lstPlugins", wxListCtrl);
+     if (list->GetSelectedItemCount() != 1)
+@@ -367,15 +393,20 @@
+     const PluginElement* elem = (const PluginElement*)list->GetItemData(sel);
+     if (!elem)
+         return;
++   
++    wxString description(elem->info.description);
++    description.Replace(_T("\n"), _T("<br />\n"));
+ 
+     wxString info;
+-    info << _("Title: ") << elem->info.title << _T('\n');
+-    info << _("Version: ") << elem->info.version << _T('\n');
+-    info << _("Description: ") << elem->info.description << _T('\n');
+-    info << _T('\n');
+-    info << _("Filename: ") << elem->fileName << _T('\n');
++    info << _T("<html><body>\n");
++    info << _T("<h3>") << elem->info.title << _T(" ");
++    info << _T("<font color=\"#0000AA\">") << elem->info.version << _T("</font></h3>");
++    info << _T("<i><font color=\"#808080\" size=\"-1\">") << UnixFilename(elem->fileName) << _T("</font></i><br />\n");
++    info << _T("<br />\n");
++    info << description << _T("<br />\n");
++    info << _T("</body></html>\n");
+ 
+-    cbMessageBox(info, _("Information"), wxICON_INFORMATION);
++    XRCCTRL(*this, "htmlInfo", wxHtmlWindow)->SetPage(info);
+ }
+ 
+ void PluginsConfigurationDlg::OnUpdateUI(wxUpdateUIEvent& event)
+@@ -402,7 +433,6 @@
+     XRCCTRL(*this, "btnDisable", wxButton)->Enable(en && (lastSelectionMultiple || (hasPlugin && isAttached)));
+     XRCCTRL(*this, "btnUninstall", wxButton)->Enable(en);
+     XRCCTRL(*this, "btnExport", wxButton)->Enable(en);
+-    XRCCTRL(*this, "btnInfo", wxButton)->Enable(en);
+ }
+ 
+ void PluginsConfigurationDlg::EndModal(int retCode)
+Index: src/sdk/pluginsconfigurationdlg.h
+===================================================================
+--- src/sdk/pluginsconfigurationdlg.h	(revision 3130)
++++ src/sdk/pluginsconfigurationdlg.h	(working copy)
+@@ -21,7 +21,7 @@
+         void OnInstall(wxCommandEvent& event);
+         void OnUninstall(wxCommandEvent& event);
+         void OnExport(wxCommandEvent& event);
+-        void OnInfo(wxCommandEvent& event);
++        void OnSelect(wxListEvent& event);
+         void OnUpdateUI(wxUpdateUIEvent& event);
+ 
+         DECLARE_EVENT_TABLE();
+Index: src/sdk/resources/plugins_configuration.xrc
+===================================================================
+--- src/sdk/resources/plugins_configuration.xrc	(revision 3130)
++++ src/sdk/resources/plugins_configuration.xrc	(working copy)
+@@ -1,151 +1,136 @@
+-<?xml version="1.0" encoding="utf-8"?>
+ <resource>
+-  <object class="wxDialog" name="dlgConfigurePlugins">
+-    <title>Manage plugins</title>
+-    <centered>1</centered>
+-    <style>wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxRESIZE_BOX</style>
+-    <object class="wxBoxSizer">
+-      <object class="sizeritem">
+-        <object class="wxStaticText">
+-          <label>Installed plugins:</label>
+-        </object>
+-        <flag>wxTOP|wxALL</flag>
+-        <border>5</border>
+-      </object>
+-      <object class="sizeritem">
++    <object class="wxDialog" name="dlgConfigurePlugins">
++        <title>Manage plugins</title>
++        <centered>1</centered>
++        <style>wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxRESIZE_BOX</style>
+         <object class="wxBoxSizer">
+-          <orient>wxHORIZONTAL</orient>
+-          <object class="sizeritem">
+-            <object class="wxBoxSizer">
+-              <orient>wxVERTICAL</orient>
+-              <object class="sizeritem">
+-                <object class="wxListCtrl" name="lstPlugins">
+-                  <style>wxLC_REPORT</style>
++            <orient>wxVERTICAL</orient>
++            <object class="sizeritem">
++                <border>5</border>
++                <flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                <object class="wxStaticText" name="ID_STATICTEXT1">
++                    <label>Installed plugins:</label>
+                 </object>
++            </object>
++            <object class="sizeritem">
+                 <option>1</option>
+-                <flag>wxGROW</flag>
+-                <minsize>320,240</minsize>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticBoxSizer">
+-                  <label>When installing new plugins</label>
+-                  <orient>wxVERTICAL</orient>
+-                  <object class="sizeritem">
+-                    <object class="wxCheckBox" name="chkInstallGlobally">
+-                      <label>Install system-wide, for all users of this machine (requires administrative rights).</label>
++                <border>5</border>
++                <flag>wxLEFT|wxRIGHT|wxBOTTOM|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                <object class="wxBoxSizer">
++                    <orient>wxHORIZONTAL</orient>
++                    <object class="sizeritem">
++                        <option>1</option>
++                        <flag>wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                        <object class="wxBoxSizer">
++                            <orient>wxVERTICAL</orient>
++                            <object class="sizeritem">
++                                <option>1</option>
++                                <flag>wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                                <object class="wxListCtrl" name="lstPlugins">
++                                    <size>595,255</size>
++                                    <style>wxLC_REPORT</style>
++                                </object>
++                            </object>
++                            <object class="sizeritem">
++                                <border>5</border>
++                                <flag>wxTOP|wxBOTTOM|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                                <object class="wxHtmlWindow" name="htmlInfo">
++                                    <size>595,163</size>
++                                </object>
++                            </object>
++                            <object class="sizeritem">
++                                <border>5</border>
++                                <flag>wxTOP|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                                <object class="wxStaticBoxSizer">
++                                    <orient>wxVERTICAL</orient>
++                                    <label>When installing new plugins</label>
++                                    <object class="sizeritem">
++                                        <border>5</border>
++                                        <flag>wxLEFT|wxRIGHT|wxTOP|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                                        <object class="wxCheckBox" name="chkInstallGlobally">
++                                            <label>Install system-wide, for all users of this machine (requires administrative rights).</label>
++                                        </object>
++                                    </object>
++                                    <object class="sizeritem">
++                                        <border>5</border>
++                                        <flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                                        <object class="wxCheckBox" name="chkInstallConfirmation">
++                                            <label>Ask for confirmation if conflicts arise.</label>
++                                        </object>
++                                    </object>
++                                </object>
++                            </object>
++                        </object>
+                     </object>
+-                    <flag>wxTOP|wxLEFT|wxRIGHT|wxGROW</flag>
+-                    <border>5</border>
+-                  </object>
+-                  <object class="sizeritem">
+-                    <object class="wxCheckBox" name="chkInstallConfirmation">
+-                      <label>Ask for confirmation if conflicts arise.</label>
++                    <object class="sizeritem">
++                        <border>5</border>
++                        <flag>wxLEFT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                        <object class="wxBoxSizer">
++                            <orient>wxVERTICAL</orient>
++                            <object class="sizeritem">
++                                <flag>wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                                <object class="wxButton" name="btnEnable">
++                                    <label>&amp;Enable</label>
++                                </object>
++                            </object>
++                            <object class="sizeritem">
++                                <border>5</border>
++                                <flag>wxTOP|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                                <object class="wxButton" name="btnDisable">
++                                    <label>&amp;Disable</label>
++                                </object>
++                            </object>
++                            <object class="sizeritem">
++                                <border>10</border>
++                                <flag>wxTOP|wxBOTTOM|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                                <object class="wxStaticLine" name="ID_STATICLINE1" />
++                            </object>
++                            <object class="sizeritem">
++                                <flag>wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                                <object class="wxButton" name="btnInstall">
++                                    <label>&amp;Install new</label>
++                                </object>
++                            </object>
++                            <object class="sizeritem">
++                                <border>5</border>
++                                <flag>wxTOP|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                                <object class="wxButton" name="btnUninstall">
++                                    <label>&amp;Uninstall</label>
++                                </object>
++                            </object>
++                            <object class="sizeritem">
++                                <border>10</border>
++                                <flag>wxTOP|wxBOTTOM|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                                <object class="wxStaticLine" name="ID_STATICLINE2" />
++                            </object>
++                            <object class="sizeritem">
++                                <flag>wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                                <object class="wxButton" name="btnExport">
++                                    <label>&amp;Export</label>
++                                </object>
++                            </object>
++                        </object>
+                     </object>
+-                    <flag>wxALL|wxGROW</flag>
+-                    <border>5</border>
+-                  </object>
+                 </object>
+-                <flag>wxTOP|wxGROW</flag>
++            </object>
++            <object class="sizeritem">
+                 <border>5</border>
+-              </object>
++                <flag>wxLEFT|wxRIGHT|wxTOP|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND</flag>
++                <object class="wxStaticLine" name="ID_STATICLINE3" />
+             </object>
+-            <option>1</option>
+-            <flag>wxGROW</flag>
+-          </object>
+-          <object class="sizeritem">
+-            <object class="wxBoxSizer">
+-              <orient>wxVERTICAL</orient>
+-              <object class="sizeritem">
+-                <object class="wxButton" name="btnEnable">
+-                  <label>&amp;Enable</label>
++            <object class="sizeritem">
++                <border>8</border>
++                <flag>wxALL|wxALIGN_CENTER_HORIZONTAL|wxALIGN_TOP</flag>
++                <object class="wxBoxSizer">
++                    <orient>wxVERTICAL</orient>
++                    <object class="sizeritem">
++                        <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                        <object class="wxButton" name="wxID_CANCEL">
++                            <label>C&amp;lose</label>
++                        </object>
++                    </object>
+                 </object>
+-                <flag>wxGROW</flag>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxButton" name="btnDisable">
+-                  <label>&amp;Disable</label>
+-                </object>
+-                <flag>wxTOP|wxGROW</flag>
+-                <border>5</border>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticLine"/>
+-                <flag>wxTOP|wxBOTTOM|wxGROW</flag>
+-                <border>10</border>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxButton" name="btnInstall">
+-                  <label>&amp;Install new</label>
+-                </object>
+-                <flag>wxGROW</flag>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxButton" name="btnUninstall">
+-                  <label>&amp;Uninstall</label>
+-                </object>
+-                <flag>wxTOP|wxGROW</flag>
+-                <border>5</border>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticLine"/>
+-                <flag>wxTOP|wxBOTTOM|wxGROW</flag>
+-                <border>10</border>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxButton" name="btnExport">
+-                  <label>&amp;Export</label>
+-                </object>
+-                <flag>wxGROW</flag>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxButton" name="btnInfo">
+-                  <label>&amp;Info</label>
+-                </object>
+-                <flag>wxTOP|wxGROW</flag>
+-                <border>5</border>
+-              </object>
+             </object>
+-            <flag>wxLEFT</flag>
+-            <border>5</border>
+-          </object>
+         </object>
+-        <option>1</option>
+-        <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxGROW</flag>
+-        <border>5</border>
+-      </object>
+-      <object class="sizeritem">
+-        <object class="wxStaticText">
+-          <label>TIP: The above list allows for multiple selections.</label>
+-        </object>
+-        <flag>wxTOP|wxLEFT|wxRIGHT</flag>
+-        <border>5</border>
+-      </object>
+-      <object class="sizeritem">
+-        <object class="wxStaticText">
+-          <label>Have you saved your work first? All functionality in this dialog is to be considered as &quot;experimental&quot;...</label>
+-          <fg>#800000</fg>
+-        </object>
+-        <flag>wxLEFT|wxRIGHT</flag>
+-        <border>5</border>
+-      </object>
+-      <object class="sizeritem">
+-        <object class="wxStaticLine"/>
+-        <flag>wxTOP|wxLEFT|wxRIGHT|wxGROW</flag>
+-        <border>5</border>
+-      </object>
+-      <object class="sizeritem">
+-        <object class="wxBoxSizer">
+-          <orient>wxVERTICAL</orient>
+-          <object class="sizeritem">
+-            <object class="wxButton" name="wxID_CANCEL">
+-              <label>C&amp;lose</label>
+-            </object>
+-          </object>
+-        </object>
+-        <flag>wxALL|wxALIGN_CENTRE_HORIZONTAL</flag>
+-        <border>8</border>
+-      </object>
+-      <orient>wxVERTICAL</orient>
+     </object>
+-  </object>
+-</resource>
+\ No newline at end of file
++</resource>

@@ -1,0 +1,97 @@
+When running CodeBlocks in __WXDEBUG__ mode the following
+assert failures occur:
+
+// ----------------------------------------------------------------------------
+#1) Invalid treeItem in projectManager.cpp
+// --------------------------------------------------------------------
+../../src/msw/treectrl.cpp(1242): assert "wxAssertFailure" failed:
+invalid tree item. Do yu wnat to stop the program....
+
+This is caused by :
+(gdb) f
+#0  ProjectManager::SetProject (this=0x153f5b0, project=0x1e80770,
+    refresh=false) at sdk/projectmanager.cpp:431
+431             m_pTree->SetItemBold(m_pActiveProject->GetProjectNode(), true);
+
+cbProject::GetProjectNode (this=0x1e80770) at sdk/cbproject.h:274
+274             wxTreeItemId GetProjectNode(){ return m_ProjectNode; }
+(gdb) p m_ProjectNode
+$3 = {m_pItem = 0x0}
+
+// ----------------------------------------------------------------------------
+#2 Thaw() without matching freeze() in projectManager.cpp
+// ----------------------------------------------------------------------------
+../../src/msw/window.cpp(1365) assert "m_frozenness > 0" failed:
+Thaw() without matching freeze()
+Do you wnat to stop the program?
+
+This is caused by:
+
+(gdb) f 10
+#10 0x605abb8b in ProjectManager::UnfreezeTree (this=0x163b600, force=true)
+    at sdk/projectmanager.cpp:1101
+1101        m_pTree->Thaw();
+Current language:  auto; currently c++
+(gdb) l
+1096        {
+1097            m_pTree->Thaw();
+1098            m_TreeFreezeCounter = 0;
+1099        }
+1100    #else
+1101        m_pTree->Thaw();
+1102    #endif
+1103    }
+1104
+1105    void ProjectManager::RebuildTree()
+(gdb)
+Breakpoint 1, ProjectManager::UnfreezeTree (this=0x153f610, force=false)
+    at sdk/projectmanager.cpp:1090
+1090        if (!m_pTree)
+(gdb) p m_pTree
+$1 = (class wxTreeCtrl *) 0x1535a30
+(gdb)
+// ----------------------------------------------------------------------------
+patch to fix both the above
+// ----------------------------------------------------------------------------
+C:\Usr\Proj\cbBeta\trunk>svn diff 
+Index: src/sdk/projectmanager.cpp
+===================================================================
+--- src/sdk/projectmanager.cpp	(revision 2092)
++++ src/sdk/projectmanager.cpp	(working copy)
+@@ -427,8 +427,11 @@
+     if (m_pActiveProject)
+         m_pTree->SetItemBold(m_pActiveProject->GetProjectNode(), false);
+     m_pActiveProject = project;
+-    if (m_pActiveProject)
++    if (m_pActiveProject){
++        wxTreeItemId tid = m_pActiveProject->GetProjectNode();      //pecan 2006/2/28
++        if (tid)                                                    //pecan 2006/2/28
+         m_pTree->SetItemBold(m_pActiveProject->GetProjectNode(), true);
++    }
+ 	if (refresh)
+ 		RebuildTree();
+ 
+@@ -1075,9 +1078,9 @@
+     if (!m_pTree)
+         return;
+ // wx 2.5.x implement nested Freeze()/Thaw() calls correctly
+-#if !wxCHECK_VERSION(2,5,0)
++//#if !wxCHECK_VERSION(2,5,0)   //pecan 2006/2/28
+     ++m_TreeFreezeCounter;
+-#endif
++//#endif                        //pecan 2006/2/28
+     m_pTree->Freeze();
+ }
+ 
+@@ -1095,7 +1098,10 @@
+         m_TreeFreezeCounter = 0;
+     }
+ #else
+-    m_pTree->Thaw();
++    if (m_TreeFreezeCounter){           //pecan 2006/2/28
++            --m_TreeFreezeCounter;      //pecan 2006/2/28
++            m_pTree->Thaw();
++    }
+ #endif
+ }
+ 

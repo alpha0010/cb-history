@@ -1,0 +1,50 @@
+Index: src/plugins/contrib/lib_finder/librariesdlg.cpp
+===================================================================
+--- src/plugins/contrib/lib_finder/librariesdlg.cpp	(revision 9374)
++++ src/plugins/contrib/lib_finder/librariesdlg.cpp	(working copy)
+@@ -14,6 +14,7 @@
+ #include <wx/string.h>
+ //*)
+ 
++#include <algorithm>
+ #include <sdk.h>
+ #include <manager.h>
+ #include <configmanager.h>
+@@ -90,7 +91,6 @@
+ 
+ LibrariesDlg::LibrariesDlg(wxWindow* parent, TypedResults& knownLibraries)
+     : m_KnownLibraries(knownLibraries)
+-    , m_WorkingCopy(knownLibraries)
+     , m_SelectedConfig(0)
+     , m_WhileUpdating(false)
+ {
+@@ -124,6 +124,8 @@
+     wxBoxSizer* BoxSizer3;
+     wxStdDialogButtonSizer* StdDialogButtonSizer1;
+ 
++    std::copy(m_KnownLibraries, m_KnownLibraries+sizeof(m_WorkingCopy)/sizeof(m_WorkingCopy[0]), m_WorkingCopy);
++
+     Create(parent, wxID_ANY, _("Registered libraries"), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER, _T("wxID_ANY"));
+     BoxSizer1 = new wxBoxSizer(wxVERTICAL);
+     BoxSizer16 = new wxBoxSizer(wxHORIZONTAL);
+Index: src/plugins/contrib/profiler/cbprofiler.cpp
+===================================================================
+--- src/plugins/contrib/profiler/cbprofiler.cpp	(revision 9374)
++++ src/plugins/contrib/profiler/cbprofiler.cpp	(working copy)
+@@ -101,7 +101,7 @@
+     if (project->GetBuildTargetsCount() > 1)
+     {
+         // more than one executable target? ask...
+-        wxString choices[project->GetBuildTargetsCount()];
++        wxString *choices = new wxString[project->GetBuildTargetsCount()];
+         wxString active_target = project->GetActiveBuildTarget();
+         int selected = 0;
+         for (int i=0; i<project->GetBuildTargetsCount(); ++i)
+@@ -114,6 +114,7 @@
+                                     _("Select the target you want to profile"),
+                                     _("Select Target"),project->GetBuildTargetsCount(),choices);
+         dialog.SetSelection(selected);
++        delete [] choices;
+         if (dialog.ShowModal() != wxID_OK)
+             return -1;
+         int targetIndex = dialog.GetSelection();

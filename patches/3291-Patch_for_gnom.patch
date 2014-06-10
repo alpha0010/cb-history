@@ -1,0 +1,103 @@
+Index: src/sdk/cbplugin.cpp
+===================================================================
+--- src/sdk/cbplugin.cpp	(revision 7966)
++++ src/sdk/cbplugin.cpp	(working copy)
+@@ -813,10 +813,10 @@
+     //start xterm -e sleep {some unique # of seconds}
+     consolePid = wxExecute(cmd, wxEXEC_ASYNC);
+     if (consolePid <= 0) return -1;
+-
++    bool KeepLooping = true;
+     // Issue the PS command to get the /dev/tty device name
+     // First, wait for the xterm to settle down, else PS won't see the sleep task
+-    for (int ii = 0; ii < 100; ++ii)
++    for (int ii = 0; ii < 100 && KeepLooping; ++ii)
+     {
+         Manager::Yield();
+         ::wxMilliSleep(200);
+@@ -824,8 +824,8 @@
+         // For some reason wxExecute returns PID>0, when the command cannot be launched.
+         // Here we check if the process is alive and the PID is really a valid one.
+         if (kill(consolePid, 0) == -1 && errno == ESRCH) {
+-            Log(wxString::Format(_("Can't launch console (%s)"), cmd.c_str()), Logger::error);
+-            break;
++            //If the PID isn't found then make this the last loop
++            KeepLooping = false;
+         }
+ 
+         int localConsolePid = consolePid;
+@@ -836,6 +836,7 @@
+             return localConsolePid;
+         }
+     }
++    Log(wxString::Format(_("Can't launch console (%s)"), cmd.c_str()), Logger::error);
+     // failed to find the console tty
+     if (consolePid != 0)
+         ::wxKill(consolePid);
+@@ -860,7 +861,7 @@
+     wxArrayString psOutput;
+     wxArrayString psErrors;
+ 
+-    psCmd << wxT("ps x -o tty,pid,command");
++    psCmd << wxT("ps x -o tty,command");
+ //    DebugLog(wxString::Format( _("Executing: %s"), psCmd.c_str()) );
+     int result = wxExecute(psCmd, psOutput, psErrors, wxEXEC_SYNC);
+     psCmd.Clear();
+@@ -873,6 +874,7 @@
+ 
+     wxString ConsTtyStr;
+     wxString ConsPidStr;
++    wxString ConsCmdStr;
+     ConsPidStr << ConsPid;
+     //find task with our unique sleep time
+     const wxString &uniqueSleepTimeStr = MakeSleepCommand();
+@@ -883,28 +885,33 @@
+         psCmd = psOutput.Item(i);
+ //        DebugLog(wxString::Format( _("PS result: %s"), psCmd.c_str()) );
+         // find the pts/# or tty/# or whatever it's called
+-        // by seaching the output of "ps x -o tty,pid,command" command.
++        // by seaching the output of "ps x -o tty,command" command.
+         // The output of ps looks like:
+-        // TT       PID   COMMAND
+-        // pts/0    13342 /bin/sh ./run.sh
+-        // pts/0    13343 /home/pecanpecan/devel/trunk/src/devel/codeblocks
+-        // pts/0    13361 /usr/bin/gdb -nx -fullname -quiet -args ./conio
+-        // pts/0    13362 xterm -font -*-*-*-*-*-*-20-*-*-*-*-*-*-* -T Program Console -e sleep 93343
+-        // pts/2    13363 sleep 93343
+-        // ?        13365 /home/pecan/proj/conio/conio
+-        // pts/1    13370 ps x -o tty,pid,command
++        // TT       COMMAND
++        // pts/0    /bin/sh ./run.sh
++        // pts/0    /home/pecanpecan/devel/trunk/src/devel/codeblocks
++        // pts/0    /usr/bin/gdb -nx -fullname -quiet -args ./conio
++        // pts/0    xterm -font -*-*-*-*-*-*-20-*-*-*-*-*-*-* -T Program Console -e sleep 93343
++        // pts/2    sleep 93343
++        // ?        /home/pecan/proj/conio/conio
++        // pts/1    ps x -o tty,pid,command
++			
++        int pos = psCmd.Find(' ', false);
++        if(pos == wxNOT_FOUND)
++            continue;
++        size_t cmdpos = psCmd.find_first_not_of(' ', pos);
++        if(cmdpos == wxString::npos)
++            continue;
++        ConsCmdStr = psCmd.Mid(cmdpos);
++//        DebugLog(wxString::Format( _("Command string: %s"), ConsCmdStr.c_str()) );
+ 
+-        if (psCmd.Contains(uniqueSleepTimeStr))
+-        do
++        
++        if (ConsCmdStr.IsSameAs(uniqueSleepTimeStr))
+         {
+-            // check for correct "sleep" line
+-            if (psCmd.Contains(wxT("-T")))
+-                break; //error;wrong sleep line.
+-            // found "sleep 93343" string, extract tty field
+             ConsTtyStr = wxT("/dev/") + psCmd.BeforeFirst(' ');
+ //            DebugLog(wxString::Format( _("TTY is[%s]"), ConsTtyStr.c_str()) );
+             return ConsTtyStr;
+-        } while(0);//if do
++        }
+     }//for
+ 
+     knt = psErrors.GetCount();

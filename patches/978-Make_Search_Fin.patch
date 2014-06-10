@@ -1,0 +1,75 @@
+Index: src/sdk/finddlg.cpp
+===================================================================
+--- src/sdk/finddlg.cpp	(revision 2366)
++++ src/sdk/finddlg.cpp	(working copy)
+@@ -57,7 +57,7 @@
+     EVT_ACTIVATE(                       FindDlg::OnActivate)
+ END_EVENT_TABLE()
+ 
+-FindDlg::FindDlg(wxWindow* parent, const wxString& initial, bool hasSelection, bool findInFilesOnly)
++FindDlg::FindDlg(wxWindow* parent, const wxString& initial, bool hasSelection, bool findInFilesOnly, bool findInFilesActive)
+ 	: FindReplaceBase(parent, initial, hasSelection),
+ 	m_Complete(!findInFilesOnly)
+ {
+@@ -113,6 +113,11 @@
+ 
+ 	if (!m_Complete)
+         XRCCTRL(*this, "nbFind", wxNotebook)->DeletePage(0); // no active editor, so only find-in-files
++	else if (findInFilesActive)
++	{
++		XRCCTRL(*this, "nbFind", wxNotebook)->SetSelection(1); // Search->Find in Files was selected
++		XRCCTRL(*this, "cmbFind2", wxComboBox)->SetFocus();
++	}
+ }
+ 
+ FindDlg::~FindDlg()
+@@ -125,9 +130,11 @@
+     cfg->Write(CONF_GROUP _T("/search_hidden"), XRCCTRL(*this, "chkSearchHidden", wxCheckBox)->GetValue());
+ 
+ 	// save last searches (up to 10)
+-    wxComboBox* combo = XRCCTRL(*this, "cmbFind1", wxComboBox);
+-	if (!m_Complete)
++    wxComboBox* combo;
++	if (IsFindInFiles())
+         combo = XRCCTRL(*this, "cmbFind2", wxComboBox);
++	else
++		combo = XRCCTRL(*this, "cmbFind1", wxComboBox);
+     wxArrayString previous;
+     for (int i = 0; (i < combo->GetCount()) && (i < 10); ++i)
+     {
+@@ -311,7 +318,8 @@
+ 
+ void FindDlg::OnActivate(wxActivateEvent& event)
+ {
+-    if (!m_Complete && XRCCTRL(*this, "cmbFind2", wxComboBox))
++	// Why is there the second part in the expression? Is this really necessary?
++    if (IsFindInFiles() && XRCCTRL(*this, "cmbFind2", wxComboBox))
+         XRCCTRL(*this, "cmbFind2", wxComboBox)->SetFocus();
+     else
+         XRCCTRL(*this, "cmbFind1", wxComboBox)->SetFocus();
+Index: src/sdk/finddlg.h
+===================================================================
+--- src/sdk/finddlg.h	(revision 2366)
++++ src/sdk/finddlg.h	(working copy)
+@@ -10,7 +10,7 @@
+ class FindDlg : public FindReplaceBase
+ {
+ 	public:
+-		FindDlg(wxWindow* parent, const wxString& initial = wxEmptyString, bool hasSelection = false, bool findInFilesOnly = false);
++		FindDlg(wxWindow* parent, const wxString& initial = wxEmptyString, bool hasSelection = false, bool findInFilesOnly = false, bool findInFilesActive = false);
+ 		~FindDlg();
+ 		wxString GetFindString() const;
+ 		wxString GetReplaceString() const{ return wxEmptyString; }
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(revision 2366)
++++ src/sdk/editormanager.cpp	(working copy)
+@@ -1109,7 +1109,7 @@
+ 
+     FindReplaceBase* dlg;
+     if (!replace)
+-        dlg = new FindDlg(Manager::Get()->GetAppWindow(), phraseAtCursor, hasSelection, explicitly_find_in_files || !ed);
++        dlg = new FindDlg(Manager::Get()->GetAppWindow(), phraseAtCursor, hasSelection, !ed, explicitly_find_in_files);
+     else
+         dlg = new ReplaceDlg(Manager::Get()->GetAppWindow(), phraseAtCursor, hasSelection);
+ 

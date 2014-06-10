@@ -1,0 +1,49 @@
+From 49089045924bbd3d46cead4e145b2d39f0b497ea Mon Sep 17 00:00:00 2001
+From: =?utf-8?q?Dan=20Hor=C3=A1k?= <dan@danny.cz>
+Date: Mon, 15 Jun 2009 16:07:05 +0200
+Subject: [PATCH] fix GSocket conflict between glib >= 2.21 and wxGTK in rawhide
+
+---
+ src/plugins/contrib/codesnippets/codesnippets.cpp  |    5 +++++
+ .../contrib/codesnippets/codesnippetstreectrl.cpp  |    5 +++++
+ 2 files changed, 10 insertions(+), 0 deletions(-)
+
+diff --git a/src/plugins/contrib/codesnippets/codesnippets.cpp b/src/plugins/contrib/codesnippets/codesnippets.cpp
+index bab4a86..83e117f 100644
+--- a/src/plugins/contrib/codesnippets/codesnippets.cpp
++++ b/src/plugins/contrib/codesnippets/codesnippets.cpp
+@@ -51,8 +51,13 @@
+ #include "dragscrollevent.h"
+ 
+ #if defined(__WXGTK__)
++    // newer versions of glib define its own GSocket but we unfortunately use this
++    // name in our own (semi-)public header and so can't change it -- rename glib
++    // one instead
++    #define GSocket GlibSocket
+     #include "wx/gtk/win_gtk.h"
+     #include <gdk/gdkx.h>
++    #undef GlibSocket
+ #endif
+ 
+ // ----------------------------------------------------------------------------
+diff --git a/src/plugins/contrib/codesnippets/codesnippetstreectrl.cpp b/src/plugins/contrib/codesnippets/codesnippetstreectrl.cpp
+index 1d73b53..0aae145 100644
+--- a/src/plugins/contrib/codesnippets/codesnippetstreectrl.cpp
++++ b/src/plugins/contrib/codesnippets/codesnippetstreectrl.cpp
+@@ -54,8 +54,13 @@
+ #include "dragscrollevent.h"
+ 
+ #if defined(__WXGTK__)
++    // newer versions of glib define its own GSocket but we unfortunately use this
++    // name in our own (semi-)public header and so can't change it -- rename glib
++    // one instead
++    #define GSocket GlibSocket
+     #include "wx/gtk/win_gtk.h"
+     #include <gdk/gdkx.h>
++    #undef GlibSocket
+ #endif
+ 
+ IMPLEMENT_DYNAMIC_CLASS(CodeSnippetsTreeCtrl, wxTreeCtrl)
+-- 
+1.6.0.6
+

@@ -1,0 +1,273 @@
+Index: src/plugins/contrib/regex_testbed/regexdlg.cpp
+===================================================================
+--- src/plugins/contrib/regex_testbed/regexdlg.cpp	(revision 5755)
++++ src/plugins/contrib/regex_testbed/regexdlg.cpp	(working copy)
+@@ -19,13 +19,6 @@
+ #endif
+ 
+ //(*InternalHeaders(regex_dialog)
+-#include <wx/bitmap.h>
+-#include <wx/font.h>
+-#include <wx/fontenum.h>
+-#include <wx/fontmap.h>
+-#include <wx/image.h>
+-#include <wx/intl.h>
+-#include <wx/settings.h>
+ #include <wx/xrc/xmlres.h>
+ //*)
+ 
+@@ -37,6 +30,8 @@
+ 	EVT_UPDATE_UI(-1, RegExDlg::OnUpdateUI)
+ END_EVENT_TABLE()
+ 
++RegExDlg::VisibleDialogs RegExDlg::m_visible_dialogs;
++
+ RegExDlg::RegExDlg(wxWindow* parent,wxWindowID id)
+ {
+     //(*Initialize(regex_dialog)
+@@ -48,6 +43,8 @@
+     m_newlines = (wxCheckBox*)FindWindow(XRCID("ID_NEWLINES"));
+     m_text = (wxTextCtrl*)FindWindow(XRCID("ID_TEXT"));
+     m_output = (wxHtmlWindow*)FindWindow(XRCID("ID_OUT"));
++
++    Connect(wxID_ANY,wxEVT_CLOSE_WINDOW,(wxObjectEventFunction)&RegExDlg::OnClose);
+     //*)
+ 
+     assert(m_regex);
+@@ -58,15 +55,48 @@
+     assert(m_text);
+     assert(m_output);
+ 
++    m_text->MoveAfterInTabOrder(m_quoted);
++
+     m_library->SetSelection(0);
+     m_output->SetBorders(0);
+     m_quoted->SetEditable(false);
++
++    m_visible_dialogs.insert(this);
+ }
+ 
+ RegExDlg::~RegExDlg()
+ {
+ }
+ 
++void RegExDlg::OnClose(wxCloseEvent& event)
++{
++    VisibleDialogs::iterator it = m_visible_dialogs.find(this);
++    if(it != m_visible_dialogs.end())
++    {
++        delete *it;
++        m_visible_dialogs.erase(it);
++    }
++}
++
++
++void RegExDlg::ReleaseAll()
++{
++    for(VisibleDialogs::iterator it = m_visible_dialogs.begin(); it != m_visible_dialogs.end(); ++it)
++        delete *it;
++    m_visible_dialogs.clear();
++}
++
++/**
++    @brief Makes the input string to be valid html string (replaces <,>,&," with &lt;,&gt;,&amp;,&quot; respectively)
++    @param [inout] s - string that will be escaped
++*/
++void cbEscapeHtml(wxString &s)
++{
++    s.Replace(wxT("&"), wxT("&amp;"));
++    s.Replace(wxT("<"), wxT("&lt;"));
++    s.Replace(wxT(">"), wxT("&gt;"));
++    s.Replace(wxT("\""), wxT("&quot;"));
++}
+ 
+ void RegExDlg::OnUpdateUI(wxUpdateUIEvent& event)
+ {
+@@ -118,6 +148,10 @@
+ 
+     for(size_t i = 0; i < as.GetCount(); ++i)
+     {
++        Manager::Get()->GetLogManager()->Log(wxT("unescaped:") + as[i]);
++        cbEscapeHtml(as[i]);
++        Manager::Get()->GetLogManager()->Log(wxT("escaped:") + as[i]);
++
+         tmp.Printf(_T("<tr><td width=35><b>%d</b></td><td>%s</td></tr>"), i, as[i].c_str());
+         s.append(tmp);
+     }
+@@ -182,6 +216,3 @@
+ 
+     return ret;
+ }
+-
+-
+-
+Index: src/plugins/contrib/regex_testbed/wxsmith/RegExDlg.wxs
+===================================================================
+--- src/plugins/contrib/regex_testbed/wxsmith/RegExDlg.wxs	(revision 5755)
++++ src/plugins/contrib/regex_testbed/wxsmith/RegExDlg.wxs	(working copy)
+@@ -1,7 +1,9 @@
+ <?xml version="1.0" encoding="utf-8" ?>
+ <wxsmith>
+     <resource_extra>
+-        <object root="1" />
++		<object root="1">
++			<handler function="OnClose" entry="EVT_CLOSE" />
++		</object>
+         <object name="ID_3" class="wxStaticText" variable="StaticText1" member="no" />
+         <object name="ID_REGEX" class="wxTextCtrl" variable="m_regex" member="yes" />
+         <object name="ID_QUOTED" class="wxTextCtrl" variable="m_quoted" member="yes" />
+Index: src/plugins/contrib/regex_testbed/RegExTestbed.cpp
+===================================================================
+--- src/plugins/contrib/regex_testbed/RegExTestbed.cpp	(revision 5755)
++++ src/plugins/contrib/regex_testbed/RegExTestbed.cpp	(working copy)
+@@ -38,6 +38,7 @@
+ // destructor
+ RegExTestbed::~RegExTestbed()
+ {
++    RegExDlg::ReleaseAll();
+ }
+ 
+ void RegExTestbed::OnAttach()
+@@ -57,15 +58,16 @@
+ 	// which means you must not use any of the SDK Managers
+ 	// NOTE: after this function, the inherited member variable
+ 	// m_IsAttached will be FALSE...
++	RegExDlg::ReleaseAll();
+ }
+ 
+ int RegExTestbed::Execute()
+ {
+     try
+     {
+-        RegExDlg dlg(0, -1);
+-        PlaceWindow(&dlg);
+-        dlg.ShowModal();
++        RegExDlg *dlg = new RegExDlg(0, -1);
++        PlaceWindow(dlg);
++        dlg->Show();
+     }
+     catch (...)
+     {
+Index: src/plugins/contrib/regex_testbed/regexdlg.h
+===================================================================
+--- src/plugins/contrib/regex_testbed/regexdlg.h	(revision 5755)
++++ src/plugins/contrib/regex_testbed/regexdlg.h	(working copy)
+@@ -7,14 +7,14 @@
+     #pragma hdrstop
+ #endif
+ 
++#include <set>
++
+ //(*Headers(regex_dialog)
+ #include <wx/checkbox.h>
+-#include <wx/choice.h>
+ #include <wx/dialog.h>
+-#include <wx/html/htmlwin.h>
+-#include <wx/sizer.h>
+-#include <wx/stattext.h>
+ #include <wx/textctrl.h>
++#include <wx/choice.h>
++#include <wx/html/htmlwin.h>
+ //*)
+ 
+ #include <wx/html/htmlwin.h>
+@@ -38,6 +38,8 @@
+ 
+ 		void EndModal(int retCode);
+ 
++		static void ReleaseAll();
++
+ 	protected:
+ 
+ 		//(*Handlers(regex_dialog)
+@@ -45,6 +47,7 @@
+ 		void OnInit(wxInitDialogEvent& event);
+ 		void OnRegExItemActivated(wxListEvent& event);
+         void OnUpdateUI(wxUpdateUIEvent& event);
++		void OnClose(wxCloseEvent& event);
+ 		//*)
+ 
+ 	private:
+@@ -54,17 +57,21 @@
+         wxArrayString GetPregMatches(const wxString& text);
+ 
+         //(*Declarations(regex_dialog)
+-        wxTextCtrl* m_regex;
+-        wxTextCtrl* m_quoted;
+-        wxChoice* m_library;
+         wxCheckBox* m_nocase;
+-        wxCheckBox* m_newlines;
+-        wxTextCtrl* m_text;
+         wxHtmlWindow* m_output;
++        wxTextCtrl* m_text;
++        wxTextCtrl* m_quoted;
++        wxTextCtrl* m_regex;
++        wxCheckBox* m_newlines;
++        wxChoice* m_library;
+         //*)
+ 
+         wxRegEx m_wxre;
+ 
++        typedef std::set<RegExDlg*> VisibleDialogs;
++        static VisibleDialogs m_visible_dialogs;
++
++
+ 		DECLARE_EVENT_TABLE()
+ };
+ 
+Index: src/plugins/contrib/regex_testbed/RegExTestbed-unix.cbp
+===================================================================
+--- src/plugins/contrib/regex_testbed/RegExTestbed-unix.cbp	(revision 5755)
++++ src/plugins/contrib/regex_testbed/RegExTestbed-unix.cbp	(working copy)
+@@ -7,7 +7,7 @@
+ 		<Option compiler="gcc" />
+ 		<Build>
+ 			<Target title="default">
+-				<Option output="../../../devel/share/codeblocks/plugins/libRegExTestbed.so" prefix_auto="1" extension_auto="1" />
++				<Option output="../../../devel/share/codeblocks/plugins/libRegExTestbed" prefix_auto="1" extension_auto="1" />
+ 				<Option type="3" />
+ 				<Option compiler="gcc" />
+ 				<Option host_application="../../../devel/codeblocks" />
+@@ -43,6 +43,9 @@
+ 			<Add option="-Ulinux" />
+ 			<Add option="-Uunix" />
+ 		</Compiler>
++		<Linker>
++			<Add option="-z defs" />
++		</Linker>
+ 		<Unit filename="RegExTestbed.cpp" />
+ 		<Unit filename="RegExTestbed.h" />
+ 		<Unit filename="manifest.xml" />
+@@ -57,6 +60,8 @@
+ 					<wxDialog wxs="wxsmith/RegExDlg.wxs" src="regexdlg.cpp" hdr="regexdlg.h" xrc="regexdlg.xrc" name="regex_dialog" language="CPP" />
+ 				</resources>
+ 			</wxsmith>
++			<envvars />
++			<debugger />
+ 		</Extensions>
+ 	</Project>
+ </CodeBlocks_project_file>
+Index: src/plugins/contrib/regex_testbed/RegExTestbed.h
+===================================================================
+Index: src/plugins/contrib/regex_testbed/regexdlg.xrc
+===================================================================
+--- src/plugins/contrib/regex_testbed/regexdlg.xrc	(revision 5755)
++++ src/plugins/contrib/regex_testbed/regexdlg.xrc	(working copy)
+@@ -2,6 +2,7 @@
+     <object class="wxDialog" name="regex_dialog">
+         <title>Regular expression utility</title>
+         <centered>1</centered>
++		<style>wxSTAY_ON_TOP|wxDEFAULT_DIALOG_STYLE</style>
+         <object class="wxFlexGridSizer">
+             <cols>1</cols>
+             <growablecols>0</growablecols>
+@@ -74,8 +75,8 @@
+             </object>
+             <object class="sizeritem">
+                 <object class="wxTextCtrl" name="ID_TEXT">
+-                    <style>wxTE_MULTILINE</style>
+                     <size>600,60</size>
++					<style>wxTE_MULTILINE</style>
+                 </object>
+                 <flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+                 <border>10</border>

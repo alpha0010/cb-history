@@ -1,0 +1,68 @@
+Index: src/plugins/codecompletion/parser/parserthread.cpp
+===================================================================
+--- src/plugins/codecompletion/parser/parserthread.cpp	(revision 5964)
++++ src/plugins/codecompletion/parser/parserthread.cpp	(working copy)
+@@ -895,9 +895,9 @@
+                     str += *ptr;
+                     //find end
+                     int n = 0;
++                    ptr++;
+                     while(*ptr != _T('\0'))
+                     {
+-                        ptr++;
+                         if (*ptr == _T('('))
+                             n++;
+                         else if (*ptr == _T(')'))
+@@ -912,6 +912,7 @@
+                             skip = false;
+                             break;
+                         }
++                        ptr++;
+                     }
+                 }
+             }
+@@ -925,7 +926,7 @@
+             {
+                 if (*ptr != _T(' '))
+                     str += *ptr;
+-                *ptr++;
++                ptr++;
+             }
+             skip = true;
+             sym  = true;
+@@ -935,7 +936,7 @@
+             {
+                 if (*ptr != _T(' '))
+                     str += *ptr;
+-                *ptr++;
++                ptr++;
+             }
+             skip = true;
+             sym  = true;
+@@ -950,19 +951,23 @@
+         default:
+             sym = false;
+         }
++        
+         if (!skip || sym)
+         {
+-            str += *ptr;
++            if (*ptr != _T('\0'))
++                str += *ptr;
+             if (wxIsalnum(*ptr))
+                 word += *ptr;
+         }
+ 
+-        if (sym == true && skip == false)
++        if (sym && !skip)
+         {
+             while (*ptr != _T('\0') && *(ptr+1) == _T(' '))
+                 ptr++;
+         }
+-        ptr++;
++        
++        if (*ptr != _T('\0'))
++            ptr++;
+     }
+ 
+     return str;

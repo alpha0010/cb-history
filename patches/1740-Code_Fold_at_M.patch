@@ -1,0 +1,92 @@
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 3455)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -1467,13 +1467,37 @@
+ 
+ void cbEditor::DoFoldBlockFromLine(int line, int fold)
+ {
+-    m_pControl->Colourise(0, -1); // the *most* important part!
++    /*m_pControl->Colourise(0, -1); // the *most* important part!
+     int i = line;
+     while (i != 0)
+     {
+         if (DoFoldLine(i, fold))
+             return;
+         --i;
++    }*/
++    
++    ConfigManager* mgr = Manager::Get()->GetConfigManager(_T("editor"));
++    if (mgr->ReadBool(_T("/folding/show_folds"), true)) //Only unfold the marked line if the folds are enabled ... duh
++    {
++        m_pControl->Colourise(0, -1); // the *most* important part!
++        int level = m_pControl->GetFoldLevel(line);
++        int parent = m_pControl->GetFoldParent(line);
++        
++        //Check for fold headers
++        if ((level & wxSCI_FOLDLEVELHEADERFLAG) && (wxSCI_FOLDLEVELBASE <= (level & wxSCI_FOLDLEVELNUMBERMASK)))
++           parent = line;
++        if (parent != -1)
++        {
++            if (m_pControl->GetFoldExpanded(parent) == false && fold == 0)
++                m_pControl->ToggleFold(parent);
++            else
++            {
++                if (m_pControl->GetFoldExpanded(parent) == true && fold == 1)
++                    m_pControl->ToggleFold(parent);
++                else if (fold == 2)
++                    m_pControl->ToggleFold(parent);
++            }
++        }
+     }
+ }
+ 
+@@ -1569,8 +1593,23 @@
+         control->GotoLine(line - onScreen);
+         control->GotoLine(line + onScreen);
+     }
++    
++    ConfigManager* mgr = Manager::Get()->GetConfigManager(_T("editor"));
++    if (mgr->ReadBool(_T("/folding/show_folds"), true)) //Only unfold the marked line if the folds are enabled ... duh
++    {
++        m_pControl->Colourise(0, -1); // the *most* important part!
++        
++        int parent = m_pControl->GetFoldParent(line);
++        while (parent != -1) //Unfold all the parent folds to ensure that the line is visible correctly
++        {
++            if (m_pControl->GetFoldExpanded(parent) == false)
++                m_pControl->ToggleFold(parent);
++            
++            parent = m_pControl->GetFoldParent(parent);
++        }
++    }
++    
+     control->GotoLine(line);
+-    UnfoldBlockFromLine(line); // make sure it's visible (not folded)
+ }
+ 
+ bool cbEditor::AddBreakpoint(int line, bool notifyDebugger)
+@@ -1804,7 +1843,23 @@
+     if (line == -1)
+         m_pControl->MarkerDeleteAll(marker);
+     else
++    {
++        ConfigManager* mgr = Manager::Get()->GetConfigManager(_T("editor"));
++        if (mgr->ReadBool(_T("/folding/show_folds"), true)) //Only unfold the marked line if the folds are enabled ... duh
++        {
++            m_pControl->Colourise(0, -1); // the *most* important part!
++            int parent = m_pControl->GetFoldParent(line);
++            while (parent != -1) //Unfold all the parent folds to ensure that the line is visible correctly
++            {
++                if (m_pControl->GetFoldExpanded(parent) == false)
++                    m_pControl->ToggleFold(parent);
++                
++                parent = m_pControl->GetFoldParent(parent);
++            }
++        }
++        
+         m_pControl->MarkerAdd(line, marker);
++    }
+ }
+ 
+ void cbEditor::GotoMatchingBrace()

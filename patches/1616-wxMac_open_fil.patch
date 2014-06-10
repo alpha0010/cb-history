@@ -1,0 +1,61 @@
+Index: src/src/app.cpp
+===================================================================
+--- src/src/app.cpp	(revision 3172)
++++ src/src/app.cpp	(working copy)
+@@ -479,6 +479,7 @@
+         Manager::SetBatchBuild(m_Batch);
+         Manager::Get()->GetScriptingManager();
+         MainFrame* frame = InitFrame();
++        m_Frame = frame;
+ 
+         if (m_Batch)
+         {
+@@ -874,6 +875,23 @@
+     s_DelayedFilesToOpen.Clear();
+ }
+ 
++
++#ifdef __WXMAC__
++
++void CodeBlocksApp::MacOpenFile(const wxString & fileName )
++{
++    if (m_Frame)
++        m_Frame->Open(fileName, true);
++}
++
++void CodeBlocksApp::MacPrintFile(const wxString & fileName )
++{
++    //TODO
++    wxApp::MacPrintFile(fileName);
++}
++
++#endif // __WXMAC__
++
+ // event handlers
+ 
+ void CodeBlocksApp::OnAppActivate(wxActivateEvent& event)
+Index: src/src/app.h
+===================================================================
+--- src/src/app.h	(revision 3172)
++++ src/src/app.h	(working copy)
+@@ -46,6 +46,12 @@
+ 		void OnAppActivate(wxActivateEvent& event);
+         bool OnCmdLineParsed(wxCmdLineParser& parser);
+         void OnFatalException();
++#ifdef __WXMAC__
++    // in response of an open-document apple event
++    virtual void         MacOpenFile(const wxString &fileName) ;
++    // in response of a print-document apple event
++    virtual void         MacPrintFile(const wxString &fileName) ;
++#endif
+     protected:
+         void OnBatchBuildDone(CodeBlocksEvent& event);
+         bool LoadConfig();
+@@ -73,6 +79,7 @@
+         wxDialog* m_pBatchBuildDialog;
+         wxString m_BatchTarget;
+         int m_BatchExitCode;
++        MainFrame* m_Frame;
+         bool m_Batch;
+         bool m_BatchNotify;
+         bool m_BatchWindowAutoClose; // default: true

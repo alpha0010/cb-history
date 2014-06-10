@@ -1,0 +1,67 @@
+Index: C:/CodeBlocks/src/sdk/manager.cpp
+===================================================================
+--- C:/CodeBlocks/src/sdk/manager.cpp	(revision 2084)
++++ C:/CodeBlocks/src/sdk/manager.cpp	(working copy)
+@@ -252,6 +252,11 @@
+     return ToolsManager::Get();
+ }
+ 
++TemplateManager* Manager::GetTemplateManager() const
++{
++    return TemplateManager::Get();
++}
++
+ MacrosManager* Manager::GetMacrosManager() const
+ {
+     return MacrosManager::Get();
+Index: C:/CodeBlocks/src/sdk/manager.h
+===================================================================
+--- C:/CodeBlocks/src/sdk/manager.h	(revision 2084)
++++ C:/CodeBlocks/src/sdk/manager.h	(working copy)
+@@ -20,6 +20,7 @@
+ class MessageManager;
+ class PluginManager;
+ class ToolsManager;
++class TemplateManager;
+ class MacrosManager;
+ class PersonalityManager;
+ class wxMenu;
+@@ -89,6 +90,7 @@
+     MessageManager* GetMessageManager() const;
+     PluginManager* GetPluginManager() const;
+     ToolsManager* GetToolsManager() const;
++    TemplateManager* GetTemplateManager() const;
+     MacrosManager* GetMacrosManager() const;
+     PersonalityManager* GetPersonalityManager() const;
+     UserVariableManager* GetUserVariableManager() const;
+Index: C:/CodeBlocks/src/src/main.cpp
+===================================================================
+--- C:/CodeBlocks/src/src/main.cpp	(revision 2084)
++++ C:/CodeBlocks/src/src/main.cpp	(working copy)
+@@ -1366,7 +1366,7 @@
+     wxCommandEvent evt;
+     wxString link = event.GetString();
+     if(link.IsSameAs(_T("CB_CMD_NEW_PROJECT")))
+-        TemplateManager::Get()->NewProject();
++        Manager::Get()->GetTemplateManager()->NewProject();
+     else if(link.IsSameAs(_T("CB_CMD_OPEN_PROJECT")))
+         OnProjectOpen(evt);
+ //    else if (link.IsSameAs(_T("CB_CMD_CONF_ENVIRONMENT")))
+@@ -2439,7 +2439,7 @@
+ 
+ void MainFrame::OnProjectNew(wxCommandEvent& event)
+ {
+-    cbProject* prj = TemplateManager::Get()->NewProject();
++    cbProject* prj = Manager::Get()->GetTemplateManager()->NewProject();
+ 	// verify that the open files are still in sync
+ 	// the new file might have overwritten an existing one)
+ 	Manager::Get()->GetEditorManager()->CheckForExternallyModifiedFiles();
+@@ -2494,7 +2494,7 @@
+ 
+ void MainFrame::OnProjectSaveTemplate(wxCommandEvent& event)
+ {
+-    TemplateManager::Get()->SaveUserTemplate(Manager::Get()->GetProjectManager()->GetActiveProject());
++    Manager::Get()->GetTemplateManager()->SaveUserTemplate(Manager::Get()->GetProjectManager()->GetActiveProject());
+ }
+ 
+ void MainFrame::OnProjectCloseProject(wxCommandEvent& event)

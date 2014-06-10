@@ -1,0 +1,68 @@
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 2412)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -555,6 +555,7 @@
+ 
+     m_pControl->SetCaretWidth(mgr->ReadInt(_T("/caret/width"), 1));
+     m_pControl->SetCaretForeground(GetOptionColour(_T("/caret/color"), *wxBLACK));
++    m_pControl->SetCaretPeriod(mgr->ReadInt(_T("/caret/period"), 500));
+ 	m_pControl->SetCaretLineVisible(mgr->ReadBool(_T("/highlight_caret_line"), false));
+ 	m_pControl->SetCaretLineBackground(GetOptionColour(_T("/highlight_caret_line_color"), wxColour(0xFF, 0xFF, 0x00)));
+ 
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 2412)
++++ src/sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -146,6 +146,7 @@
+     wxColour caretColor = cfg->ReadColour(_T("/caret/color"), *wxBLACK);
+     XRCCTRL(*this, "spnCaretWidth", wxSpinCtrl)->SetValue(cfg->ReadInt(_T("/caret/width"), 1));
+     XRCCTRL(*this, "btnCaretColor", wxButton)->SetBackgroundColour(caretColor);
++    XRCCTRL(*this, "slCaretPeriod", wxSlider)->SetValue(cfg->ReadInt(_T("/caret/period"), 500));
+ 
+ 	//folding
+    	XRCCTRL(*this, "chkEnableFolding", wxCheckBox)->SetValue(cfg->ReadBool(_T("/folding/show_folds"), true));
+@@ -819,8 +820,9 @@
+         cfg->Write(_T("/auto_wrap_search"),     XRCCTRL(*this, "chkAutoWrapSearch", wxCheckBox)->GetValue());
+ 
+         //caret
+-        cfg->Write(_T("/caret/width"), XRCCTRL(*this, "spnCaretWidth", wxSpinCtrl)->GetValue());
+-        cfg->Write(_T("/caret/color"), XRCCTRL(*this, "btnCaretColor", wxButton)->GetBackgroundColour());
++        cfg->Write(_T("/caret/width"),  XRCCTRL(*this, "spnCaretWidth", wxSpinCtrl)->GetValue());
++        cfg->Write(_T("/caret/color"),  XRCCTRL(*this, "btnCaretColor", wxButton)->GetBackgroundColour());
++        cfg->Write(_T("/caret/period"), XRCCTRL(*this, "slCaretPeriod", wxSlider)->GetValue());
+ 
+         //folding
+         cfg->Write(_T("/folding/show_folds"), 			XRCCTRL(*this, "chkEnableFolding", wxCheckBox)->GetValue());
+Index: src/sdk/resources/editor_configuration.xrc
+===================================================================
+--- src/sdk/resources/editor_configuration.xrc	(revision 2412)
++++ src/sdk/resources/editor_configuration.xrc	(working copy)
+@@ -517,6 +517,20 @@
+                             <label></label>
+                           </object>
+                         </object>
++                        <object class="sizeritem">
++                          <flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++                          <object class="wxStaticText">
++                            <label>Period (in milliseconds):</label>
++                          </object>
++                        </object>
++                        <object class="sizeritem">
++                          <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++                          <object class="wxSlider" name="slCaretPeriod">
++                            <value>500</value>
++                            <max>500</max>
++                            <style>wxSL_TOP|wxSL_LABELS|wxSL_INVERSE</style>
++                          </object>
++                        </object>
+                       </object>
+                     </object>
+                   </object>
+@@ -939,4 +953,4 @@
+       </object>
+     </object>
+   </object>
+-</resource>
+\ No newline at end of file
++</resource>

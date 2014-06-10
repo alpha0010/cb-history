@@ -1,0 +1,1236 @@
+Index: plugins/classwizard/classwizard.cpp
+===================================================================
+--- plugins/classwizard/classwizard.cpp	(revision 9225)
++++ plugins/classwizard/classwizard.cpp	(working copy)
+@@ -118,6 +118,28 @@
+             prjMan->AddFileToProject(dlg.GetHeaderFilename(), prj, targets);
+             if ( (targets.GetCount() != 0) && (dlg.IsValidImplementationFilename()) )
+                 prjMan->AddFileToProject(dlg.GetImplementationFilename(), prj, targets);
++            if(dlg.AddPathToProject())
++            {
++                // Add the include Path to the Build targets....
++                for(int i = 0; i < targets.GetCount();i++)
++                {
++                    ProjectBuildTarget* build_target;
++                    build_target = prj->GetBuildTarget(targets[i]);  // Get the top level build Target
++                    if(build_target == NULL)
++                    {
++                        wxString information;
++                        information.Printf(_("Could not find build target ID = %i.\nThe include directory won't be added to this target. Please do it manually"),targets[i]);
++                         cbMessageBox(  information  ,
++                                        _("Information"),
++                                        wxOK | wxICON_INFORMATION,
++                                        Manager::Get()->GetAppWindow());
++                    }
++                    else
++                    {
++                        build_target->AddIncludeDir(dlg.GetIncludeDir());
++                    }
++                }
++            }
+             prjMan->GetUI().RebuildTree();
+         }
+     }
+Index: plugins/classwizard/classwizarddlg.cpp
+===================================================================
+--- plugins/classwizard/classwizarddlg.cpp	(revision 9225)
++++ plugins/classwizard/classwizarddlg.cpp	(working copy)
+@@ -43,6 +43,7 @@
+     EVT_BUTTON   (XRCID("btnRemoveMemberVar"), ClassWizardDlg::OnRemoveMemberVar)
+     EVT_BUTTON   (XRCID("btnCommonDir"),       ClassWizardDlg::OnCommonDirClick)
+     EVT_CHECKBOX (XRCID("chkLowerCase"),       ClassWizardDlg::OnLowerCaseClick)
++    EVT_CHECKBOX (XRCID("chkAddPathToProject"),ClassWizardDlg::OnAddPathToProjectClick)
+     EVT_BUTTON   (XRCID("btnIncludeDir"),      ClassWizardDlg::OnIncludeDirClick)
+     EVT_BUTTON   (XRCID("btnImplDir"),         ClassWizardDlg::OnImplDirClick)
+     EVT_TEXT     (XRCID("txtHeader"),          ClassWizardDlg::OnHeaderChange)
+@@ -245,6 +246,15 @@
+     }
+ }
+ 
++void ClassWizardDlg::OnAddPathToProjectClick(wxCommandEvent& event)
++{
++    if(event.IsChecked())
++        XRCCTRL(*this, "chkRelativePath", wxCheckBox)->Enable();
++    else
++        XRCCTRL(*this, "chkRelativePath", wxCheckBox)->Disable();
++}
++
++
+ void ClassWizardDlg::OnLowerCaseClick(wxCommandEvent& WXUNUSED(event))
+ {
+     DoFileNames();
+@@ -328,6 +338,9 @@
+ 
+     m_Documentation = XRCCTRL(*this, "chkDocumentation", wxCheckBox)->GetValue();
+ 
++    m_AddPathToProject = XRCCTRL(*this, "chkAddPathToProject", wxCheckBox)->GetValue();
++    m_UseRelativePath = XRCCTRL(*this, "chkRelativePath", wxCheckBox)->GetValue();
++
+     m_CommonDir = XRCCTRL(*this, "chkCommonDir", wxCheckBox)->GetValue();
+     if (m_CommonDir)
+     {
+@@ -720,3 +733,20 @@
+ {
+     return (_T("[") + typ + _T("] : ") + var);
+ }
++
++wxString ClassWizardDlg::GetIncludeDir()
++{
++    if(!m_UseRelativePath)
++        return m_IncludeDir;
++
++    wxString basePath;
++    basePath = Manager::Get()->GetProjectManager()->GetActiveProject()->GetCommonTopLevelPath();
++    wxString relative = m_IncludeDir;
++    wxFileName fname = m_IncludeDir;
++    if (fname.IsAbsolute())
++    {
++        fname.MakeRelativeTo(basePath);
++        relative = fname.GetFullPath();
++    }
++    return relative;
++}
+Index: plugins/classwizard/classwizarddlg.h
+===================================================================
+--- plugins/classwizard/classwizarddlg.h	(revision 9225)
++++ plugins/classwizard/classwizarddlg.h	(working copy)
+@@ -26,6 +26,8 @@
+         const wxString& GetHeaderFilename()         const { return m_Header;         }
+         bool  IsValidImplementationFilename()       const { return m_GenerateImplementation && m_Implementation != _T(""); }
+         const wxString& GetImplementationFilename() const { return m_Implementation; }
++        bool  AddPathToProject()                    const { return m_AddPathToProject; }
++        wxString GetIncludeDir();
+ 
+     private:
+         struct MemberVar_impl { wxString Typ; wxString Var; wxString Get; wxString Set; };
+@@ -45,6 +47,7 @@
+         void OnHeaderChange(wxCommandEvent& event);
+         void OnOKClick(wxCommandEvent& event);
+         void OnCancelClick(wxCommandEvent& event);
++        void OnAddPathToProjectClick(wxCommandEvent& event);
+ 
+         // methods
+         bool DoHeader();
+@@ -77,6 +80,9 @@
+ 
+         bool            m_Documentation;
+ 
++        bool            m_AddPathToProject;
++        bool            m_UseRelativePath;
++
+         bool            m_CommonDir;
+         wxString        m_IncludeDir;
+         wxString        m_ImplDir;
+Index: plugins/classwizard/resources/new_class.xrc
+===================================================================
+--- plugins/classwizard/resources/new_class.xrc	(revision 9225)
++++ plugins/classwizard/resources/new_class.xrc	(working copy)
+@@ -1,545 +1,564 @@
+ <?xml version="1.0" encoding="utf-8" ?>
+ <resource xmlns="http://www.wxwidgets.org/wxxrc">
+-  <object class="wxScrollingDialog" name="dlgNewClass">
+-    <title>Create new class</title>
+-    <centered>1</centered>
+-    <style>wxDEFAULT_DIALOG_STYLE</style>
+-    <object class="wxBoxSizer">
+-      <orient>wxVERTICAL</orient>
+-      <object class="sizeritem">
+-        <object class="wxStaticBoxSizer">
+-          <object class="sizeritem">
+-            <object class="wxBoxSizer">
+-              <object class="sizeritem">
+-                <object class="wxBoxSizer">
+-                  <orient>wxVERTICAL</orient>
+-                  <object class="sizeritem">
+-                    <object class="wxFlexGridSizer">
+-                      <object class="sizeritem">
+-                        <object class="wxStaticText" name="">
+-                          <label>Class name:</label>
+-                        </object>
+-                        <flag>wxEXPAND</flag>
+-                      </object>
+-                      <object class="sizeritem">
+-                        <object class="wxTextCtrl" name="txtName"/>
+-                        <option>1</option>
+-                        <flag>wxLEFT|wxEXPAND</flag>
+-                        <border>5</border>
+-                      </object>
+-                      <cols>2</cols>
+-                      <rows>2</rows>
+-                      <object class="sizeritem">
+-                        <object class="wxStaticText" name="">
+-                          <label>Arguments:</label>
+-                        </object>
+-                        <flag>wxTOP|wxEXPAND</flag>
+-                        <border>5</border>
+-                      </object>
+-                      <object class="sizeritem">
+-                        <object class="wxTextCtrl" name="txtArguments"/>
+-                        <option>1</option>
+-                        <flag>wxTOP|wxLEFT|wxEXPAND</flag>
+-                        <border>5</border>
+-                      </object>
+-                      <growablecols>1</growablecols>
+-                    </object>
+-                    <flag>wxEXPAND</flag>
+-                  </object>
+-                  <object class="sizeritem">
+-                    <object class="wxBoxSizer">
+-                      <orient>wxHORIZONTAL</orient>
+-                      <object class="sizeritem">
+-                        <object class="wxBoxSizer">
+-                          <orient>wxVERTICAL</orient>
+-                          <object class="sizeritem">
+-                            <object class="wxCheckBox" name="chkHasDestructor">
+-                              <label>Has destructor</label>
+-                              <checked>1</checked>
+-                            </object>
+-                            <flag>wxBOTTOM|wxEXPAND</flag>
+-                            <border>5</border>
+-                          </object>
+-                          <object class="sizeritem">
+-                            <object class="wxCheckBox" name="chkVirtualDestructor">
+-                              <label>Virtual destructor</label>
+-                              <checked>1</checked>
+-                            </object>
+-                            <flag>wxEXPAND</flag>
+-                          </object>
+-                        </object>
+-                        <option>1</option>
+-                        <flag>wxALL|wxEXPAND</flag>
+-                      </object>
+-                      <object class="sizeritem">
+-                        <object class="wxBoxSizer">
+-                          <orient>wxVERTICAL</orient>
+-                          <object class="sizeritem">
+-                            <object class="wxCheckBox" name="chkHasCopyCtor">
+-                              <label>Has copy ctor</label>
+-                            </object>
+-                            <flag>wxBOTTOM|wxEXPAND</flag>
+-                            <border>5</border>
+-                          </object>
+-                          <object class="sizeritem">
+-                            <object class="wxCheckBox" name="chkHasAssignmentOp">
+-                              <label>Has assigment op.</label>
+-                            </object>
+-                            <flag>wxEXPAND</flag>
+-                            <border>5</border>
+-                          </object>
+-                        </object>
+-                        <option>1</option>
+-                        <flag>wxALL|wxEXPAND</flag>
+-                      </object>
+-                    </object>
+-                    <flag>wxTOP|wxBOTTOM|wxEXPAND</flag>
+-                    <border>5</border>
+-                  </object>
+-                  <object class="sizeritem">
+-                    <object class="wxStaticBoxSizer">
+-                      <label>Inheritance</label>
+-                      <orient>wxVERTICAL</orient>
+-                      <object class="sizeritem">
+-                        <object class="wxCheckBox" name="chkInherits">
+-                          <label>Inherits another class</label>
+-                        </object>
+-                        <flag>wxALL|wxEXPAND</flag>
+-                        <border>5</border>
+-                      </object>
+-                      <object class="sizeritem">
+-                        <object class="wxFlexGridSizer">
+-                          <cols>2</cols>
+-                          <vgap>5</vgap>
+-                          <hgap>5</hgap>
+-                          <growablecols>1</growablecols>
+-                          <object class="sizeritem">
+-                            <object class="wxStaticText" name="">
+-                              <label>Ancestor:</label>
+-                            </object>
+-                            <flag>wxTOP|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                            <border>4</border>
+-                          </object>
+-                          <object class="sizeritem">
+-                            <object class="wxTextCtrl" name="txtInheritance"/>
+-                            <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                          </object>
+-                          <object class="sizeritem">
+-                            <object class="wxStaticText" name="">
+-                              <label>Ancestor's include filename:</label>
+-                            </object>
+-                            <flag>wxTOP|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                            <border>4</border>
+-                          </object>
+-                          <object class="sizeritem">
+-                            <object class="wxTextCtrl" name="txtInheritanceFilename"/>
+-                            <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                          </object>
+-                          <object class="sizeritem">
+-                            <object class="wxStaticText" name="">
+-                              <label>Scope:</label>
+-                            </object>
+-                            <flag>wxTOP|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                            <border>4</border>
+-                          </object>
+-                          <object class="sizeritem">
+-                            <object class="wxComboBox" name="cmbInheritanceScope">
+-                              <content>
+-                                <item>public</item>
+-                                <item>protected</item>
+-                                <item>private</item>
+-                              </content>
+-                              <style>wxCB_READONLY|wxCB_DROPDOWN</style>
+-                            </object>
+-                            <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                          </object>
+-                        </object>
+-                        <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND</flag>
+-                        <border>5</border>
+-                        <option>1</option>
+-                      </object>
+-                    </object>
+-                    <flag>wxBOTTOM|wxEXPAND</flag>
+-                    <border>5</border>
+-                  </object>
+-                </object>
+-                <flag>wxLEFT|wxRIGHT|wxEXPAND</flag>
+-                <border>5</border>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxBoxSizer">
+-                  <orient>wxVERTICAL</orient>
+-                  <object class="sizeritem">
+-                    <object class="wxStaticBoxSizer">
+-                      <label>Member variables</label>
+-                      <orient>wxHORIZONTAL</orient>
+-                      <object class="sizeritem">
+-                        <object class="wxBoxSizer">
+-                          <orient>wxVERTICAL</orient>
+-                          <object class="sizeritem">
+-                            <object class="wxListBox" name="lstMemberVars">
+-                              <content/>
+-                            </object>
+-                            <option>1</option>
+-                            <flag>wxEXPAND</flag>
+-                          </object>
+-                          <object class="sizeritem">
+-                            <object class="wxButton" name="btnRemoveMemberVar">
+-                              <label>Remove</label>
+-                              <enabled>0</enabled>
+-                            </object>
+-                            <flag>wxTOP|wxALIGN_CENTRE</flag>
+-                            <border>5</border>
+-                          </object>
+-                        </object>
+-                        <flag>wxALL|wxEXPAND</flag>
+-                        <border>5</border>
+-                      </object>
+-                      <object class="sizeritem">
+-                        <object class="wxStaticBoxSizer">
+-                          <orient>wxVERTICAL</orient>
+-                          <object class="sizeritem">
+-                            <object class="wxTextCtrl" name="txtMemberVar">
+-                              <value>unsigned int m_Counter</value>
+-                            </object>
+-                            <flag>wxBOTTOM|wxEXPAND</flag>
+-                            <border>5</border>
+-                          </object>
+-                          <object class="sizeritem">
+-                            <object class="wxCheckBox" name="chkGetter">
+-                              <label>Add &quot;Getter&quot; method</label>
+-                              <checked>1</checked>
+-                            </object>
+-                            <flag>wxBOTTOM|wxEXPAND</flag>
+-                            <border>5</border>
+-                          </object>
+-                          <object class="sizeritem">
+-                            <object class="wxCheckBox" name="chkSetter">
+-                              <label>Add &quot;Setter&quot; method</label>
+-                              <checked>1</checked>
+-                            </object>
+-                            <flag>wxBOTTOM|wxEXPAND</flag>
+-                            <border>5</border>
+-                          </object>
+-                          <object class="sizeritem">
+-                            <object class="wxCheckBox" name="chkRemovePrefix">
+-                              <label>Remove prefix:</label>
+-                              <checked>1</checked>
+-                            </object>
+-                            <flag>wxBOTTOM|wxEXPAND</flag>
+-                            <border>5</border>
+-                          </object>
+-                          <object class="sizeritem">
+-                            <object class="wxBoxSizer">
+-                              <object class="spacer">
+-                                <size>15,15</size>
+-                              </object>
+-                              <object class="sizeritem">
+-                                <object class="wxTextCtrl" name="txtPrefix">
+-                                  <value>m_</value>
+-                                </object>
+-                                <option>1</option>
+-                                <flag>wxBOTTOM|wxRIGHT|wxEXPAND</flag>
+-                                <border>5</border>
+-                              </object>
+-                              <orient>wxHORIZONTAL</orient>
+-                            </object>
+-                            <flag>wxALL|wxEXPAND</flag>
+-                          </object>
+-                          <object class="sizeritem">
+-                            <object class="wxButton" name="btnAddMemberVar">
+-                              <label>Add</label>
+-                            </object>
+-                            <flag>wxBOTTOM|wxALIGN_CENTRE</flag>
+-                            <border>5</border>
+-                          </object>
+-                          <label>Add new:</label>
+-                        </object>
+-                        <flag>wxBOTTOM|wxRIGHT|wxEXPAND</flag>
+-                        <border>5</border>
+-                      </object>
+-                    </object>
+-                    <option>1</option>
+-                    <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND</flag>
+-                    <border>5</border>
+-                  </object>
+-                  <object class="sizeritem">
+-                    <object class="wxStaticBoxSizer">
+-                      <orient>wxHORIZONTAL</orient>
+-                      <object class="sizeritem">
+-                        <object class="wxCheckBox" name="chkDocumentation">
+-                          <label>Add documentation where appropriate</label>
+-                        </object>
+-                        <option>1</option>
+-                        <flag>wxBOTTOM|wxEXPAND</flag>
+-                        <border>0</border>
+-                      </object>
+-                      <label>Documentation</label>
+-                    </object>
+-                    <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND</flag>
+-                    <border>5</border>
+-                  </object>
+-                </object>
+-                <flag>wxEXPAND</flag>
+-              </object>
+-              <orient>wxHORIZONTAL</orient>
+-            </object>
+-            <flag>wxALL|wxEXPAND</flag>
+-          </object>
+-          <label>Class definition</label>
+-          <orient>wxVERTICAL</orient>
+-        </object>
+-        <flag>wxALL|wxEXPAND</flag>
+-        <border>5</border>
+-      </object>
+-      <object class="sizeritem">
+-        <object class="wxStaticBoxSizer">
+-          <label>File policy</label>
+-          <orient>wxVERTICAL</orient>
+-          <object class="sizeritem">
+-            <object class="wxCheckBox" name="chkCommonDir">
+-              <label>Header and implementation file shall be in same folder</label>
+-            </object>
+-            <flag>wxTOP|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-            <border>5</border>
+-          </object>
+-          <object class="sizeritem">
+-            <object class="wxFlexGridSizer">
+-              <cols>2</cols>
+-              <growablecols>1</growablecols>
+-              <object class="sizeritem">
+-                <object class="wxStaticText" name="">
+-                  <label>Folder:</label>
+-                </object>
+-                <flag>wxTOP|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                <border>4</border>
+-                <option>1</option>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxBoxSizer">
+-                  <object class="sizeritem">
+-                    <object class="wxTextCtrl" name="txtCommonDir">
+-                      <value>Text</value>
+-                    </object>
+-                    <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                    <option>1</option>
+-                  </object>
+-                  <object class="sizeritem">
+-                    <object class="wxButton" name="btnCommonDir">
+-                      <label>...</label>
+-                      <size>23,24</size>
+-                    </object>
+-                    <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                    <border>5</border>
+-                  </object>
+-                  <orient></orient>
+-                </object>
+-                <flag>wxALL|wxEXPAND</flag>
+-              </object>
+-            </object>
+-            <flag>wxTOP|wxLEFT|wxRIGHT|wxEXPAND</flag>
+-            <border>5</border>
+-            <option>1</option>
+-          </object>
+-          <object class="sizeritem">
+-            <object class="wxCheckBox" name="chkLowerCase">
+-              <label>Header and implementation file shall always be lower case</label>
+-            </object>
+-            <flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-            <border>5</border>
+-          </object>
+-          <object class="sizeritem">
+-            <object class="wxBoxSizer">
+-              <orient>wxHORIZONTAL</orient>
+-              <object class="sizeritem">
+-                <object class="wxStaticBoxSizer">
+-                  <label>Header file</label>
+-                  <orient>wxVERTICAL</orient>
+-                  <object class="sizeritem">
+-                    <object class="wxFlexGridSizer">
+-                      <cols>2</cols>
+-                      <vgap>5</vgap>
+-                      <hgap>5</hgap>
+-                      <growablecols>1</growablecols>
+-                      <object class="sizeritem">
+-                        <object class="wxStaticText" name="">
+-                          <label>Folder:</label>
+-                        </object>
+-                        <flag>wxTOP|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                        <border>4</border>
+-                      </object>
+-                      <object class="sizeritem">
+-                        <object class="wxBoxSizer">
+-                          <object class="sizeritem">
+-                            <object class="wxTextCtrl" name="txtIncludeDir">
+-                              <value>Text</value>
+-                            </object>
+-                            <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                            <option>1</option>
+-                          </object>
+-                          <object class="sizeritem">
+-                            <object class="wxButton" name="btnIncludeDir">
+-                              <label>...</label>
+-                              <size>24,23</size>
+-                            </object>
+-                            <flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                          </object>
+-                          <orient></orient>
+-                        </object>
+-                        <flag>wxALL|wxEXPAND</flag>
+-                      </object>
+-                      <object class="sizeritem">
+-                        <object class="wxStaticText" name="">
+-                          <label>Filename:</label>
+-                        </object>
+-                        <flag>wxTOP|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                        <border>4</border>
+-                      </object>
+-                      <object class="sizeritem">
+-                        <object class="wxTextCtrl" name="txtHeader"/>
+-                        <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                      </object>
+-                      <object class="spacer">
+-                        <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                        <size>0,0</size>
+-                      </object>
+-                      <object class="sizeritem">
+-                        <object class="wxCheckBox" name="chkGuardBlock">
+-                          <label>Add guard block in header file</label>
+-                          <checked>1</checked>
+-                        </object>
+-                        <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                      </object>
+-                      <object class="sizeritem">
+-                        <object class="wxStaticText" name="">
+-                          <label>Guard block:</label>
+-                        </object>
+-                        <flag>wxTOP|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                        <border>4</border>
+-                      </object>
+-                      <object class="sizeritem">
+-                        <object class="wxTextCtrl" name="txtGuardBlock"/>
+-                        <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                      </object>
+-                    </object>
+-                    <flag>wxALL|wxEXPAND</flag>
+-                    <border>5</border>
+-                    <option>1</option>
+-                  </object>
+-                </object>
+-                <option>1</option>
+-                <flag>wxALL|wxEXPAND</flag>
+-                <border>5</border>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticBoxSizer">
+-                  <label>Implementation file</label>
+-                  <orient>wxVERTICAL</orient>
+-                  <object class="sizeritem">
+-                    <object class="wxCheckBox" name="chkImplementation">
+-                      <label>Generate implementation file</label>
+-                      <checked>1</checked>
+-                    </object>
+-                    <flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                    <border>5</border>
+-                  </object>
+-                  <object class="sizeritem">
+-                    <object class="wxFlexGridSizer">
+-                      <cols>2</cols>
+-                      <vgap>5</vgap>
+-                      <hgap>5</hgap>
+-                      <growablecols>1</growablecols>
+-                      <object class="sizeritem">
+-                        <object class="wxStaticText" name="">
+-                          <label>Folder:</label>
+-                        </object>
+-                        <flag>wxTOP|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                        <border>4</border>
+-                      </object>
+-                      <object class="sizeritem">
+-                        <object class="wxBoxSizer">
+-                          <object class="sizeritem">
+-                            <object class="wxTextCtrl" name="txtImplDir">
+-                              <value>Text</value>
+-                              <size>115,23</size>
+-                            </object>
+-                            <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                            <option>1</option>
+-                          </object>
+-                          <object class="sizeritem">
+-                            <object class="wxButton" name="btnImplDir">
+-                              <label>...</label>
+-                              <size>24,23</size>
+-                            </object>
+-                            <flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                          </object>
+-                          <orient></orient>
+-                        </object>
+-                        <flag>wxALL|wxEXPAND</flag>
+-                      </object>
+-                      <object class="sizeritem">
+-                        <object class="wxStaticText" name="">
+-                          <label>Filename:</label>
+-                        </object>
+-                        <flag>wxTOP|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                        <border>4</border>
+-                      </object>
+-                      <object class="sizeritem">
+-                        <object class="wxTextCtrl" name="txtImplementation"/>
+-                        <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                      </object>
+-                      <object class="sizeritem">
+-                        <object class="wxStaticText" name="">
+-                          <label>Header include:</label>
+-                        </object>
+-                        <flag>wxTOP|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                        <border>4</border>
+-                        <option>1</option>
+-                      </object>
+-                      <object class="sizeritem">
+-                        <object class="wxTextCtrl" name="txtHeaderInclude">
+-                          <value>&quot;&quot;</value>
+-                        </object>
+-                        <flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-                        <option>1</option>
+-                      </object>
+-                    </object>
+-                    <flag>wxALL|wxEXPAND</flag>
+-                    <border>5</border>
+-                    <option>1</option>
+-                  </object>
+-                </object>
+-                <option>1</option>
+-                <flag>wxALL|wxEXPAND</flag>
+-                <border>5</border>
+-              </object>
+-            </object>
+-            <flag>wxALL|wxEXPAND</flag>
+-          </object>
+-        </object>
+-        <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND</flag>
+-        <border>5</border>
+-      </object>
+-      <object class="sizeritem">
+-        <object class="wxBoxSizer">
+-          <object class="sizeritem">
+-            <object class="wxButton" name="wxID_OK">
+-              <label>C&amp;reate</label>
+-              <default>1</default>
+-            </object>
+-            <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+-          </object>
+-          <object class="sizeritem">
+-            <object class="wxButton" name="wxID_CANCEL">
+-              <label>&amp;Cancel</label>
+-            </object>
+-            <flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+-          </object>
+-          <orient></orient>
+-        </object>
+-        <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
+-        <border>5</border>
+-      </object>
+-    </object>
+-  </object>
+-</resource>
+\ No newline at end of file
++	<object class="wxScrollingDialog" name="dlgNewClass">
++		<title>Create new class</title>
++		<centered>1</centered>
++		<object class="wxBoxSizer">
++			<orient>wxVERTICAL</orient>
++			<object class="sizeritem">
++				<object class="wxStaticBoxSizer">
++					<label>Class definition</label>
++					<orient>wxVERTICAL</orient>
++					<object class="sizeritem">
++						<object class="wxBoxSizer">
++							<object class="sizeritem">
++								<object class="wxBoxSizer">
++									<orient>wxVERTICAL</orient>
++									<object class="sizeritem">
++										<object class="wxFlexGridSizer">
++											<cols>2</cols>
++											<rows>2</rows>
++											<growablecols>1</growablecols>
++											<object class="sizeritem">
++												<object class="wxStaticText" name="ID_STATICTEXT1">
++													<label>Class name:</label>
++												</object>
++												<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++											</object>
++											<object class="sizeritem">
++												<object class="wxTextCtrl" name="txtName" />
++												<flag>wxLEFT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++												<border>5</border>
++												<option>1</option>
++											</object>
++											<object class="sizeritem">
++												<object class="wxStaticText" name="ID_STATICTEXT2">
++													<label>Arguments:</label>
++												</object>
++												<flag>wxTOP|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++												<border>5</border>
++											</object>
++											<object class="sizeritem">
++												<object class="wxTextCtrl" name="txtArguments" />
++												<flag>wxTOP|wxLEFT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++												<border>5</border>
++												<option>1</option>
++											</object>
++										</object>
++										<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++									</object>
++									<object class="sizeritem">
++										<object class="wxBoxSizer">
++											<object class="sizeritem">
++												<object class="wxBoxSizer">
++													<orient>wxVERTICAL</orient>
++													<object class="sizeritem">
++														<object class="wxCheckBox" name="chkHasDestructor">
++															<label>Has destructor</label>
++															<checked>1</checked>
++														</object>
++														<flag>wxBOTTOM|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++														<border>5</border>
++													</object>
++													<object class="sizeritem">
++														<object class="wxCheckBox" name="chkVirtualDestructor">
++															<label>Virtual destructor</label>
++															<checked>1</checked>
++														</object>
++														<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++													</object>
++												</object>
++												<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++												<option>1</option>
++											</object>
++											<object class="sizeritem">
++												<object class="wxBoxSizer">
++													<orient>wxVERTICAL</orient>
++													<object class="sizeritem">
++														<object class="wxCheckBox" name="chkHasCopyCtor">
++															<label>Has copy ctor</label>
++														</object>
++														<flag>wxBOTTOM|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++														<border>5</border>
++													</object>
++													<object class="sizeritem">
++														<object class="wxCheckBox" name="chkHasAssignmentOp">
++															<label>Has assigment op.</label>
++														</object>
++														<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++														<border>5</border>
++													</object>
++												</object>
++												<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++												<option>1</option>
++											</object>
++										</object>
++										<flag>wxTOP|wxBOTTOM|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++										<border>5</border>
++									</object>
++									<object class="sizeritem">
++										<object class="wxStaticBoxSizer">
++											<label>Inheritance</label>
++											<orient>wxVERTICAL</orient>
++											<object class="sizeritem">
++												<object class="wxCheckBox" name="chkInherits">
++													<label>Inherits another class</label>
++												</object>
++												<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++												<border>5</border>
++											</object>
++											<object class="sizeritem">
++												<object class="wxFlexGridSizer">
++													<cols>2</cols>
++													<vgap>5</vgap>
++													<hgap>5</hgap>
++													<growablecols>1</growablecols>
++													<object class="sizeritem">
++														<object class="wxStaticText" name="ID_STATICTEXT3">
++															<label>Ancestor:</label>
++														</object>
++														<flag>wxTOP|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++														<border>4</border>
++													</object>
++													<object class="sizeritem">
++														<object class="wxTextCtrl" name="txtInheritance" />
++														<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++													</object>
++													<object class="sizeritem">
++														<object class="wxStaticText" name="ID_STATICTEXT4">
++															<label>Ancestor&apos;s include filename:</label>
++														</object>
++														<flag>wxTOP|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++														<border>4</border>
++													</object>
++													<object class="sizeritem">
++														<object class="wxTextCtrl" name="txtInheritanceFilename" />
++														<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++													</object>
++													<object class="sizeritem">
++														<object class="wxStaticText" name="ID_STATICTEXT5">
++															<label>Scope:</label>
++														</object>
++														<flag>wxTOP|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++														<border>4</border>
++													</object>
++													<object class="sizeritem">
++														<object class="wxComboBox" name="cmbInheritanceScope">
++															<content>
++																<item>public</item>
++																<item>protected</item>
++																<item>private</item>
++															</content>
++															<style>wxCB_READONLY|wxCB_DROPDOWN</style>
++														</object>
++														<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++													</object>
++												</object>
++												<flag>wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++												<border>5</border>
++												<option>1</option>
++											</object>
++										</object>
++										<flag>wxBOTTOM|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++										<border>5</border>
++									</object>
++								</object>
++								<flag>wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++								<border>5</border>
++							</object>
++							<object class="sizeritem">
++								<object class="wxBoxSizer">
++									<orient>wxVERTICAL</orient>
++									<object class="sizeritem">
++										<object class="wxStaticBoxSizer">
++											<label>Member variables</label>
++											<object class="sizeritem">
++												<object class="wxBoxSizer">
++													<orient>wxVERTICAL</orient>
++													<object class="sizeritem">
++														<object class="wxListBox" name="lstMemberVars" />
++														<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++														<option>1</option>
++													</object>
++													<object class="sizeritem">
++														<object class="wxButton" name="btnRemoveMemberVar">
++															<label>Remove</label>
++															<enabled>0</enabled>
++														</object>
++														<flag>wxTOP|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++														<border>5</border>
++													</object>
++												</object>
++												<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++												<border>5</border>
++											</object>
++											<object class="sizeritem">
++												<object class="wxStaticBoxSizer">
++													<label>Add new:</label>
++													<orient>wxVERTICAL</orient>
++													<object class="sizeritem">
++														<object class="wxTextCtrl" name="txtMemberVar">
++															<value>unsigned int m&amp;Counter</value>
++														</object>
++														<flag>wxBOTTOM|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++														<border>5</border>
++													</object>
++													<object class="sizeritem">
++														<object class="wxCheckBox" name="chkGetter">
++															<label>Add &quot;Getter&quot; method</label>
++															<checked>1</checked>
++														</object>
++														<flag>wxBOTTOM|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++														<border>5</border>
++													</object>
++													<object class="sizeritem">
++														<object class="wxCheckBox" name="chkSetter">
++															<label>Add &quot;Setter&quot; method</label>
++															<checked>1</checked>
++														</object>
++														<flag>wxBOTTOM|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++														<border>5</border>
++													</object>
++													<object class="sizeritem">
++														<object class="wxCheckBox" name="chkRemovePrefix">
++															<label>Remove prefix:</label>
++															<checked>1</checked>
++														</object>
++														<flag>wxBOTTOM|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++														<border>5</border>
++													</object>
++													<object class="sizeritem">
++														<object class="wxBoxSizer">
++															<object class="spacer">
++																<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++																<size>15,15</size>
++															</object>
++															<object class="sizeritem">
++																<object class="wxTextCtrl" name="txtPrefix">
++																	<value>m&amp;</value>
++																</object>
++																<flag>wxBOTTOM|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++																<border>5</border>
++																<option>1</option>
++															</object>
++														</object>
++														<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++													</object>
++													<object class="sizeritem">
++														<object class="wxButton" name="btnAddMemberVar">
++															<label>Add</label>
++														</object>
++														<flag>wxBOTTOM|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++														<border>5</border>
++													</object>
++												</object>
++												<flag>wxBOTTOM|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++												<border>5</border>
++											</object>
++										</object>
++										<flag>wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++										<border>5</border>
++										<option>1</option>
++									</object>
++									<object class="sizeritem">
++										<object class="wxStaticBoxSizer">
++											<label>Documentation</label>
++											<object class="sizeritem">
++												<object class="wxCheckBox" name="chkDocumentation">
++													<label>Add documentation where appropriate</label>
++												</object>
++												<flag>wxBOTTOM|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++												<option>1</option>
++											</object>
++										</object>
++										<flag>wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++										<border>5</border>
++									</object>
++								</object>
++								<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++							</object>
++						</object>
++						<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++					</object>
++				</object>
++				<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++				<border>5</border>
++			</object>
++			<object class="sizeritem">
++				<object class="wxStaticBoxSizer">
++					<label>File policy</label>
++					<orient>wxVERTICAL</orient>
++					<object class="sizeritem">
++						<object class="wxBoxSizer">
++							<object class="sizeritem">
++								<object class="wxCheckBox" name="chkAddPathToProject">
++									<label>Add paths to project</label>
++									<checked>1</checked>
++								</object>
++								<flag>wxTOP|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++								<border>5</border>
++							</object>
++							<object class="spacer">
++								<flag>wxALL|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++								<border>5</border>
++								<option>1</option>
++							</object>
++							<object class="sizeritem">
++								<object class="wxCheckBox" name="chkRelativePath">
++									<label>Use relative path</label>
++									<checked>1</checked>
++								</object>
++								<flag>wxTOP|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_RIGHT|wxALIGN_TOP</flag>
++								<border>5</border>
++							</object>
++							<object class="spacer">
++								<flag>wxALL|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++								<border>5</border>
++								<option>1</option>
++							</object>
++						</object>
++						<flag>wxTOP|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++						<border>5</border>
++					</object>
++					<object class="sizeritem">
++						<object class="wxCheckBox" name="chkCommonDir">
++							<label>Header and implementation file shall be in same folder</label>
++						</object>
++						<flag>wxTOP|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++						<border>5</border>
++					</object>
++					<object class="sizeritem">
++						<object class="wxFlexGridSizer">
++							<cols>2</cols>
++							<growablecols>1</growablecols>
++							<object class="sizeritem">
++								<object class="wxStaticText" name="ID_STATICTEXT6">
++									<label>Folder:</label>
++								</object>
++								<flag>wxTOP|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++								<border>4</border>
++								<option>1</option>
++							</object>
++							<object class="sizeritem">
++								<object class="wxBoxSizer">
++									<object class="sizeritem">
++										<object class="wxTextCtrl" name="txtCommonDir">
++											<value>Text</value>
++										</object>
++										<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++										<option>1</option>
++									</object>
++									<object class="sizeritem">
++										<object class="wxButton" name="btnCommonDir">
++											<label>...</label>
++											<size>23,24</size>
++										</object>
++										<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++										<border>5</border>
++									</object>
++								</object>
++								<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++							</object>
++						</object>
++						<flag>wxTOP|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++						<border>5</border>
++						<option>1</option>
++					</object>
++					<object class="sizeritem">
++						<object class="wxCheckBox" name="chkLowerCase">
++							<label>Header and implementation file shall always be lower case</label>
++						</object>
++						<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++						<border>5</border>
++					</object>
++					<object class="sizeritem">
++						<object class="wxBoxSizer">
++							<object class="sizeritem">
++								<object class="wxStaticBoxSizer">
++									<label>Header file</label>
++									<orient>wxVERTICAL</orient>
++									<object class="sizeritem">
++										<object class="wxFlexGridSizer">
++											<cols>2</cols>
++											<vgap>5</vgap>
++											<hgap>5</hgap>
++											<growablecols>1</growablecols>
++											<object class="sizeritem">
++												<object class="wxStaticText" name="ID_STATICTEXT7">
++													<label>Folder:</label>
++												</object>
++												<flag>wxTOP|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++												<border>4</border>
++											</object>
++											<object class="sizeritem">
++												<object class="wxBoxSizer">
++													<object class="sizeritem">
++														<object class="wxTextCtrl" name="txtIncludeDir">
++															<value>Text</value>
++														</object>
++														<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++														<option>1</option>
++													</object>
++													<object class="sizeritem">
++														<object class="wxButton" name="btnIncludeDir">
++															<label>...</label>
++															<size>24,23</size>
++														</object>
++														<flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
++													</object>
++												</object>
++												<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++											</object>
++											<object class="sizeritem">
++												<object class="wxStaticText" name="ID_STATICTEXT8">
++													<label>Filename:</label>
++												</object>
++												<flag>wxTOP|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++												<border>4</border>
++											</object>
++											<object class="sizeritem">
++												<object class="wxTextCtrl" name="txtHeader" />
++												<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++											</object>
++											<object class="spacer">
++												<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++												<size>0,0</size>
++											</object>
++											<object class="sizeritem">
++												<object class="wxCheckBox" name="chkGuardBlock">
++													<label>Add guard block in header file</label>
++													<checked>1</checked>
++												</object>
++												<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++											</object>
++											<object class="sizeritem">
++												<object class="wxStaticText" name="ID_STATICTEXT9">
++													<label>Guard block:</label>
++												</object>
++												<flag>wxTOP|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++												<border>4</border>
++											</object>
++											<object class="sizeritem">
++												<object class="wxTextCtrl" name="txtGuardBlock" />
++												<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++											</object>
++										</object>
++										<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++										<border>5</border>
++										<option>1</option>
++									</object>
++								</object>
++								<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++								<border>5</border>
++								<option>1</option>
++							</object>
++							<object class="sizeritem">
++								<object class="wxStaticBoxSizer">
++									<label>Implementation file</label>
++									<orient>wxVERTICAL</orient>
++									<object class="sizeritem">
++										<object class="wxCheckBox" name="chkImplementation">
++											<label>Generate implementation file</label>
++											<checked>1</checked>
++										</object>
++										<flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
++										<border>5</border>
++									</object>
++									<object class="sizeritem">
++										<object class="wxFlexGridSizer">
++											<cols>2</cols>
++											<vgap>5</vgap>
++											<hgap>5</hgap>
++											<growablecols>1</growablecols>
++											<object class="sizeritem">
++												<object class="wxStaticText" name="ID_STATICTEXT10">
++													<label>Folder:</label>
++												</object>
++												<flag>wxTOP|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++												<border>4</border>
++											</object>
++											<object class="sizeritem">
++												<object class="wxBoxSizer">
++													<object class="sizeritem">
++														<object class="wxTextCtrl" name="txtImplDir">
++															<value>Text</value>
++															<size>115,23</size>
++														</object>
++														<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++														<option>1</option>
++													</object>
++													<object class="sizeritem">
++														<object class="wxButton" name="btnImplDir">
++															<label>...</label>
++															<size>24,23</size>
++														</object>
++														<flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
++													</object>
++												</object>
++												<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++											</object>
++											<object class="sizeritem">
++												<object class="wxStaticText" name="ID_STATICTEXT11">
++													<label>Filename:</label>
++												</object>
++												<flag>wxTOP|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++												<border>4</border>
++											</object>
++											<object class="sizeritem">
++												<object class="wxTextCtrl" name="txtImplementation" />
++												<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++											</object>
++											<object class="sizeritem">
++												<object class="wxStaticText" name="ID_STATICTEXT12">
++													<label>Header include:</label>
++												</object>
++												<flag>wxTOP|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++												<border>4</border>
++												<option>1</option>
++											</object>
++											<object class="sizeritem">
++												<object class="wxTextCtrl" name="txtHeaderInclude">
++													<value>&quot;&quot;</value>
++												</object>
++												<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++												<option>1</option>
++											</object>
++										</object>
++										<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++										<border>5</border>
++										<option>1</option>
++									</object>
++								</object>
++								<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++								<border>5</border>
++								<option>1</option>
++							</object>
++						</object>
++						<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++					</object>
++				</object>
++				<flag>wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++				<border>5</border>
++			</object>
++			<object class="sizeritem">
++				<object class="wxBoxSizer">
++					<object class="sizeritem">
++						<object class="wxButton" name="wxID_OK">
++							<label>C&amp;reate</label>
++							<default>1</default>
++						</object>
++						<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++					</object>
++					<object class="sizeritem">
++						<object class="wxButton" name="wxID_CANCEL">
++							<label>&amp;Cancel</label>
++						</object>
++						<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++					</object>
++				</object>
++				<flag>wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++				<border>5</border>
++			</object>
++		</object>
++	</object>
++</resource>

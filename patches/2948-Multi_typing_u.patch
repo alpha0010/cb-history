@@ -1,0 +1,75 @@
+Index: src/include/editorconfigurationdlg.h
+===================================================================
+--- src/include/editorconfigurationdlg.h	(revision 6187)
++++ src/include/editorconfigurationdlg.h	(working copy)
+@@ -39,7 +39,6 @@
+         void OnAutoCompDelete(wxCommandEvent& event);
+         void OnDynamicCheck(wxCommandEvent& event);
+         void OnHighlightOccurrences(wxCommandEvent& event);
+-        void OnMultipleSelections(wxCommandEvent& event);
+         void UpdateSampleFont(bool askForNewFont);
+ 
+         void EndModal(int retCode);
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 6187)
++++ src/sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -81,7 +81,6 @@
+     EVT_BUTTON(XRCID("btnAutoCompDelete"),      EditorConfigurationDlg::OnAutoCompDelete)
+     EVT_CHECKBOX(XRCID("chkDynamicWidth"),      EditorConfigurationDlg::OnDynamicCheck)
+     EVT_CHECKBOX(XRCID("chkHighlightOccurrences"),  EditorConfigurationDlg::OnHighlightOccurrences)
+-    EVT_CHECKBOX(XRCID("chkEnableMultipleSelections"),  EditorConfigurationDlg::OnMultipleSelections)
+     EVT_BUTTON(XRCID("btnHighlightColour"),         EditorConfigurationDlg::OnChooseColour)
+ 
+     EVT_LISTBOOK_PAGE_CHANGED(XRCID("nbMain"), EditorConfigurationDlg::OnPageChanged)
+@@ -159,10 +158,8 @@
+ 
+     //selections
+     XRCCTRL(*this, "chkEnableVirtualSpace", wxCheckBox)->SetValue(cfg->ReadBool(_T("/selection/use_vspace"), false));
+-    bool multiSelectEnabled = cfg->ReadBool(_T("/selection/multi_select"), false);
+-    XRCCTRL(*this, "chkEnableMultipleSelections", wxCheckBox)->SetValue(multiSelectEnabled);
++    XRCCTRL(*this, "chkEnableMultipleSelections", wxCheckBox)->SetValue(cfg->ReadBool(_T("/selection/multi_select"), false));
+     XRCCTRL(*this, "chkEnableAdditionalSelectionTyping", wxCheckBox)->SetValue(cfg->ReadBool(_T("/selection/multi_typing"), false));
+-    XRCCTRL(*this, "chkEnableAdditionalSelectionTyping", wxCheckBox)->Enable(multiSelectEnabled);
+ 
+     //folding
+     XRCCTRL(*this, "chkEnableFolding", wxCheckBox)->SetValue(cfg->ReadBool(_T("/folding/show_folds"), true));
+@@ -1038,8 +1035,3 @@
+     XRCCTRL(*this, "stHighlightColour", wxStaticText)->Enable( event.IsChecked() );
+     XRCCTRL(*this, "btnHighlightColour", wxButton)->Enable( event.IsChecked() );
+ }
+-
+-void EditorConfigurationDlg::OnMultipleSelections(wxCommandEvent& event)
+-{
+-    XRCCTRL(*this, "chkEnableAdditionalSelectionTyping", wxCheckBox)->Enable( event.IsChecked() );
+-}
+Index: src/sdk/resources/editor_configuration.xrc
+===================================================================
+--- src/sdk/resources/editor_configuration.xrc	(revision 6187)
++++ src/sdk/resources/editor_configuration.xrc	(working copy)
+@@ -776,21 +776,11 @@
+ 											<border>4</border>
+ 										</object>
+ 										<object class="sizeritem">
+-											<object class="wxBoxSizer">
+-												<object class="spacer">
+-													<flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+-													<border>6</border>
+-													<size>15,6</size>
+-												</object>
+-												<object class="sizeritem">
+-													<object class="wxCheckBox" name="chkEnableAdditionalSelectionTyping">
+-														<label>Enable typing (and deleting) in multiple selections simultaneously</label>
+-													</object>
+-													<flag>wxBOTTOM|wxLEFT|wxEXPAND|wxALIGN_LEFT|wxALIGN_BOTTOM</flag>
+-													<border>4</border>
+-												</object>
++											<object class="wxCheckBox" name="chkEnableAdditionalSelectionTyping">
++												<label>Enable typing (and deleting) in multiple selections or in each line of rectangular selection simultaneously</label>
+ 											</object>
+-											<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_BOTTOM</flag>
++											<flag>wxBOTTOM|wxLEFT|wxEXPAND|wxALIGN_LEFT|wxALIGN_BOTTOM</flag>
++											<border>4</border>
+ 										</object>
+ 									</object>
+ 									<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_BOTTOM</flag>

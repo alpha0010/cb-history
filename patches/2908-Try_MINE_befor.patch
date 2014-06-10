@@ -1,0 +1,147 @@
+Index: debian/changelog
+===================================================================
+--- debian/changelog	(revision 6089)
++++ debian/changelog	(working copy)
+@@ -1,4 +1,4 @@
+-codeblocks (8.02svn5933) unstable; urgency=low
++codeblocks (8.02svn6089) unstable; urgency=low
+ 
+   * more fixes to debian build system, sources and packages are now
+     lintian-clean, except for some words guessed as spelling-errors.
+Index: src/sdk/projectmanager.cpp
+===================================================================
+--- src/sdk/projectmanager.cpp	(revision 6089)
++++ src/sdk/projectmanager.cpp	(working copy)
+@@ -1437,50 +1437,49 @@
+     }
+ 
+     FileType ft = FileTypeOf(filename);
+-    if (ft == ftHeader || ft == ftSource)
++
++    // first look for custom editors
++    // if that fails, try MIME handlers
++    EditorBase* eb = Manager::Get()->GetEditorManager()->IsOpen(filename);
++    if (eb && !eb->IsBuiltinEditor())
+     {
+-        // C/C++ header/source files, always get opened inside Code::Blocks
+-        cbEditor* ed = Manager::Get()->GetEditorManager()->Open(filename);
+-        if (ed)
+-        {
+-            ed->SetProjectFile(pf);
+-            ed->Activate();
+-        }
+-        else
+-        {
+-            wxString msg;
+-            msg.Printf(_("Failed to open '%s'."), filename.c_str());
+-            Manager::Get()->GetLogManager()->LogError(msg);
+-        }
++        // custom editors just get activated
++        eb->Activate();
++        return;
+     }
+-    else
++
++    // then try MIME handlers
++    cbMimePlugin* plugin = Manager::Get()->GetPluginManager()->GetMIMEHandlerForFile(filename);
++    if (!plugin)
+     {
+-        // first look for custom editors
+-        // if that fails, try MIME handlers
+-        EditorBase* eb = Manager::Get()->GetEditorManager()->IsOpen(filename);
+-        if (eb && !eb->IsBuiltinEditor())
++        if (ft == ftHeader || ft == ftSource)
+         {
+-            // custom editors just get activated
+-            eb->Activate();
+-            return;
++            // try falling back on the internal editor before
++            // resorting to an error message.
++            cbEditor* ed = Manager::Get()->GetEditorManager()->Open(filename);
++            if (ed)
++            {
++                ed->SetProjectFile(pf);
++                ed->Activate();
++            }
++            else
++            {
++                wxString msg;
++                msg.Printf(_("Failed to open '%s'."), filename.c_str());
++                Manager::Get()->GetLogManager()->LogError(msg);
++            }
+         }
+-
+-        // not a recognized file type
+-        cbMimePlugin* plugin = Manager::Get()->GetPluginManager()->GetMIMEHandlerForFile(filename);
+-        if (!plugin)
+-        {
+-            wxString msg;
+-            msg.Printf(_("Could not open file '%s'.\nNo handler registered for this type of file."), filename.c_str());
+-            Manager::Get()->GetLogManager()->LogError(msg);
+-        }
+-        else if (plugin->OpenFile(filename) != 0)
+-        {
+-            const PluginInfo* info = Manager::Get()->GetPluginManager()->GetPluginInfo(plugin);
+-            wxString msg;
+-            msg.Printf(_("Could not open file '%s'.\nThe registered handler (%s) could not open it."), filename.c_str(), info ? info->title.c_str() : wxString(_("<Unknown plugin>")).c_str());
+-            Manager::Get()->GetLogManager()->LogError(msg);
+-        }
++        wxString msg;
++        msg.Printf(_("Could not open file '%s'.\nNo handler registered for this type of file."), filename.c_str());
++        Manager::Get()->GetLogManager()->LogError(msg);
+     }
++    else if (plugin->OpenFile(filename) != 0)
++    {
++        const PluginInfo* info = Manager::Get()->GetPluginManager()->GetPluginInfo(plugin);
++        wxString msg;
++        msg.Printf(_("Could not open file '%s'.\nThe registered handler (%s) could not open it."), filename.c_str(), info ? info->title.c_str() : wxString(_("<Unknown plugin>")).c_str());
++        Manager::Get()->GetLogManager()->LogError(msg);
++    }
+ }
+ 
+ void ProjectManager::DoOpenSelectedFile()
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(revision 6089)
++++ src/src/main.cpp	(working copy)
+@@ -1566,25 +1566,28 @@
+             }
+         }
+         //
+-        // Source files
+-        //
+-        case ftHeader:
+-            // fallthrough
+-        case ftSource:
+-            // fallthrough
+-        case ftResource:
+-            return DoOpenFile(filename, addToHistory);
+-        //
+         // For all other files, ask MIME plugin for a suitable handler
+         //
+         default:
+         {
+             cbMimePlugin* plugin = Manager::Get()->GetPluginManager()->GetMIMEHandlerForFile(filename);
+-            // warn user that "Files extension handler" is disabled
++            // attempt fall back on the internal editor
+             if (!plugin)
+             {
+-                cbMessageBox(_("Could not open file ") + filename + _(",\nbecause no extension handler could be found."), _("Error"), wxICON_ERROR);
+-                return false;
++                switch(FileTypeOf(filename))
++                {
++                    case ftHeader:
++                        // fallthrough
++                    case ftSource:
++                        // fallthrough
++                    case ftResource:
++                        // fallthrough
++                        return DoOpenFile(filename, addToHistory);
++                    default:
++                        // warn user that "Files extension handler" is disabled
++                        cbMessageBox(_("Could not open file ") + filename + _(",\nbecause no extension handler could be found."), _("Error"), wxICON_ERROR);
++                        return false;
++                }
+             }
+             if (plugin->OpenFile(filename) == 0)
+             {

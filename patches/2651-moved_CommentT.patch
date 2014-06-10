@@ -1,0 +1,1122 @@
+Index: include/editorcolourset.h
+===================================================================
+--- include/editorcolourset.h	(revision 5414)
++++ include/editorcolourset.h	(working copy)
+@@ -39,6 +39,15 @@
+ };
+ WX_DEFINE_ARRAY(OptionColour*, OptionColours);
+ 
++struct CommentToken {
++    wxString lineComment;
++    wxString streamCommentStart;
++    wxString streamCommentEnd;
++    wxString boxCommentStart;
++    wxString boxCommentMid;
++    wxString boxCommentEnd;
++};
++
+ struct OptionSet
+ {
+     wxString m_Langs;
+@@ -53,6 +62,9 @@
+ 
+     wxString m_originalKeywords[wxSCI_KEYWORDSET_MAX + 1]; // wxSCI_KEYWORDSET_MAX+1 keyword sets
+     wxArrayString m_originalFileMasks;
++
++    CommentToken comment;
++    bool m_CaseSensitive;
+ };
+ WX_DECLARE_STRING_HASH_MAP(OptionSet, OptionSetsMap);
+ 
+@@ -97,6 +109,10 @@
+ 		void SetFileMasks(HighlightLanguage lang, const wxString& masks, const wxString& = _(","));
+ 		wxString GetSampleCode(HighlightLanguage lang, int* breakLine, int* debugLine, int* errorLine);
+ 		void SetSampleCode(HighlightLanguage lang, const wxString& sample, int breakLine, int debugLine, int errorLine);
++        CommentToken GetCommentToken(HighlightLanguage lang);
++        void SetCommentToken(HighlightLanguage lang, CommentToken token);
++        bool GetCaseSensitivity(HighlightLanguage lang);
++        void SetCaseSensitivity(HighlightLanguage lang, bool CaseSensitive);
+ 	protected:
+ 	private:
+ 		void DoApplyStyle(cbStyledTextCtrl* control, int value, OptionColour* option);
+Index: include/editorlexerloader.h
+===================================================================
+--- include/editorlexerloader.h	(revision 5414)
++++ include/editorlexerloader.h	(working copy)
+@@ -25,6 +25,7 @@
+         void DoKeywords(HighlightLanguage language, TiXmlElement* node);
+         void DoSingleKeywordNode(HighlightLanguage language, TiXmlElement* node, const wxString& nodename);
+         void DoSampleCode(HighlightLanguage language, TiXmlElement* node);
++        void DoLangAttributes(HighlightLanguage language, TiXmlElement* node);
+         EditorColourSet* m_pTarget;
+ 	private:
+ };
+Index: sdk/editorcolourset.cpp
+===================================================================
+--- sdk/editorcolourset.cpp	(revision 5414)
++++ sdk/editorcolourset.cpp	(working copy)
+@@ -797,3 +797,41 @@
+     mset.m_DebugLine = debugLine;
+     mset.m_ErrorLine = errorLine;
+ }
++
++void EditorColourSet::SetCommentToken(HighlightLanguage lang, CommentToken token)
++{
++    if (lang == HL_NONE)
++        return;
++    m_Sets[lang].comment = token;
++}
++
++CommentToken EditorColourSet::GetCommentToken(HighlightLanguage lang)
++{
++    CommentToken com;
++    com.lineComment        = _T("");
++    com.streamCommentStart = _T("");
++    com.streamCommentEnd   = _T("");
++    com.boxCommentStart    = _T("");
++    com.boxCommentMid      = _T("");
++    com.boxCommentEnd      = _T("");
++
++    if (lang != HL_NONE)
++    {
++        com = m_Sets[lang].comment;
++    }
++    return com;
++}
++
++void EditorColourSet::SetCaseSensitivity(HighlightLanguage lang, bool CaseSensitive)
++{
++    if ( lang == HL_NONE )
++        return;
++    m_Sets[lang].m_CaseSensitive = CaseSensitive;
++}
++
++bool EditorColourSet::GetCaseSensitivity(HighlightLanguage lang)
++{
++    if ( lang == HL_NONE )
++        return false;
++    return m_Sets[lang].m_CaseSensitive;
++}
+Index: sdk/editorlexerloader.cpp
+===================================================================
+--- sdk/editorlexerloader.cpp	(revision 5414)
++++ sdk/editorlexerloader.cpp	(working copy)
+@@ -90,6 +90,7 @@
+     DoStyles(style, node);
+     DoKeywords(style, node);
+     DoSampleCode(style, node);
++    DoLangAttributes(style, node);
+ }
+ 
+ void EditorLexerLoader::DoStyles(HighlightLanguage language, TiXmlElement* node)
+@@ -190,3 +191,24 @@
+     int errorLine = sample->Attribute("error_line") ? atol(sample->Attribute("error_line")) : -1;
+     m_pTarget->SetSampleCode(language, code, breakLine, debugLine, errorLine);
+ }
++
++void EditorLexerLoader::DoLangAttributes(HighlightLanguage language, TiXmlElement* node)
++{
++    TiXmlElement* attribs = node->FirstChildElement("LanguageAttributes");
++    if ( !attribs )
++        return;
++
++    bool CaseSensitive = attribs->Attribute("CaseSensitive") ? atol(attribs->Attribute("CaseSensitive")) != 0 : false;
++    m_pTarget->SetCaseSensitivity(language, CaseSensitive);
++
++
++    CommentToken token;
++    token.lineComment = wxString( attribs->Attribute("LineComment"), wxConvUTF8 );
++    token.streamCommentStart = wxString( attribs->Attribute("StreamCommentStart"), wxConvUTF8 );
++    token.streamCommentEnd = wxString( attribs->Attribute("StreamCommentEnd"), wxConvUTF8 );
++    token.boxCommentStart = wxString( attribs->Attribute("BoxCommentStart"), wxConvUTF8 );
++    token.boxCommentMid = wxString( attribs->Attribute("BoxCommentMid"), wxConvUTF8 );
++    token.boxCommentEnd = wxString( attribs->Attribute("BoxCommentEnd"), wxConvUTF8 );
++
++    m_pTarget->SetCommentToken(language, token);
++}
+Index: sdk/resources/lexers/lexer_ada.xml
+===================================================================
+--- sdk/resources/lexers/lexer_ada.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_ada.xml	(working copy)
+@@ -94,5 +94,13 @@
+ 						breakpoint_line="32"
+ 						debug_line="35"
+ 						error_line="37"/>
++                <LanguageAttributes
++                    LineComment="--"
++                    StreamCommentStart=""
++                    StreamCommentEnd=""
++                    BoxCommentStart=""
++                    BoxCommentMid=""
++                    BoxCommentEnd=""
++                    CaseSensitive="0"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_angelscript.xml
+===================================================================
+--- sdk/resources/lexers/lexer_angelscript.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_angelscript.xml	(working copy)
+@@ -82,5 +82,12 @@
+ 								var verbatim verbinclude version warning weakgroup $ @ \ & < > # { }"/>
+ 				</Keywords>
+ 				<SampleCode value="lexer_angelscript.sample"/>
++				<LanguageAttributes
++                    LineComment="//"
++                    StreamCommentStart="/*"
++                    StreamCommentEnd="*/"
++                    BoxCommentStart="/* "
++                    BoxCommentMid=" * "
++                    BoxCommentEnd=" */"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_bash.xml
+===================================================================
+--- sdk/resources/lexers/lexer_bash.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_bash.xml	(working copy)
+@@ -87,5 +87,13 @@
+                                    sha1sum shred stat su tac unlink users vdir whoami yes"/>
+                 </Keywords>
+                 <SampleCode value="lexer_bash.sample"/>
++                <LanguageAttributes
++                    LineComment="#"
++                    StreamCommentStart=""
++                    StreamCommentEnd=""
++                    BoxCommentStart=""
++                    BoxCommentMid=""
++                    BoxCommentEnd=""
++                    CaseSensitive="1"/>
+         </Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_batch.xml
+===================================================================
+--- sdk/resources/lexers/lexer_batch.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_batch.xml	(working copy)
+@@ -43,5 +43,13 @@
+                                    rmdir rd shift time type ver verify vol com con lpt nul"/>
+                 </Keywords>
+                 <SampleCode value="lexer_batch.sample"/>
++                <LanguageAttributes
++                    LineComment="REM "
++                    StreamCommentStart=""
++                    StreamCommentEnd=""
++                    BoxCommentStart=""
++                    BoxCommentMid=""
++                    BoxCommentEnd=""
++                    CaseSensitive="0"/>
+         </Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_caml.xml
+===================================================================
+--- sdk/resources/lexers/lexer_caml.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_caml.xml	(working copy)
+@@ -85,5 +85,13 @@
+ 						breakpoint_line="20"
+ 						debug_line="22"
+ 						error_line="23"/>
++                <LanguageAttributes
++                    LineComment=""
++                    StreamCommentStart="(*"
++                    StreamCommentEnd="*)"
++                    BoxCommentStart="(* "
++                    BoxCommentMid=" * "
++                    BoxCommentEnd=" *)"
++                    CaseSensitive="1"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_cg.xml
+===================================================================
+--- sdk/resources/lexers/lexer_cg.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_cg.xml	(working copy)
+@@ -163,5 +163,12 @@
+ 				</Keywords>
+ 				<SampleCode value="lexer_cg.sample"
+ 						error_line="23"/>
++                <LanguageAttributes
++                    LineComment="//"
++                    StreamCommentStart="/*"
++                    StreamCommentEnd="*/"
++                    BoxCommentStart="/* "
++                    BoxCommentMid=" * "
++                    BoxCommentEnd=" */"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+\ No newline at end of file
+Index: sdk/resources/lexers/lexer_cpp.xml
+===================================================================
+--- sdk/resources/lexers/lexer_cpp.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_cpp.xml	(working copy)
+@@ -117,5 +117,13 @@
+ 						breakpoint_line="20"
+ 						debug_line="22"
+ 						error_line="23"/>
++                <LanguageAttributes
++                    LineComment="//"
++                    StreamCommentStart="/*"
++                    StreamCommentEnd="*/"
++                    BoxCommentStart="/* "
++                    BoxCommentMid=" * "
++                    BoxCommentEnd=" */"
++                    CaseSensitive="1"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_css.xml
+===================================================================
+--- sdk/resources/lexers/lexer_css.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_css.xml	(working copy)
+@@ -102,5 +102,13 @@
+                                    speak-punctuation speak-numeral"/>
+ 				</Keywords>
+                 <SampleCode value="lexer_css.sample"/>
++                <LanguageAttributes
++                    LineComment=""
++                    StreamCommentStart="/*"
++                    StreamCommentEnd="*/"
++                    BoxCommentStart="/* "
++                    BoxCommentMid=" * "
++                    BoxCommentEnd=" */"
++                    CaseSensitive="0"/>
+         </Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_d.xml
+===================================================================
+--- sdk/resources/lexers/lexer_d.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_d.xml	(working copy)
+@@ -112,5 +112,13 @@
+ 						breakpoint_line="20"
+ 						debug_line="22"
+ 						error_line="23"/>
++                <LanguageAttributes
++                    LineComment="//"
++                    StreamCommentStart="/*"
++                    StreamCommentEnd="*/"
++                    BoxCommentStart="/* "
++                    BoxCommentMid=" * "
++                    BoxCommentEnd=" */"
++                    CaseSensitive="1"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_diff.xml
+===================================================================
+--- sdk/resources/lexers/lexer_diff.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_diff.xml	(working copy)
+@@ -30,5 +30,13 @@
+                         index="6"
+                         fg="0,0,128"/>
+                 <SampleCode value="lexer_diff.sample"/>
++                <LanguageAttributes
++                    LineComment=""
++                    StreamCommentStart=""
++                    StreamCommentEnd=""
++                    BoxCommentStart=""
++                    BoxCommentMid=""
++                    BoxCommentEnd=""
++                    CaseSensitive="1"/>
+         </Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_f77.xml
+===================================================================
+--- sdk/resources/lexers/lexer_f77.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_f77.xml	(working copy)
+@@ -84,5 +84,13 @@
+ 						breakpoint_line="20"
+ 						debug_line="22"
+ 						error_line="23"/>
++                <LanguageAttributes
++                    LineComment="*"
++                    StreamCommentStart=""
++                    StreamCommentEnd=""
++                    BoxCommentStart=""
++                    BoxCommentMid=""
++                    BoxCommentEnd=""
++                    CaseSensitive="0"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_fortran.xml
+===================================================================
+--- sdk/resources/lexers/lexer_fortran.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_fortran.xml	(working copy)
+@@ -135,5 +135,13 @@
+ 						breakpoint_line="20"
+ 						debug_line="22"
+ 						error_line="23"/>
++                <LanguageAttributes
++                    LineComment="!"
++                    StreamCommentStart=""
++                    StreamCommentEnd=""
++                    BoxCommentStart=""
++                    BoxCommentMid=""
++                    BoxCommentEnd=""
++                    CaseSensitive="0"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_glsl.xml
+===================================================================
+--- sdk/resources/lexers/lexer_glsl.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_glsl.xml	(working copy)
+@@ -166,5 +166,13 @@
+ 
+ 				<SampleCode value="lexer_glsl.sample"
+ 						error_line="17"/>
++                <LanguageAttributes
++                    LineComment="//"
++                    StreamCommentStart="/*"
++                    StreamCommentEnd="*/"
++                    BoxCommentStart="/* "
++                    BoxCommentMid=" * "
++                    BoxCommentEnd=" */"
++                    CaseSensitive="1"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+\ No newline at end of file
+Index: sdk/resources/lexers/lexer_gm.xml
+===================================================================
+--- sdk/resources/lexers/lexer_gm.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_gm.xml	(working copy)
+@@ -67,5 +67,12 @@
+ 				</Keywords>
+ 				<SampleCode value="lexer_gm.sample"
+ 						error_line="9"/>
++                <LanguageAttributes
++                    LineComment="//"
++                    StreamCommentStart="/*"
++                    StreamCommentEnd="*/"
++                    BoxCommentStart="/* "
++                    BoxCommentMid=" * "
++                    BoxCommentEnd=" */"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_haskell.xml
+===================================================================
+--- sdk/resources/lexers/lexer_haskell.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_haskell.xml	(working copy)
+@@ -94,5 +94,13 @@
+ 						breakpoint_line="32"
+ 						debug_line="35"
+ 						error_line="37"/>
++                <LanguageAttributes
++                    LineComment="--"
++                    StreamCommentStart=""
++                    StreamCommentEnd=""
++                    BoxCommentStart=""
++                    BoxCommentMid=""
++                    BoxCommentEnd=""
++                    CaseSensitive="0"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_hitasm.xml
+===================================================================
+--- sdk/resources/lexers/lexer_hitasm.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_hitasm.xml	(working copy)
+@@ -77,5 +77,13 @@
+                 </Keywords>
+                 <SampleCode value="lexer_hitasm.sample"
+                         error_line="50"/>
++                <LanguageAttributes
++                    LineComment="//"
++                    StreamCommentStart="/*"
++                    StreamCommentEnd="*/"
++                    BoxCommentStart="/* "
++                    BoxCommentMid=" * "
++                    BoxCommentEnd=" */"
++                    CaseSensitive="1"/>
+         </Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_html.xml
+===================================================================
+--- sdk/resources/lexers/lexer_html.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_html.xml	(working copy)
+@@ -263,5 +263,13 @@
+                              __file__ __function__ __line__ __sleep __wakeup"/>
+                 </Keywords>
+                 <SampleCode value="lexer_html.sample"/>
++                <LanguageAttributes
++                    LineComment="//"
++                    StreamCommentStart="/*"
++                    StreamCommentEnd="*/"
++                    BoxCommentStart="/* "
++                    BoxCommentMid=" * "
++                    BoxCommentEnd=" */"
++                    CaseSensitive="0"/>
+         </Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_latex.xml
+===================================================================
+--- sdk/resources/lexers/lexer_latex.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_latex.xml	(working copy)
+@@ -45,5 +45,13 @@
+                index="-98"
+                bg="255,255,160"/>
+         <SampleCode value="lexer_latex.sample"/>
++        <LanguageAttributes
++            LineComment="%"
++            StreamCommentStart=""
++            StreamCommentEnd=""
++            BoxCommentStart=""
++            BoxCommentMid=""
++            BoxCommentEnd=""
++            CaseSensitive="1"/>
+     </Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_lisp.xml
+===================================================================
+--- sdk/resources/lexers/lexer_lisp.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_lisp.xml	(working copy)
+@@ -72,5 +72,13 @@
+ 						breakpoint_line="3"
+ 						debug_line="6"
+ 						error_line="7"/>
++                <LanguageAttributes
++                    LineComment=";"
++                    StreamCommentStart="#|"
++                    StreamCommentEnd="|#"
++                    BoxCommentStart="#| "
++                    BoxCommentMid=" | "
++                    BoxCommentEnd=" |#"
++                    CaseSensitive="0"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_lua.xml
+===================================================================
+--- sdk/resources/lexers/lexer_lua.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_lua.xml	(working copy)
+@@ -51,5 +51,13 @@
+ 				</Keywords>
+ 				<SampleCode value="lexer_lua.sample"
+ 						error_line="9"/>
++                <LanguageAttributes
++                    LineComment="--"
++                    StreamCommentStart="/*"
++                    StreamCommentEnd="*/"
++                    BoxCommentStart="/* "
++                    BoxCommentMid=" * "
++                    BoxCommentEnd=" */"
++                    CaseSensitive="1"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_make.xml
+===================================================================
+--- sdk/resources/lexers/lexer_make.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_make.xml	(working copy)
+@@ -30,5 +30,13 @@
+                         index="4"
+                         fg="255,0,0"/>
+                 <SampleCode value="lexer_make.sample"/>
++                <LanguageAttributes
++                    LineComment="#"
++                    StreamCommentStart=""
++                    StreamCommentEnd=""
++                    BoxCommentStart=""
++                    BoxCommentMid=""
++                    BoxCommentEnd=""
++                    CaseSensitive="1"/>
+         </Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_masm.xml
+===================================================================
+--- sdk/resources/lexers/lexer_masm.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_masm.xml	(working copy)
+@@ -180,5 +180,13 @@
+ 											unpckhpd unpckhps unpcklpd unpcklps xorpd xorps"/>
+                 </Keywords>
+                 <SampleCode value="lexer_masm.sample"/>
++                <LanguageAttributes
++                    LineComment=";"
++                    StreamCommentStart=""
++                    StreamCommentEnd=""
++                    BoxCommentStart=""
++                    BoxCommentMid=""
++                    BoxCommentEnd=""
++                    CaseSensitive="1"/>
+         </Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_matlab.xml
+===================================================================
+--- sdk/resources/lexers/lexer_matlab.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_matlab.xml	(working copy)
+@@ -203,5 +203,13 @@
+ 						breakpoint_line="10"
+ 						debug_line="8"
+ 						error_line="14"/>
++                <LanguageAttributes
++                    LineComment="%"
++                    StreamCommentStart="%{"
++                    StreamCommentEnd="}%"
++                    BoxCommentStart="%{ "
++                    BoxCommentMid="   "
++                    BoxCommentEnd=" }%"
++                    CaseSensitive="1"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_nsis.xml
+===================================================================
+--- sdk/resources/lexers/lexer_nsis.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_nsis.xml	(working copy)
+@@ -156,5 +156,12 @@
+                             value=""/>
+                 </Keywords>
+                 <SampleCode value="lexer_nsis.sample"/>
++                <LanguageAttributes
++                    LineComment=";"
++                    StreamCommentStart="/*"
++                    StreamCommentEnd="*/"
++                    BoxCommentStart="/* "
++                    BoxCommentMid=" * "
++                    BoxCommentEnd=" */"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_OgreCompositor.xml
+===================================================================
+--- sdk/resources/lexers/lexer_OgreCompositor.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_OgreCompositor.xml	(working copy)
+@@ -50,5 +50,12 @@
+ 						<Documentation index="2" value=""/>
+ 				</Keywords>
+ 				<SampleCode value="lexer_OgreCompositor.sample"/>
++				<LanguageAttributes
++                    LineComment="//"
++                    StreamCommentStart="/*"
++                    StreamCommentEnd="*/"
++                    BoxCommentStart="/* "
++                    BoxCommentMid=" * "
++                    BoxCommentEnd=" */"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_OgreMaterial.xml
+===================================================================
+--- sdk/resources/lexers/lexer_OgreMaterial.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_OgreMaterial.xml	(working copy)
+@@ -50,5 +50,12 @@
+ 						<Documentation index="2" value=""/>
+ 				</Keywords>
+ 				<SampleCode value="lexer_OgreMaterial.sample"/>
++				<LanguageAttributes
++                    LineComment="//"
++                    StreamCommentStart="/*"
++                    StreamCommentEnd="*/"
++                    BoxCommentStart="/* "
++                    BoxCommentMid=" * "
++                    BoxCommentEnd=" */"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_pascal.xml
+===================================================================
+--- sdk/resources/lexers/lexer_pascal.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_pascal.xml	(working copy)
+@@ -90,5 +90,13 @@
+ 						breakpoint_line="3"
+ 						debug_line="6"
+ 						error_line="7"/>
++                <LanguageAttributes
++                    LineComment="//"
++                    StreamCommentStart="{"
++                    StreamCommentEnd="}"
++                    BoxCommentStart="(* "
++                    BoxCommentMid=" * "
++                    BoxCommentEnd=" *)"
++                    CaseSensitive="0"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_perl.xml
+===================================================================
+--- sdk/resources/lexers/lexer_perl.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_perl.xml	(working copy)
+@@ -158,5 +158,13 @@
+                                    wait waitpid wantarray warn while write x xor y" />
+                 </Keywords>
+                 <SampleCode value="lexer_perl.sample"/>
++                <LanguageAttributes
++                    LineComment="#"
++                    StreamCommentStart=""
++                    StreamCommentEnd=""
++                    BoxCommentStart=""
++                    BoxCommentMid=""
++                    BoxCommentEnd=""
++                    CaseSensitive="1"/>
+         </Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_postscript.xml
+===================================================================
+--- sdk/resources/lexers/lexer_postscript.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_postscript.xml	(working copy)
+@@ -107,5 +107,13 @@
+ 						breakpoint_line="12"
+ 						debug_line="14"
+ 						error_line="18"/>
++                <LanguageAttributes
++                    LineComment="%"
++                    StreamCommentStart=""
++                    StreamCommentEnd=""
++                    BoxCommentStart=""
++                    BoxCommentMid=""
++                    BoxCommentEnd=""
++                    CaseSensitive="1"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_prg.xml
+===================================================================
+--- sdk/resources/lexers/lexer_prg.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_prg.xml	(working copy)
+@@ -102,5 +102,12 @@
+ 				</Keywords>
+ 				<SampleCode value="lexer_prg.sample"
+ 						error_line="25"/>
++                <LanguageAttributes
++                    LineComment=""
++                    StreamCommentStart=""
++                    StreamCommentEnd=""
++                    BoxCommentStart=""
++                    BoxCommentMid=""
++                    BoxCommentEnd=""/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_properties.xml
+===================================================================
+--- sdk/resources/lexers/lexer_properties.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_properties.xml	(working copy)
+@@ -24,5 +24,13 @@
+                         index="4"
+                         fg="128,128,0"/>
+                 <SampleCode value="lexer_properties.sample"/>
++                <LanguageAttributes
++                    LineComment="#"
++                    StreamCommentStart=""
++                    StreamCommentEnd=""
++                    BoxCommentStart=""
++                    BoxCommentMid=""
++                    BoxCommentEnd=""
++                    CaseSensitive="0"/>
+         </Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_python.xml
+===================================================================
+--- sdk/resources/lexers/lexer_python.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_python.xml	(working copy)
+@@ -170,5 +170,13 @@
+                                    py_compile compileall dis pickletools distutils"/>
+                 </Keywords>
+                 <SampleCode value="lexer_python.sample"/>
++                <LanguageAttributes
++                    LineComment="#"
++                    StreamCommentStart=""
++                    StreamCommentEnd=""
++                    BoxCommentStart=""
++                    BoxCommentMid=""
++                    BoxCommentEnd=""
++                    CaseSensitive="1"/>
+         </Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_rc.xml
+===================================================================
+--- sdk/resources/lexers/lexer_rc.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_rc.xml	(working copy)
+@@ -65,5 +65,12 @@
+ 				</Keywords>
+ 				<SampleCode value="lexer_rc.sample"
+ 						error_line="9"/>
++                <LanguageAttributes
++                    LineComment="//"
++                    StreamCommentStart="/*"
++                    StreamCommentEnd="*/"
++                    BoxCommentStart="/* "
++                    BoxCommentMid=" * "
++                    BoxCommentEnd=" */"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_ruby.xml
+===================================================================
+--- sdk/resources/lexers/lexer_ruby.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_ruby.xml	(working copy)
+@@ -134,5 +134,13 @@
+ 						breakpoint_line="3"
+ 						debug_line="4"
+ 						error_line="9"/>
++                <LanguageAttributes
++                    LineComment="#"
++                    StreamCommentStart="=begin"
++                    StreamCommentEnd="=end"
++                    BoxCommentStart="=begin"
++                    BoxCommentMid=""
++                    BoxCommentEnd="=end"
++                    CaseSensitive="1"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_smalltalk.xml
+===================================================================
+--- sdk/resources/lexers/lexer_smalltalk.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_smalltalk.xml	(working copy)
+@@ -99,5 +99,13 @@
+ 						breakpoint_line="12"
+ 						debug_line="17"
+ 						error_line="23"/>
++                <LanguageAttributes
++                    LineComment=""
++                    StreamCommentStart="&quot;"
++                    StreamCommentEnd="&quot;"
++                    BoxCommentStart="&quot;"
++                    BoxCommentMid=""
++                    BoxCommentEnd="&quot;"
++                    CaseSensitive="1"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_sql.xml
+===================================================================
+--- sdk/resources/lexers/lexer_sql.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_sql.xml	(working copy)
+@@ -18,5 +18,12 @@
+ 		    <Set index="1" value=""/>
+                 </Keywords>
+                 <SampleCode value="lexer_sql.sample"/>
++            <LanguageAttributes
++                    LineComment="--"
++                    StreamCommentStart=""
++                    StreamCommentEnd=""
++                    BoxCommentStart=""
++                    BoxCommentMid=""
++                    BoxCommentEnd=""/>
+         </Lexer>
+ </CodeBlocks_lexer_properties>
+\ No newline at end of file
+Index: sdk/resources/lexers/lexer_squirrel.xml
+===================================================================
+--- sdk/resources/lexers/lexer_squirrel.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_squirrel.xml	(working copy)
+@@ -88,5 +88,12 @@
+ 								var verbatim verbinclude version warning weakgroup $ @ \ & < > # { }"/>
+ 				</Keywords>
+ 				<SampleCode value="lexer_squirrel.sample"/>
++				<LanguageAttributes
++                    LineComment="//"
++                    StreamCommentStart="/*"
++                    StreamCommentEnd="*/"
++                    BoxCommentStart="/* "
++                    BoxCommentMid=" * "
++                    BoxCommentEnd=" */"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_vbscript.xml
+===================================================================
+--- sdk/resources/lexers/lexer_vbscript.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_vbscript.xml	(working copy)
+@@ -150,5 +150,13 @@
+ 						breakpoint_line="7"
+ 						debug_line="10"
+ 						error_line="12"/>
++                <LanguageAttributes
++                    LineComment="'"
++                    StreamCommentStart=""
++                    StreamCommentEnd=""
++                    BoxCommentStart=""
++                    BoxCommentMid=""
++                    BoxCommentEnd=""
++                    CaseSensitive="0"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_verilog.xml
+===================================================================
+--- sdk/resources/lexers/lexer_verilog.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_verilog.xml	(working copy)
+@@ -112,5 +112,13 @@
+                 breakpoint_line="8"
+                 debug_line="10"
+                 error_line="11" />
++    <LanguageAttributes
++        LineComment="//"
++        StreamCommentStart="/*"
++        StreamCommentEnd="*/"
++        BoxCommentStart="/* "
++        BoxCommentMid=" * "
++        BoxCommentEnd=" */"
++        CaseSensitive="1"/>
+   </Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_vhdl.xml
+===================================================================
+--- sdk/resources/lexers/lexer_vhdl.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_vhdl.xml	(working copy)
+@@ -120,5 +120,13 @@
+                 breakpoint_line="32"
+                 debug_line="35"
+                 error_line="37" />
++    <LanguageAttributes
++        LineComment="--"
++        StreamCommentStart=""
++        StreamCommentEnd=""
++        BoxCommentStart=""
++        BoxCommentMid=""
++        BoxCommentEnd=""
++        CaseSensitive="0"/>
+   </Lexer>
+ </CodeBlocks_lexer_properties>
+Index: sdk/resources/lexers/lexer_xml.xml
+===================================================================
+--- sdk/resources/lexers/lexer_xml.xml	(revision 5414)
++++ sdk/resources/lexers/lexer_xml.xml	(working copy)
+@@ -40,5 +40,13 @@
+                         fg="0,0,0"
+                         italics="1"/>
+ 				<SampleCode value="lexer_xml.sample"/>
++				<LanguageAttributes
++                    LineComment=""
++                    StreamCommentStart="&lt;!--"
++                    StreamCommentEnd="--&gt;"
++                    BoxCommentStart="&lt;!-- "
++                    BoxCommentMid="  -- "
++                    BoxCommentEnd="  --&gt;"
++                    CaseSensitive="1"/>
+         </Lexer>
+ </CodeBlocks_lexer_properties>
+Index: src/main.cpp
+===================================================================
+--- src/main.cpp	(revision 5414)
++++ src/main.cpp	(working copy)
+@@ -2974,179 +2974,6 @@
+         eb->SelectAll();
+ }
+ 
+-CommentToken GetCommentToken(cbStyledTextCtrl* stc)
+-{
+-    CommentToken comment;
+-    comment.lineComment        = _T("");
+-    comment.streamCommentStart = _T("");
+-    comment.streamCommentEnd   = _T("");
+-    comment.boxCommentStart    = _T("");
+-    comment.boxCommentMid      = _T("");
+-    comment.boxCommentEnd      = _T("");
+-
+-    switch(stc->GetLexer())
+-    {
+-        case wxSCI_LEX_CONTAINER:  comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_NULL:       comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_PYTHON:     comment.lineComment = _T("#"); break;
+-        case wxSCI_LEX_CPP:
+-            comment.lineComment        = _T("//");
+-            comment.streamCommentStart = _T("/*");
+-            comment.streamCommentEnd   = _T("*/");
+-            comment.boxCommentStart    = _T("/* ");
+-            comment.boxCommentMid      = _T(" * ");
+-            comment.boxCommentEnd      = _T(" */");
+-            break;
+-        case wxSCI_LEX_HTML:
+-            comment.lineComment        = _T("//");
+-            comment.streamCommentStart = _T("/*");
+-            comment.streamCommentEnd   = _T("*/");
+-            comment.boxCommentStart    = _T("/* ");
+-            comment.boxCommentMid      = _T(" * ");
+-            comment.boxCommentEnd      = _T(" */");
+-            break; // PHP uses HTML lexer
+-        case wxSCI_LEX_XML:
+-            comment.streamCommentStart = _T("<!--");
+-            comment.streamCommentEnd   = _T("-->");
+-            comment.boxCommentStart    = _T("<!-- ");
+-            comment.boxCommentMid      = _T("  -- ");
+-            comment.boxCommentEnd      = _T("  -->");
+-            break;
+-        case wxSCI_LEX_PERL:       comment.lineComment = _T("#"); break;
+-        case wxSCI_LEX_SQL:        comment.lineComment = _T("--"); break;
+-        case wxSCI_LEX_VB:         comment.lineComment = _T("'"); break;
+-        case wxSCI_LEX_PROPERTIES: comment.lineComment = _T("#"); break;
+-        case wxSCI_LEX_ERRORLIST:  comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_MAKEFILE:   comment.lineComment = _T("#"); break;
+-        case wxSCI_LEX_BATCH:      comment.lineComment = _T("REM "); break;
+-        case wxSCI_LEX_XCODE:      comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_LATEX:      comment.lineComment = _T("%"); break;
+-        case wxSCI_LEX_LUA:
+-            comment.lineComment        = _T("--");
+-            comment.streamCommentStart = _T("/*");
+-            comment.streamCommentEnd   = _T("*/");
+-            comment.boxCommentStart    = _T("/* ");
+-            comment.boxCommentMid      = _T(" * ");
+-            comment.boxCommentEnd      = _T(" */");
+-            break;
+-        case wxSCI_LEX_DIFF:       comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_CONF:       comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_PASCAL:
+-            comment.lineComment        = _T("//");  //delphi style lineComments, otherwise use { } or (* and *)
+-            comment.streamCommentStart = _T("{");
+-            comment.streamCommentEnd   = _T("}");
+-            comment.boxCommentStart    = _T("(* ");
+-            comment.boxCommentMid      = _T(" * ");
+-            comment.boxCommentEnd      = _T(" *)");
+-            break;
+-        case wxSCI_LEX_AVE:        comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_ADA:        comment.lineComment = _T("--"); break;
+-        case wxSCI_LEX_LISP:
+-            comment.lineComment        = _T(";");
+-            comment.streamCommentStart = _T("#|");
+-            comment.streamCommentEnd   = _T("|#");
+-            comment.boxCommentStart    = _T("#| ");
+-            comment.boxCommentMid      = _T(" | ");
+-            comment.boxCommentEnd      = _T(" |#");
+-            break;
+-        case wxSCI_LEX_RUBY:
+-            comment.lineComment        = _T("#");
+-            comment.boxCommentStart    = _T("=begin");
+-            comment.boxCommentEnd      = _T("=end");
+-            break;
+-        case wxSCI_LEX_EIFFEL:     comment.lineComment = _T("--"); break;
+-        case wxSCI_LEX_EIFFELKW:   comment.lineComment = _T("--"); break;
+-        case wxSCI_LEX_TCL:        comment.lineComment = _T("#"); break;
+-        case wxSCI_LEX_NNCRONTAB:  comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_BULLANT:    comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_VBSCRIPT:   comment.lineComment = _T("'"); break;
+-        case wxSCI_LEX_BAAN:       comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_MATLAB:
+-            comment.lineComment        = _T("%");
+-            comment.streamCommentStart = _T("%{");
+-            comment.streamCommentEnd   = _T("}%");
+-            comment.boxCommentStart    = _T("%{ ");
+-            comment.boxCommentEnd      = _T(" }%");
+-            break;
+-        case wxSCI_LEX_SCRIPTOL:   comment.lineComment = _T("`"); break;
+-        case wxSCI_LEX_ASM:        comment.lineComment = _T(";"); break;
+-        case wxSCI_LEX_CPPNOCASE:
+-            comment.lineComment        = _T("//");
+-            comment.streamCommentStart = _T("/*");
+-            comment.streamCommentEnd   = _T("*/");
+-            comment.boxCommentStart    = _T("/* ");
+-            comment.boxCommentMid      = _T(" * ");
+-            comment.boxCommentEnd      = _T(" */");
+-            break;
+-        case wxSCI_LEX_FORTRAN:    comment.lineComment = _T("!"); break;
+-        case wxSCI_LEX_CSS:
+-            comment.lineComment        = _T("");
+-            comment.streamCommentStart = _T("/*");
+-            comment.streamCommentEnd   = _T("*/");
+-            comment.boxCommentStart    = _T("/* ");
+-            comment.boxCommentMid      = _T(" * ");
+-            comment.boxCommentEnd      = _T(" */");
+-            break;
+-        case wxSCI_LEX_POV:
+-            comment.lineComment        = _T("//"); // original here was "//@-" don't know why
+-            comment.streamCommentStart = _T("/*");
+-            comment.streamCommentEnd   = _T("*/");
+-            comment.boxCommentStart    = _T("/* ");
+-            comment.boxCommentMid      = _T(" * ");
+-            comment.boxCommentEnd      = _T(" */");
+-            break;
+-        case wxSCI_LEX_LOUT:       comment.lineComment = _T("#"); break;
+-        case wxSCI_LEX_ESCRIPT:    comment.lineComment = _T(""); break; //couldn't find
+-        case wxSCI_LEX_PS:         comment.lineComment = _T("%"); break; // not sure if it's only one % or multiple
+-        case wxSCI_LEX_NSIS:       comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_MMIXAL:     comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_CLW:        comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_CLWNOCASE:  comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_LOT:        comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_YAML:       comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_TEX:        comment.lineComment = _T("%"); break;
+-        case wxSCI_LEX_METAPOST:   comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_POWERBASIC: comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_FORTH:      comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_ERLANG:     comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_OCTAVE:     comment.lineComment = _T("#"); break; // or '%'
+-        case wxSCI_LEX_MSSQL:      comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_VERILOG:    comment.lineComment = _T("//"); break;
+-        case wxSCI_LEX_KIX:        comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_SPECMAN:    comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_APDL:       comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_BASH:       comment.lineComment = _T("#"); break;
+-        case wxSCI_LEX_VHDL:       comment.lineComment = _T("--"); break;
+-        case wxSCI_LEX_CAML:       comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_BLITZBASIC: comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_PUREBASIC:  comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_HASKELL:    comment.lineComment = _T("--"); break;
+-        case wxSCI_LEX_PHPSCRIPT:
+-            comment.lineComment        = _T("#");
+-            //comment.lineComment        = _T("//");
+-            comment.streamCommentStart = _T("/*");
+-            comment.streamCommentEnd   = _T("*/");
+-            comment.boxCommentStart    = _T("/* ");
+-            comment.boxCommentMid      = _T(" * ");
+-            comment.boxCommentEnd      = _T(" */");
+-            break;
+-        case wxSCI_LEX_REBOL:      comment.lineComment = _T(""); break; // couldn't find
+-        case wxSCI_LEX_SMALLTALK:  comment.lineComment = _T(""); break; // uses double quotes at start and end i.e. "lineComment"
+-        case wxSCI_LEX_FLAGSHIP:   comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_CSOUND:     comment.lineComment = _T(""); break;
+-        case wxSCI_LEX_FREEBASIC:  comment.lineComment = _T(""); break;
+-        default: // Let the user decide if he wants to lineComment or not
+-            comment.lineComment        = _T("//");
+-            comment.streamCommentStart = _T("/*");
+-            comment.streamCommentEnd   = _T("*/");
+-            comment.boxCommentStart    = _T("/* ");
+-            comment.boxCommentMid      = _T(" * ");
+-            comment.boxCommentEnd      = _T(" */");
+-    }
+-    return comment;
+-}
+-
+-
+ /* This is a shameless rip-off of the original OnEditCommentSelected function,
+  * now more suitingly named OnEditToggleCommentSelected (because that's what
+  * it does :)
+@@ -3157,7 +2984,8 @@
+     if (ed)
+     {
+         cbStyledTextCtrl* stc = ed->GetControl();
+-        CommentToken comment=GetCommentToken(stc);
++        CommentToken comment =
++            Manager::Get()->GetEditorManager()->GetColourSet()->GetCommentToken( ed->GetLanguage() );
+         if(comment.lineComment==wxEmptyString && comment.streamCommentStart==wxEmptyString)
+             return;
+ 
+@@ -3206,7 +3034,9 @@
+     if (ed)
+     {
+         cbStyledTextCtrl* stc = ed->GetControl();
+-        CommentToken comment=GetCommentToken(stc);
++        CommentToken comment =
++            Manager::Get()->GetEditorManager()->GetColourSet()->GetCommentToken( ed->GetLanguage() );
++
+         if(comment.lineComment==wxEmptyString && comment.streamCommentStart==wxEmptyString)
+             return;
+ 
+@@ -3290,7 +3120,8 @@
+     if (ed)
+     {
+         cbStyledTextCtrl* stc = ed->GetControl();
+-        wxString comment=GetCommentToken(stc).lineComment;
++        wxString comment =
++            Manager::Get()->GetEditorManager()->GetColourSet()->GetCommentToken( ed->GetLanguage() ).lineComment;
+         if(comment==wxEmptyString)
+             return;
+ 
+@@ -3347,7 +3178,8 @@
+     if (ed)
+     {
+         cbStyledTextCtrl* stc = ed->GetControl();
+-        CommentToken comment=GetCommentToken(stc);
++        CommentToken comment =
++            Manager::Get()->GetEditorManager()->GetColourSet()->GetCommentToken( ed->GetLanguage() );
+         if(comment.streamCommentStart==wxEmptyString)
+             return;
+ 
+@@ -3392,7 +3224,8 @@
+     {
+ 
+         cbStyledTextCtrl* stc = ed->GetControl();
+-        CommentToken comment=GetCommentToken(stc);
++        CommentToken comment =
++            Manager::Get()->GetEditorManager()->GetColourSet()->GetCommentToken( ed->GetLanguage() );
+         if(comment.boxCommentStart==wxEmptyString)
+             return;
+ 
+Index: src/main.h
+===================================================================
+--- src/main.h	(revision 5414)
++++ src/main.h	(working copy)
+@@ -26,15 +26,6 @@
+ WX_DECLARE_HASH_MAP(cbPlugin*, wxToolBar*, wxPointerHash, wxPointerEqual, PluginToolbarsMap);
+ WX_DECLARE_STRING_HASH_MAP(wxString, LayoutViewsMap);
+ 
+-struct CommentToken {
+-    wxString lineComment;
+-    wxString streamCommentStart;
+-    wxString streamCommentEnd;
+-    wxString boxCommentStart;
+-    wxString boxCommentMid;
+-    wxString boxCommentEnd;
+-};
+-
+ extern int idStartHerePageLink;
+ extern int idStartHerePageVarSubst;
+ 

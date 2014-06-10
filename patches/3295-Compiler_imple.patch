@@ -1,0 +1,29 @@
+Index: src/plugins/compilergcc/compileroptionsdlg.cpp
+===================================================================
+--- src/plugins/compilergcc/compileroptionsdlg.cpp	(revision 8059)
++++ src/plugins/compilergcc/compileroptionsdlg.cpp	(working copy)
+@@ -1411,6 +1411,24 @@
+     if (copt)
+     {
+         copt->enabled = list->IsChecked(sel);
++        if (copt->doChecks && copt->enabled)
++        {
++            wxArrayString check = GetArrayFromString(copt->checkAgainst, _T(" "));
++            for (size_t i = 0; i < check.Count(); i++)
++            {
++                CompOption* against = m_Options.GetOptionByOption(check[i]);
++                if (against && against->enabled)
++                {
++                    AnnoyingDialog dlg(_("Compiler options conflict"),
++                                       copt->checkMessage,
++                                       wxART_INFORMATION,
++                                       AnnoyingDialog::OK,
++                                       wxID_OK);
++                    dlg.ShowModal();
++                    break;
++                }
++            }
++        }
+     }
+     m_bDirty = true;
+ } // OnOptionToggled

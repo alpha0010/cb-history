@@ -1,0 +1,130 @@
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 6574)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -656,6 +656,7 @@
+ const int idProperties = wxNewId();
+ const int idAddFileToProject = wxNewId();
+ const int idRemoveFileFromProject = wxNewId();
++const int idShowFileInProject = wxNewId();
+ 
+ const int idBookmarkAdd = wxNewId();
+ const int idBookmarkRemove = wxNewId();
+@@ -692,6 +693,7 @@
+     EVT_MENU(idProperties, cbEditor::OnContextMenuEntry)
+     EVT_MENU(idAddFileToProject, cbEditor::OnContextMenuEntry)
+     EVT_MENU(idRemoveFileFromProject, cbEditor::OnContextMenuEntry)
++    EVT_MENU(idShowFileInProject, cbEditor::OnContextMenuEntry)
+     EVT_MENU(idBookmarkAdd, cbEditor::OnContextMenuEntry)
+     EVT_MENU(idBookmarkRemove, cbEditor::OnContextMenuEntry)
+     EVT_MENU(idBreakpointAdd, cbEditor::OnContextMenuEntry)
+@@ -2692,6 +2694,7 @@
+             {
+                 popup->Append(idRemoveFileFromProject, _("Remove file from project"));
+                 popup->Enable(idRemoveFileFromProject, isAddRemoveEnabled);
++                popup->Append(idShowFileInProject, _("Show file in the project tree"));
+             }
+             else
+             {
+@@ -2951,6 +2954,19 @@
+             Manager::Get()->GetProjectManager()->RebuildTree();
+         }
+     }
++    else if (id == idShowFileInProject)
++    {
++        wxTreeCtrl* tree = Manager::Get()->GetProjectManager()->GetTree();
++        if (m_pProjectFile && tree)
++        {
++            const wxTreeItemId &itemId = m_pProjectFile->GetTreeItemId();
++            if (itemId.IsOk())
++            {
++                tree->EnsureVisible(itemId);
++                tree->SelectItem(itemId, true);
++            }
++        }
++    }
+     else if (id == idBreakpointAdd)
+         AddBreakpoint(m_pData->m_LastMarginMenuLine);
+     else if (id == idBreakpointEdit)
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(revision 6574)
++++ src/sdk/editormanager.cpp	(working copy)
+@@ -151,6 +151,7 @@
+ static const int idNBProperties = wxNewId();
+ static const int idNBAddFileToProject = wxNewId();
+ static const int idNBRemoveFileFromProject = wxNewId();
++static const int idNBShowFileInTree = wxNewId();
+ 
+ /** *******************************************************
+   * struct EditorManagerInternalData                      *
+@@ -196,6 +197,7 @@
+     EVT_MENU(idNBProperties, EditorManager::OnProperties)
+     EVT_MENU(idNBAddFileToProject, EditorManager::OnAddFileToProject)
+     EVT_MENU(idNBRemoveFileFromProject, EditorManager::OnRemoveFileFromProject)
++    EVT_MENU(idNBShowFileInTree, EditorManager::OnShowFileInTree)
+     EVT_MENU(idEditorManagerCheckFiles, EditorManager::OnCheckForModifiedFiles)
+ END_EVENT_TABLE()
+ 
+@@ -2830,8 +2832,12 @@
+         {
+             pop->AppendSeparator();
+ 
+-            if (ed->GetProjectFile())
++            ProjectFile *projectFile = ed->GetProjectFile();
++            if (projectFile)
++            {
+                 pop->Append(idNBRemoveFileFromProject, _("Remove file from project"));
++                pop->Append(idNBShowFileInTree, _("Show file in the project tree"));
++            }
+             else
+                 pop->Append(idNBAddFileToProject, _("Add file to active project"));
+         }
+@@ -2941,6 +2947,21 @@
+     }
+ }
+ 
++void EditorManager::OnShowFileInTree(wxCommandEvent& event)
++{
++    ProjectFile* pf = GetBuiltinActiveEditor()->GetProjectFile();
++    wxTreeCtrl* tree = Manager::Get()->GetProjectManager()->GetTree();
++    if (pf && tree) // should be in any case, otherwise something went wrong between popup menu creation and here
++    {
++        const wxTreeItemId &itemId = pf->GetTreeItemId();
++        if (itemId.IsOk())
++        {
++            tree->EnsureVisible(itemId);
++            tree->SelectItem(itemId, true);
++        }
++    }
++}
++
+ void EditorManager::OnAppDoneStartup(wxCommandEvent& event)
+ {
+     event.Skip(); // allow others to process it too
+Index: src/include/projectfile.h
+===================================================================
+--- src/include/projectfile.h	(revision 6574)
++++ src/include/projectfile.h	(working copy)
+@@ -175,6 +175,9 @@
+ 
+         /** Auto-generated files when compiling this file */
+         ProjectFilesVector generatedFiles;
++
++        /** Returns the wxTreeItemId for the file */
++        const wxTreeItemId& GetTreeItemId() const { return m_TreeItemId; }
+     protected:
+         friend class cbProject;
+ 
+Index: src/include/editormanager.h
+===================================================================
+--- src/include/editormanager.h	(revision 6574)
++++ src/include/editormanager.h	(working copy)
+@@ -159,6 +159,7 @@
+         void OnProperties(wxCommandEvent& event);
+         void OnAddFileToProject(wxCommandEvent& event);
+         void OnRemoveFileFromProject(wxCommandEvent& event);
++        void OnShowFileInTree(wxCommandEvent& event);
+         void OnAppDoneStartup(wxCommandEvent& event);
+         void OnAppStartShutdown(wxCommandEvent& event);
+         void OnUpdateUI(wxUpdateUIEvent& event);

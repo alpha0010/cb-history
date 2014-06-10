@@ -1,0 +1,33 @@
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 3367)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -1409,6 +1409,28 @@
+         }
+         return true;
+     }
++    //Lets check if the folded code is a sub-fold from a main fold?
++    //We can include this in the top check list but will propably hinder
++    //if you want to do some custom code for the inner folds instead of the main folds
++    if ((level & wxSCI_FOLDLEVELHEADERFLAG) &&
++        (wxSCI_FOLDLEVELBASE < (level & wxSCI_FOLDLEVELNUMBERMASK))) //Is it a sub-level
++    {
++        bool expand = false;
++        int maxLine = m_pControl->GetLastChild(line, -1);
++        if (fold == 2) // toggle
++            expand = !m_pControl->GetFoldExpanded(line);
++        else
++            expand = fold == 0;
++        m_pControl->SetFoldExpanded(line, expand);
++        if (maxLine > line)
++        {
++            if (expand)
++                m_pControl->ShowLines(line + 1, maxLine);
++            else
++                m_pControl->HideLines(line + 1, maxLine);
++        }
++        return true;
++    }
+     return false;
+ }
+ 

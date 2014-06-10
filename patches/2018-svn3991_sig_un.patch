@@ -1,0 +1,147 @@
+Index: plugins/compilergcc/compilermessages.cpp
+===================================================================
+--- plugins/compilergcc/compilermessages.cpp	(revision 3991)
++++ plugins/compilergcc/compilermessages.cpp	(working copy)
+@@ -100,7 +100,11 @@
+ 
+         // file:line: msg
+         text << m_pList->GetItemText(i) << _T(':') << line << _T(": ");
+-        text << msg << _T('\n');
++        text << msg;
++#ifdef __WIN32__
++        text << _T('\r'); // Add CR for Windows clipboard
++#endif
++        text << _T('\n');
+     }
+ 
+     if (!text.IsEmpty() && wxTheClipboard->Open())
+Index: plugins/compilergcc/compileroptionsdlg.cpp
+===================================================================
+--- plugins/compilergcc/compileroptionsdlg.cpp	(revision 3991)
++++ plugins/compilergcc/compileroptionsdlg.cpp	(working copy)
+@@ -857,7 +857,7 @@
+ 
+     // linker options and libs
+     wxListBox* lstLibs = XRCCTRL(*this, "lstLibs", wxListBox);
+-    for (int i = 0; i < lstLibs->GetCount(); ++i)
++    for (unsigned int i = 0; i < lstLibs->GetCount(); ++i)
+         m_LinkLibs.Add(lstLibs->GetString(i));
+ }
+ 
+@@ -1407,7 +1407,7 @@
+     if (!base)
+         return;
+     wxNotebook* nb = XRCCTRL(*this, "nbDirs", wxNotebook);
+-    for (int i = 0; i < control->GetCount(); ++i)
++    for (unsigned int i = 0; i < control->GetCount(); ++i)
+     {
+         switch (nb->GetSelection())
+         {
+@@ -1505,7 +1505,7 @@
+                         wxYES | wxNO | wxICON_QUESTION) == wxID_YES)
+     {
+         // Unset all variables of lstVars
+-        for (int i=0; i<lstVars->GetCount(); i++)
++        for (unsigned int i=0; i<lstVars->GetCount(); i++)
+         {
+             wxString key = lstVars->GetString(i).BeforeFirst(_T('=')).Trim(true);
+             if (!key.IsEmpty())
+@@ -1553,7 +1553,8 @@
+                 break;
+         } // end switch
+     }
+-    wxChoice* cmb = XRCCTRL(*this, "cmbCompiler", wxChoice);
++    wxChoice* cmb = 0;
++    cmb = XRCCTRL(*this, "cmbCompiler", wxChoice);
+     wxString value = wxGetTextFromUser(_("Please enter the new compiler's name:"),
+                                     _("Add new compiler"),
+                                     _("Copy of ") + CompilerFactory::GetCompiler(m_CurrentCompilerIdx)->GetName());
+@@ -1618,7 +1619,7 @@
+         int compilerIdx = m_CurrentCompilerIdx;
+         CompilerFactory::RemoveCompiler(CompilerFactory::GetCompiler(compilerIdx));
+         cmb->Delete(compilerIdx);
+-        while (compilerIdx >= cmb->GetCount())
++        while (compilerIdx >= (int)(cmb->GetCount()))
+             --compilerIdx;
+         cmb->SetSelection(compilerIdx);
+         m_CurrentCompilerIdx = compilerIdx;
+@@ -1747,7 +1748,7 @@
+                                 : reinterpret_cast<CompileOptionsBase*>(m_pProject->GetBuildTarget(sel));
+     if (!base)
+         return;
+-    for (int i = 0; i < lstLibs->GetCount(); ++i)
++    for (unsigned int i = 0; i < lstLibs->GetCount(); ++i)
+     {
+         base->AddLinkLib(lstLibs->GetString(i));
+     }
+@@ -1854,7 +1855,7 @@
+ void CompilerOptionsDlg::OnMoveLibDownClick(wxSpinEvent& /*event*/)
+ {
+     wxListBox* lstLibs = XRCCTRL(*this, "lstLibs", wxListBox);
+-    if (lstLibs->GetSelection() == lstLibs->GetCount() - 1)
++    if (lstLibs->GetSelection() == (int)(lstLibs->GetCount()) - 1)
+         return;
+     int sel = lstLibs->GetSelection();
+     wxString lib = lstLibs->GetStringSelection();
+@@ -1880,7 +1881,7 @@
+ void CompilerOptionsDlg::OnMoveDirDownClick(wxSpinEvent& /*event*/)
+ {
+     wxListBox* lst = GetDirsListBox();
+-    if (!lst || lst->GetSelection() == lst->GetCount() - 1)
++    if (!lst || lst->GetSelection() == (int)(lst->GetCount()) - 1)
+         return;
+     int sel = lst->GetSelection();
+     wxString lib = lst->GetStringSelection();
+Index: sdk/configuretoolsdlg.cpp
+===================================================================
+--- sdk/configuretoolsdlg.cpp	(revision 3991)
++++ sdk/configuretoolsdlg.cpp	(working copy)
+@@ -93,7 +93,7 @@
+ 	const wxListBox* list = XRCCTRL(*this, "lstTools", wxListBox);
+ 	bool hasSel = list->GetSelection() != -1;
+ 	bool notFirst = list->GetSelection() > 0;
+-	bool notLast = (list->GetSelection() < list->GetCount() -1) && hasSel;
++	bool notLast = (list->GetSelection() < (int)(list->GetCount()) -1) && hasSel;
+ 	bool notSeparator = true;
+ 
+ 	if(hasSel)
+Index: sdk/projectoptionsdlg.cpp
+===================================================================
+--- sdk/projectoptionsdlg.cpp	(revision 3991)
++++ sdk/projectoptionsdlg.cpp	(working copy)
+@@ -108,7 +108,7 @@
+ 	m_pCompiler(0L)
+ {
+ 	wxXmlResource::Get()->LoadDialog(this, parent, _T("dlgProjectOptions"));
+-    
++
+     wxCheckListBox* list = XRCCTRL(*this, "lstFiles", wxCheckListBox);
+     int count = m_Project->GetFilesCount();
+     for (int i = 0; i < count; ++i)
+@@ -754,7 +754,7 @@
+     ProjectBuildTarget* target = m_Project->GetBuildTarget(targetIdx);
+ 
+     wxCheckListBox* list = XRCCTRL(*this, "lstFiles", wxCheckListBox);
+-    for (int i = 0; i < list->GetCount(); ++i)
++    for (unsigned int i = 0; i < list->GetCount(); ++i)
+ 	{
+ 		ProjectFile* pf = m_Project->GetFile(i);
+ 		list->Check(i, !list->IsChecked(i));
+@@ -917,7 +917,7 @@
+     base->RemoveBuildScript(script);
+     int isel = ctrl->GetSelection();
+     ctrl->Delete(isel);
+-    ctrl->SetSelection(isel < ctrl->GetCount() ? isel : --isel );
++    ctrl->SetSelection(isel < (int)(ctrl->GetCount()) ? isel : --isel );
+ }
+ 
+ void ProjectOptionsDlg::OnPlatform(wxCommandEvent& event)
+@@ -978,7 +978,7 @@
+ void ProjectOptionsDlg::OnScriptMoveDown(wxSpinEvent& event)
+ {
+     wxListBox* ctrl = XRCCTRL(*this, "lstPreScripts", wxListBox);
+-    if (!ctrl || ctrl->GetSelection() == ctrl->GetCount() - 1)
++    if (!ctrl || ctrl->GetSelection() == (int)(ctrl->GetCount()) - 1)
+         return;
+ 
+ 	wxTreeCtrl* tc = XRCCTRL(*this, "tcOverview", wxTreeCtrl);

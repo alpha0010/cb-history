@@ -1,0 +1,22 @@
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 8250)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -2569,6 +2569,8 @@
+     // if we haven't found it, we 'll search at pos-1 too
+     if (matchingBrace == wxSCI_INVALID_POSITION)
+         matchingBrace = control->BraceMatch(control->GetCurrentPos() - 1);
++    else
++        ++matchingBrace; // to keep the caret on the same side of the brace
+ 
+     // else look for a matching preprocessor command
+     if (matchingBrace == wxSCI_INVALID_POSITION)
+@@ -2597,7 +2599,7 @@
+         else if (ppEnd.Matches(control->GetCurLine()))
+         {
+             int depth = -1; // search backwards
+-            for (int i = control->GetCurrentLine() - 1; i > 0; --i)
++            for (int i = control->GetCurrentLine() - 1; i >= 0; --i)
+             {
+                 if (ppIf.Matches(control->GetLine(i))) // ignore else's, elif's, ...
+                     ++depth;

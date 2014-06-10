@@ -1,0 +1,106 @@
+diff -urN src/plugins/debuggergdb/gdb_commands.h src/plugins/debuggergdb/gdb_commands.h
+--- src/plugins/debuggergdb/gdb_commands.h	2007-02-02 16:40:17.000000000 +0100
++++ src/plugins/debuggergdb/gdb_commands.h	2007-02-02 16:40:05.000000000 +0100
+@@ -130,8 +130,8 @@
+ //  ebx at 0x22ff6c, ebp at 0x22ff78, esi at 0x22ff70, edi at 0x22ff74, eip at 0x22ff7c
+ static wxRegEx reDisassemblyInit(_T("^Stack level [0-9]+, frame at (0x[A-Fa-f0-9]+):"));
+ static wxRegEx reDisassemblyInitFunc(_T("eip = (0x[A-Fa-f0-9]+) in ([^;]*)"));
+-// or32 variant
+-#ifdef __WXMSW__
++// or32/ba variant
++#if (defined(__WXMSW__) || defined(__LINUX__))
+ static wxRegEx reDisassemblyInitFuncOR32(_T("PC = (0x[A-Fa-f0-9]+) in ([^;]*)"));
+ #endif
+ //    Using the running image of child Thread 46912568064384 (LWP 7051).
+@@ -932,8 +932,9 @@
+ 
+     public:
+         /** @param dlg The disassembly dialog. */
+-#ifdef __WXMSW__
++#if (defined(__WXMSW__) || defined(__LINUX__))
+         // only tested on mingw/pc/win env
++        // tested allso on gcc/pc/linux env
+         GdbCmd_InfoRegisters(DebuggerDriver* driver, CPURegistersDlg* dlg, wxString disassemblyFlavor)
+ #else
+         GdbCmd_InfoRegisters(DebuggerDriver* driver, CPURegistersDlg* dlg)
+@@ -942,7 +943,7 @@
+             m_pDlg(dlg)
+         {
+             m_Cmd << _T("info registers");
+-#ifdef __WXMSW__
++#if (defined(__WXMSW__) || defined(__LINUX__))
+             m_disassemblyFlavor = disassemblyFlavor;
+ #endif
+         }
+@@ -969,8 +970,9 @@
+ 
+             if (!m_pDlg)
+                 return;
+-            // or32 register string parser
+-            if(m_disassemblyFlavor == _T("set disassembly-flavor or32"))
++            // or32/ba register string parser
++            if((m_disassemblyFlavor == _T("set disassembly-flavor or32")) ||
++              (m_disassemblyFlavor == _T("set disassembly-flavor ba")))
+             {
+                 ParseOutputFromOR32gdbPort(output);
+             }
+@@ -1106,14 +1108,15 @@
+ class GdbCmd_DisassemblyInit : public DebuggerCmd
+ {
+         DisassemblyDlg* m_pDlg;
+-#ifdef __WXMSW__
++#if (defined(__WXMSW__) || defined(__LINUX__))
+         wxString m_disassemblyFlavor;
+ #endif
+     public:
+         static wxString LastAddr;
+         /** @param dlg The disassembly dialog. */
+-#ifdef __WXMSW__
++#if (defined(__WXMSW__) || defined(__LINUX__))
+         // only tested on mingw/pc/win env
++        // also tested on gcc/pc/linux env
+         GdbCmd_DisassemblyInit(DebuggerDriver* driver, DisassemblyDlg* dlg, wxString disassemblyFlavor)
+ #else
+         GdbCmd_DisassemblyInit(DebuggerDriver* driver, DisassemblyDlg* dlg)
+@@ -1122,7 +1125,7 @@
+             m_pDlg(dlg)
+         {
+             m_Cmd << _T("info frame");
+-#ifdef __WXMSW__
++#if (defined(__WXMSW__) || defined(__LINUX__))
+             m_disassemblyFlavor = disassemblyFlavor;
+ #endif
+         }
+@@ -1145,8 +1148,9 @@
+                     sf.function = reDisassemblyInitFunc.GetMatch(output, 2);
+                     long int active;
+ 
+-#ifdef __WXMSW__
+-                    if(m_disassemblyFlavor == _T("set disassembly-flavor or32"))
++#if (defined(__WXMSW__) || defined(__LINUX__))
++                    if((m_disassemblyFlavor == _T("set disassembly-flavor or32")) ||
++                       (m_disassemblyFlavor == _T("set disassembly-flavor ba")))
+                     {
+                         reDisassemblyInitFuncOR32.GetMatch(output, 1).ToLong(&active, 16);
+                     }
+diff -urN src/plugins/debuggergdb/gdb_driver.cpp src/plugins/debuggergdb/gdb_driver.cpp
+--- src/plugins/debuggergdb/gdb_driver.cpp	2007-02-02 16:40:17.000000000 +0100
++++ src/plugins/debuggergdb/gdb_driver.cpp	2007-02-02 16:39:45.000000000 +0100
+@@ -440,7 +440,7 @@
+ {
+     if (!m_pDisassembly)
+         return;
+-#ifdef __WXMSW__
++#if (defined(__WXMSW__) || defined(__LINUX__))
+     QueueCommand(new GdbCmd_DisassemblyInit(this, m_pDisassembly, flavour));
+ #else
+     QueueCommand(new GdbCmd_DisassemblyInit(this, m_pDisassembly));
+@@ -451,7 +451,7 @@
+ {
+     if (!m_pCPURegisters)
+         return;
+-#ifdef __WXMSW__
++#if (defined(__WXMSW__) || defined(__LINUX__))
+     QueueCommand(new GdbCmd_InfoRegisters(this, m_pCPURegisters, flavour));
+ #else
+     QueueCommand(new GdbCmd_InfoRegisters(this, m_pCPURegisters));

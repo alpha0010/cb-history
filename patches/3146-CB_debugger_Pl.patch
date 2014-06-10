@@ -1,0 +1,60 @@
+Index: src/plugins/debuggergdb/gdb_commands.h
+===================================================================
+--- src/plugins/debuggergdb/gdb_commands.h	(Revision 7112)
++++ src/plugins/debuggergdb/gdb_commands.h	(Arbeitskopie)
+@@ -784,6 +784,46 @@
+ };
+ 
+ /**
++  * Command to get the REAL type of the type
++  * will repeat until a registrated type was fond or the same type is retuned
++  */
++class GdbCmd_FindTypeType : public DebuggerCmd
++{
++		GDBWatch::Pointer m_watch;
++    public:
++        GdbCmd_FindTypeType(DebuggerDriver* driver, GDBWatch::Pointer watch) :
++            DebuggerCmd(driver),
++            m_watch(watch)
++        {
++        	wxString type;
++        	m_watch->GetType(type);
++            m_Cmd << wxT("whatis ");
++            m_Cmd << type;
++        }
++        void ParseOutput(const wxString& output)
++        {
++            // examples:
++            // type = wxString
++            // type = const wxChar
++            // type = Action *
++            // type = bool
++            wxString m_ParseFunc, type, tmp = output.AfterFirst(_T('='));
++        	m_watch->GetType(type);
++
++			m_Cmd = static_cast<GDB_driver*>(m_pDriver)->GetScriptedTypeCommand(type, m_ParseFunc);
++			if( m_Cmd.IsEmpty() && type != tmp )
++			{
++				//type = tmp;
++				m_watch->SetType(tmp);
++				m_pDriver->QueueCommand(new GdbCmd_FindTypeType(m_pDriver, m_watch), DebuggerDriver::High);
++				return;
++			}
++			
++			m_pDriver->QueueCommand(new GdbCmd_Watch(m_pDriver, m_watch), DebuggerDriver::High);
++        }
++};
++
++/**
+   * Command to get a watched variable's type.
+   */
+ class GdbCmd_FindWatchType : public DebuggerCmd
+@@ -831,7 +871,7 @@
+                 m_watch->SetType(tmp);
+                 m_watch->SetValue(wxEmptyString);
+             }
+-            m_pDriver->QueueCommand(new GdbCmd_Watch(m_pDriver, m_watch), DebuggerDriver::High);
++            m_pDriver->QueueCommand(new GdbCmd_FindTypeType(m_pDriver, m_watch), DebuggerDriver::High);
+         }
+ };
+ 

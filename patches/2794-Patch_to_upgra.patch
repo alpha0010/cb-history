@@ -1,0 +1,599 @@
+Index: src/plugins/contrib/wxSmithContribItems/wxchart/wxschart.cpp
+===================================================================
+--- src/plugins/contrib/wxSmithContribItems/wxchart/wxschart.cpp	(revision 5693)
++++ src/plugins/contrib/wxSmithContribItems/wxchart/wxschart.cpp	(working copy)
+@@ -195,9 +211,18 @@
+ 
+ void wxsChart::OnAddExtraProperties(wxsPropertyGridManager* Grid)
+ {
++    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++    Grid->SelectPage(0);
++    #else
+     Grid->SetTargetPage(0);
++    #endif
+ 
++
++    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++    m_ChartPointsCountId = Grid->Append(new wxIntProperty(_("Number of data sets"),wxPG_LABEL,
++    #else
+     m_ChartPointsCountId = Grid->Append(wxIntProperty(_("Number of data sets"),wxPG_LABEL,
++    #endif
+                                                       (int)m_ChartPointsDesc.Count()));
+ 
+     for ( int i=0; i<(int)m_ChartPointsDesc.Count(); i++ )
+@@ -210,7 +235,11 @@
+ 
+ void wxsChart::OnExtraPropertyChanged(wxsPropertyGridManager* Grid,wxPGId Id)
+ {
++    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++    Grid->SelectPage(0);
++    #else
+     Grid->SetTargetPage(0);
++    #endif
+ 
+     if ( Id == m_ChartPointsCountId )
+     {
+@@ -237,7 +266,11 @@
+             // We have to remove some entries
+             for ( int i=NewValue; i<OldValue; i++ )
+             {
++                #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++                Grid->DeleteProperty(m_ChartPointsDesc[i]->Id);
++                #else
+                 Grid->Delete(m_ChartPointsDesc[i]->Id);
++                #endif
+                 delete m_ChartPointsDesc[i];
+             }
+ 
+@@ -344,7 +348,11 @@
+     ChartPointsDesc* Desc = m_ChartPointsDesc[Position];
+     wxString SetName = wxString::Format(_("Set %d"),Position+1);
+ 
++    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++    Desc->Id = Grid->Append(new wxParentProperty(SetName,wxPG_LABEL));
++    #else
+     Desc->Id = Grid->Append(wxParentProperty(SetName,wxPG_LABEL));
++    #endif
+ 
+     static const wxChar* Types[] =
+     {
+@@ -359,9 +367,15 @@
+         Bar, Bar3D, Pie, Pie3D, Points, Points3D, Line, Line3D, Area, Area3D
+     };
+ 
++    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++    Desc->TypeId = Grid->AppendIn(Desc->Id,new wxEnumProperty(_("Type"),wxPG_LABEL,Types,Values,Desc->Type));
++    Desc->NameId = Grid->AppendIn(Desc->Id,new wxStringProperty(_("Name"),wxPG_LABEL,Desc->Name));
++    Desc->PointsCountId = Grid->AppendIn(Desc->Id,new wxIntProperty(_("Number of points"),wxPG_LABEL,(int)Desc->Points.Count()));
++    #else
+     Desc->TypeId = Grid->AppendIn(Desc->Id,wxEnumProperty(_("Type"),wxPG_LABEL,Types,Values,Desc->Type));
+     Desc->NameId = Grid->AppendIn(Desc->Id,wxStringProperty(_("Name"),wxPG_LABEL,Desc->Name));
+     Desc->PointsCountId = Grid->AppendIn(Desc->Id,wxIntProperty(_("Number of points"),wxPG_LABEL,(int)Desc->Points.Count()));
++    #endif
+ 
+     for ( int i=0; i<(int)Desc->Points.Count(); i++ )
+     {
+@@ -415,7 +458,11 @@
+         {
+             for ( int i=NewValue; i<OldValue; i++ )
+             {
++                #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++                Grid->DeleteProperty((Desc->Points[i])->Id);
++                #else
+                 Grid->Delete((Desc->Points[i])->Id);
++                #endif
+                 delete Desc->Points[i];
+             }
+ 
+@@ -451,10 +465,17 @@
+     PointDesc* Desc = SetDesc->Points[Position];
+     wxString Name = wxString::Format(_("Point %d"),Position+1);
+ 
++    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++    Desc->Id = Grid->AppendIn(SetDesc->Id,new wxParentProperty(Name,wxPG_LABEL));
++    Desc->NameId = Grid->AppendIn(Desc->Id,new wxStringProperty(_("Name"),wxPG_LABEL,Desc->Name));
++    Desc->XId = Grid->AppendIn(Desc->Id,new wxStringProperty(_("X"),wxPG_LABEL,wxString::Format(_T("%lf"),Desc->X)));
++    Desc->YId = Grid->AppendIn(Desc->Id,new wxStringProperty(_("Y"),wxPG_LABEL,wxString::Format(_T("%lf"),Desc->Y)));
++    #else
+     Desc->Id = Grid->AppendIn(SetDesc->Id,wxParentProperty(Name,wxPG_LABEL));
+     Desc->NameId = Grid->AppendIn(Desc->Id,wxStringProperty(_("Name"),wxPG_LABEL,Desc->Name));
+     Desc->XId = Grid->AppendIn(Desc->Id,wxStringProperty(_("X"),wxPG_LABEL,wxString::Format(_T("%lf"),Desc->X)));
+     Desc->YId = Grid->AppendIn(Desc->Id,wxStringProperty(_("Y"),wxPG_LABEL,wxString::Format(_T("%lf"),Desc->Y)));
++    #endif
+ }
+ 
+ bool wxsChart::HandleChangeInPoint(wxsPropertyGridManager* Grid,wxPGId Id,ChartPointsDesc* SetDesc,int Position,bool Global)
+Index: src/plugins/contrib/wxSmithAui/wxAuiManager/wxsAuiPaneInfoProperty.cpp
+===================================================================
+--- src/plugins/contrib/wxSmithAui/wxAuiManager/wxsAuiPaneInfoProperty.cpp	(revision 5693)
++++ src/plugins/contrib/wxSmithAui/wxAuiManager/wxsAuiPaneInfoProperty.cpp	(working copy)
+@@ -44,7 +44,11 @@
+     PGC1.Add(_("Left"), LeftDockable);
+     PGC1.Add(_("Right"), RightDockable);
+     PGC1.Add(_("Dockable (All)"), Dockable);
++    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++    PGRegister(Object,Grid,ID1 = Grid->AppendIn(Parent,new wxFlagsProperty(_("AUI Dockable"),wxPG_LABEL,PGC1,DOCKABLEFLAGS&(DockableMask))),DOCKABLEIND);
++    #else
+     PGRegister(Object,Grid,ID1 = Grid->AppendIn(Parent,wxFlagsProperty(_("AUI Dockable"),wxPG_LABEL,PGC1,DOCKABLEFLAGS&(DockableMask))),DOCKABLEIND);
++    #endif
+ 
+     Grid->SetPropertyAttribute(ID1,wxPG_BOOL_USE_CHECKBOX,1L,wxPG_RECURSE);
+ }
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstddialogbuttonsizer.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstddialogbuttonsizer.cpp	(revision 5693)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstddialogbuttonsizer.cpp	(working copy)
+@@ -250,9 +250,9 @@
+ {
+     for ( int i=0; i<NumButtons; i++ )
+     {
+-        m_UseId[i] = Grid->Append(wxBoolProperty(IdNames[i],wxPG_LABEL,m_Use[i]));
++        m_UseId[i] = Grid->Append(NEW_IN_WXPG14X wxBoolProperty(IdNames[i],wxPG_LABEL,m_Use[i]));
+         Grid->SetPropertyAttribute(m_UseId[i],wxPG_BOOL_USE_CHECKBOX,1L,wxPG_RECURSE);
+-        m_LabelId[i] = Grid->Append(wxStringProperty(_("  Label:"),wxPG_LABEL,m_Label[i]));
++        m_LabelId[i] = Grid->Append(NEW_IN_WXPG14X wxStringProperty(_("  Label:"),wxPG_LABEL,m_Label[i]));
+     }
+     wxsItem::OnAddExtraProperties(Grid);
+ }
+Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstatusbar.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstatusbar.cpp	(revision 5693)
++++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsstatusbar.cpp	(working copy)
+@@ -136,16 +149,20 @@
+ 
+ void wxsStatusBar::OnAddExtraProperties(wxsPropertyGridManager* Grid)
+ {
++    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++    Grid->SelectPage(0);
++    #else
+     Grid->SetTargetPage(0);
+-    m_FieldsId = Grid->Append(wxIntProperty(_("Fields"),wxPG_LABEL,m_Fields));
++    #endif
++    m_FieldsId = Grid->Append(NEW_IN_WXPG14X wxIntProperty(_("Fields"),wxPG_LABEL,m_Fields));
+ 
+     for ( int i=0; i<m_Fields; i++ )
+     {
+-        wxPGId ParentProp = Grid->Append(wxParentProperty(wxString::Format(_("Field %d"),i+1),wxPG_LABEL));
+-        m_WidthsIds[i] = Grid->AppendIn(ParentProp,wxIntProperty(_("Width"),wxPG_LABEL,m_Widths[i]));
+-        m_VarWidthIds[i] = Grid->AppendIn(ParentProp,wxBoolProperty(_T("Variable width"),wxPG_LABEL,m_VarWidth[i]));
++        wxPGId ParentProp = Grid->Append(NEW_IN_WXPG14X wxParentProperty(wxString::Format(_("Field %d"),i+1),wxPG_LABEL));
++        m_WidthsIds[i] = Grid->AppendIn(ParentProp,NEW_IN_WXPG14X wxIntProperty(_("Width"),wxPG_LABEL,m_Widths[i]));
++        m_VarWidthIds[i] = Grid->AppendIn(ParentProp,NEW_IN_WXPG14X wxBoolProperty(_T("Variable width"),wxPG_LABEL,m_VarWidth[i]));
+         Grid->SetPropertyAttribute(m_VarWidthIds[i],wxPG_BOOL_USE_CHECKBOX,1L,wxPG_RECURSE);
+-        m_StylesIds[i] = Grid->AppendIn(ParentProp,wxEnumProperty(_("Style"),wxPG_LABEL,FieldStyles,FieldStylesVal,m_Styles[i]));
++        m_StylesIds[i] = Grid->AppendIn(ParentProp,NEW_IN_WXPG14X wxEnumProperty(_("Style"),wxPG_LABEL,FieldStyles,FieldStylesVal,m_Styles[i]));
+         m_ParentIds[i] = ParentProp;
+     }
+ 
+@@ -169,20 +186,28 @@
+         {
+             for ( int i=NewFields; i<m_Fields; i++ )
+             {
++                #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++                Grid->DeleteProperty(m_ParentIds[i]);
++                #else
+                 Grid->Delete(m_ParentIds[i]);
++                #endif
+             }
+         }
+         else if ( NewFields > m_Fields )
+         {
+             // Adding new properties
++            #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++            Grid->SelectPage(0);
++            #else
+             Grid->SetTargetPage(0);
++            #endif
+             UpdateArraysSize(NewFields);
+             for ( int i = m_Fields; i<NewFields; i++ )
+             {
+-                wxPGId ParentProp = Grid->Append(wxParentProperty(wxString::Format(_("Field %d"),i+1),wxPG_LABEL));
+-                m_WidthsIds[i] = Grid->AppendIn(ParentProp,wxIntProperty(_("Width"),wxPG_LABEL,m_Widths[i]));
+-                m_VarWidthIds[i] = Grid->AppendIn(ParentProp,wxBoolProperty(_T("Variable width"),wxPG_LABEL,m_VarWidth[i]));
++                wxPGId ParentProp = Grid->Append(NEW_IN_WXPG14X wxParentProperty(wxString::Format(_("Field %d"),i+1),wxPG_LABEL));
++                m_WidthsIds[i] = Grid->AppendIn(ParentProp,NEW_IN_WXPG14X wxIntProperty(_("Width"),wxPG_LABEL,m_Widths[i]));
++                m_VarWidthIds[i] = Grid->AppendIn(ParentProp,NEW_IN_WXPG14X wxBoolProperty(_T("Variable width"),wxPG_LABEL,m_VarWidth[i]));
+                 Grid->SetPropertyAttribute(m_VarWidthIds[i],wxPG_BOOL_USE_CHECKBOX,1L,wxPG_RECURSE);
+-                m_StylesIds[i] = Grid->AppendIn(ParentProp,wxEnumProperty(_("Style"),wxPG_LABEL,FieldStyles,FieldStylesVal,m_Styles[i]));
++                m_StylesIds[i] = Grid->AppendIn(ParentProp,NEW_IN_WXPG14X wxEnumProperty(_("Style"),wxPG_LABEL,FieldStyles,FieldStylesVal,m_Styles[i]));
+                 m_ParentIds[i] = ParentProp;
+             }
+         }
+Index: src/plugins/contrib/wxSmith/wxwidgets/wxseventseditor.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/wxseventseditor.cpp	(revision 5693)
++++ src/plugins/contrib/wxSmith/wxwidgets/wxseventseditor.cpp	(working copy)
+@@ -69,8 +69,13 @@
+ 
+     int PageIndex = 1;              // TODO: Do not use fixed page number
+     Grid->ClearPage(PageIndex);
++    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++    Grid->SelectPage(PageIndex);
++    #else
+     Grid->SetTargetPage(PageIndex);
++    #endif
+ 
++
+     if ( !m_Item )
+     {
+         return;
+@@ -117,7 +117,7 @@
+             m_Events->SetHandler(i,_T(""));
+         }
+ 
+-        m_Ids.Add(Grid->Append(wxEnumProperty(Event->Entry,wxPG_LABEL,Const,Index)));
++        m_Ids.Add(Grid->Append(NEW_IN_WXPG14X wxEnumProperty(Event->Entry,wxPG_LABEL,Const,Index)));
+ 	}
+ }
+ 
+Index: src/plugins/contrib/wxSmith/wxwidgets/properties/wxspositionsizeproperty.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/properties/wxspositionsizeproperty.cpp	(revision 5693)
++++ src/plugins/contrib/wxSmith/wxwidgets/properties/wxspositionsizeproperty.cpp	(working copy)
+@@ -105,10 +105,10 @@
+ 
+ void wxsPositionSizeProperty::PGCreate(wxsPropertyContainer* Object,wxPropertyGridManager* Grid,wxPGId Parent)
+ {
+-    wxPGId DefId = Grid->AppendIn(Parent,wxBoolProperty(GetPGName(),wxPG_LABEL,DEFVALUE));
+-    wxPGId XId = Grid->AppendIn(Parent,wxIntProperty(PGXName,wxPG_LABEL,XVALUE));
+-    wxPGId YId = Grid->AppendIn(Parent,wxIntProperty(PGYName,wxPG_LABEL,YVALUE));
+-    wxPGId DUId = Grid->AppendIn(Parent,wxBoolProperty(PGDUName,wxPG_LABEL,DUVALUE));
++    wxPGId DefId = Grid->AppendIn(Parent,NEW_IN_WXPG14X wxBoolProperty(GetPGName(),wxPG_LABEL,DEFVALUE));
++    wxPGId XId = Grid->AppendIn(Parent,NEW_IN_WXPG14X wxIntProperty(PGXName,wxPG_LABEL,XVALUE));
++    wxPGId YId = Grid->AppendIn(Parent,NEW_IN_WXPG14X wxIntProperty(PGYName,wxPG_LABEL,YVALUE));
++    wxPGId DUId = Grid->AppendIn(Parent,NEW_IN_WXPG14X wxBoolProperty(PGDUName,wxPG_LABEL,DUVALUE));
+ 
+     Grid->SetPropertyAttribute(DefId,wxPG_BOOL_USE_CHECKBOX,1L,wxPG_RECURSE);
+     Grid->SetPropertyAttribute(DUId,wxPG_BOOL_USE_CHECKBOX,1L,wxPG_RECURSE);
+Index: src/plugins/contrib/wxSmith/wxwidgets/properties/wxsstyleproperty.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/properties/wxsstyleproperty.cpp	(revision 5693)
++++ src/plugins/contrib/wxSmith/wxwidgets/properties/wxsstyleproperty.cpp	(working copy)
+@@ -68,7 +68,7 @@
+ 
+         if ( StyleConsts.GetCount() )
+         {
+-            wxPGId ID = Grid->AppendIn(Parent,wxFlagsProperty(GetPGName(),wxPG_LABEL,StyleConsts,STYLEBITS));
++            wxPGId ID = Grid->AppendIn(Parent,NEW_IN_WXPG14X wxFlagsProperty(GetPGName(),wxPG_LABEL,StyleConsts,STYLEBITS));
+             Grid->SetPropertyAttribute(ID,wxPG_BOOL_USE_CHECKBOX,1L,wxPG_RECURSE);
+             PGRegister(Object,Grid,ID);
+         }
+Index: src/plugins/contrib/wxSmith/wxwidgets/properties/wxscolourproperty.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/properties/wxscolourproperty.cpp	(revision 5693)
++++ src/plugins/contrib/wxSmith/wxwidgets/properties/wxscolourproperty.cpp	(working copy)
+@@ -121,7 +121,11 @@
+     {
+         public:
+ 
++            #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++            virtual wxString GetValueType() const
++            #else
+             virtual wxPG_VALUETYPE_MSGVAL GetValueType() const
++            #endif
+             {
+                 return wxPG_VALUETYPE(wxColourPropertyValue);
+             }
+@@ -151,7 +155,9 @@
+         const wxColourPropertyValue& value )
+         : wxEnumPropertyClass( label, name, wxsColourLabels, wxsColourValues, wxsColourCount )
+     {
++        #if !(wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0))
+         wxPG_INIT_REQUIRED_TYPE(wxColourPropertyValue)
++        #endif
+         m_value.m_type = value.m_type;
+         m_value.m_colour = value.m_colour.Ok() ? value.m_colour : *wxWHITE;
+         m_flags |= wxPG_PROP_STATIC_CHOICES;
+@@ -177,17 +183,29 @@
+         if ( m_value.m_type < wxPG_COLOUR_WEB_BASE )
+         {
+             m_value.m_colour = wxSystemSettings::GetColour((wxSystemColour)m_value.m_type);
++            #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++            wxEnumProperty::SetValue((long)m_value.m_type);
++            #else
+             wxEnumPropertyClass::DoSetValue((long)m_value.m_type);
++            #endif
+         }
+         else if ( m_value.m_type == wxsCOLOUR_DEFAULT )
+         {
++            #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++            wxEnumProperty::SetValue((long)m_value.m_type);
++            #else
+             wxEnumPropertyClass::DoSetValue((long)m_value.m_type);
++            #endif
+         }
+     }
+ 
+     wxPGVariant wxsMyColourPropertyClass::DoGetValue () const
+     {
++        #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++        return wxVariant(&m_value);
++        #else
+         return wxPGVariantCreator(&m_value);
++        #endif
+     }
+ 
+     wxString wxsMyColourPropertyClass::GetValueAsString ( int ) const
+@@ -199,7 +217,13 @@
+                 (int)m_value.m_colour.Red(),(int)m_value.m_colour.Green(),(int)m_value.m_colour.Blue());
+             return temp;
+         }
++        #if wxCHECK_VERSION(2, 9, 0)
++        return m_choices.GetLabel(GetChoiceSelection());
++        #elif wxCHECK_PROPGRID_VERSION(1, 4, 0)
++        return m_choices.GetLabel(GetIndex());
++        #else
+         return m_choices.GetLabel(m_index);
++        #endif
+     }
+ 
+     wxSize wxsMyColourPropertyClass::GetImageSize() const
+@@ -232,14 +254,22 @@
+                 {
+                     wxColourData retData = dialog.GetColourData();
+                     m_value.m_colour = retData.GetColour();
++                    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++                    wxsMyColourPropertyClass::DoSetValue(wxPGVariant(&m_value));
++                    #else
+                     wxsMyColourPropertyClass::DoSetValue(m_value);
++                    #endif
+                     Ret = true;
+                 }
+ 
+                 // Update text in combo box (so it is "(R,G,B)" not "Custom").
+                 if ( primary )
+                 {
++                    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++                    DoGetEditorClass()->SetControlStringValue(this, primary,GetValueAsString(0));
++                    #else
+                     GetEditorClass()->SetControlStringValue(primary,GetValueAsString(0));
++                    #endif
+                 }
+ 
+                 return Ret;
+@@ -251,7 +281,11 @@
+ 
+                 if ( primary )
+                 {
++                    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++                    DoGetEditorClass()->SetControlStringValue(this, primary,GetValueAsString(0));
++                    #else
+                     GetEditorClass()->SetControlStringValue(primary,GetValueAsString(0));
++                    #endif
+                 }
+ 
+                 return true;
+@@ -329,7 +363,13 @@
+             bool res = wxEnumPropertyClass::SetValueFromString(text,flags);
+             if ( res )
+             {
++                #if wxCHECK_VERSION(2, 9, 0)
++                val.m_type = wxsColourValues[GetChoiceSelection()];
++                #elif wxCHECK_PROPGRID_VERSION(1, 4, 0)
++                val.m_type = wxsColourValues[GetIndex()];
++                #else
+                 val.m_type = wxsColourValues[m_index];
++                #endif
+ 
+                 // Get proper colour for type.
+                 if ( val.m_type == wxsCOLOUR_DEFAULT )
+Index: src/plugins/contrib/wxSmith/wxwidgets/properties/wxssizerflagsproperty.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/properties/wxssizerflagsproperty.cpp	(revision 5693)
++++ src/plugins/contrib/wxSmith/wxwidgets/properties/wxssizerflagsproperty.cpp	(working copy)
+@@ -43,7 +43,9 @@
+ 
+ void wxsSizerFlagsProperty::PGCreate(wxsPropertyContainer* Object,wxPropertyGridManager* Grid,wxPGId Parent)
+ {
++    #if !(wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0))
+     wxPGId ID1, ID2, ID3, ID4, ID5, ID6;
++    #endif
+     // Creating border flags
+ 
+     if ( (FLAGS & BorderMask) == BorderMask )
+@@ -61,23 +63,47 @@
+     PGC.Add(_("Left"),BorderLeft);
+     PGC.Add(_("Right"),BorderRight);
+     PGC.Add(_("All"),BorderAll);
+-    PGRegister(Object,Grid,ID1 = Grid->AppendIn(Parent,wxFlagsProperty(_("Border"),wxPG_LABEL,PGC,FLAGS&(BorderMask|BorderAll))),BORDERIND);
++    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++    wxPGId ID1 = Grid->AppendIn(Parent,new wxFlagsProperty(_("Border"),wxPG_LABEL,PGC,FLAGS&(BorderMask|BorderAll)));
++    PGRegister(Object,Grid,ID1,BORDERIND);
++    #else
++    PGRegister(Object,Grid,ID1 = Grid->AppendIn(Parent, wxFlagsProperty(_("Border"),wxPG_LABEL,PGC,FLAGS&(BorderMask|BorderAll))),BORDERIND);
++    #endif
+ 
+     wxPGChoices PGC2;
+     PGC2.Add(_("Left"),AlignLeft);
+     PGC2.Add(_("Center"),AlignCenterHorizontal);
+     PGC2.Add(_("Right"),AlignRight);
+-    PGRegister(Object,Grid,ID2 = Grid->AppendIn(Parent,wxEnumProperty(_("Horizontal align"),wxPG_LABEL,PGC2,FLAGS&AlignHMask)),ALIGNHIND);
++    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++    wxPGId ID2 = Grid->AppendIn(Parent,new wxEnumProperty(_("Horizontal align"),wxPG_LABEL,PGC2,FLAGS&AlignHMask));
++    PGRegister(Object,Grid,ID2,ALIGNHIND);
++    #else
++    PGRegister(Object,Grid,ID2 = Grid->AppendIn(Parent,NEW_IN_WXPG14X wxEnumProperty(_("Horizontal align"),wxPG_LABEL,PGC2,FLAGS&AlignHMask)),ALIGNHIND);
++    #endif
+ 
+     wxPGChoices PGC3;
+     PGC3.Add(_("Top"),AlignTop);
+     PGC3.Add(_("Center"),AlignCenterVertical);
+     PGC3.Add(_("Bottom"),AlignBottom);
+-    PGRegister(Object,Grid,ID3 = Grid->AppendIn(Parent,wxEnumProperty(_("Vertical align"),wxPG_LABEL,PGC3,FLAGS&AlignVMask)),ALIGNVIND);
++    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++    wxPGId ID3 = Grid->AppendIn(Parent,new wxEnumProperty(_("Vertical align"),wxPG_LABEL,PGC3,FLAGS&AlignVMask));
++    PGRegister(Object,Grid,ID3,ALIGNVIND);
++    #else
++    PGRegister(Object,Grid,ID3 = Grid->AppendIn(Parent, wxEnumProperty(_("Vertical align"),wxPG_LABEL,PGC3,FLAGS&AlignVMask)),ALIGNVIND);
++    #endif
+ 
+-    PGRegister(Object,Grid,ID4 = Grid->AppendIn(Parent,wxBoolProperty(_("Expand"),wxPG_LABEL,(FLAGS&Expand)!=0)),EXPANDIND);
+-    PGRegister(Object,Grid,ID5 = Grid->AppendIn(Parent,wxBoolProperty(_("Shaped"),wxPG_LABEL,(FLAGS&Shaped)!=0)),SHAPEDIND);
+-    PGRegister(Object,Grid,ID6 = Grid->AppendIn(Parent,wxBoolProperty(_("Fixed min size"),wxPG_LABEL,(FLAGS&FixedMinSize)!=0)),FIXEDIND);
++    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++    wxPGId ID4 = Grid->AppendIn(Parent,new wxBoolProperty(_("Expand"),wxPG_LABEL,(FLAGS&Expand)!=0));
++    wxPGId ID5 = Grid->AppendIn(Parent,new wxBoolProperty(_("Shaped"),wxPG_LABEL,(FLAGS&Shaped)!=0));
++    wxPGId ID6 = Grid->AppendIn(Parent,new wxBoolProperty(_("Fixed min size"),wxPG_LABEL,(FLAGS&FixedMinSize)!=0));
++    PGRegister(Object,Grid,ID4,EXPANDIND);
++    PGRegister(Object,Grid,ID5,SHAPEDIND);
++    PGRegister(Object,Grid,ID6,FIXEDIND);
++    #else
++    PGRegister(Object,Grid,ID4 = Grid->AppendIn(Parent, wxBoolProperty(_("Expand"),wxPG_LABEL,(FLAGS&Expand)!=0)),EXPANDIND);
++    PGRegister(Object,Grid,ID5 = Grid->AppendIn(Parent, wxBoolProperty(_("Shaped"),wxPG_LABEL,(FLAGS&Shaped)!=0)),SHAPEDIND);
++    PGRegister(Object,Grid,ID6 = Grid->AppendIn(Parent, wxBoolProperty(_("Fixed min size"),wxPG_LABEL,(FLAGS&FixedMinSize)!=0)),FIXEDIND);
++    #endif
+ 
+     Grid->SetPropertyAttribute(ID1,wxPG_BOOL_USE_CHECKBOX,1L,wxPG_RECURSE);
+     Grid->SetPropertyAttribute(ID2,wxPG_BOOL_USE_CHECKBOX,1L,wxPG_RECURSE);
+Index: src/plugins/contrib/wxSmith/wxwidgets/properties/wxsdimensionproperty.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/properties/wxsdimensionproperty.cpp	(revision 5693)
++++ src/plugins/contrib/wxSmith/wxwidgets/properties/wxsdimensionproperty.cpp	(working copy)
+@@ -77,8 +77,8 @@
+ void wxsDimensionProperty::PGCreate(wxsPropertyContainer* Object,wxPropertyGridManager* Grid,wxPGId Parent)
+ {
+     wxPGId DUId;
+-    PGRegister(Object,Grid,Grid->AppendIn(Parent,wxIntProperty(GetPGName(),wxPG_LABEL,VALUE)),DIM_VALUE);
+-    PGRegister(Object,Grid,DUId = Grid->AppendIn(Parent,wxBoolProperty(PGDUName,wxPG_LABEL,UNITS)),DIM_UNITS);
++    PGRegister(Object,Grid,Grid->AppendIn(Parent,NEW_IN_WXPG14X wxIntProperty(GetPGName(),wxPG_LABEL,VALUE)),DIM_VALUE);
++    PGRegister(Object,Grid,DUId = Grid->AppendIn(Parent,NEW_IN_WXPG14X wxBoolProperty(PGDUName,wxPG_LABEL,UNITS)),DIM_UNITS);
+     Grid->SetPropertyAttribute(DUId,wxPG_BOOL_USE_CHECKBOX,1L,wxPG_RECURSE);
+ }
+ 
+Index: src/plugins/contrib/wxSmith/properties/wxsboolproperty.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/properties/wxsboolproperty.cpp	(revision 5693)
++++ src/plugins/contrib/wxSmith/properties/wxsboolproperty.cpp	(working copy)
+@@ -34,7 +34,7 @@
+ 
+ void wxsBoolProperty::PGCreate(wxsPropertyContainer* Object,wxPropertyGridManager* Grid,wxPGId Parent)
+ {
+-    wxPGId ID = Grid->AppendIn(Parent,wxBoolProperty(GetPGName(),wxPG_LABEL,VALUE));
++    wxPGId ID = Grid->AppendIn(Parent,NEW_IN_WXPG14X wxBoolProperty(GetPGName(),wxPG_LABEL,VALUE));
+     Grid->SetPropertyAttribute(ID,wxPG_BOOL_USE_CHECKBOX,1L,wxPG_RECURSE);
+     PGRegister(Object,Grid,ID);
+ }
+Index: src/plugins/contrib/wxSmith/properties/wxsflagsproperty.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/properties/wxsflagsproperty.cpp	(revision 5693)
++++ src/plugins/contrib/wxSmith/properties/wxsflagsproperty.cpp	(working copy)
+@@ -41,7 +41,7 @@
+ void wxsFlagsProperty::PGCreate(wxsPropertyContainer* Object,wxPropertyGridManager* Grid,wxPGId Parent)
+ {
+     wxPGChoices PGC(Names,Values);
+-    wxPGId Id = Grid->AppendIn(Parent,wxFlagsProperty(GetPGName(),wxPG_LABEL,PGC,VALUE));
++    wxPGId Id = Grid->AppendIn(Parent,NEW_IN_WXPG14X wxFlagsProperty(GetPGName(),wxPG_LABEL,PGC,VALUE));
+     Grid->SetPropertyAttribute(Id,wxPG_BOOL_USE_CHECKBOX,1L,wxPG_RECURSE);
+     PGRegister(Object,Grid,Id);
+ }
+Index: src/plugins/contrib/wxSmith/properties/wxslongproperty.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/properties/wxslongproperty.cpp	(revision 5693)
++++ src/plugins/contrib/wxSmith/properties/wxslongproperty.cpp	(working copy)
+@@ -35,7 +35,7 @@
+ 
+ void wxsLongProperty::PGCreate(wxsPropertyContainer* Object,wxPropertyGridManager* Grid,wxPGId Parent)
+ {
+-    PGRegister(Object,Grid,Grid->AppendIn(Parent,wxIntProperty(GetPGName(),wxPG_LABEL,VALUE)));
++    PGRegister(Object,Grid,Grid->AppendIn(Parent,NEW_IN_WXPG14X wxIntProperty(GetPGName(),wxPG_LABEL,VALUE)));
+ }
+ 
+ bool wxsLongProperty::PGRead(wxsPropertyContainer* Object,wxPropertyGridManager* Grid,wxPGId Id,long Index)
+Index: src/plugins/contrib/wxSmith/properties/wxsenumproperty.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/properties/wxsenumproperty.cpp	(revision 5693)
++++ src/plugins/contrib/wxSmith/properties/wxsenumproperty.cpp	(working copy)
+@@ -41,7 +41,7 @@
+ void wxsEnumProperty::PGCreate(wxsPropertyContainer* Object,wxPropertyGridManager* Grid,wxPGId Parent)
+ {
+     wxPGChoices PGC(Names,Values);
+-    PGRegister(Object,Grid,Grid->AppendIn(Parent,wxEnumProperty(GetPGName(),wxPG_LABEL,PGC,VALUE)));
++    PGRegister(Object,Grid,Grid->AppendIn(Parent,NEW_IN_WXPG14X wxEnumProperty(GetPGName(),wxPG_LABEL,PGC,VALUE)));
+ }
+ 
+ bool wxsEnumProperty::PGRead(wxsPropertyContainer* Object,wxPropertyGridManager* Grid,wxPGId Id,long Index)
+Index: src/plugins/contrib/wxSmith/properties/wxsstringproperty.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/properties/wxsstringproperty.cpp	(revision 5693)
++++ src/plugins/contrib/wxSmith/properties/wxsstringproperty.cpp	(working copy)
+@@ -46,11 +46,11 @@
+     wxPGId Id;
+     if ( IsLongString )
+     {
+-        Id = Grid->AppendIn(Parent,wxLongStringProperty(GetPGName(),wxPG_LABEL,Fixed));
++        Id = Grid->AppendIn(Parent,NEW_IN_WXPG14X wxLongStringProperty(GetPGName(),wxPG_LABEL,Fixed));
+     }
+     else
+     {
+-        Id = Grid->AppendIn(Parent,wxStringProperty(GetPGName(),wxPG_LABEL,Fixed));
++        Id = Grid->AppendIn(Parent,NEW_IN_WXPG14X wxStringProperty(GetPGName(),wxPG_LABEL,Fixed));
+     }
+     PGRegister(Object,Grid,Id);
+ }
+Index: src/plugins/contrib/wxSmith/properties/wxspropertygridmanager.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/properties/wxspropertygridmanager.cpp	(revision 5693)
++++ src/plugins/contrib/wxSmith/properties/wxspropertygridmanager.cpp	(working copy)
+@@ -148,7 +148,11 @@
+     {
+         if ( PGContainers[i] == PC )
+         {
++            #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++            DeleteProperty(PGIDs[i]);
++            #else
+             Delete(PGIDs[i]);
++            #endif
+             PGIDs.RemoveAt(i);
+             PGEnteries.RemoveAt(i);
+             PGIndexes.RemoveAt(i);
+@@ -213,12 +217,20 @@
+ 
+ void wxsPropertyGridManager::NewPropertyContainerFinish(wxsPropertyContainer* Container)
+ {
++    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++    SelectPage(0);
++    #else
+     SetTargetPage(0);
++    #endif
+ 
+     while ( PropertiesList )
+     {
+         TemporaryPropertiesList* Next = PropertiesList->Next;
++        #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++        PropertiesList->Property->PGCreate(PropertiesList->Container,this,GetGrid()->GetRoot());
++        #else
+         PropertiesList->Property->PGCreate(PropertiesList->Container,this,GetRoot());
++        #endif
+         delete PropertiesList;
+         PropertiesList = Next;
+     }
+Index: src/plugins/contrib/wxSmith/properties/wxsproperty.h
+===================================================================
+--- src/plugins/contrib/wxSmith/properties/wxsproperty.h	(revision 5693)
++++ src/plugins/contrib/wxSmith/properties/wxsproperty.h	(working copy)
+@@ -39,6 +39,25 @@
+ 
+ class wxsPropertyContainer;
+ 
++#if wxCHECK_VERSION(2, 9, 0)
++#define wxCHECK_PROPGRID_VERSION(major,minor,release) (0)
++#endif
++
++#if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)
++#define wxPGVariant                     wxVariant
++#define wxPGId                          wxPGProperty*
++#define wxParentProperty                wxPGProperty
++#define wxCustomPropertyClass           wxPGProperty
++#define wxEnumPropertyClass             wxEnumProperty
++#define wxPG_VALUETYPE(T)               wxT(#T)
++#define wxPGVariantToWxObjectPtr(A,B)   wxDynamicCast(A.GetWxObjectPtr(),B)
++#define wxPG_PROP_UNSPECIFIED           wxPG_EX_AUTO_UNSPECIFIED_VALUES
++#define NEW_IN_WXPG14X                  new
++#else
++#define NEW_IN_WXPG14X
++#endif
++
++
+ /** \brief Class representing one property
+  *
+  * Property is object around real variable(s) which is responsible

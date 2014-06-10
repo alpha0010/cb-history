@@ -1,0 +1,74 @@
+Index: src/sdk/projectfile.cpp
+===================================================================
+--- src/sdk/projectfile.cpp	(revision 3398)
++++ src/sdk/projectfile.cpp	(working copy)
+@@ -214,6 +214,28 @@
+     }
+ }
+ 
++
++void ProjectFile::SetUseCustomBuildCommand(const wxString& compilerId, bool useCustomBuildCommand)
++{
++    customBuild[compilerId].useCustomBuildCommand = useCustomBuildCommand;
++}
++
++void ProjectFile::SetCustomBuildCommand(const wxString& compilerId, const wxString& newBuildCommand)
++{
++    customBuild[compilerId].buildCommand = newBuildCommand;
++}
++
++bool ProjectFile::GetUseCustomBuildCommand(const wxString& compilerId)
++{
++    return customBuild[compilerId].useCustomBuildCommand;
++}
++
++wxString ProjectFile::GetCustomBuildCommand(const wxString& compilerId)
++{
++    return customBuild[compilerId].buildCommand;
++}
++
++
+ ////////////////////////////////////////////////////////////////////////////////
+ // pfDetails
+ ////////////////////////////////////////////////////////////////////////////////
+Index: src/sdk/projectfile.h
+===================================================================
+--- src/sdk/projectfile.h	(revision 3398)
++++ src/sdk/projectfile.h	(working copy)
+@@ -135,6 +135,19 @@
+           * This is a relative path which doesn't have to exist in the filesystem
+           * hierarchy. */
+         wxString virtual_path;
++
++        /** Modify 'Use custom command to build this file' for a compilerId. */
++        void SetUseCustomBuildCommand(const wxString& compilerId, bool useCustomBuildCommand);
++
++        /** Modify customBuild command for a compilerId. */
++        void SetCustomBuildCommand(const wxString& compilerId, const wxString& newBuildCommand);
++
++        /** Read 'Use custom command to build this file' for a compilerId. */
++        bool GetUseCustomBuildCommand(const wxString& compilerId);
++
++        /** Read customBuild command for a compilerId. */
++        wxString GetCustomBuildCommand(const wxString& compilerId);
++
+     protected:
+         friend class cbProject;
+         void DoUpdateFileDetails(ProjectBuildTarget* target);
+Index: src/sdk/scripting/bindings/scriptbindings.cpp
+===================================================================
+--- src/sdk/scripting/bindings/scriptbindings.cpp	(revision 3398)
++++ src/sdk/scripting/bindings/scriptbindings.cpp	(working copy)
+@@ -331,7 +331,11 @@
+                 func(&ProjectFile::GetObjName, "GetObjName").
+                 func(&ProjectFile::SetObjName, "SetObjName").
+                 func(&ProjectFile::GetParentProject, "GetParentProject").
+-                var(&ProjectFile::file, "file").
++                func(&ProjectFile::SetUseCustomBuildCommand, "SetUseCustomBuildCommand").
++                func(&ProjectFile::SetCustomBuildCommand, "SetCustomBuildCommand").
++                func(&ProjectFile::GetUseCustomBuildCommand, "GetUseCustomBuildCommand").
++                func(&ProjectFile::GetCustomBuildCommand, "GetCustomBuildCommand").
++                var(&ProjectFile::file, "file").
+                 var(&ProjectFile::relativeFilename, "relativeFilename").
+                 var(&ProjectFile::relativeToCommonTopLevelPath, "relativeToCommonTopLevelPath").
+                 var(&ProjectFile::compile, "compile").

@@ -1,0 +1,596 @@
+Index: include/configmanager.h
+===================================================================
+--- include/configmanager.h	(revision 4832)
++++ include/configmanager.h	(working copy)
+@@ -82,7 +82,28 @@
+ };
+ 
+ 
++// Defaults;
++// Log window
++extern const wxColour defLogColourListStandardFront;
++extern const wxColour defLogColourTextStandardFront;
++extern const wxColour defLogColourTextStandardBack;
++extern const wxColour defLogColourListSuccessFront;
++extern const wxColour defLogColourTextSuccessFront;
++extern const wxColour defLogColourTextSuccessBack;
++extern const wxColour defLogColourListWarningFront;
++extern const wxColour defLogColourTextWarningFront;
++extern const wxColour defLogColourTextWarningBack;
++extern const wxColour defLogColourListErrorFront;
++extern const wxColour defLogColourTextErrorFront;
++extern const wxColour defLogColourTextErrorBack;
++extern const wxColour defLogColourListCriticalFront;
++extern const wxColour defLogColourTextCriticalFront;
++extern const wxColour defLogColourTextCriticalBack;
++extern const wxColour defLogColourListFailureFront;
++extern const wxColour defLogColourTextFailureFront;
++extern const wxColour defLogColourTextFailureBack;
+ 
++
+ /* ------------------------------------------------------------------------------------------------------------------
+ *  ConfigManager class
+ */
+Index: include/loggers.h
+===================================================================
+--- include/loggers.h	(revision 4832)
++++ include/loggers.h	(working copy)
+@@ -54,7 +54,8 @@
+     wxString asterisk;
+ 
+     CSS();
+-    operator wxString();
++    operator wxString();
++    void UpdateSettings();
+ };
+ 
+ class DLLIMPORT HTMLFileLogger : public FileLogger
+@@ -66,7 +67,8 @@
+ 
+     virtual void Append(const wxString& msg, Logger::level lv);
+     virtual void Open(const wxString& filename);
+-    virtual void Close();
++    virtual void Close();
++    virtual void UpdateSettings();
+ };
+ 
+ class DLLIMPORT TextCtrlLogger : public Logger
+Index: plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- plugins/compilergcc/compilergcc.cpp	(revision 4832)
++++ plugins/compilergcc/compilergcc.cpp	(working copy)
+@@ -123,7 +123,11 @@
+ 
+         style[caption].SetAlignment(wxTEXT_ALIGNMENT_DEFAULT);
+         style[caption].SetFont(style[error].GetFont());
+-        style[warning].SetTextColour(*wxBLUE);
++        ConfigManager* mcfg = Manager::Get()->GetConfigManager(_T("message_manager"));
++        control->SetForegroundColour(mcfg->ReadColour(_T("/log_colour_text_standard_front"), defLogColourTextStandardFront));
++        control->SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_text_standard_back"), defLogColourTextStandardBack));
++        style[warning].SetTextColour(mcfg->ReadColour(_T("/log_colour_text_warning_front"), defLogColourTextWarningFront));
++        style[warning].SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_text_warning_back"), defLogColourTextWarningBack));
+         style[error].SetFont(style[info].GetFont());
+     }
+ 
+Index: sdk/configmanager.cpp
+===================================================================
+--- sdk/configmanager.cpp	(revision 4832)
++++ sdk/configmanager.cpp	(working copy)
+@@ -51,6 +51,27 @@
+ #include "tinyxml/tinywxuni.h"
+ #include <stdlib.h>
+ 
++// Defaults;
++// Log window
++const wxColour defLogColourListStandardFront = *wxBLACK;
++const wxColour defLogColourTextStandardFront = *wxBLACK;
++const wxColour defLogColourTextStandardBack = *wxWHITE;
++const wxColour defLogColourListSuccessFront = *wxBLUE;
++const wxColour defLogColourTextSuccessFront = *wxBLUE;
++const wxColour defLogColourTextSuccessBack = *wxWHITE;
++const wxColour defLogColourListWarningFront = wxColour(0x00, 0x00, 0xa0);   // navy blue
++const wxColour defLogColourTextWarningFront = *wxBLUE;
++const wxColour defLogColourTextWarningBack = *wxWHITE;
++const wxColour defLogColourListErrorFront = *wxRED;
++const wxColour defLogColourTextErrorFront = *wxRED;
++const wxColour defLogColourTextErrorBack = *wxWHITE;
++const wxColour defLogColourListCriticalFront = wxColour(0x0a, 0x00, 0x00);  // maroon
++const wxColour defLogColourTextCriticalFront = *wxWHITE;
++const wxColour defLogColourTextCriticalBack = *wxRED;
++const wxColour defLogColourListFailureFront = wxColour(0x00, 0x00, 0xa0);   // navy blue
++const wxColour defLogColourTextFailureFront = *wxWHITE;
++const wxColour defLogColourTextFailureBack = *wxRED;
++
+ template<> CfgMgrBldr* Mgr<CfgMgrBldr>::instance = 0;
+ template<> bool  Mgr<CfgMgrBldr>::isShutdown = false;
+ 
+Index: sdk/loggers.cpp
+===================================================================
+--- sdk/loggers.cpp	(revision 4832)
++++ sdk/loggers.cpp	(working copy)
+@@ -29,12 +29,15 @@
+ void TextCtrlLogger::UpdateSettings()
+ {
+ 	if (!control)
+-		return;
++		return;
++
++	ConfigManager* mcfg = Manager::Get()->GetConfigManager(_T("message_manager"));
++
++	control->SetForegroundColour(mcfg->ReadColour(_T("/log_colour_text_standard_front"), defLogColourTextStandardFront));
++	control->SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_text_standard_back"), defLogColourTextStandardBack));
+ 
+-	control->SetBackgroundColour(*wxWHITE);
++	int size = mcfg->ReadInt(_T("/log_font_size"), platform::macosx ? 10 : 8);
+ 
+-	int size = Manager::Get()->GetConfigManager(_T("message_manager"))->ReadInt(_T("/log_font_size"), platform::macosx ? 10 : 8);
+-
+ 	wxFont default_font(size, fixed ? wxFONTFAMILY_MODERN : wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+ 	wxFont bold_font(default_font);
+ 	wxFont italic_font(default_font);
+@@ -56,8 +59,8 @@
+ 	{
+ 		style[i].SetFont(default_font);
+ 		style[i].SetAlignment(wxTEXT_ALIGNMENT_DEFAULT);
+-		style[i].SetTextColour(*wxBLACK);
+-		style[i].SetBackgroundColour(*wxWHITE);
++    style[i].SetTextColour(mcfg->ReadColour(_T("/log_colour_text_standard_front"), defLogColourTextStandardFront));
++    style[i].SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_text_standard_back"), defLogColourTextStandardBack));
+ 
+ 		// is it necessary to do that?
+ 		//style[i].SetFlags(...);
+@@ -67,16 +70,18 @@
+ 	bigger_font.SetUnderlined(true);
+ 	style[caption].SetFont(bigger_font);
+ 
+-	style[success].SetTextColour(*wxBLUE);
++  style[success].SetTextColour(mcfg->ReadColour(_T("/log_colour_text_success_front"), defLogColourTextSuccessFront));
++  style[success].SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_text_success_back"), defLogColourTextSuccessBack));
+ 
+ 	style[warning].SetFont(italic_font);
+ 
+ 	style[error].SetFont(bold_font);
+-	style[error].SetTextColour(*wxRED);
++  style[error].SetTextColour(mcfg->ReadColour(_T("/log_colour_text_error_front"), defLogColourTextErrorFront));
++  style[error].SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_text_error_back"), defLogColourTextErrorBack));
+ 
+-	style[critical].SetFont(bold_font);
+-	style[critical].SetTextColour(*wxWHITE);
+-	style[critical].SetBackgroundColour(*wxRED);
++	style[critical].SetFont(bold_font);
++  style[critical].SetTextColour(mcfg->ReadColour(_T("/log_colour_text_critical_front"), defLogColourTextCriticalFront));
++  style[critical].SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_text_critical_back"), defLogColourTextCriticalBack));
+ 	style[spacer].SetFont(small_font);
+ };
+ 
+@@ -188,9 +193,11 @@
+ void ListCtrlLogger::UpdateSettings()
+ {
+ 	if (!control)
+-		return;
++		return;
++
++	ConfigManager* mcfg = Manager::Get()->GetConfigManager(_T("message_manager"));
+ 
+-	int size = Manager::Get()->GetConfigManager(_T("message_manager"))->ReadInt(_T("/log_font_size"), platform::macosx ? 10 : 8);
++	int size = mcfg->ReadInt(_T("/log_font_size"), platform::macosx ? 10 : 8);
+ 	wxFont default_font(size, fixed ? wxFONTFAMILY_MODERN : wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+ 	wxFont bold_font(default_font);
+ 	wxFont italic_font(default_font);
+@@ -208,20 +215,20 @@
+ 	for(unsigned int i = 0; i < num_levels; ++i)
+ 	{
+ 		style[i].font = default_font;
+-		style[i].colour = *wxBLACK;
++    style[i].colour = mcfg->ReadColour(_T("/log_colour_list_standard_front"), defLogColourListStandardFront);
+ 	}
+ 
+ 	style[caption].font = bigger_font;
+-	style[success].colour = *wxBLUE;
+-	style[failure].colour = wxColour(0x00, 0x00, 0xa0);
++  style[success].colour = mcfg->ReadColour(_T("/log_colour_list_success_front"), defLogColourListSuccessFront);
++  style[failure].colour = mcfg->ReadColour(_T("/log_colour_list_failure_front"), defLogColourListFailureFront);
+ 
+ 	style[warning].font = italic_font;
+-	style[warning].colour = wxColour(0x00, 0x00, 0xa0); // navy blue
++  style[warning].colour = mcfg->ReadColour(_T("/log_colour_list_warning_front"), defLogColourListWarningFront);
+ 
+-	style[error].colour = *wxRED;
++  style[error].colour = mcfg->ReadColour(_T("/log_colour_list_error_front"), defLogColourListErrorFront);
+ 
+ 	style[critical].font = bold_font;
+-	style[critical].colour = wxColour(0x0a, 0x00, 0x00); // maroon
++  style[critical].colour = mcfg->ReadColour(_T("/log_colour_list_critical_front"), defLogColourListCriticalFront);
+ 
+ 	style[spacer].font = small_font;
+ 	style[pagetitle] = style[caption];
+@@ -291,13 +298,11 @@
+     info		(wxEmptyString),
+     warning		(_T("margin-left: 2em;")),
+     success		(wxEmptyString),
+-    error		(_T("margin-left: 2em; border-left: 1px solid red;")),
+-    critical	(_T("color: red; font-weight: bold;")),
+-    failure		(_T("color: maroon;")),
+     pagetitle	(_T("font-size: 16pt;")),
+     spacer		(wxEmptyString),
+     asterisk	(_T("font-family: Arial, Helvetica, \"Bitstream Vera Sans\", sans;"))
+ {
++    UpdateSettings();
+ }
+ 
+ CSS::operator wxString()
+@@ -306,6 +311,19 @@
+     return tmp;
+ }
+ 
++void CSS::UpdateSettings() {
++    ConfigManager* mcfg = Manager::Get()->GetConfigManager(_T("message_manager"));
++    error = _T("margin-left: 2em; border-left: 1px solid ");
++    error += mcfg->ReadColour(_T("/log_colour_text_error_front"), defLogColourTextErrorFront).GetAsString(wxC2S_HTML_SYNTAX);
++    error += _T(";");
++    critical = _T("font-weight: bold; color: ");
++    critical += mcfg->ReadColour(_T("/log_colour_text_critical_front"), defLogColourTextCriticalFront).GetAsString(wxC2S_HTML_SYNTAX);
++    critical += _T(";");
++    failure = _T("color: ");
++    failure += mcfg->ReadColour(_T("/log_colour_text_failure_front"), defLogColourTextFailureFront).GetAsString(wxC2S_HTML_SYNTAX);
++    failure += _T(";");
++}
++
+ HTMLFileLogger::HTMLFileLogger(const wxString& filename)
+ {
+     Open(filename);
+@@ -354,5 +372,7 @@
+     FileLogger::Close();
+ };
+ 
++void HTMLFileLogger::UpdateSettings() {
++    css.UpdateSettings();
++}
+ 
+-
+Index: src/environmentsettingsdlg.cpp
+===================================================================
+--- src/environmentsettingsdlg.cpp	(revision 4832)
++++ src/environmentsettingsdlg.cpp	(working copy)
+@@ -50,6 +50,7 @@
+     _T("general-prefs"),
+     _T("view"),
+     _T("notebook-appearance"),
++    _T("log-window"),
+     _T("colours"),
+     _T("dialogs"),
+     _T("net"),
+@@ -64,6 +65,24 @@
+     EVT_BUTTON(XRCID("btnFNFrom"), EnvironmentSettingsDlg::OnChooseColour)
+     EVT_BUTTON(XRCID("btnFNTo"), EnvironmentSettingsDlg::OnChooseColour)
+     EVT_BUTTON(XRCID("btnNbDefaults"), EnvironmentSettingsDlg::OnNbDefaults)
++    EVT_BUTTON(XRCID("btnLogListStandardFront"), EnvironmentSettingsDlg::OnChooseColour)
++    EVT_BUTTON(XRCID("btnLogTextStandardFront"), EnvironmentSettingsDlg::OnChooseColour)
++    EVT_BUTTON(XRCID("btnLogTextStandardBack"), EnvironmentSettingsDlg::OnChooseColour)
++    EVT_BUTTON(XRCID("btnLogListSuccessFront"), EnvironmentSettingsDlg::OnChooseColour)
++    EVT_BUTTON(XRCID("btnLogTextSuccessFront"), EnvironmentSettingsDlg::OnChooseColour)
++    EVT_BUTTON(XRCID("btnLogTextSuccessBack"), EnvironmentSettingsDlg::OnChooseColour)
++    EVT_BUTTON(XRCID("btnLogListErrorFront"), EnvironmentSettingsDlg::OnChooseColour)
++    EVT_BUTTON(XRCID("btnLogTextErrorFront"), EnvironmentSettingsDlg::OnChooseColour)
++    EVT_BUTTON(XRCID("btnLogTextErrorBack"), EnvironmentSettingsDlg::OnChooseColour)
++    EVT_BUTTON(XRCID("btnLogListWarningFront"), EnvironmentSettingsDlg::OnChooseColour)
++    EVT_BUTTON(XRCID("btnLogTextWarningFront"), EnvironmentSettingsDlg::OnChooseColour)
++    EVT_BUTTON(XRCID("btnLogTextWarningBack"), EnvironmentSettingsDlg::OnChooseColour)
++    EVT_BUTTON(XRCID("btnLogListCriticalFront"), EnvironmentSettingsDlg::OnChooseColour)
++    EVT_BUTTON(XRCID("btnLogTextCriticalFront"), EnvironmentSettingsDlg::OnChooseColour)
++    EVT_BUTTON(XRCID("btnLogTextCriticalBack"), EnvironmentSettingsDlg::OnChooseColour)
++    EVT_BUTTON(XRCID("btnLogListFailureFront"), EnvironmentSettingsDlg::OnChooseColour)
++    EVT_BUTTON(XRCID("btnLogTextFailureFront"), EnvironmentSettingsDlg::OnChooseColour)
++    EVT_BUTTON(XRCID("btnLogTextFailureFront"), EnvironmentSettingsDlg::OnChooseColour)
+     EVT_BUTTON(XRCID("btnAuiCaptionColour"), EnvironmentSettingsDlg::OnChooseColour)
+     EVT_BUTTON(XRCID("btnAuiCaptionTextColour"), EnvironmentSettingsDlg::OnChooseColour)
+     EVT_BUTTON(XRCID("btnAuiActiveCaptionColour"), EnvironmentSettingsDlg::OnChooseColour)
+@@ -131,7 +150,6 @@
+     XRCCTRL(*this, "rbToolbarSize", wxRadioBox)->SetSelection(cfg->ReadBool(_T("/environment/toolbar_size"), true) ? 1 : 0);
+     XRCCTRL(*this, "rbSettingsIconsSize", wxRadioBox)->SetSelection(cfg->ReadInt(_T("/environment/settings_size"), 0));
+     XRCCTRL(*this, "chkShowStartPage", wxCheckBox)->SetValue(cfg->ReadBool(_T("/environment/start_here_page"), true));
+-    XRCCTRL(*this, "spnLogFontSize", wxSpinCtrl)->SetValue(mcfg->ReadInt(_T("/log_font_size"), 8));
+ 
+     bool en = mcfg->ReadBool(_T("/auto_hide"), false);
+     XRCCTRL(*this, "chkAutoHideMessages", wxCheckBox)->SetValue(en);
+@@ -173,6 +191,27 @@
+     XRCCTRL(*this, "btnFNFrom", wxButton)->SetBackgroundColour(cfg->ReadColour(_T("/environment/gradient_from"), wxColour(wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE))));
+     XRCCTRL(*this, "btnFNTo", wxButton)->SetBackgroundColour(cfg->ReadColour(_T("/environment/gradient_to"), *wxWHITE));
+ 
++    // tab "Log window"
++    XRCCTRL(*this, "spnLogFontSize", wxSpinCtrl)->SetValue(mcfg->ReadInt(_T("/log_font_size"), 8));
++    XRCCTRL(*this, "btnLogListStandardFront", wxButton)->SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_list_standard_front"), defLogColourListStandardFront));
++    XRCCTRL(*this, "btnLogTextStandardFront", wxButton)->SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_text_standard_front"), defLogColourTextStandardFront));
++    XRCCTRL(*this, "btnLogTextStandardBack", wxButton)->SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_text_standard_back"), defLogColourTextStandardBack));
++    XRCCTRL(*this, "btnLogListSuccessFront", wxButton)->SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_list_success_front"), defLogColourListSuccessFront));
++    XRCCTRL(*this, "btnLogTextSuccessFront", wxButton)->SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_text_success_front"), defLogColourTextSuccessFront));
++    XRCCTRL(*this, "btnLogTextSuccessBack", wxButton)->SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_text_success_back"), defLogColourTextSuccessBack));
++    XRCCTRL(*this, "btnLogListWarningFront", wxButton)->SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_list_warning_front"), defLogColourListWarningFront));
++    XRCCTRL(*this, "btnLogTextWarningFront", wxButton)->SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_text_warning_front"), defLogColourTextWarningFront));
++    XRCCTRL(*this, "btnLogTextWarningBack", wxButton)->SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_text_warning_back"), defLogColourTextWarningBack));
++    XRCCTRL(*this, "btnLogListErrorFront", wxButton)->SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_list_error_front"), defLogColourListErrorFront));
++    XRCCTRL(*this, "btnLogTextErrorFront", wxButton)->SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_text_error_front"), defLogColourTextErrorFront));
++    XRCCTRL(*this, "btnLogTextErrorBack", wxButton)->SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_text_error_back"), defLogColourTextErrorBack));
++    XRCCTRL(*this, "btnLogListCriticalFront", wxButton)->SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_list_critical_front"), defLogColourListCriticalFront));
++    XRCCTRL(*this, "btnLogTextCriticalFront", wxButton)->SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_text_critical_front"), defLogColourTextCriticalFront));
++    XRCCTRL(*this, "btnLogTextCriticalBack", wxButton)->SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_text_critical_back"), defLogColourTextCriticalBack));
++    XRCCTRL(*this, "btnLogListFailureFront", wxButton)->SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_list_failure_front"), defLogColourListFailureFront));
++    XRCCTRL(*this, "btnLogTextFailureFront", wxButton)->SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_text_failure_front"), defLogColourTextFailureFront));
++    XRCCTRL(*this, "btnLogTextFailureBack", wxButton)->SetBackgroundColour(mcfg->ReadColour(_T("/log_colour_text_failure_back"), defLogColourTextFailureBack));
++
+     // tab "Docking"
+     XRCCTRL(*this, "spnAuiBorder", wxSpinCtrl)->SetValue(cfg->ReadInt(_T("/environment/aui/border_size"), m_pArt->GetMetric(wxAUI_DOCKART_PANE_BORDER_SIZE)));
+     XRCCTRL(*this, "spnAuiSash", wxSpinCtrl)->SetValue(cfg->ReadInt(_T("/environment/aui/sash_size"), m_pArt->GetMetric(wxAUI_DOCKART_SASH_SIZE)));
+@@ -408,7 +447,6 @@
+         else
+             cfg->Write(_T("/locale/language"), wxEmptyString);
+ 
+-        mcfg->Write(_T("/log_font_size"),                    (int)  XRCCTRL(*this, "spnLogFontSize", wxSpinCtrl)->GetValue());
+         cfg->Write(_T("/dialog_placement/do_place"),         (bool) XRCCTRL(*this, "chkDoPlace", wxCheckBox)->GetValue());
+         cfg->Write(_T("/dialog_placement/dialog_position"),  (int)  XRCCTRL(*this, "chkPlaceHead", wxCheckBox)->GetValue() ? pdlHead : pdlCentre);
+ 
+@@ -419,6 +457,28 @@
+         cfg->Write(_T("/environment/gradient_border"),      XRCCTRL(*this, "btnFNBorder", wxButton)->GetBackgroundColour());
+         cfg->Write(_T("/environment/gradient_from"),        XRCCTRL(*this, "btnFNFrom", wxButton)->GetBackgroundColour());
+         cfg->Write(_T("/environment/gradient_to"),          XRCCTRL(*this, "btnFNTo", wxButton)->GetBackgroundColour());
++
++        // tab "Log window"
++        mcfg->Write(_T("/log_font_size"),                   (int)  XRCCTRL(*this, "spnLogFontSize", wxSpinCtrl)->GetValue());
++        mcfg->Write(_T("/log_colour_list_standard_front"),  XRCCTRL(*this, "btnLogListStandardFront", wxButton)->GetBackgroundColour());
++        mcfg->Write(_T("/log_colour_text_standard_front"),  XRCCTRL(*this, "btnLogTextStandardFront", wxButton)->GetBackgroundColour());
++        mcfg->Write(_T("/log_colour_text_standard_back"),   XRCCTRL(*this, "btnLogTextStandardBack", wxButton)->GetBackgroundColour());
++        mcfg->Write(_T("/log_colour_list_success_front"),   XRCCTRL(*this, "btnLogListSuccessFront", wxButton)->GetBackgroundColour());
++        mcfg->Write(_T("/log_colour_text_success_front"),   XRCCTRL(*this, "btnLogTextSuccessFront", wxButton)->GetBackgroundColour());
++        mcfg->Write(_T("/log_colour_text_success_back"),    XRCCTRL(*this, "btnLogTextSuccessBack", wxButton)->GetBackgroundColour());
++        mcfg->Write(_T("/log_colour_list_warning_front"),   XRCCTRL(*this, "btnLogListWarningFront", wxButton)->GetBackgroundColour());
++        mcfg->Write(_T("/log_colour_text_warning_front"),   XRCCTRL(*this, "btnLogTextWarningFront", wxButton)->GetBackgroundColour());
++        mcfg->Write(_T("/log_colour_text_warning_back"),    XRCCTRL(*this, "btnLogTextWarningBack", wxButton)->GetBackgroundColour());
++        mcfg->Write(_T("/log_colour_list_error_front"),     XRCCTRL(*this, "btnLogListErrorFront", wxButton)->GetBackgroundColour());
++        mcfg->Write(_T("/log_colour_text_error_front"),     XRCCTRL(*this, "btnLogTextErrorFront", wxButton)->GetBackgroundColour());
++        mcfg->Write(_T("/log_colour_text_error_back"),      XRCCTRL(*this, "btnLogTextErrorBack", wxButton)->GetBackgroundColour());
++        mcfg->Write(_T("/log_colour_list_critical_front"),  XRCCTRL(*this, "btnLogListCriticalFront", wxButton)->GetBackgroundColour());
++        mcfg->Write(_T("/log_colour_text_critical_front"),  XRCCTRL(*this, "btnLogTextCriticalFront", wxButton)->GetBackgroundColour());
++        mcfg->Write(_T("/log_colour_text_critical_back"),   XRCCTRL(*this, "btnLogTextCriticalBack", wxButton)->GetBackgroundColour());
++        mcfg->Write(_T("/log_colour_list_failure_front"),   XRCCTRL(*this, "btnLogListFailureFront", wxButton)->GetBackgroundColour());
++        mcfg->Write(_T("/log_colour_text_failure_front"),   XRCCTRL(*this, "btnLogTextFailureFront", wxButton)->GetBackgroundColour());
++        mcfg->Write(_T("/log_colour_text_failure_back"),    XRCCTRL(*this, "btnLogTextFailureBack", wxButton)->GetBackgroundColour());
++
+         cfg->Write(_T("/environment/aui/border_size"),          (int)XRCCTRL(*this, "spnAuiBorder", wxSpinCtrl)->GetValue());
+         cfg->Write(_T("/environment/aui/sash_size"),            (int)XRCCTRL(*this, "spnAuiSash", wxSpinCtrl)->GetValue());
+         cfg->Write(_T("/environment/aui/caption_size"),         (int)XRCCTRL(*this, "spnAuiCaption", wxSpinCtrl)->GetValue());
+Index: src/resources/env_settings.xrc
+===================================================================
+--- src/resources/env_settings.xrc	(revision 4832)
++++ src/resources/env_settings.xrc	(working copy)
+@@ -274,27 +274,6 @@
+ 									<size>0,16</size>
+ 								</object>
+ 								<object class="sizeritem">
+-									<object class="wxBoxSizer">
+-										<object class="sizeritem">
+-											<object class="wxStaticText" name="ID_STATICTEXT22">
+-												<label>Message logs&apos; font size:</label>
+-											</object>
+-											<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
+-										</object>
+-										<object class="sizeritem">
+-											<object class="wxSpinCtrl" name="spnLogFontSize">
+-												<value>8</value>
+-												<min>6</min>
+-												<max>32</max>
+-											</object>
+-											<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
+-											<border>5</border>
+-										</object>
+-									</object>
+-									<flag>wxTOP|wxBOTTOM|wxLEFT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-									<border>8</border>
+-								</object>
+-								<object class="sizeritem">
+ 									<object class="wxFlexGridSizer">
+ 										<cols>2</cols>
+ 										<vgap>8</vgap>
+@@ -441,6 +420,183 @@
+ 						<label>Notebooks appearance</label>
+ 					</object>
+ 					<object class="listbookpage">
++						<object class="wxPanel" name="pnlLogWindow">
++							<object class="wxBoxSizer">
++								<orient>wxVERTICAL</orient>
++								<object class="sizeritem">
++									<object class="wxBoxSizer">
++										<object class="sizeritem">
++											<object class="wxStaticText" name="ID_STATICTEXT22">
++												<label>Font size:</label>
++											</object>
++											<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++										</object>
++										<object class="sizeritem">
++											<object class="wxSpinCtrl" name="spnLogFontSize">
++												<value>8</value>
++												<min>6</min>
++												<max>32</max>
++											</object>
++											<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++											<border>5</border>
++										</object>
++									</object>
++									<flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
++									<border>5</border>
++								</object>
++								<object class="sizeritem">
++									<object class="wxStaticBoxSizer">
++										<label>Colours</label>
++										<orient>wxVERTICAL</orient>
++										<object class="sizeritem">
++											<object class="wxFlexGridSizer">
++												<cols>4</cols>
++												<vgap>4</vgap>
++												<hgap>4</hgap>
++												<object class="spacer">
++													<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxStaticText" name="ID_STATICTEXT33">
++														<label>List</label>
++													</object>
++													<flag>wxLEFT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++													<border>5</border>
++												</object>
++												<object class="sizeritem">
++													<object class="wxStaticText" name="ID_STATICTEXT26">
++														<label>Text foreground</label>
++													</object>
++													<flag>wxLEFT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++													<border>5</border>
++												</object>
++												<object class="sizeritem">
++													<object class="wxStaticText" name="ID_STATICTEXT27">
++														<label>Text background</label>
++													</object>
++													<flag>wxLEFT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++													<border>5</border>
++												</object>
++												<object class="sizeritem">
++													<object class="wxStaticText" name="ID_STATICTEXT31">
++														<label>Standard:</label>
++													</object>
++													<flag>wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxButton" name="btnLogListStandardFront" />
++													<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxButton" name="btnLogTextStandardFront" />
++													<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxButton" name="btnLogTextStandardBack" />
++													<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxStaticText" name="ID_STATICTEXT100">
++														<label>Success:</label>
++													</object>
++													<flag>wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxButton" name="btnLogListSuccessFront" />
++													<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxButton" name="btnLogTextSuccessFront" />
++													<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxButton" name="btnLogTextSuccessBack" />
++													<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxStaticText" name="ID_STATICTEXT44">
++														<label>Warning:</label>
++													</object>
++													<flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxButton" name="btnLogListWarningFront" />
++													<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxButton" name="btnLogTextWarningFront" />
++													<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxButton" name="btnLogTextWarningBack" />
++													<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxStaticText" name="ID_STATICTEXT111">
++														<label>Error:</label>
++													</object>
++													<flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxButton" name="btnLogListErrorFront" />
++													<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxButton" name="btnLogTextErrorFront" />
++													<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxButton" name="btnLogTextErrorBack" />
++													<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxStaticText" name="ID_STATICTEXT24">
++														<label>Critical:</label>
++													</object>
++													<flag>wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxButton" name="btnLogListCriticalFront" />
++													<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxButton" name="btnLogTextCriticalFront" />
++													<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxButton" name="btnLogTextCriticalBack" />
++													<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxStaticText" name="ID_STATICTEXT28">
++														<label>Failure:</label>
++													</object>
++													<flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxButton" name="btnLogListFailureFront" />
++													<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxButton" name="btnLogTextFailureFront" />
++													<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++												<object class="sizeritem">
++													<object class="wxButton" name="btnLogTextFailureBack" />
++													<flag>wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++												</object>
++											</object>
++											<flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++										</object>
++									</object>
++									<flag>wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++									<border>5</border>
++								</object>
++							</object>
++						</object>
++						<label>Log window</label>
++					</object>
++					<object class="listbookpage">
+ 						<object class="wxPanel" name="pnlDocking">
+ 							<object class="wxBoxSizer">
+ 								<orient>wxVERTICAL</orient>
+Index: src/resources/images/settings/log-window-off.png
+===================================================================
+Cannot display: file marked as a binary type.
+svn:mime-type = application/octet-stream
+
+Property changes on: src\resources\images\settings\log-window-off.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Index: src/resources/images/settings/log-window.png
+===================================================================
+Cannot display: file marked as a binary type.
+svn:mime-type = application/octet-stream
+
+Property changes on: src\resources\images\settings\log-window.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+

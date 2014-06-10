@@ -1,0 +1,115 @@
+Index: src/sdk/toolsmanager.cpp
+===================================================================
+--- src/sdk/toolsmanager.cpp	(revision 9232)
++++ src/sdk/toolsmanager.cpp	(working copy)
+@@ -214,7 +214,7 @@
+ void ToolsManager::RemoveToolByIndex(int index)
+ {
+     int idx = 0;
+-    for (ToolsList::Node* node = m_Tools.GetFirst(); node; node = node->GetNext())
++    for (ToolsList::compatibility_iterator node = m_Tools.GetFirst(); node; node = node->GetNext())
+     {
+         if (idx == index)
+         {
+@@ -225,7 +225,7 @@
+     }
+ }
+ 
+-void ToolsManager::DoRemoveTool(ToolsList::Node* node)
++void ToolsManager::DoRemoveTool(ToolsList::compatibility_iterator node)
+ {
+     if (node)
+     {
+@@ -236,7 +236,7 @@
+ 
+ cbTool* ToolsManager::GetToolByMenuId(int id)
+ {
+-    for (ToolsList::Node* node = m_Tools.GetFirst(); node; node = node->GetNext())
++    for (ToolsList::compatibility_iterator node = m_Tools.GetFirst(); node; node = node->GetNext())
+     {
+         cbTool* tool = node->GetData();
+         if (tool->GetMenuId() == id)
+@@ -248,7 +248,7 @@
+ cbTool* ToolsManager::GetToolByIndex(int index)
+ {
+     int idx = 0;
+-    for (ToolsList::Node* node = m_Tools.GetFirst(); node; node = node->GetNext())
++    for (ToolsList::compatibility_iterator node = m_Tools.GetFirst(); node; node = node->GetNext())
+     {
+         cbTool* tool = node->GetData();
+         if (idx == index)
+@@ -290,7 +290,7 @@
+     }
+ 
+     int count = 0;
+-    for (ToolsList::Node* node = m_Tools.GetFirst(); node; node = node->GetNext())
++    for (ToolsList::compatibility_iterator node = m_Tools.GetFirst(); node; node = node->GetNext())
+     {
+         cbTool* tool = node->GetData();
+         wxString elem;
+@@ -320,7 +320,7 @@
+         m_ItemsManager.Add(menu, wxID_SEPARATOR, _T(""), _T(""));
+     }
+ 
+-    for (ToolsList::Node* node = m_Tools.GetFirst(); node; node = node->GetNext())
++    for (ToolsList::compatibility_iterator node = m_Tools.GetFirst(); node; node = node->GetNext())
+     {
+         cbTool* tool = node->GetData();
+         if (tool->GetName() == CB_TOOLS_SEPARATOR)
+Index: src/plugins/compilergcc/compiler_defs.cpp
+===================================================================
+--- src/plugins/compilergcc/compiler_defs.cpp	(revision 9232)
++++ src/plugins/compilergcc/compiler_defs.cpp	(working copy)
+@@ -54,7 +54,7 @@
+ 
+ void CompilerQueue::Add(CompilerQueue* queue)
+ {
+-    wxCompilerCommandsNode* node = queue->m_Commands.GetFirst();
++    CompilerCommands::compatibility_iterator node = queue->m_Commands.GetFirst();
+     while (node)
+     {
+         if (node->GetData())
+@@ -65,7 +65,7 @@
+ 
+ CompilerCommand* CompilerQueue::Peek()
+ {
+-    wxCompilerCommandsNode* node = m_Commands.GetFirst();
++    CompilerCommands::compatibility_iterator node = m_Commands.GetFirst();
+     if (!node)
+         return 0;
+     return node->GetData();
+@@ -73,7 +73,7 @@
+ 
+ CompilerCommand* CompilerQueue::Next()
+ {
+-    wxCompilerCommandsNode* node = m_Commands.GetFirst();
++    CompilerCommands::compatibility_iterator node = m_Commands.GetFirst();
+     if (!node)
+         return 0;
+     CompilerCommand* cmd = node->GetData();
+Index: src/plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- src/plugins/compilergcc/compilergcc.cpp	(revision 9232)
++++ src/plugins/compilergcc/compilergcc.cpp	(working copy)
+@@ -1368,7 +1368,7 @@
+     if (m_TargetMenu)
+     {
+         wxMenuItemList& items = m_TargetMenu->GetMenuItems();
+-        while (wxMenuItemList::Node* node = items.GetFirst())
++        while (wxMenuItemList::compatibility_iterator node = items.GetFirst())
+         {
+             if (node->GetData())
+                 m_TargetMenu->Delete(node->GetData());
+Index: src/include/toolsmanager.h
+===================================================================
+--- src/include/toolsmanager.h	(revision 9232)
++++ src/include/toolsmanager.h	(working copy)
+@@ -43,7 +43,7 @@
+ 	private:
+ 		ToolsManager();
+ 		~ToolsManager();
+-		void DoRemoveTool(ToolsList::Node* node);
++		void DoRemoveTool(ToolsList::compatibility_iterator node);
+ 		int Configure();
+ 		bool Execute(const cbTool* tool);
+ 		void LoadTools();

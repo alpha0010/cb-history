@@ -1,0 +1,117 @@
+Index: src/CodeBlocks.cbp
+===================================================================
+--- src/CodeBlocks.cbp	(revision 3915)
++++ src/CodeBlocks.cbp	(working copy)
+@@ -525,6 +525,9 @@
+ 		<Unit filename="include\cbthreadpool_extras.h">
+ 			<Option target="sdk" />
+ 		</Unit>
++		<Unit filename="include\cbtool.h">
++			<Option target="sdk" />
++		</Unit>
+ 		<Unit filename="include\cbworkspace.h">
+ 			<Option target="sdk" />
+ 		</Unit>
+Index: src/include/cbtool.h
+===================================================================
+--- src/include/cbtool.h	(revision 3915)
++++ src/include/cbtool.h	(working copy)
+@@ -3,6 +3,8 @@
+ 
+ #include <wx/string.h>
+ 
++#define CB_TOOLS_SEPARATOR _("---separator---")
++
+ class cbTool
+ {
+   public:
+Index: src/include/configuretoolsdlg.h
+===================================================================
+--- src/include/configuretoolsdlg.h	(revision 3915)
++++ src/include/configuretoolsdlg.h	(working copy)
+@@ -19,6 +19,7 @@
+ 		void OnAdd(wxCommandEvent& event);
+ 		void OnEdit(wxCommandEvent& event);
+ 		void OnRemove(wxCommandEvent& event);
++		void OnAddSeparator(wxCommandEvent& event);
+ 		void OnUp(wxCommandEvent& event);
+ 		void OnDown(wxCommandEvent& event);
+ 		void OnUpdateUI(wxUpdateUIEvent& event);
+Index: src/sdk/configuretoolsdlg.cpp
+===================================================================
+--- src/sdk/configuretoolsdlg.cpp	(revision 3915)
++++ src/sdk/configuretoolsdlg.cpp	(working copy)
+@@ -46,6 +46,7 @@
+ 	EVT_BUTTON(XRCID("btnAdd"), 	ConfigureToolsDlg::OnAdd)
+ 	EVT_BUTTON(XRCID("btnEdit"), 	ConfigureToolsDlg::OnEdit)
+ 	EVT_BUTTON(XRCID("btnRemove"), 	ConfigureToolsDlg::OnRemove)
++	EVT_BUTTON(XRCID("btnAddSeparator"), 	ConfigureToolsDlg::OnAddSeparator)
+ 	EVT_BUTTON(XRCID("btnUp"), 		ConfigureToolsDlg::OnUp)
+ 	EVT_BUTTON(XRCID("btnDown"), 	ConfigureToolsDlg::OnDown)
+ 	EVT_UPDATE_UI(-1,				ConfigureToolsDlg::OnUpdateUI)
+@@ -93,8 +94,12 @@
+ 	bool hasSel = list->GetSelection() != -1;
+ 	bool notFirst = list->GetSelection() > 0;
+ 	bool notLast = (list->GetSelection() < list->GetCount() -1) && hasSel;
++	bool notSeparator = true;
+ 
+-	XRCCTRL(*this, "btnEdit", wxButton)->Enable(hasSel);
++	if(hasSel)
++        notSeparator = Manager::Get()->GetToolsManager()->GetToolByIndex(list->GetSelection())->GetName() != CB_TOOLS_SEPARATOR;
++
++	XRCCTRL(*this, "btnEdit", wxButton)->Enable(hasSel && notSeparator);
+ 	XRCCTRL(*this, "btnRemove", wxButton)->Enable(hasSel);
+ 	XRCCTRL(*this, "btnUp", wxButton)->Enable(notFirst);
+ 	XRCCTRL(*this, "btnDown", wxButton)->Enable(notLast);
+@@ -131,6 +136,15 @@
+ 	}
+ } // end of OnRemove
+ 
++void ConfigureToolsDlg::OnAddSeparator(wxCommandEvent& /*event*/)
++{
++    cbTool tool;
++    tool.SetName(CB_TOOLS_SEPARATOR);
++    tool.SetCommand(CB_TOOLS_SEPARATOR);
++    Manager::Get()->GetToolsManager()->AddTool(&tool);
++    DoFillList();
++} // end of OnAddSeparator
++
+ void ConfigureToolsDlg::OnUp(wxCommandEvent& /*event*/)
+ {
+ 	wxListBox* list = XRCCTRL(*this, "lstTools", wxListBox);
+Index: src/sdk/resources/configure_tools.xrc
+===================================================================
+--- src/sdk/resources/configure_tools.xrc	(revision 3915)
++++ src/sdk/resources/configure_tools.xrc	(working copy)
+@@ -52,6 +52,15 @@
+                 </object>
+                 <flag>wxGROW</flag>
+               </object>
++              <object class="spacer">
++                <size>0,16</size>
++              </object>
++              <object class="sizeritem">
++                <object class="wxButton" name="btnAddSeparator">
++                  <label>Add &amp;Separator</label>
++                </object>
++                <flag>wxGROW</flag>
++              </object>
+             </object>
+             <flag>wxLEFT|wxEXPAND</flag>
+             <border>8</border>
+Index: src/sdk/toolsmanager.cpp
+===================================================================
+--- src/sdk/toolsmanager.cpp	(revision 3915)
++++ src/sdk/toolsmanager.cpp	(working copy)
+@@ -327,6 +327,11 @@
+     for (ToolsList::Node* node = m_Tools.GetFirst(); node; node = node->GetNext())
+     {
+         cbTool* tool = node->GetData();
++        if (tool->GetName() == CB_TOOLS_SEPARATOR)
++        {
++            m_ItemsManager.Add(menu, wxID_SEPARATOR, _T(""), _T(""));
++            continue;
++        }
+         if (tool->GetMenuId() == -1)
+         {
+             tool->SetMenuId(wxNewId());

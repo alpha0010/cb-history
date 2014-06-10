@@ -1,0 +1,423 @@
+Index: src/sdk/projectmanager.cpp
+===================================================================
+--- src/sdk/projectmanager.cpp	(Revision 3882)
++++ src/sdk/projectmanager.cpp	(Arbeitskopie)
+@@ -2031,7 +2031,8 @@
+ void ProjectManager::OnRemoveFileFromProject(wxCommandEvent& event)
+ {
+     wxTreeItemId sel = m_pTree->GetSelection();
+-    FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(sel);
++    FileTreeData* ftd = NULL;
++    if (sel.IsOk()) ftd = (FileTreeData*)m_pTree->GetItemData(sel);
+     if (!ftd)
+         return;
+     cbProject* prj = ftd->GetProject();
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(Revision 3882)
++++ src/sdk/editorconfigurationdlg.cpp	(Arbeitskopie)
+@@ -282,6 +282,11 @@
+ void EditorConfigurationDlg::UpdateListbookImages()
+ {
+     wxListbook* lb = XRCCTRL(*this, "nbMain", wxListbook);
++    
++    //If this function is called while loading the dialog from XRC (imagelist not assigned yet)
++    if(!lb->GetImageList())
++        return;
++    
+     int sel = lb->GetSelection();
+     // set page images according to their on/off status
+     for (size_t i = 0; i < IMAGES_COUNT + m_PluginPanels.GetCount(); ++i)
+Index: src/sdk/virtualbuildtargetsdlg.cpp
+===================================================================
+--- src/sdk/virtualbuildtargetsdlg.cpp	(Revision 3882)
++++ src/sdk/virtualbuildtargetsdlg.cpp	(Arbeitskopie)
+@@ -39,13 +39,14 @@
+ 
+ 	// fill aliases
+ 	wxArrayString virtuals = m_pProject->GetVirtualBuildTargets();
+-	lstAliases->Set(virtuals);
+-	lstAliases->SetSelection(0);
++	lstAliases->Set(virtuals);
++	if (!virtuals.IsEmpty())
++		lstAliases->SetSelection(0);
+ 
+ 	// fill build targets
+ 	for (int i = 0; i < m_pProject->GetBuildTargetsCount(); ++i)
+-        lstTargets->Append(m_pProject->GetBuildTarget(i)->GetTitle());
+-    CheckTargets();
++		lstTargets->Append(m_pProject->GetBuildTarget(i)->GetTitle());
++	CheckTargets();
+ }
+ 
+ VirtualBuildTargetsDlg::~VirtualBuildTargetsDlg()
+Index: src/sdk/uservarmanager.cpp
+===================================================================
+--- src/sdk/uservarmanager.cpp	(Revision 3882)
++++ src/sdk/uservarmanager.cpp	(Arbeitskopie)
+@@ -540,7 +540,10 @@
+     for(unsigned int i = 0; i < builtinMembers.GetCount(); ++i)
+     {
+         ((wxTextCtrl*) FindWindow(builtinMembers[i]))->SetValue(cfg->Read(path + builtinMembers[i]));
+-        knownMembers.RemoveAt(knownMembers.Index(builtinMembers[i], false));
++        
++        int index=knownMembers.Index(builtinMembers[i], false);
++        if(index != wxNOT_FOUND)
++            knownMembers.RemoveAt(index);
+     }
+ 
+     for(unsigned int i = 0; i < 7; ++i)
+@@ -608,7 +611,7 @@
+     selVar->Append(vars);
+ 
+ 
+-    if(currentVar.IsEmpty())
++    if(currentVar.IsEmpty() && !selVar->IsEmpty())
+         currentVar = selVar->GetString(0);
+ 
+     selSet->SetStringSelection(currentSet);
+Index: src/plugins/debuggergdb/debuggertree.cpp
+===================================================================
+--- src/plugins/debuggergdb/debuggertree.cpp	(Revision 3882)
++++ src/plugins/debuggergdb/debuggertree.cpp	(Arbeitskopie)
+@@ -567,7 +567,10 @@
+     wxMenu menu(wxEmptyString);
+ 
+     // if we right-clicked on a pointer, add a "dereference pointer" entry
+-    wxString itemtext = m_pTree->GetItemText(id);
++    wxString itemtext;
++    if(id.IsOk())
++        itemtext = m_pTree->GetItemText(id);
++    
+     if (itemtext.Find(_T('*')) != wxNOT_FOUND)
+     {
+         menu.Append(idDereferenceValue, wxString::Format(_("Dereference pointer '%s'"), itemtext.BeforeFirst(_T('=')).c_str()));
+@@ -579,12 +582,15 @@
+     menu.Append(idWatchThis, _("Watch '*&this'"));
+ 
+     // we have to have a valid id for the following to be enabled
+-    WatchTreeData* data = dynamic_cast<WatchTreeData*>(m_pTree->GetItemData(id));
+-    if (id.IsOk() && // valid item
+-        data && data->m_pWatch) // *is* a watch
++    if (id.IsOk()) // valid item
+     {
+-        menu.Append(idEditWatch, _("&Edit watch"));
+-        menu.Append(idDeleteWatch, _("&Delete watch"));
++        WatchTreeData* data = dynamic_cast<WatchTreeData*>(m_pTree->GetItemData(id));
++        
++        if(data && data->m_pWatch) // *is* a watch
++        {
++            menu.Append(idEditWatch, _("&Edit watch"));
++            menu.Append(idDeleteWatch, _("&Delete watch"));
++        }
+     }
+     menu.AppendSeparator();
+     menu.Append(idChangeValue, _("&Change value..."));
+Index: src/plugins/codecompletion/nativeparser.cpp
+===================================================================
+--- src/plugins/codecompletion/nativeparser.cpp	(Revision 3882)
++++ src/plugins/codecompletion/nativeparser.cpp	(Arbeitskopie)
+@@ -1132,8 +1132,9 @@
+             --x;
+ 
+         if (x > 0 &&
+-            (line.GetChar(x) == '>' && line.GetChar(x - 1) == '-') ||
+-            (line.GetChar(x) == ':' && line.GetChar(x - 1) == ':'))
++            ( (line.GetChar(x) == '>' && line.GetChar(x - 1) == '-') ||
++            (line.GetChar(x) == ':' && line.GetChar(x - 1) == ':') )
++            )
+         {
+             x -= 2;
+             repeat = true;
+Index: src/plugins/codecompletion/classbrowserbuilderthread.cpp
+===================================================================
+--- src/plugins/codecompletion/classbrowserbuilderthread.cpp	(Revision 3882)
++++ src/plugins/codecompletion/classbrowserbuilderthread.cpp	(Arbeitskopie)
+@@ -185,8 +185,9 @@
+     m_pTreeTop->Freeze();
+     m_pTreeBottom->Freeze();
+ 
+-	RemoveInvalidNodes(m_pTreeTop, root);
+-	RemoveInvalidNodes(m_pTreeBottom, m_pTreeBottom->GetRootItem());
++	RemoveInvalidNodes(m_pTreeTop, root);
++	if(m_pTreeBottom->GetRootItem().IsOk())
++		RemoveInvalidNodes(m_pTreeBottom, m_pTreeBottom->GetRootItem());
+ 
+     if (TestDestroy() || Manager::IsAppShuttingDown())
+     {
+@@ -212,8 +213,9 @@
+ 
+     m_pTreeBottom->Thaw();
+     m_pTreeTop->Thaw();
+-
+-    SelectNode(m_pTreeTop->GetSelection()); // refresh selection
++
++    wxTreeItemId sel=m_pTreeTop->GetSelection();
++    if(sel.IsOk()) SelectNode(sel); // refresh selection
+ }
+ 
+ void ClassBrowserBuilderThread::RemoveInvalidNodes(wxTreeCtrl* tree, wxTreeItemId parent)
+@@ -338,7 +340,7 @@
+ 
+ bool ClassBrowserBuilderThread::AddChildrenOf(wxTreeCtrl* tree, wxTreeItemId parent, int parentTokenIdx, int tokenKindMask)
+ {
+-    if (TestDestroy() || Manager::IsAppShuttingDown())
++    if ((This()==this && TestDestroy()) || Manager::IsAppShuttingDown())
+         return false;
+ 
+     Token* parentToken = 0;
+@@ -367,7 +369,7 @@
+ 
+ bool ClassBrowserBuilderThread::AddAncestorsOf(wxTreeCtrl* tree, wxTreeItemId parent, int tokenIdx)
+ {
+-    if (TestDestroy() || Manager::IsAppShuttingDown())
++    if ((This()==this && TestDestroy()) || Manager::IsAppShuttingDown())
+         return false;
+ 
+     Token* token = m_pTokens->at(tokenIdx);
+@@ -379,7 +381,7 @@
+ 
+ bool ClassBrowserBuilderThread::AddDescendantsOf(wxTreeCtrl* tree, wxTreeItemId parent, int tokenIdx, bool allowInheritance)
+ {
+-    if (TestDestroy() || Manager::IsAppShuttingDown())
++    if ((This()==this && TestDestroy()) || Manager::IsAppShuttingDown())
+         return false;
+ 
+     Token* token = m_pTokens->at(tokenIdx);
+@@ -480,7 +482,7 @@
+ 
+ void ClassBrowserBuilderThread::SelectNode(wxTreeItemId node)
+ {
+-    if (TestDestroy() || Manager::IsAppShuttingDown() || (!(node.IsOk())))
++    if ((This()==this && TestDestroy()) || Manager::IsAppShuttingDown() || (!(node.IsOk())))
+         return;
+ 
+     m_pTreeBottom->Freeze();
+@@ -557,7 +559,7 @@
+ 
+ void ClassBrowserBuilderThread::ExpandItem(wxTreeItemId item)
+ {
+-    if (TestDestroy() || Manager::IsAppShuttingDown())
++    if ((This()==this && TestDestroy()) || Manager::IsAppShuttingDown())
+         return;
+ 
+     wxMutexLocker lock(m_BuildMutex);
+@@ -612,7 +614,7 @@
+ 
+ void ClassBrowserBuilderThread::CollapseItem(wxTreeItemId item)
+ {
+-    if (TestDestroy() || Manager::IsAppShuttingDown())
++    if ((This()==this && TestDestroy()) || Manager::IsAppShuttingDown())
+         return;
+ 
+     wxMutexLocker lock(m_BuildMutex);
+@@ -627,7 +629,7 @@
+ 
+ void ClassBrowserBuilderThread::SelectItem(wxTreeItemId item)
+ {
+-    if (TestDestroy() || Manager::IsAppShuttingDown())
++    if ((This()==this && TestDestroy()) || Manager::IsAppShuttingDown())
+         return;
+ 
+     wxMutexLocker lock(m_BuildMutex);
+Index: src/plugins/codecompletion/classbrowser.cpp
+===================================================================
+--- src/plugins/codecompletion/classbrowser.cpp	(Revision 3882)
++++ src/plugins/codecompletion/classbrowser.cpp	(Arbeitskopie)
+@@ -632,7 +632,8 @@
+ 
+ void ClassBrowser::OnTreeItemSelected(wxTreeEvent& event)
+ {
+-    if (m_pBuilderThread)
+-        m_pBuilderThread->SelectItem(event.GetItem());
++    wxTreeItemId id = event.GetItem();
++    if (id.IsOk() && m_pBuilderThread)
++        m_pBuilderThread->SelectItem(id);
+     event.Allow();
+ }
+Index: src/plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- src/plugins/compilergcc/compilergcc.cpp	(Revision 3882)
++++ src/plugins/compilergcc/compilergcc.cpp	(Arbeitskopie)
+@@ -2998,7 +2998,9 @@
+ {
+     wxTreeCtrl* tree = Manager::Get()->GetProjectManager()->GetTree();
+     wxTreeItemId sel = tree->GetSelection();
+-    FileTreeData* ftd = (FileTreeData*)tree->GetItemData(sel);
++    FileTreeData* ftd = NULL;
++    if (sel.IsOk())
++        ftd = (FileTreeData*)tree->GetItemData(sel);
+     if (ftd)
+     {
+         // 'configure' selected target, if other than 'All'
+Index: src/include/cbtool.h
+===================================================================
+--- src/include/cbtool.h	(Revision 3882)
++++ src/include/cbtool.h	(Arbeitskopie)
+@@ -14,7 +14,11 @@
+         LAUNCH_VISIBLE_DETACHED
+     };
+ 
+-    cbTool() { m_MenuId = -1; }
++    cbTool()
++    {
++        m_MenuId = -1;
++        m_LaunchOption = LAUNCH_NEW_CONSOLE_WINDOW;
++    }
+     // getters
+     wxString GetName() const {return m_Name;}
+     wxString GetCommand() const {return m_Command;}
+Index: src/src/startherepage.cpp
+===================================================================
+--- src/src/startherepage.cpp	(Revision 3882)
++++ src/src/startherepage.cpp	(Arbeitskopie)
+@@ -173,14 +173,23 @@
+     if(href.IsSameAs(_T("http://www.codeblocks.org/"))
+     || href.StartsWith(_T("http://developer.berlios.de/bugs/")))
+     {
+-        wxTextDataObject *data = new wxTextDataObject(revInfo);
+-        wxTheClipboard->SetData(data);
++        if(wxTheClipboard->Open())
++        {
++            wxTextDataObject *data = new wxTextDataObject(revInfo);
++            wxTheClipboard->SetData(data);
++            wxTheClipboard->Close();
++        }
+     }
+ 
+     if(href.IsSameAs(_T("rev")))
+     {
+-        wxTextDataObject *data = new wxTextDataObject(revInfo);
+-        wxTheClipboard->SetData(data);
++        if(wxTheClipboard->Open())
++        {
++            wxTextDataObject *data = new wxTextDataObject(revInfo);
++            wxTheClipboard->SetData(data);
++            wxTheClipboard->Close();
++        }
++        
+         return true;
+     }
+ 
+Index: src/src/environmentsettingsdlg.cpp
+===================================================================
+--- src/src/environmentsettingsdlg.cpp	(Revision 3882)
++++ src/src/environmentsettingsdlg.cpp	(Arbeitskopie)
+@@ -248,6 +248,11 @@
+ void EnvironmentSettingsDlg::UpdateListbookImages()
+ {
+     wxListbook* lb = XRCCTRL(*this, "nbMain", wxListbook);
++    
++	//If this function is called while loading the dialog from XRC (imagelist not assigned yet)
++	if(!lb->GetImageList())
++		return;
++    
+     int sel = lb->GetSelection();
+     // set page images according to their on/off status
+     for (size_t i = 0; i < IMAGES_COUNT + m_PluginPanels.GetCount(); ++i)
+Index: src/src/compilersettingsdlg.cpp
+===================================================================
+--- src/src/compilersettingsdlg.cpp	(Revision 3882)
++++ src/src/compilersettingsdlg.cpp	(Arbeitskopie)
+@@ -129,35 +129,32 @@
+     for (size_t i = 0; i < local.GetCount(); ++i)
+     {
+         cbConfigurationPanel* panel = local[i];
+-        lb->AddPage(panel, panel->GetTitle());
+ 
+         lb->GetImageList()->Add(cbLoadBitmap(base + panel->GetBitmapBaseName() + _T(".png")));
+         lb->GetImageList()->Add(cbLoadBitmap(base + panel->GetBitmapBaseName() + _T("-off.png")));
+-        lb->SetPageImage(lb->GetPageCount() - 1, lb->GetImageList()->GetImageCount() - 2);
++        lb->AddPage(panel, panel->GetTitle(), false, lb->GetImageList()->GetImageCount() - 2);
+ 
+         // add it in our central container too
+         m_PluginPanels.Add(panel);
+     }
+ 
+     // now load the builtin pages' images
+-    lb->AddPage(existingPage, existingTitle);
+     wxBitmap bmp;
+     bmp = cbLoadBitmap(base + base_imgs[0] + _T(".png"), wxBITMAP_TYPE_PNG);
+     lb->GetImageList()->Add(bmp);
+     bmp = cbLoadBitmap(base + base_imgs[0] + _T("-off.png"), wxBITMAP_TYPE_PNG);
+     lb->GetImageList()->Add(bmp);
+-    lb->SetPageImage(lb->GetPageCount() -1, lb->GetImageList()->GetImageCount() - 2);
++    lb->AddPage(existingPage, existingTitle, false, lb->GetImageList()->GetImageCount() - 2);
+ 
+     // step 2
+     Manager::Get()->GetPluginManager()->GetConfigurationPanels(cgDebugger, lb, local);
+     for (size_t i = 0; i < local.GetCount(); ++i)
+     {
+         cbConfigurationPanel* panel = local[i];
+-        lb->AddPage(panel, panel->GetTitle());
+ 
+         lb->GetImageList()->Add(cbLoadBitmap(base + panel->GetBitmapBaseName() + _T(".png")));
+         lb->GetImageList()->Add(cbLoadBitmap(base + panel->GetBitmapBaseName() + _T("-off.png")));
+-        lb->SetPageImage(lb->GetPageCount() - 1, lb->GetImageList()->GetImageCount() - 2);
++        lb->AddPage(panel, panel->GetTitle(), false, lb->GetImageList()->GetImageCount() - 2);
+ 
+         // add it in our central container too
+         m_PluginPanels.Add(panel);
+@@ -169,6 +166,11 @@
+ void CompilerSettingsDlg::UpdateListbookImages()
+ {
+     wxListbook* lb = XRCCTRL(*this, "nbMain", wxListbook);
++	
++	//If this function is called while loading the dialog from XRC (imagelist not assigned yet)
++	if(!lb->GetImageList())
++		return;
++	
+     int sel = lb->GetSelection();
+     // set page images according to their on/off status
+     for (size_t i = 0; i < IMAGES_COUNT + m_PluginPanels.GetCount(); ++i)
+Index: src/src/app.h
+===================================================================
+--- src/src/app.h	(Revision 3882)
++++ src/src/app.h	(Arbeitskopie)
+@@ -55,6 +55,7 @@
+     protected:
+         void OnBatchBuildDone(CodeBlocksEvent& event);
+         bool LoadConfig();
++        void InitCmdLineParser();
+         void InitDebugConsole();
+         void InitExceptionHandler();
+         bool InitXRCStuff();
+Index: src/src/app.cpp
+===================================================================
+--- src/src/app.cpp	(Revision 3882)
++++ src/src/app.cpp	(Arbeitskopie)
+@@ -303,6 +303,16 @@
+ #endif
+ }
+ 
++void CodeBlocksApp::InitCmdLineParser()
++{
++#if wxUSE_CMDLINE_PARSER
++    wxCmdLineParser& parser = *Manager::GetCmdLineParser();
++    parser.SetDesc(cmdLineDesc);
++    parser.SetCmdLine(argc, argv);
++    // wxApp::argc is a wxChar**
++#endif
++}
++
+ void CodeBlocksApp::InitDebugConsole()
+ {
+ #ifdef __WXMSW__
+@@ -460,6 +470,7 @@
+     #endif
+ 
+         InitExceptionHandler();
++        InitCmdLineParser();
+ 
+         if(!LoadConfig())
+             return false;
+@@ -845,9 +856,6 @@
+ 
+ #if wxUSE_CMDLINE_PARSER
+     wxCmdLineParser& parser = *Manager::GetCmdLineParser();
+-    parser.SetDesc(cmdLineDesc);
+-    parser.SetCmdLine(argc, argv);
+-    // wxApp::argc is a wxChar**
+ 
+     // don't display errors as plugins will have the chance to parse the command-line
+     // too, so we don't know here what exactly are the supported options

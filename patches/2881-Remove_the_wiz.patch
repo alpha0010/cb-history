@@ -1,0 +1,43 @@
+Index: src/plugins/codecompletion/resources/classbrowser.xrc
+===================================================================
+--- src/plugins/codecompletion/resources/classbrowser.xrc	(revision 5986)
++++ src/plugins/codecompletion/resources/classbrowser.xrc	(working copy)
+@@ -54,10 +54,10 @@
+ 							<object class="wxSplitterWindow" name="splitterWin">
+ 								<minsize>64</minsize>
+ 								<style>wxSP_LIVE_UPDATE</style>
+-								<object class="wxTreeCtrl" name="treeAll">
++								<object class="wxTreeCtrl" name="treeAll" subclass="CBTreeCtrl">
+ 									<style>wxTR_HAS_VARIABLE_ROW_HEIGHT|wxTR_DEFAULT_STYLE</style>
+ 								</object>
+-								<object class="wxTreeCtrl" name="treeMembers">
++								<object class="wxTreeCtrl" name="treeMembers" subclass="CBTreeCtrl">
+ 									<style>wxTR_HAS_BUTTONS|wxTR_NO_LINES|wxTR_HIDE_ROOT|wxTR_HAS_VARIABLE_ROW_HEIGHT</style>
+ 								</object>
+ 							</object>
+Index: src/plugins/codecompletion/classbrowser.cpp
+===================================================================
+--- src/plugins/codecompletion/classbrowser.cpp	(revision 5986)
++++ src/plugins/codecompletion/classbrowser.cpp	(working copy)
+@@ -113,19 +113,10 @@
+     if (platform::windows)
+         m_Search->SetWindowStyle(wxTE_PROCESS_ENTER); // it's a must on windows to catch EVT_TEXT_ENTER
+ 
++    m_Tree = XRCCTRL(*this, "treeAll", CBTreeCtrl);
+ 
+-    wxTreeCtrl* tmp = XRCCTRL(*this, "treeAll", CBTreeCtrl);
+-    wxSplitterWindow* winTmp = (wxSplitterWindow*)tmp->GetParent();
++    m_TreeBottom = XRCCTRL(*this, "treeMembers", CBTreeCtrl);
+ 
+-    m_Tree = new CBTreeCtrl(tmp->GetParent(), tmp->GetId(), tmp->GetPosition(), tmp->GetSize(), tmp->GetWindowStyleFlag());
+-    winTmp->ReplaceWindow(tmp, m_Tree);
+-    delete tmp;
+-
+-    tmp = XRCCTRL(*this, "treeMembers", CBTreeCtrl);
+-    m_TreeBottom = new CBTreeCtrl(tmp->GetParent(), tmp->GetId(), tmp->GetPosition(), tmp->GetSize(), tmp->GetWindowStyleFlag());
+-    winTmp->ReplaceWindow(tmp, m_TreeBottom);
+-    delete tmp;
+-
+     int filter = cfg->ReadInt(_T("/browser_display_filter"), bdfWorkspace);
+     XRCCTRL(*this, "cmbView", wxChoice)->SetSelection(filter);
+ 

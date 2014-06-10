@@ -1,0 +1,1034 @@
+Index: codestatexec.h
+===================================================================
+--- codestatexec.h	(revision 8065)
++++ codestatexec.h	(working copy)
+@@ -15,23 +15,39 @@
+ #include "language_def.h"
+ 
+ class wxWindow;
++class wxProgressDialog;
+ 
+ /** This class computes the statistics of the project's files and display them.
+  *  @see CodeStat, CodeStatConfigDlg, CodeStatExecDlg, LanguageDef
+  */
++
++class CodeStatCache;
++
+ class CodeStatExecDlg : public wxScrollingDialog
+ {
+-	public:
+-		CodeStatExecDlg(wxWindow* parent) : parent(parent){}
+-		virtual ~CodeStatExecDlg();
+-		int Execute(LanguageDef languages[NB_FILETYPES_MAX], int nb_languages);
+-	private:
+-      void EndModal(int retCode);
+-      void CountLines(wxFileName filename, LanguageDef &language,
+-                      long int &code_lines, long int &codecomments_lines,
+-                      long int &comment_lines, long int &empty_lines, long int &total_lines);
+-      void AnalyseLine(LanguageDef &language, wxString line, bool &comment, bool &code, bool &multi_line_comment);
+-      wxWindow* parent;
++public:
++    CodeStatExecDlg(wxWindow* parent);
++    virtual ~CodeStatExecDlg();
++    int Execute(LanguageDef languages[NB_FILETYPES_MAX], int nb_languages);
++private:
++    void EndModal(int retCode);
++    void OnSelectProject(wxCommandEvent& evt);
++    void OnIdle(wxIdleEvent& evt);
++    void ParseProject(int index);
++    void DoParseProject(int index);
++    void DoParseWorkspace();
++    void UpdateProgress();
++    void ShowResults(int index);
++
++    wxWindow* m_parent;
++    wxChoice* m_choice;
++    wxProgressDialog* m_progress;
++    CodeStatCache* m_cache;
++    LanguageDef* m_languages;
++    int m_nb_languages;
++    int m_nb_files;
++    int m_current_file;
++    bool m_changed;
+ };
+ 
+ #endif // CODESTATEXEC_H
+Index: resources/main_dialog.xrc
+===================================================================
+--- resources/main_dialog.xrc	(revision 8065)
++++ resources/main_dialog.xrc	(working copy)
+@@ -1,199 +1,232 @@
+ <?xml version="1.0" encoding="utf-8" ?>
+-<resource xmlns="http://www.wxwidgets.org/wxxrc">
+-  <object class="wxScrollingDialog" name="dlgCodeStatExec">
+-    <title>Code Statistics</title>
+-    <object class="wxBoxSizer">
+-      <orient>wxVERTICAL</orient>
+-      <object class="sizeritem">
+-        <object class="wxStaticBoxSizer">
+-          <orient>wxVERTICAL</orient>
+-          <object class="sizeritem">
+-            <object class="wxGridSizer">
+-              <cols>2</cols>
+-              <rows>2</rows>
+-              <object class="sizeritem">
+-                <object class="wxStaticText">
+-                  <label>Number of files:</label>
+-                </object>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticText" name="txt_num_files">
+-                  <label>999999</label>
+-                  <style>wxALIGN_RIGHT</style>
+-                </object>
+-                <flag>wxALIGN_RIGHT</flag>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticText">
+-                  <label>Files skipped:</label>
+-                </object>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticText" name="txt_skipped_files">
+-                  <label>999999</label>
+-                  <style>wxALIGN_RIGHT</style>
+-                </object>
+-                <flag>wxALIGN_RIGHT</flag>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticText">
+-                  <label>Files not found:</label>
+-                </object>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticText" name="txt_files_not_found">
+-                  <label>999999</label>
+-                  <style>wxALIGN_RIGHT</style>
+-                </object>
+-                <flag>wxALIGN_RIGHT</flag>
+-              </object>
+-            </object>
+-            <flag>wxALL|wxEXPAND</flag>
+-            <border>5</border>
+-          </object>
+-          <object class="sizeritem">
+-            <object class="wxGridSizer">
+-              <cols>2</cols>
+-              <rows>2</rows>
+-              <object class="sizeritem">
+-                <object class="wxGauge" name="Gauge_Code">
+-                  <range>100</range>
+-                  <size>-1,20</size>
+-                </object>
+-                <flag>wxALL|wxEXPAND</flag>
+-                <border>2</border>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticText" name="txt_Gauge_Code">
+-                  <label>XXXX% Code only</label>
+-                </object>
+-                <flag>wxALIGN_CENTRE_VERTICAL</flag>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxGauge" name="Gauge_Code_Comments">
+-                  <range>100</range>
+-                  <size>-1,20</size>
+-                </object>
+-                <flag>wxALL|wxEXPAND</flag>
+-                <border>2</border>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticText" name="txt_Gauge_Code_Comments">
+-                  <label>XXXX% Code + comm.</label>
+-                </object>
+-                <flag>wxALIGN_CENTRE_VERTICAL</flag>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxGauge" name="Gauge_Comments">
+-                  <range>100</range>
+-                  <size>-1,20</size>
+-                </object>
+-                <flag>wxALL|wxEXPAND</flag>
+-                <border>2</border>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticText" name="txt_Gauge_Comments">
+-                  <label>XXXX% Comments</label>
+-                </object>
+-                <flag>wxALIGN_CENTRE_VERTICAL</flag>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxGauge" name="Gauge_Empty">
+-                  <range>100</range>
+-                  <size>-1,20</size>
+-                </object>
+-                <flag>wxALL|wxEXPAND</flag>
+-                <border>2</border>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticText" name="txt_Gauge_Empty">
+-                  <label>XXXX% Empty</label>
+-                </object>
+-                <flag>wxALIGN_CENTRE_VERTICAL</flag>
+-              </object>
+-            </object>
+-          </object>
+-          <object class="sizeritem">
+-            <object class="wxGridSizer">
+-              <cols>2</cols>
+-              <rows>2</rows>
+-              <object class="sizeritem">
+-                <object class="wxStaticText">
+-                  <label>Code only:</label>
+-                </object>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticText" name="txt_Code">
+-                  <label>999999</label>
+-                  <style>wxALIGN_RIGHT</style>
+-                </object>
+-                <flag>wxALIGN_RIGHT</flag>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticText">
+-                  <label>Empty lines:</label>
+-                </object>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticText" name="txt_Empty">
+-                  <label>999999</label>
+-                  <style>wxALIGN_RIGHT</style>
+-                </object>
+-                <flag>wxALIGN_RIGHT</flag>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticText">
+-                  <label>Comment lines:</label>
+-                </object>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticText" name="txt_Comments">
+-                  <label>999999</label>
+-                  <style>wxALIGN_RIGHT</style>
+-                </object>
+-                <flag>wxALIGN_RIGHT</flag>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticText">
+-                  <label>Code and comments:</label>
+-                </object>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticText" name="txt_Code_Comments">
+-                  <label>999999</label>
+-                  <style>wxALIGN_RIGHT</style>
+-                </object>
+-                <flag>wxALIGN_RIGHT</flag>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticText">
+-                  <label>Total:</label>
+-                </object>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxStaticText" name="txt_Total">
+-                  <label>999999</label>
+-                  <style>wxALIGN_RIGHT</style>
+-                </object>
+-                <flag>wxALIGN_RIGHT</flag>
+-              </object>
+-            </object>
+-            <flag>wxALL|wxEXPAND</flag>
+-            <border>5</border>
+-          </object>
+-          <label></label>
+-        </object>
+-        <flag>wxALL</flag>
+-        <border>5</border>
+-      </object>
+-      <object class="sizeritem">
+-        <object class="wxButton" name="wxID_OK">
+-          <label>OK</label>
+-        </object>
+-        <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_CENTRE</flag>
+-        <border>5</border>
+-      </object>
+-    </object>
+-    <centered>1</centered>
+-  </object>
++<resource>
++	<object class="wxScrollingDialog" name="dlgCodeStatExec">
++		<title>Code Statistics</title>
++		<centered>1</centered>
++		<size>-1,-1</size>
++		<object class="wxBoxSizer">
++			<orient>wxVERTICAL</orient>
++			<object class="sizeritem">
++				<object class="wxBoxSizer">
++					<object class="sizeritem">
++						<object class="wxStaticText" name="ID_STATICTEXT9">
++							<label>Project:</label>
++							<size>42,13</size>
++						</object>
++						<flag>wxALL|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++						<border>5</border>
++					</object>
++					<object class="sizeritem">
++						<object class="wxChoice" name="ID_CHOICE1">
++							<size>126,21</size>
++						</object>
++						<flag>wxALL|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++						<border>5</border>
++						<option>1</option>
++					</object>
++				</object>
++				<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++				<border>5</border>
++				<option>1</option>
++			</object>
++			<object class="sizeritem">
++				<object class="wxStaticBoxSizer">
++					<orient>wxVERTICAL</orient>
++					<object class="sizeritem">
++						<object class="wxGridSizer">
++							<cols>2</cols>
++							<rows>3</rows>
++							<object class="sizeritem">
++								<object class="wxStaticText" name="ID_STATICTEXT1">
++									<label>Number of files:</label>
++								</object>
++								<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++							</object>
++							<object class="sizeritem">
++								<object class="wxStaticText" name="txt_num_files">
++									<label>999999</label>
++									<style>wxALIGN_RIGHT</style>
++								</object>
++								<flag>wxALIGN_RIGHT|wxALIGN_TOP</flag>
++							</object>
++							<object class="sizeritem">
++								<object class="wxStaticText" name="ID_STATICTEXT2">
++									<label>Files skipped:</label>
++								</object>
++								<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++							</object>
++							<object class="sizeritem">
++								<object class="wxStaticText" name="txt_skipped_files">
++									<label>999999</label>
++									<style>wxALIGN_RIGHT</style>
++								</object>
++								<flag>wxALIGN_RIGHT|wxALIGN_TOP</flag>
++							</object>
++							<object class="sizeritem">
++								<object class="wxStaticText" name="ID_STATICTEXT3">
++									<label>Files not found:</label>
++								</object>
++								<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++							</object>
++							<object class="sizeritem">
++								<object class="wxStaticText" name="txt_files_not_found">
++									<label>999999</label>
++									<style>wxALIGN_RIGHT</style>
++								</object>
++								<flag>wxALIGN_RIGHT|wxALIGN_TOP</flag>
++							</object>
++						</object>
++						<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++						<border>5</border>
++					</object>
++					<object class="sizeritem">
++						<object class="wxGridSizer">
++							<cols>2</cols>
++							<rows>4</rows>
++							<object class="sizeritem">
++								<object class="wxGauge" name="Gauge_Code">
++									<size>-1,20</size>
++								</object>
++								<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++								<border>2</border>
++							</object>
++							<object class="sizeritem">
++								<object class="wxStaticText" name="txt_Gauge_Code">
++									<label>XXXX% Code only</label>
++								</object>
++								<flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++							</object>
++							<object class="sizeritem">
++								<object class="wxGauge" name="Gauge_Code_Comments">
++									<size>98,20</size>
++								</object>
++								<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++								<border>2</border>
++							</object>
++							<object class="sizeritem">
++								<object class="wxStaticText" name="txt_Gauge_Code_Comments">
++									<label>XXXX% Code + comm.</label>
++									<size>-1,-1</size>
++								</object>
++								<flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++							</object>
++							<object class="sizeritem">
++								<object class="wxGauge" name="Gauge_Comments">
++									<size>-1,20</size>
++								</object>
++								<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++								<border>2</border>
++							</object>
++							<object class="sizeritem">
++								<object class="wxStaticText" name="txt_Gauge_Comments">
++									<label>XXXX% Comments</label>
++								</object>
++								<flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++							</object>
++							<object class="sizeritem">
++								<object class="wxGauge" name="Gauge_Empty">
++									<size>-1,20</size>
++								</object>
++								<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++								<border>2</border>
++							</object>
++							<object class="sizeritem">
++								<object class="wxStaticText" name="txt_Gauge_Empty">
++									<label>XXXX% Empty</label>
++								</object>
++								<flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++							</object>
++						</object>
++						<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++					</object>
++					<object class="sizeritem">
++						<object class="wxFlexGridSizer">
++							<cols>2</cols>
++							<rows>5</rows>
++							<growablecols>0</growablecols>
++							<growablerows>0</growablerows>
++							<object class="sizeritem">
++								<object class="wxStaticText" name="ID_STATICTEXT4">
++									<label>Code only:</label>
++								</object>
++								<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++							</object>
++							<object class="sizeritem">
++								<object class="wxStaticText" name="txt_Code">
++									<label>999999</label>
++									<style>wxALIGN_RIGHT</style>
++								</object>
++								<flag>wxALIGN_RIGHT|wxALIGN_TOP</flag>
++							</object>
++							<object class="sizeritem">
++								<object class="wxStaticText" name="ID_STATICTEXT5">
++									<label>Empty lines:</label>
++								</object>
++								<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++							</object>
++							<object class="sizeritem">
++								<object class="wxStaticText" name="txt_Empty">
++									<label>999999</label>
++									<style>wxALIGN_RIGHT</style>
++								</object>
++								<flag>wxALIGN_RIGHT|wxALIGN_TOP</flag>
++							</object>
++							<object class="sizeritem">
++								<object class="wxStaticText" name="ID_STATICTEXT6">
++									<label>Comment lines:</label>
++								</object>
++								<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++							</object>
++							<object class="sizeritem">
++								<object class="wxStaticText" name="txt_Comments">
++									<label>999999</label>
++									<style>wxALIGN_RIGHT</style>
++								</object>
++								<flag>wxALIGN_RIGHT|wxALIGN_TOP</flag>
++							</object>
++							<object class="sizeritem">
++								<object class="wxStaticText" name="ID_STATICTEXT7">
++									<label>Code and comments:</label>
++									<size>104,13</size>
++								</object>
++								<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++							</object>
++							<object class="sizeritem">
++								<object class="wxStaticText" name="txt_Code_Comments">
++									<label>999999</label>
++									<style>wxALIGN_RIGHT</style>
++								</object>
++								<flag>wxALIGN_RIGHT|wxALIGN_TOP</flag>
++							</object>
++							<object class="sizeritem">
++								<object class="wxStaticText" name="ID_STATICTEXT8">
++									<label>Total:</label>
++								</object>
++								<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++							</object>
++							<object class="sizeritem">
++								<object class="wxStaticText" name="txt_Total">
++									<label>999999</label>
++									<style>wxALIGN_RIGHT</style>
++								</object>
++								<flag>wxALIGN_RIGHT|wxALIGN_TOP</flag>
++							</object>
++						</object>
++						<flag>wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++						<border>5</border>
++						<option>1</option>
++					</object>
++				</object>
++				<flag>wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++				<border>5</border>
++			</object>
++			<object class="sizeritem">
++				<object class="wxButton" name="wxID_OK">
++					<label>OK</label>
++				</object>
++				<flag>wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++				<border>5</border>
++			</object>
++		</object>
++	</object>
+ </resource>
+Index: codestat-unix.cbp
+===================================================================
+--- codestat-unix.cbp	(revision 8065)
++++ codestat-unix.cbp	(working copy)
+@@ -13,6 +13,7 @@
+ 				<Option compiler="gcc" />
+ 				<Option parameters="--debug-log --multiple-instance -ns -ni" />
+ 				<Option host_application="../../../devel/codeblocks" />
++				<Option run_host_application_in_terminal="0" />
+ 				<Option projectCompilerOptionsRelation="0" />
+ 			</Target>
+ 		</Build>
+@@ -49,6 +50,9 @@
+ 		<Unit filename="codestatexec.cpp" />
+ 		<Unit filename="codestatexec.h" />
+ 		<Unit filename="language_def.h" />
++		<Unit filename="resources/config_dialog.xrc" />
++		<Unit filename="resources/main_dialog.xrc" />
++		<Unit filename="resources/manifest.xml" />
+ 		<Extensions>
+ 			<code_completion />
+ 			<envvars />
+Index: codestatexec.cpp
+===================================================================
+--- codestatexec.cpp	(revision 8065)
++++ codestatexec.cpp	(working copy)
+@@ -25,165 +25,354 @@
+ #include <wx/progdlg.h>
+ #include <wx/textfile.h>
+ #include "codestatexec.h"
++#include <vector>
+ 
++namespace
++{
++
++    struct CodeStat
++    {
++        CodeStat():
++            nb_files(0),
++            nb_files_not_found(0),
++            nb_skipped_files(0),
++            code_lines(0),
++            empty_lines(0),
++            comment_lines(0),
++            codecomments_lines(0),
++            total_lines(0),
++            isparsed(false)
++        {}
++
++        long nb_files;
++        long nb_files_not_found;
++        long nb_skipped_files;
++
++        long code_lines;
++        long empty_lines;
++        long comment_lines;
++        long codecomments_lines;
++        long total_lines;
++
++        bool isparsed;
++    };
++
++}
++
++void CountLines(wxFileName filename, LanguageDef &language, CodeStat& stat);
++void AnalyseLine(LanguageDef &language, wxString line, bool &comment, bool &code, bool &multi_line_comment);
++
++class CodeStatCache: public std::vector<CodeStat> {};
++
++CodeStatExecDlg::CodeStatExecDlg(wxWindow* parent) :
++    m_parent(parent),
++    m_nb_languages(0),
++    m_nb_files(0),
++    m_current_file(0),
++    m_changed(false)
++{
++    m_cache = new CodeStatCache();
++    m_progress = 0;
++
++    // Setting-up the statistics dialog box
++    wxXmlResource::Get()->LoadObject(this, m_parent, _T("dlgCodeStatExec"),_T("wxScrollingDialog"));
++
++    m_choice = XRCCTRL(*this, "ID_CHOICE1", wxChoice);
++    m_choice->Connect(wxEVT_COMMAND_CHOICE_SELECTED, (wxObjectEventFunction)&CodeStatExecDlg::OnSelectProject, NULL, this);
++    this->Connect(wxEVT_IDLE, (wxObjectEventFunction)&CodeStatExecDlg::OnIdle, NULL, this);
++}
++
++CodeStatExecDlg::~CodeStatExecDlg()
++{
++    m_choice->Disconnect(wxEVT_COMMAND_CHOICE_SELECTED, (wxObjectEventFunction)&CodeStatExecDlg::OnSelectProject, NULL, this);
++    this->Disconnect(wxEVT_IDLE, (wxObjectEventFunction)&CodeStatExecDlg::OnIdle, NULL, this);
++
++    delete m_cache;
++}
++
+ /** Count the lines on all project's files and display the results.
+  *  @param languages Languages definitions
+  *  @param nb_languages Number of languages defined in the 'languages' array
+  */
+ int CodeStatExecDlg::Execute(LanguageDef languages[NB_FILETYPES_MAX], int nb_languages)
+ {
+-   cbProject* project = Manager::Get()->GetProjectManager()->GetActiveProject();
+-   long nb_files = project->GetFilesCount();
+-   //wxMessageBox(wxString::Format(_T("Nb files: %ld"), nb_files), _("Error"), wxOK);
++    m_choice->Clear();
++    m_choice->Append(_T("Entire workspace"));
+ 
+-   // Check if all files have been saved
+-   bool all_files_saved = true;
+-   for (FilesList::iterator it = project->GetFilesList().begin(); it != project->GetFilesList().end(); ++it)
+-      if ((*it)->GetFileState() == fvsModified)
+-         all_files_saved = false;
+-   // If not, ask user if we can save them
+-   if (!all_files_saved)
+-   {
+-       if (cbMessageBox(_T("Some files are not saved.\nDo you want to save them before running the plugin?"), _("Warning"), wxICON_EXCLAMATION | wxYES_NO, Manager::Get()->GetAppWindow()) == wxID_YES)
+-       {
+-           for (FilesList::iterator it = project->GetFilesList().begin(); it != project->GetFilesList().end(); ++it)
+-           {
+-              if ((*it)->GetFileState() == fvsModified)
+-                 Manager::Get()->GetEditorManager()->Save((*it)->file.GetFullPath());
+-           }
+-       }
+-   }
++    ProjectsArray* projects = Manager::Get()->GetProjectManager()->GetProjects();
++    for (size_t i = 0, length = projects->GetCount(); i < length; ++i)
++    {
++        m_choice->Append(projects->Item(i)->GetTitle());
++    }
++    m_cache->clear();
++    m_cache->resize(projects->GetCount() + 1);
+ 
+-    // Count code statistics on each file
+-    long nb_files_not_found = 0;
+-    long nb_skipped_files = 0;
+-    long total_lines = 0;
+-    long code_lines = 0;
+-    long empty_lines = 0;
+-    long comment_lines = 0;
+-    long codecomments_lines = 0;
++    m_languages = languages;
++    m_nb_languages = nb_languages;
+ 
+-    wxProgressDialog progress(_("Code Statistics plugin"),_("Parsing project files. Please wait..."));
+-    int i = 0;
+-    for (FilesList::iterator it = project->GetFilesList().begin(); it != project->GetFilesList().end(); ++it)
++    // Check if all files have been saved
++    std::vector<ProjectFile*> unsaved_files;
++    bool all_saved = true;
++    for (size_t i = 0, nb_projects = projects->GetCount(); i < nb_projects; ++i)
+     {
+-        ProjectFile* pf = *it;
++        cbProject* project = projects->Item(i);
++        for (int j = 0, nb_files = project->GetFilesCount(); j < nb_files; ++j)
++        {
++            ProjectFile* pf = project->GetFile(j);
++            if (pf->GetFileState() == fvsModified)
++            {
++                all_saved = false;
++                unsaved_files.push_back(pf);
++            }
++        }
++    }
++
++    // If not, ask user if we can save them
++    if (!all_saved)
++    {
++        if (cbMessageBox(_T("Some files are not saved.\nDo you want to save them before running the plugin?"), _("Warning"), wxICON_EXCLAMATION | wxYES_NO, Manager::Get()->GetAppWindow()) == wxID_YES)
++        {
++            for (int i = 0, nb_files = unsaved_files.size(); i < nb_files; ++i)
++            {
++                ProjectFile* pf = unsaved_files[i];
++                if (pf->GetFileState() == fvsModified)
++                    Manager::Get()->GetEditorManager()->Save(pf->file.GetFullPath());
++            }
++        }
++    }
++
++    cbProject* project = Manager::Get()->GetProjectManager()->GetActiveProject();
++    int index = m_choice->FindString(project->GetTitle(), true);
++    m_choice->SetSelection(index);
++    DoParseProject(index);
++    m_cache->at(index).isparsed = true;
++    ShowResults(index);
++
++    ShowModal();
++
++    return 0;
++}
++
++void CodeStatExecDlg::EndModal(int retCode)
++{
++    wxScrollingDialog::EndModal(retCode);
++}
++
++void CodeStatExecDlg::OnSelectProject(wxCommandEvent& evt)
++{
++    m_changed = true;
++    evt.Skip();
++}
++
++void CodeStatExecDlg::OnIdle(wxIdleEvent& evt)
++{
++    if (!m_changed)
++        return;
++
++    m_changed = false;
++
++    int index = m_choice->GetSelection();
++    if (index == 0) {
++        DoParseWorkspace();
++        m_cache->at(0).isparsed = true;
++    } else {
++        DoParseProject(index);
++        m_cache->at(index).isparsed = true;
++    }
++    ShowResults(index);
++
++    evt.Skip();
++}
++
++void CodeStatExecDlg::ParseProject(int index)
++{
++    CodeStat& stat = m_cache->at(index);
++    cbProject* project = Manager::Get()->GetProjectManager()->GetProjects()->Item(index - 1);
++    stat.nb_files = project->GetFilesCount();
++
++    for (int i = 0 ; i < stat.nb_files; ++i)
++    {
++        ProjectFile* pf = project->GetFile(i);
+         wxFileName filename(pf->file.GetFullPath(), wxPATH_DOS);
+         if (!filename.FileExists())
+         {
+-            ++nb_files_not_found;
++            ++stat.nb_files_not_found;
+             //Manager::Get()->GetLogManager()->DebugLog(_T("Code Statistics: Ignoring file '%s' (file not found)"), filename.GetName());
+         }
+         else
+         {
+             // Find the language associated to the file extension
+             int num_language = -1;
+-            for (int l = 0; l<nb_languages; ++l)
++            for (int l = 0; l < m_nb_languages; ++l)
+             {
+-                for (int j = 0; j<(int)languages[l].ext.Count(); ++j)
++                for (int j = 0; j < (int)m_languages[l].ext.Count(); ++j)
+                 {
+-                  if (filename.GetExt() == languages[l].ext[j])
+-                     num_language = l;
++                    if (filename.GetExt() == m_languages[l].ext[j])
++                        num_language = l;
+                 }
+             }
+ 
+             // If the language is found, analyse the source file
+             if (num_language > -1)
+-              CountLines(filename, languages[num_language], code_lines, codecomments_lines, comment_lines, empty_lines, total_lines);
+-            else ++nb_skipped_files;
++                CountLines(filename, m_languages[num_language], stat);
++            else
++                ++stat.nb_skipped_files;
+         }
+-        if (nb_files > 1)
+-            progress.Update((100*i++)/(nb_files-1));
+-   }
+-   progress.Update(100);
++        if (stat.nb_files > 1)
++        {
++            ++m_current_file;
++            UpdateProgress();
++        }
++    }
++}
+ 
+-   // Setting-up the statistics dialog box
+-   wxXmlResource::Get()->LoadObject(this, parent, _T("dlgCodeStatExec"),_T("wxScrollingDialog"));
++void CodeStatExecDlg::DoParseProject(int index)
++{
++    if (m_cache->at(index).isparsed || index == 0)
++        return;
+ 
+-   wxStaticText* txt_num_files = XRCCTRL(*this, "txt_num_files", wxStaticText);
+-   txt_num_files->SetLabel(wxString::Format(_("%ld"), nb_files));
+-   wxStaticText* txt_skipped_files = XRCCTRL(*this, "txt_skipped_files", wxStaticText);
+-   txt_skipped_files->SetLabel(wxString::Format(_("%ld"), nb_skipped_files));
+-   wxStaticText* txt_files_not_found = XRCCTRL(*this, "txt_files_not_found", wxStaticText);
+-   txt_files_not_found->SetLabel(wxString::Format(_("%ld"), nb_files_not_found));
++    m_progress = new wxProgressDialog(_("Code Statistics plugin"),_("Parsing project files. Please wait..."));
+ 
+-   wxStaticText* txt_Code = XRCCTRL(*this, "txt_Code", wxStaticText);
+-   txt_Code->SetLabel(wxString::Format(_("%ld"), code_lines));
+-   wxStaticText* txt_Empty = XRCCTRL(*this, "txt_Empty", wxStaticText);
+-   txt_Empty->SetLabel(wxString::Format(_("%ld"), empty_lines));
+-   wxStaticText* txt_Comments = XRCCTRL(*this, "txt_Comments", wxStaticText);
+-   txt_Comments->SetLabel(wxString::Format(_("%ld"), comment_lines));
+-   wxStaticText* txt_Code_Comments = XRCCTRL(*this, "txt_Code_Comments", wxStaticText);
+-   txt_Code_Comments->SetLabel(wxString::Format(_("%ld"), codecomments_lines));
+-   wxStaticText* txt_Total = XRCCTRL(*this, "txt_Total", wxStaticText);
+-   txt_Total->SetLabel(wxString::Format(_("%ld"), total_lines));
++    cbProject* project = Manager::Get()->GetProjectManager()->GetProjects()->Item(index - 1);
++    m_current_file = 0;
++    m_nb_files = project->GetFilesCount();
++    ParseProject(index);
+ 
+-   // If the project is not empty, display the main dialog box
+-   if(total_lines) // avoid division by zero on empty document
+-   {
+-        int icode = static_cast<int>(round(static_cast<double>(100 * code_lines) / static_cast<double>(total_lines)));
++    m_progress->Update(100);
++    delete m_progress;
++    m_progress = 0;
++}
++
++void CodeStatExecDlg::DoParseWorkspace()
++{
++    CodeStat& stat_ws = m_cache->at(0);
++    if (stat_ws.isparsed)
++        return;
++
++    m_progress = new wxProgressDialog(_("Code Statistics plugin"),_("Parsing workspace files. Please wait..."));
++
++    m_current_file = 0;
++    m_nb_files = 0;
++
++    ProjectsArray* projects = Manager::Get()->GetProjectManager()->GetProjects();
++    for (size_t i = 0, nb_projects = projects->GetCount(); i < nb_projects; ++i)
++    {
++        m_nb_files += projects->Item(i)->GetFilesCount();
++    }
++
++    for (size_t i = 1, nb_projects = projects->GetCount(); i < nb_projects + 1; ++i)
++    {
++        if (!m_cache->at(i).isparsed)
++        {
++            ParseProject(i);
++            m_cache->at(i).isparsed = true;
++        }
++
++        CodeStat& stat_prj = m_cache->at(i);
++        stat_ws.nb_files            += stat_prj.nb_files;
++        stat_ws.nb_files_not_found  += stat_prj.nb_files_not_found;
++        stat_ws.nb_skipped_files    += stat_prj.nb_skipped_files;
++        stat_ws.code_lines          += stat_prj.code_lines;
++        stat_ws.empty_lines         += stat_prj.empty_lines;
++        stat_ws.comment_lines       += stat_prj.comment_lines;
++        stat_ws.codecomments_lines  += stat_prj.codecomments_lines;
++        stat_ws.total_lines         += stat_prj.total_lines ;
++    }
++
++    stat_ws.isparsed = true;
++
++    m_progress->Update(100);
++    delete m_progress;
++    m_progress = 0;
++}
++
++void CodeStatExecDlg::UpdateProgress() {
++    if (m_progress)
++    {
++        m_progress->Update((100 * m_current_file)/(m_nb_files - 1));
++    }
++}
++
++void CodeStatExecDlg::ShowResults(int index) {
++    CodeStat& stat = m_cache->at(index);
++
++    wxStaticText* txt_num_files = XRCCTRL(*this, "txt_num_files", wxStaticText);
++    txt_num_files->SetLabel(wxString::Format(_("%ld"), stat.nb_files));
++    wxStaticText* txt_skipped_files = XRCCTRL(*this, "txt_skipped_files", wxStaticText);
++    txt_skipped_files->SetLabel(wxString::Format(_("%ld"), stat.nb_skipped_files));
++    wxStaticText* txt_files_not_found = XRCCTRL(*this, "txt_files_not_found", wxStaticText);
++    txt_files_not_found->SetLabel(wxString::Format(_("%ld"), stat.nb_files_not_found));
++
++    wxStaticText* txt_Code = XRCCTRL(*this, "txt_Code", wxStaticText);
++    txt_Code->SetLabel(wxString::Format(_("%ld"), stat.code_lines));
++    wxStaticText* txt_Empty = XRCCTRL(*this, "txt_Empty", wxStaticText);
++    txt_Empty->SetLabel(wxString::Format(_("%ld"), stat.empty_lines));
++    wxStaticText* txt_Comments = XRCCTRL(*this, "txt_Comments", wxStaticText);
++    txt_Comments->SetLabel(wxString::Format(_("%ld"), stat.comment_lines));
++    wxStaticText* txt_Code_Comments = XRCCTRL(*this, "txt_Code_Comments", wxStaticText);
++    txt_Code_Comments->SetLabel(wxString::Format(_("%ld"), stat.codecomments_lines));
++    wxStaticText* txt_Total = XRCCTRL(*this, "txt_Total", wxStaticText);
++    txt_Total->SetLabel(wxString::Format(_("%ld"), stat.total_lines));
++
++    // If the project is not empty, display the main dialog box
++    if(stat.total_lines) // avoid division by zero on empty document
++    {
++        int icode = static_cast<int>(round(static_cast<double>(100 * stat.code_lines) / static_cast<double>(stat.total_lines)));
+         wxGauge* Gauge_Code = XRCCTRL(*this, "Gauge_Code", wxGauge);
+         Gauge_Code->SetValue(icode);
+         wxStaticText* txt_Gauge_Code = XRCCTRL(*this, "txt_Gauge_Code", wxStaticText);
+         txt_Gauge_Code->SetLabel(wxString::Format(_("%3d%% Code only"), icode));
+ 
+-        int icode_comments = static_cast<int>(round(static_cast<double>(100 * codecomments_lines) / static_cast<double>(total_lines)));
++        int icode_comments = static_cast<int>(round(static_cast<double>(100 * stat.codecomments_lines) / static_cast<double>(stat.total_lines)));
+         wxGauge* Gauge_Code_Comments = XRCCTRL(*this, "Gauge_Code_Comments", wxGauge);
+         Gauge_Code_Comments->SetValue(icode_comments);
+         wxStaticText* txt_Gauge_Code_Comments = XRCCTRL(*this, "txt_Gauge_Code_Comments", wxStaticText);
+         txt_Gauge_Code_Comments->SetLabel(wxString::Format(_("%3d%% Code + Comment"), icode_comments));
+ 
+-        int icomments = static_cast<int>(round(static_cast<double>(100 * comment_lines) / static_cast<double>(total_lines)));
++        int icomments = static_cast<int>(round(static_cast<double>(100 * stat.comment_lines) / static_cast<double>(stat.total_lines)));
+         wxGauge* Gauge_Comments = XRCCTRL(*this, "Gauge_Comments", wxGauge);
+         Gauge_Comments->SetValue(icomments);
+         wxStaticText* txt_Gauge_Comments = XRCCTRL(*this, "txt_Gauge_Comments", wxStaticText);
+         txt_Gauge_Comments->SetLabel(wxString::Format(_("%3d%% Comments"), icomments));
+ 
+-        int iempty = static_cast<int>(round(static_cast<double>(100 * empty_lines) / static_cast<double>(total_lines)));
++        int iempty = static_cast<int>(round(static_cast<double>(100 * stat.empty_lines) / static_cast<double>(stat.total_lines)));
+         wxGauge* Gauge_Empty = XRCCTRL(*this, "Gauge_Empty", wxGauge);
+         Gauge_Empty->SetValue(iempty);
+         wxStaticText* txt_Gauge_Empty = XRCCTRL(*this, "txt_Gauge_Empty", wxStaticText);
+         txt_Gauge_Empty->SetLabel(wxString::Format(_("%3d%% Empty"), iempty));
+ 
+-        ShowModal();
+-   }
+-   else cbMessageBox(_("The project is empty!"), _("Warning"), wxICON_EXCLAMATION | wxOK, Manager::Get()->GetAppWindow());
++        GetSizer()->Layout();
++    }
++    else
++        cbMessageBox(_("The project is empty!"), _("Warning"), wxICON_EXCLAMATION | wxOK, Manager::Get()->GetAppWindow());
+ 
+-   return 0;
+ }
+ 
+-void CodeStatExecDlg::EndModal(int retCode)
+-{
+-    wxScrollingDialog::EndModal(retCode);
+-}
+-
+ /** This function analyses a given source file and count the lines of code, comments etc...
+  */
+-void CodeStatExecDlg::CountLines(wxFileName filename, LanguageDef &language,
+-                                 long int &code_lines, long int &codecomments_lines,
+-                                 long int &comment_lines, long int &empty_lines, long int &total_lines)
++void CountLines(wxFileName filename, LanguageDef &language, CodeStat& stat)
+ {
+     wxTextFile file;
+     if (file.Open(filename.GetFullPath(),wxConvFile))
+     {
+         bool multi_line_comment = false;
+-        total_lines += file.GetLineCount();
++        stat.total_lines += file.GetLineCount();
+         for (unsigned int i=0; i<file.GetLineCount(); ++i)
+         {
+-           wxString line(file[i]);
+-           line = line.Trim(true);
+-           line = line.Trim(false);
+-           bool comment = false;
+-           bool code = false;
+-           if (line.IsEmpty())
+-               ++empty_lines;
+-           else
+-           {
++            wxString line(file[i]);
++            line = line.Trim(true);
++            line = line.Trim(false);
++            bool comment = false;
++            bool code = false;
++            if (line.IsEmpty())
++                ++stat.empty_lines;
++            else
++            {
+                 AnalyseLine(language, line, comment, code, multi_line_comment);
+-                if      (comment&&code) ++codecomments_lines;
+-                else if (comment)       ++comment_lines;
+-                else if (code)          ++code_lines;
+-           }
++                if (comment&&code) ++stat.codecomments_lines;
++                else if (comment) ++stat.comment_lines;
++                else if (code) ++stat.code_lines;
++            }
+         }
+     }
+ }
+@@ -192,20 +381,20 @@
+  *  It is called by the "CountLines" function.
+  *  @see CountLines
+  */
+-void CodeStatExecDlg::AnalyseLine(LanguageDef &language, wxString line, bool &comment, bool &code, bool &multi_line_comment)
++void AnalyseLine(LanguageDef &language, wxString line, bool &comment, bool &code, bool &multi_line_comment)
+ {
+-   int first_single_line_comment, first_multi_line_comment_begin, first_multi_line_comment_end;
++    int first_single_line_comment, first_multi_line_comment_begin, first_multi_line_comment_end;
+ 
+-   // Delete first and trailing spaces
+-   line = line.Trim(true);
+-   line = line.Trim(false);
++    // Delete first and trailing spaces
++    line = line.Trim(true);
++    line = line.Trim(false);
+ 
+     if (line.IsEmpty())
+         return;
+ 
+     // Searching for single and multi-lines comment signs
+     if (language.single_line_comment.Length() > 0)
+-      first_single_line_comment = line.Find(language.single_line_comment);
++        first_single_line_comment = line.Find(language.single_line_comment);
+     else first_single_line_comment = -1;
+     if (language.multiple_line_comment[0].Length() > 0)
+         first_multi_line_comment_begin = line.Find(language.multiple_line_comment[0]);
+@@ -218,23 +407,23 @@
+     if (multi_line_comment)
+     {
+         comment = true;
+-         if (first_multi_line_comment_end > -1)
+-         {
+-             multi_line_comment = false;
+-             if (first_multi_line_comment_end+language.multiple_line_comment[1].Length() < line.Length())
+-                 AnalyseLine(language, line.Mid(first_multi_line_comment_end+language.multiple_line_comment[1].Length()), comment, code, multi_line_comment);
+-         }
++        if (first_multi_line_comment_end > -1)
++        {
++            multi_line_comment = false;
++            if (first_multi_line_comment_end+language.multiple_line_comment[1].Length() < line.Length())
++                AnalyseLine(language, line.Mid(first_multi_line_comment_end+language.multiple_line_comment[1].Length()), comment, code, multi_line_comment);
++        }
+     }
+     // We are not in a multiple line comment
+     else if (!multi_line_comment)
+     {
+         // First comment sign found is a single line comment sign
+-        if (   (first_single_line_comment>-1)
+-            && ((first_multi_line_comment_begin==-1)||((first_multi_line_comment_begin>-1)&&(first_single_line_comment<first_multi_line_comment_begin))) )
++        if ( (first_single_line_comment > -1)
++                &&((first_multi_line_comment_begin == -1) || ((first_multi_line_comment_begin>-1)&&(first_single_line_comment<first_multi_line_comment_begin))) )
+         {
+-             comment = true;
+-             if (first_single_line_comment > 0)
+-                 code = true;
++            comment = true;
++            if (first_single_line_comment > 0)
++                code = true;
+         }
+         // First comment sign found is a multi-line comment begin sign
+         else if (first_multi_line_comment_begin>-1)
+@@ -252,7 +441,3 @@
+         }
+     }
+ }
+-
+-CodeStatExecDlg::~CodeStatExecDlg()
+-{
+-}

@@ -1,0 +1,49 @@
+Index: src/sdk/msvc7loader.cpp
+===================================================================
+--- src/sdk/msvc7loader.cpp	(revision 2892)
++++ src/sdk/msvc7loader.cpp	(working copy)
+@@ -527,6 +527,10 @@
+             {
+             	if (fname.StartsWith(_T(".\\")))
+ 					fname.erase(0, 2);
++
++                #ifndef __WXMSW__
++                fname.Replace(_T("\\"), _T("/"), true);
++                #endif
+                 ProjectFile* pf = m_pProject->AddFile(0, fname);
+                 if (pf)
+                 {
+Index: src/sdk/msvcloader.cpp
+===================================================================
+--- src/sdk/msvcloader.cpp	(revision 2892)
++++ src/sdk/msvcloader.cpp	(working copy)
+@@ -342,12 +342,24 @@
+         line.Trim(true);
+         line.Trim(false);
+ 
+-        ProjectFile* pf = m_pProject->AddFile(0, RemoveQuotes(line));
+-        if (pf)
++        wxString fname (RemoveQuotes(line));
++
++        if ((!fname.IsEmpty()) && (fname != _T(".\\")))
+         {
+-            // add it to all configurations, not just the first
+-            for (int i = 1; i < m_pProject->GetBuildTargetsCount(); ++i)
+-                pf->AddBuildTarget(m_pProject->GetBuildTarget(i)->GetTitle());
++            if (fname.StartsWith(_T(".\\")))
++                fname.erase(0, 2);
++
++            #ifndef __WXMSW__
++            fname.Replace(_T("\\"), _T("/"), true);
++            #endif
++
++            ProjectFile* pf = m_pProject->AddFile(0, fname);
++            if (pf)
++            {
++                // add it to all configurations, not just the first
++                for (int i = 1; i < m_pProject->GetBuildTargetsCount(); ++i)
++                    pf->AddBuildTarget(m_pProject->GetBuildTarget(i)->GetTitle());
++            }
+         }
+     }
+     return true;

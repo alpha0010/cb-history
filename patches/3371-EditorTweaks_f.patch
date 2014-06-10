@@ -1,0 +1,13 @@
+Index: src/plugins/contrib/EditorTweaks/EditorTweaks.cpp
+===================================================================
+--- src/plugins/contrib/EditorTweaks/EditorTweaks.cpp	(revision 8571)
++++ src/plugins/contrib/EditorTweaks/EditorTweaks.cpp	(working copy)
+@@ -1170,6 +1170,8 @@
+         return;
+     const int buffer = (m_center_caret ? (stc->LinesOnScreen() >> 1) - 2 : 4);
+     const int dist   = stc->VisibleFromDocLine(stc->GetCurrentLine()) + delta - stc->GetFirstVisibleLine();
++    if (dist < 0 || dist > stc->LinesOnScreen()) // caret is off screen
++        return;
+     if (dist < buffer)
+         stc->LineScroll(0, -1);
+     else if (dist > stc->LinesOnScreen() - buffer)

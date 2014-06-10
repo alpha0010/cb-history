@@ -1,0 +1,56 @@
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp   (revision 2871)
++++ src/sdk/editormanager.cpp   (working copy)
+@@ -576,7 +576,7 @@
+ 
+ cbEditor* EditorManager::New(const wxString& newFileName)
+ {
+-    wxString old_title = Manager::Get()->GetAppWindow()->GetTitle(); // Fix for Bug #1389450
++//    wxString old_title = Manager::Get()->GetAppWindow()->GetTitle(); // Fix for Bug #1389450
+     // create a dummy file
+     if (!newFileName.IsEmpty() && !wxFileExists(newFileName) && wxDirExists(wxPathOnly(newFileName)))
+     {
+@@ -805,7 +805,15 @@
+ {
+     EditorBase* ed = InternalGetEditorBase(index);
+     if (ed)
+-        return ed->Save();
++    {
++           wxString oldname = ed->GetFilename();
++        if (!ed->Save())
++                       return false;
++               wxString newname = ed->GetFilename();
++               if (oldname != newname)
++                       RenameTreeFile(oldname, newname);
++               return true;    
++    }                          
+     return false;              
+ }                              
+                                
+@@ -813,7 +821,15 @@            
+ {                              
+     EditorBase* ed = GetActiveEditor();
+     if (ed)                    
+-        return ed->Save();     
++    {                          
++           wxString oldname = ed->GetFilename();
++        if (!ed->Save())       
++                       return false;
++               wxString newname = ed->GetFilename();
++               if (oldname != newname)
++                       RenameTreeFile(oldname, newname);
++               return true;    
++    }                          
+     return true;               
+ }                              
+                                
+@@ -2474,7 +2490,7 @@           
+         if(filename!=oldname)  
+             continue;          
+         data->SetFullName(newname);
+-        EditorBase *ed=GetEditor(filename);
++        EditorBase *ed=GetEditor(newname);
+         if(ed)                 
+         {                      
+             shortname=ed->GetShortName();

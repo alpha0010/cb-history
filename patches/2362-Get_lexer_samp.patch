@@ -1,0 +1,23 @@
+The lexer_{lang}.xml is loaded from the user data dir before the one included with codeblocks. The lexer_{lang}.sample is not. This patch loads the .sample like the .xml
+
+Index: src/sdk/editorcolourset.cpp
+===================================================================
+--- src/sdk/editorcolourset.cpp	(revision 4831)
++++ src/sdk/editorcolourset.cpp	(working copy)
+@@ -789,7 +789,15 @@
+         *debugLine = mset.m_DebugLine;
+     if (errorLine)
+         *errorLine = mset.m_ErrorLine;
+-    wxString path = ConfigManager::GetDataFolder() + _T("/lexers/");
++
++    wxString shortname = _T("lexer_") + lang + _T(".sample");
++    // user path first
++    wxString path = ConfigManager::GetFolder(sdDataUser) + _T("/lexers/");
++    wxFileName fullname( path+shortname );
++    if ( not fullname.FileExists(path + shortname) )
++        // global path next
++        path = ConfigManager::GetFolder(sdDataGlobal) + _T("/lexers/");
++
+     if (!mset.m_SampleCode.IsEmpty())
+         return path + mset.m_SampleCode;
+     return wxEmptyString; 

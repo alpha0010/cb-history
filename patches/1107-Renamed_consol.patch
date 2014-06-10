@@ -1,0 +1,162 @@
+Index: src/plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- src/plugins/compilergcc/compilergcc.cpp	(Revision 2539)
++++ src/plugins/compilergcc/compilergcc.cpp	(Arbeitskopie)
+@@ -1380,9 +1380,9 @@
+ #endif
+     wxString baseDir = ConfigManager::GetExecutableFolder();
+ #ifdef __WXMSW__
+-	#define CONSOLE_RUNNER "console_runner.exe"
++	#define CONSOLE_RUNNER "cb_console_runner.exe"
+ #else
+-	#define CONSOLE_RUNNER "console_runner"
++	#define CONSOLE_RUNNER "cb_console_runner"
+ #endif
+     if (wxFileExists(baseDir + wxT("/" CONSOLE_RUNNER)))
+         cmd << baseDir << wxT("/" CONSOLE_RUNNER " ");
+@@ -1491,9 +1491,9 @@
+         {
+             wxString baseDir = ConfigManager::GetExecutableFolder();
+ #ifdef __WXMSW__
+-	#define CONSOLE_RUNNER "console_runner.exe"
++	#define CONSOLE_RUNNER "cb_console_runner.exe"
+ #else
+-	#define CONSOLE_RUNNER "console_runner"
++	#define CONSOLE_RUNNER "cb_console_runner"
+ #endif
+             if (wxFileExists(baseDir + wxT("/" CONSOLE_RUNNER)))
+                 cmd << baseDir << wxT("/" CONSOLE_RUNNER " ");
+Index: src/sdk/toolsmanager.cpp
+===================================================================
+--- src/sdk/toolsmanager.cpp	(Revision 2539)
++++ src/sdk/toolsmanager.cpp	(Arbeitskopie)
+@@ -122,9 +122,9 @@
+         wxString term = Manager::Get()->GetConfigManager(_T("app"))->Read(_T("/console_terminal"), DEFAULT_CONSOLE_TERM);
+         term.Replace(_T("$TITLE"), _T("'") + tool->name + _T("'"));
+         cmdline << term << _T(" ");
+-        #define CONSOLE_RUNNER "console_runner"
++        #define CONSOLE_RUNNER "cb_console_runner"
+     #else
+-        #define CONSOLE_RUNNER "console_runner.exe"
++        #define CONSOLE_RUNNER "cb_console_runner.exe"
+     #endif
+         wxString baseDir = ConfigManager::GetExecutableFolder();
+         if (wxFileExists(baseDir + wxT("/" CONSOLE_RUNNER)))
+Index: src/update
+===================================================================
+--- src/update	(Revision 2539)
++++ src/update	(Arbeitskopie)
+@@ -69,8 +69,8 @@
+ cp -f scripts/*.script output/share/codeblocks/scripts > /dev/null
+ cp -f tips.txt devel/share/codeblocks > /dev/null
+ cp -f tips.txt output/share/codeblocks > /dev/null
+-cp -f tools/ConsoleRunner/console_runner output > /dev/null
+-cp -f tools/ConsoleRunner/console_runner devel > /dev/null
++cp -f tools/ConsoleRunner/cb_console_runner output > /dev/null
++cp -f tools/ConsoleRunner/cb_console_runner devel > /dev/null
+ cp -f devel/codeblocks output > /dev/null
+ cp -f devel/*.so output > /dev/null
+ cp -f ${RESDIR}/plugins/*.so output/share/codeblocks/plugins > /dev/null
+Index: src/update.bat
+===================================================================
+--- src/update.bat	(Revision 2539)
++++ src/update.bat	(Arbeitskopie)
+@@ -82,8 +82,8 @@
+ copy /y scripts\* output\share\codeblocks\scripts > nul
+ copy /y tips.txt devel\share\CodeBlocks > nul
+ copy /y tips.txt output\share\CodeBlocks > nul
+-copy /y tools\ConsoleRunner\console_runner*.exe output > nul
+-copy /y tools\ConsoleRunner\console_runner*.exe devel > nul
++copy /y tools\ConsoleRunner\cb_console_runner*.exe output > nul
++copy /y tools\ConsoleRunner\cb_console_runner*.exe devel > nul
+ copy /y devel\*.exe output > nul
+ copy /y devel\*.dll output > nul
+ copy /y %RESDIR%\plugins\*.dll output\share\codeblocks\plugins > nul
+Index: src/CodeBlocks-unix.cbp
+===================================================================
+--- src/CodeBlocks-unix.cbp	(Revision 2539)
++++ src/CodeBlocks-unix.cbp	(Arbeitskopie)
+@@ -22,7 +22,7 @@
+ 				</Linker>
+ 			</Target>
+ 			<Target title="ConsoleRunner">
+-				<Option output="tools\ConsoleRunner\console_runner" />
++				<Option output="tools\ConsoleRunner\cb_console_runner" />
+ 				<Option working_dir="tools\ConsoleRunner" />
+ 				<Option type="1" />
+ 				<Option compiler="gcc" />
+@@ -4800,4 +4800,4 @@
+ 			<Option target="AutoRevision" />
+ 		</Unit>
+ 	</Project>
+-</CodeBlocks_project_file>
+\ Kein Zeilenvorschub am Ende der Datei
++</CodeBlocks_project_file>
+Index: src/setup/CodeBlocks_MINGW.iss
+===================================================================
+--- src/setup/CodeBlocks_MINGW.iss	(Revision 2539)
++++ src/setup/CodeBlocks_MINGW.iss	(Arbeitskopie)
+@@ -40,7 +40,7 @@
+ Source: wxmsw26_gcc_cb.dll; DestDir: {app}; Components: ProgramFiles
+ Source: ..\output\exchndl.dll; DestDir: {app}; Components: ProgramFiles
+ Source: ..\output\wxscintilla.dll; DestDir: {app}; Components: ProgramFiles
+-Source: ..\output\console_runner.exe; DestDir: {app}; Components: ProgramFiles
++Source: ..\output\cb_console_runner.exe; DestDir: {app}; Components: ProgramFiles
+ Source: ..\..\AUTHORS; DestDir: {app}; DestName: AUTHORS.txt; Components: ProgramFiles
+ Source: ..\..\COPYING; DestDir: {app}; DestName: COPYING.txt; Components: ProgramFiles
+ Source: ..\..\README; DestDir: {app}; DestName: README.txt; Components: ProgramFiles
+Index: src/setup/CodeBlocks_Core.iss
+===================================================================
+--- src/setup/CodeBlocks_Core.iss	(Revision 2539)
++++ src/setup/CodeBlocks_Core.iss	(Arbeitskopie)
+@@ -40,7 +40,7 @@
+ Source: wxmsw26_gcc_cb.dll; DestDir: {app}; Components: ProgramFiles
+ Source: ..\output\exchndl.dll; DestDir: {app}; Components: ProgramFiles
+ Source: ..\output\wxscintilla.dll; DestDir: {app}; Components: ProgramFiles
+-Source: ..\output\console_runner.exe; DestDir: {app}; Components: ProgramFiles
++Source: ..\output\cb_console_runner.exe; DestDir: {app}; Components: ProgramFiles
+ Source: ..\..\AUTHORS; DestDir: {app}; DestName: AUTHORS.txt; Components: ProgramFiles
+ Source: ..\..\COPYING; DestDir: {app}; DestName: COPYING.txt; Components: ProgramFiles
+ Source: ..\..\README; DestDir: {app}; DestName: README.txt; Components: ProgramFiles
+Index: src/tools/ConsoleRunner/main.cpp
+===================================================================
+--- src/tools/ConsoleRunner/main.cpp	(Revision 2539)
++++ src/tools/ConsoleRunner/main.cpp	(Arbeitskopie)
+@@ -25,7 +25,7 @@
+ {
+ 	if (argc < 2)
+     {
+-        printf("Usage: console_runner <filename> <args ...>\n");
++        printf("Usage: cb_console_runner <filename> <args ...>\n");
+         return 1;
+     }
+ 
+Index: src/tools/ConsoleRunner/Makefile.am
+===================================================================
+--- src/tools/ConsoleRunner/Makefile.am	(Revision 2539)
++++ src/tools/ConsoleRunner/Makefile.am	(Arbeitskopie)
+@@ -1,2 +1,2 @@
+-bin_PROGRAMS = console_runner
+-console_runner_SOURCES = main.cpp
++bin_PROGRAMS = cb_console_runner
++cb_console_runner_SOURCES = main.cpp
+Index: src/CodeBlocks.cbp
+===================================================================
+--- src/CodeBlocks.cbp	(Revision 2539)
++++ src/CodeBlocks.cbp	(Arbeitskopie)
+@@ -20,7 +20,7 @@
+ 				</Linker>
+ 			</Target>
+ 			<Target title="ConsoleRunner">
+-				<Option output="tools\ConsoleRunner\console_runner.exe" />
++				<Option output="tools\ConsoleRunner\cb_console_runner.exe" />
+ 				<Option working_dir="tools\ConsoleRunner" />
+ 				<Option object_output=".objs\2.6" />
+ 				<Option type="1" />
+@@ -4161,4 +4161,4 @@
+ 			<Option target="AutoRevision" />
+ 		</Unit>
+ 	</Project>
+-</CodeBlocks_project_file>
+\ Kein Zeilenvorschub am Ende der Datei
++</CodeBlocks_project_file>

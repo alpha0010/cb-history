@@ -1,0 +1,37 @@
+Index: src/scripts/startup.script
+===================================================================
+--- src/scripts/startup.script	(revision 3993)
++++ src/scripts/startup.script	(working copy)
+@@ -5,4 +5,4 @@
+ // Include(_T("sample_plugin.script"));
+ 
+ // add a menu entry to edit this script
+-GetScriptingManager().RegisterScriptMenu(_T("Settings/-Edit startup script"), _T("edit_startup_script.script"), false);
++GetScriptingManager().RegisterScriptMenu(_("&Settings") + _T("/-Edit startup script"), _T("edit_startup_script.script"), false);
+Index: src/sdk/scripting/bindings/sc_wxtypes.cpp
+===================================================================
+--- src/sdk/scripting/bindings/sc_wxtypes.cpp	(revision 3993)
++++ src/sdk/scripting/bindings/sc_wxtypes.cpp	(working copy)
+@@ -14,6 +14,12 @@
+     wxString static_T(const SQChar* str)
+     {
+         return cbC2U(str);
++    }
++
++    // the _() function for scripts
++    wxString static_(const SQChar* str)
++    {
++        return wxGetTranslation(cbC2U(str));
+     }
+ 
+     // wxString operator+
+@@ -159,7 +165,8 @@
+ 
+     void Register_wxTypes()
+     {
+-        SqPlus::RegisterGlobal(&static_T, "_T");
++        SqPlus::RegisterGlobal(&static_T, "_T");
++        SqPlus::RegisterGlobal(&static_, "_");
+ 
+         typedef int(wxString::*WXSTR_FIRST_STR)(const wxString&)const;
+         typedef wxString&(wxString::*WXSTR_REMOVE_2)(size_t pos, size_t len);

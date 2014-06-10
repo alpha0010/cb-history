@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 1186 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #1186 <small>2006-07-04 03:26:21</small></h3>
+          <h4>bjoernp</h4>
+          Bug #7979 -&gt; ProjectManager::pTopEditor removed
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="1186-Bug_7979_Proje.patch">1186-Bug_7979_Proje.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Bugfix</dd>
+            <dt>Status</dt><dd>Accepted</dd>
+            <dt>Close date</dt><dd>2006-07-05 11:39:48</dd>
+            <dt>Assigned to</dt><dd></dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">bjoernp 2006-07-04 03:35:12</div>
+        <div class="panel-body">
+          <p>This bug crashed into sdk/projectmanager.cpp +996</p>
+          <p>The patch removes ProjectManager::pTopEditor and references to it.</p>
+          <p>ProjectManager::SetTopEditor(...)</p>
+          <p>ProjectManager::GetTopEditor()</p>
+          <p>Changes/breaks sdk-interface =&gt; forces lots of recompilation!</p>
+          <p>But it seemed the only sensible way to fix this bug, because IMO no references to Editor-Windows should be held anywhere outside of EditorManager, if I got that pattern right.</p>
+          <p>There were no dependent references to this interface anyway.</p>
+          <p>Awaiting your comments!</p>
+          <p>Cheers,</p>
+          <p>Björn</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">thomasdenk 2006-07-04 15:19:30</div>
+        <div class="panel-body">
+          <p>I believe there is an easier and cleaner solution:</p>
+          <p>cbEditor::~cbEditor()</p>
+          <p>{</p>
+          <p>/* ... */</p>
+          <p>ProjectManager *pm = Manager::Get()-&gt;GetProjectManager();</p>
+          <p>if(pm)</p>
+          <p>pm-&gt;SetTopEditor(0);</p>
+          <p>delete m_pData;</p>
+          <p>}</p>
+          <p>Please try revision 2671. On my machine, this fixes the problem.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">bjoernp 2006-07-05 00:29:23</div>
+        <div class="panel-body">
+          <p>Yes, this looks easier, but I am not so sure that it is also cleaner. I have a few arguments against this solution:</p>
+          <p>Now the cbEditor needs to know about a ProjectManager that it is some part of. Doesn't feel right to me: It shouldn't need to know that.</p>
+          <p>pTopEditor points to EditorBase, not to the derived cbEditor.   Given a future alternative implementation of this interface the same problem would rise again.</p>
+          <p>pTopEditor and its Set/Get-Methods have a very questionable reason for being there, but  I am not into it enough to really judge this.</p>
+          <p>As I understand the EditorManager and all the other Manager-Gizmos around, they are there telling us: "Hey, we take care about this sh** and you need not be concerned about our business. If you need to know about the Editors around, ask the EditorManager, gotcha?"</p>
+          <p>If that is so, then holding a private reference to some instance of an Editor anywhere breaks this design.</p>
+          <p>In your solution pTopEditor will be zeroed in case _any_ of the open editors is destroyed. On the other hand it is only set once int cbProject::LoadLayout().</p>
+          <p>Then Activate() is already called there on the last open Editor-Panel, the call that crashes on the meanwhile invalidated pointer in ProjectManager - fatal and redundant. And right this Activate()-Call is the only use of pTopEditor within the ProjectManager.</p>
+          <p>So my favourite easy and simple solution is just dropping the line that causes the crash. It's not needed anyway (well, so it seems).</p>
+          <p>The whole rest of my arguments could be postponed then.</p>
+          <p>What about this?</p>
+          <p>Greetz,</p>
+          <p>Björn</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">thomasdenk 2006-07-05 11:39:48</div>
+        <div class="panel-body">
+          <p>&gt;Now the cbEditor needs to know about a ProjectManager...</p>
+          <p>&gt;pTopEditor points to EditorBase</p>
+          <p>The former is the most normal thing, happens everywhere throughout the code, the latter is technically true, but no problem, putting the same instruction into EditorBase instead is a fiffy (should have done that anyway).</p>
+          <p>However, you are certainly right insofar as the top editor does no longer serve any real purpose. It is a relict none of us remembers what it was once good for, so it can as well be entirely removed. :)</p>
+          <p>Revision 2686</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">bjoernp 2006-07-05 14:47:21</div>
+        <div class="panel-body">
+          <p>All right, then I will update the patch to the latest revision and remove that thing.</p>
+          <p>I think the info on "What was the last editor/file open on top with this project" could go into cbProject, if anybody has some use for it.</p>
+          <p>By the way I feel a bit silly throwing such big arguments at you for such a rather small issue.</p>
+          <p>Well,. it's my first dig on this project, so I am just slightly over-motivated. ;-) Hope you don't mind.</p>
+          <p>rev 2689</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">bjoernp 2006-07-05 14:52:53</div>
+        <div class="panel-body">
+          <p>Aahhh!</p>
+          <p>m_pTopEditor is gone!</p>
+          <p>You did it?</p>
+          <p>Fine then... :)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

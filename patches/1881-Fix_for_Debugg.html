@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 1881 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #1881 <small>2007-02-10 16:49:39</small></h3>
+          <h4>pecan</h4>
+          Fix for Debugger termination crashes
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="1881-Fix_for_Debugg.patch">1881-Fix_for_Debugg.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>None</dd>
+            <dt>Status</dt><dd>Rejected</dd>
+            <dt>Close date</dt><dd>2007-06-27 10:53:21</dd>
+            <dt>Assigned to</dt><dd></dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2007-02-10 17:06:29</div>
+        <div class="panel-body">
+          <p>The following program can reproduce this bug in two ways.</p>
+          <p>The first just waits for input, hit the stop button, then crash.</p>
+          <p>The second put the pgm in a sleep loop. Hit the stop button, crash.</p>
+          <p>#include &lt;iostream&gt;</p>
+          <p>#include &lt;cstdlib&gt;</p>
+          <p>#include &lt;cstring&gt;</p>
+          <p>using namespace std;</p>
+          <p>int upstring(char *value);</p>
+          <p>int main()</p>
+          <p>{</p>
+          <p>//asm("int3");</p>
+          <p>char value[81]={'\0'};</p>
+          <p>int upper_count;</p>
+          <p>// perform i/o operation</p>
+          <p>do</p>
+          <p>{   cout &lt;&lt; "Please type in a String (max. 80 characters): ";</p>
+          <p>cin.getline(value, 80);</p>
+          <p>upper_count = upstring(value);</p>
+          <p>cout &lt;&lt; upper_count &lt;&lt; " characters are converted" &lt;&lt; endl;</p>
+          <p>cout &lt;&lt; "The new string is now: " &lt;&lt; value &lt;&lt; endl;</p>
+          <p>if ( (strlen(value) &gt;3) &amp;&amp; (0==strncmp(value,"LOOP",4) ))</p>
+          <p>break;</p>
+          <p>}while(upper_count);</p>
+          <p>// perform infinite loop if user entered text "loop"</p>
+          <p>if ( (strlen(value) &gt;3) &amp;&amp; (0==strncmp(value,"LOOP",4)) )</p>
+          <p>{</p>
+          <p>int i = 0;</p>
+          <p>while(true){</p>
+          <p>cout&lt;&lt;".";cout.flush();</p>
+          <p>++i;</p>
+          <p>sleep(1);</p>
+          <p>}</p>
+          <p>}</p>
+          <p>return EXIT_SUCCESS;</p>
+          <p>}</p>
+          <p>int upstring(char *value)</p>
+          <p>{</p>
+          <p>int i=0;</p>
+          <p>while(*value)</p>
+          <p>{</p>
+          <p>if(islower(*value))</p>
+          <p>{</p>
+          <p>*value=toupper(*value);</p>
+          <p>i++;</p>
+          <p>}</p>
+          <p>value++;</p>
+          <p>}</p>
+          <p>return(i);</p>
+          <p>}</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2007-03-02 18:18:42</div>
+        <div class="panel-body">
+          <p>Fixed by SVN 3659</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">rickg22 2007-06-26 23:23:44</div>
+        <div class="panel-body">
+          <p>Pecan, what's the status of this patch? Was the bug fixed in trunk or not? I need to know so I can close Bug #9655.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2007-06-27 10:53:21</div>
+        <div class="panel-body">
+          <p>This bug was fixed in another way by mandrav.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

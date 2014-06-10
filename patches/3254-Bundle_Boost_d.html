@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 3254 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #3254 <small>2012-02-18 04:49:30</small></h3>
+          <h4>alpha0010</h4>
+          Bundle Boost dependency (Windows)
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="3254-Bundle_Boost_d.patch">3254-Bundle_Boost_d.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::Refinement</dd>
+            <dt>Status</dt><dd>Out of date</dd>
+            <dt>Close date</dt><dd>2012-06-28 05:47:32</dd>
+            <dt>Assigned to</dt><dd>mortenmacfly</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">alpha0010 2012-02-23 01:45:50</div>
+        <div class="panel-body">
+          <p>Yes; I think it makes much more sense to include this small 3% of the Boost library that is used, rather than force the download of the entire library simply to build the Nassi Shneiderman plugin.</p>
+          <p>I believe this build convenience is a similar idea to that of, for example, the AStyle plugin.</p>
+          <p>I only patched the Windows build system, however I would assume the Linux build system could be patched to use these files as well without too much hassle.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2012-02-19 13:21:52</div>
+        <div class="panel-body">
+          <p>Hm, what is the true purpose of this patch?</p>
+          <p>Putting boost files in our svn?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2012-02-25 20:12:10</div>
+        <div class="panel-body">
+          <p>I like the idea, but if its Windows only, it makes no sense to bundle it. Resolving the dependency on Windows is as easy as to extract a 7z archive (the boost one). On Linux this is different. So either this works on all platforms, or it doesn't really bring a benefit other that stealing SVN bandwidth. :-(</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">alpha0010 2012-02-26 22:14:02</div>
+        <div class="panel-body">
+          <p>Although downloading and extracting the full boost archive is easy, it is very time (and somewhat space) consuming (at least for me), which is why I proposed this.  However, you are right, this patch should be postponed consideration until I (or someone else) has a chance to complete and test it on Linux platforms (I am fairly certain it contains all - or nearly all - the correct files already, only the .cbp and Makefile.am must be patched).</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2012-03-09 14:13:09</div>
+        <div class="panel-body">
+          <p>Keep in mind that most distributions don't like the bundling of common libraries in a source of a project. They feel this is a bad practice (security issues, code duplication, etc).</p>
+          <p>I don't like it, too.</p>
+          <p>The way to go with this one is to provide a downloadable archive with all the files pre-build or in build-able configuration, so users like you can save time.</p>
+          <p>What is the problem of just downloading a 50mb file and then extracting it? You have to do this once.</p>
+          <p>Or just disable the build of the only plugin requiring it? Do you use it at all?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">alpha0010 2012-03-10 01:19:16</div>
+        <div class="panel-body">
+          <p>It would be a simple matter for me to instead provide an archive of this portion of Boost, however, I am unsure of where I would store it for others to find/make use of.  I could put it on my SkyDrive, but that looks rather unofficial, likely causing many of the "would-be time saver users" to instead opt for the official version (negating any benefit).</p>
+          <p>Would you suggest I abandon this idea?</p>
+          <p>Do you have a more-official looking location the archive could be hosted at?</p>
+          <p>(With respects to my problem with Boost - as you mentioned, I like to save time.  I also dislike that a library as large as Boost cannot be easily decoupled, so that one only needs carry around the parts they use.  But this is just my opinion.)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

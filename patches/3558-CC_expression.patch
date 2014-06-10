@@ -1,0 +1,57 @@
+Index: src/plugins/codecompletion/parser/expression.cpp
+===================================================================
+--- src/plugins/codecompletion/parser/expression.cpp	(revision 9677)
++++ src/plugins/codecompletion/parser/expression.cpp	(working copy)
+@@ -98,7 +98,7 @@
+     m_Priority = GetNodeTypePriority(m_Type);
+ }
+ 
+-ExpressionNode::ExpressionNodeType ExpressionNode::ParseNodeType(wxString token)
++ExpressionNode::ExpressionNodeType ExpressionNode::ParseNodeType(const wxString& token)
+ {
+     if      (token.IsEmpty())                         return ExpressionNode::Unknown;
+     else if (token == ExpressionConsts::Plus)         return ExpressionNode::Plus;
+@@ -195,7 +195,7 @@
+ }
+ 
+ 
+-bool ExpressionNode::IsBinaryOperator(wxString first, wxString second)
++bool ExpressionNode::IsBinaryOperator(const wxString& first, const wxString& second)
+ {
+     switch ((wxChar)first.GetChar(0))
+     {
+@@ -230,7 +230,7 @@
+     m_PostfixExpression.clear();
+ }
+ 
+-void Expression::AddToInfixExpression(wxString token)
++void Expression::AddToInfixExpression(const wxString& token)
+ {
+     if (token.IsEmpty())
+         return;
+Index: src/plugins/codecompletion/parser/expression.h
+===================================================================
+--- src/plugins/codecompletion/parser/expression.h	(revision 9677)
++++ src/plugins/codecompletion/parser/expression.h	(working copy)
+@@ -56,10 +56,10 @@
+         return r;
+     }
+ 
+-    static ExpressionNodeType ParseNodeType(wxString token);
++    static ExpressionNodeType ParseNodeType(const wxString& token);
+     static long GetNodeTypePriority(ExpressionNodeType type);
+     static bool IsUnaryNode(ExpressionNodeType type);
+-    static bool IsBinaryOperator(wxString first, wxString second);
++    static bool IsBinaryOperator(const wxString& first, const wxString& second);
+ 
+ private:
+     wxString           m_Token;
+@@ -78,7 +78,7 @@
+     {
+     };
+ 
+-    void AddToInfixExpression(wxString token);
++    void AddToInfixExpression(const wxString& token);
+     void ConvertInfixToPostfix();
+     bool CalcPostfix();
+     long GetResult() const { return m_Result; }

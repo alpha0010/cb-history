@@ -1,0 +1,192 @@
+Index: src/plugins/contrib/EditorTweaks/EditorTweaks.cpp
+===================================================================
+--- src/plugins/contrib/EditorTweaks/EditorTweaks.cpp	(revision 8526)
++++ src/plugins/contrib/EditorTweaks/EditorTweaks.cpp	(working copy)
+@@ -40,34 +40,35 @@
+ 
+ }
+ 
+-int id_et= wxNewId();
+-int id_et_WordWrap= wxNewId();
+-int id_et_ShowLineNumbers= wxNewId();
+-int id_et_TabChar = wxNewId();
+-int id_et_TabIndent = wxNewId();
+-int id_et_TabSize2 = wxNewId();
+-int id_et_TabSize4 = wxNewId();
+-int id_et_TabSize6 = wxNewId();
+-int id_et_TabSize8 = wxNewId();
+-int id_et_ShowEOL = wxNewId();
++int id_et                     = wxNewId();
++int id_et_WordWrap            = wxNewId();
++int id_et_ShowLineNumbers     = wxNewId();
++int id_et_TabChar             = wxNewId();
++int id_et_TabIndent           = wxNewId();
++int id_et_TabSize2            = wxNewId();
++int id_et_TabSize4            = wxNewId();
++int id_et_TabSize6            = wxNewId();
++int id_et_TabSize8            = wxNewId();
++int id_et_ShowEOL             = wxNewId();
+ int id_et_StripTrailingBlanks = wxNewId();
+ int id_et_EnsureConsistentEOL = wxNewId();
+-int id_et_EOLCRLF = wxNewId();
+-int id_et_EOLCR = wxNewId();
+-int id_et_EOLLF = wxNewId();
+-int id_et_Fold1= wxNewId();
+-int id_et_Fold2= wxNewId();
+-int id_et_Fold3= wxNewId();
+-int id_et_Fold4= wxNewId();
+-int id_et_Fold5= wxNewId();
+-int id_et_Unfold1= wxNewId();
+-int id_et_Unfold2= wxNewId();
+-int id_et_Unfold3= wxNewId();
+-int id_et_Unfold4= wxNewId();
+-int id_et_Unfold5= wxNewId();
+-int id_et_align_others= wxNewId();
+-int id_et_SuppressInsertKey= wxNewId();
+-int id_et_ConvertBraces= wxNewId();
++int id_et_EOLCRLF             = wxNewId();
++int id_et_EOLCR               = wxNewId();
++int id_et_EOLLF               = wxNewId();
++int id_et_Fold1               = wxNewId();
++int id_et_Fold2               = wxNewId();
++int id_et_Fold3               = wxNewId();
++int id_et_Fold4               = wxNewId();
++int id_et_Fold5               = wxNewId();
++int id_et_Unfold1             = wxNewId();
++int id_et_Unfold2             = wxNewId();
++int id_et_Unfold3             = wxNewId();
++int id_et_Unfold4             = wxNewId();
++int id_et_Unfold5             = wxNewId();
++int id_et_align_others        = wxNewId();
++int id_et_SuppressInsertKey   = wxNewId();
++int id_et_ConvertBraces       = wxNewId();
++int id_et_CenterCaret         = wxNewId();
+ 
+ // events handling
+ BEGIN_EVENT_TABLE(EditorTweaks, cbPlugin)
+@@ -114,7 +116,8 @@
+ 
+     EVT_MENU(id_et_SuppressInsertKey, EditorTweaks::OnSuppressInsert)
+     EVT_MENU(id_et_ConvertBraces, EditorTweaks::OnConvertBraces)
++    EVT_MENU(id_et_CenterCaret, EditorTweaks::OnCenterCaret)
+     EVT_MENU(id_et_align_others, EditorTweaks::OnAlignOthers)
+ END_EVENT_TABLE()
+ 
+ // constructor
+@@ -178,8 +182,9 @@
+         AlignerMenuEntries.push_back(e);
+         Connect(e.id, wxEVT_COMMAND_MENU_SELECTED,  wxCommandEventHandler(EditorTweaks::OnAlign) );
+     }
+-    m_suppress_insert=cfg->ReadBool(_("/suppress_insert_key"),false);
+-    m_convert_braces=cfg->ReadBool(_("/convert_braces"),false);
++    m_suppress_insert = cfg->ReadBool(wxT("/suppress_insert_key"), false);
++    m_convert_braces  = cfg->ReadBool(wxT("/convert_braces"),      false);
++    m_center_caret    = cfg->ReadBool(wxT("/center_caret"),        false);
+ }
+ 
+ void EditorTweaks::OnRelease(bool /*appShutDown*/)
+@@ -214,8 +219,9 @@
+     cfg->Write(_T("/aligner/saved_entries"),i);
+     for (; i < static_cast<int>(AlignerMenuEntries.size()) ; ++i)
+         Disconnect(AlignerMenuEntries[i].id, wxEVT_COMMAND_MENU_SELECTED,  wxCommandEventHandler(EditorTweaks::OnAlign) );
+-    cfg->Write(_("/suppress_insert_key"),m_suppress_insert);
+-    cfg->Write(_("/convert_braces"),m_convert_braces);
++    cfg->Write(wxT("/suppress_insert_key"), m_suppress_insert);
++    cfg->Write(wxT("/convert_braces"),      m_convert_braces);
++    cfg->Write(wxT("/center_caret"),        m_center_caret);
+ }
+ 
+ cbConfigurationPanel* EditorTweaks::GetConfigurationPanel(wxWindow* parent)
+@@ -288,6 +294,7 @@
+     submenu->AppendSeparator();
+     submenu->AppendCheckItem( id_et_SuppressInsertKey, _("Suppress Insert Key"), _("Disable toggle between insert and overwrite mode using the insert key") );
+     submenu->AppendCheckItem( id_et_ConvertBraces, _("Convert Matching Braces"), _("Selecting a brace and typing a new brace character will change the matching brace appropriately") );
++    submenu->AppendCheckItem( id_et_CenterCaret, _("Center Caret"), _("Scroll the editor so the caret is always near the center") );
+ 
+ 
+     wxMenu *foldmenu = 0;
+@@ -360,6 +367,7 @@
+     submenu->Check(id_et_ShowEOL,ed->GetControl()->GetViewEOL());
+     submenu->Check(id_et_SuppressInsertKey,m_suppress_insert);
+     submenu->Check(id_et_ConvertBraces,m_convert_braces);
++    submenu->Check(id_et_CenterCaret,m_center_caret);
+ }
+ 
+ void EditorTweaks::OnEditorUpdateUI(CodeBlocksEvent& /*event*/)
+@@ -425,11 +433,17 @@
+ 
+ void EditorTweaks::OnKeyPress(wxKeyEvent& event)
+ {
+-    if (m_suppress_insert && event.GetKeyCode()==WXK_INSERT && event.GetModifiers()==wxMOD_NONE)
++    int keyCode = event.GetKeyCode();
++    keyCode = (keyCode == WXK_NUMPAD_UP   ? WXK_UP :
++               keyCode == WXK_NUMPAD_DOWN ? WXK_DOWN : keyCode);
++    if (!( (keyCode == WXK_UP || keyCode == WXK_DOWN)
++           && event.GetModifiers() == wxMOD_CONTROL )) // do not interfere on Ctrl up/down
++        DoBufferEditorPos(keyCode == WXK_UP ? -1 : keyCode == WXK_DOWN ? 1 : 0);
++    if (m_suppress_insert && keyCode == WXK_INSERT && event.GetModifiers() == wxMOD_NONE)
+         event.Skip(false);
+     else
+         event.Skip(true);
+-    if (m_convert_braces && event.GetKeyCode() == WXK_DELETE && (event.GetModifiers()==wxMOD_NONE || event.GetModifiers()==wxMOD_SHIFT))
++    if (m_convert_braces && keyCode == WXK_DELETE && (event.GetModifiers() == wxMOD_NONE || event.GetModifiers() == wxMOD_SHIFT))
+     {
+         event.Skip(true);
+         cbEditor *ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
+@@ -541,6 +555,11 @@
+     m_convert_braces = event.IsChecked();
+ }
+ 
++void EditorTweaks::OnCenterCaret(wxCommandEvent& event)
++{
++    m_center_caret = event.IsChecked();
++}
++
+ //void EditorTweaks::EditorEventHook(cbEditor* editor, wxScintillaEvent& event)
+ //{
+ //}
+@@ -1060,3 +1160,18 @@
+     return found_lines;
+ }
+ 
++void EditorTweaks::DoBufferEditorPos(int delta)
++{
++    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
++    if (!ed)
++        return;
++    cbStyledTextCtrl* stc = ed->GetControl();
++    if (!stc || stc->LinesOnScreen() < 10) // ignore small editors
++        return;
++    const int buffer = (m_center_caret ? (stc->LinesOnScreen() >> 1) - 2 : 4);
++    const int dist   = stc->VisibleFromDocLine(stc->GetCurrentLine()) + delta - stc->GetFirstVisibleLine();
++    if (dist < buffer)
++        stc->LineScroll(0, -1);
++    else if (dist > stc->LinesOnScreen() - buffer)
++        stc->LineScroll(0, 1);
++}
+Index: src/plugins/contrib/EditorTweaks/EditorTweaks.h
+===================================================================
+--- src/plugins/contrib/EditorTweaks/EditorTweaks.h	(revision 8526)
++++ src/plugins/contrib/EditorTweaks/EditorTweaks.h	(working copy)
+@@ -130,11 +130,13 @@
+     private:
+ 		void OnAlign(wxCommandEvent& event);
+ 		void OnAlignOthers(wxCommandEvent& event);
+ 		void OnSuppressInsert(wxCommandEvent& event);
+ 		void OnConvertBraces(wxCommandEvent& event);
++        void OnCenterCaret(wxCommandEvent& event);
+ 		void AlignToString(const wxString AlignmentString);
+ 		wxString GetPadding(const wxString& Padding, const int Count);
+ 		bool GetSelectionLines(int& LineStart, int& LineEnd);
++        void DoBufferEditorPos(int delta);
+ 
+ 		std::vector<AlignerMenuEntry> AlignerMenuEntries;
+ 
+@@ -142,6 +145,7 @@
+         int m_EditorHookId;
+         bool m_suppress_insert;
+         bool m_convert_braces;
++        bool m_center_caret;
+         wxMenu *m_tweakmenu;
+         wxMenuItem *m_tweakmenuitem;
+ 

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 2894 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #2894 <small>2009-12-30 23:46:56</small></h3>
+          <h4>techy</h4>
+          Set parent window of cbMessageBox where possible
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="2894-Set_parent_win.patch">2894-Set_parent_win.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Refinement</dd>
+            <dt>Status</dt><dd>Accepted</dd>
+            <dt>Close date</dt><dd>2010-08-19 05:37:57</dd>
+            <dt>Assigned to</dt><dd>mortenmacfly</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">techy 2009-12-31 00:16:01</div>
+        <div class="panel-body">
+          <p>(About the opposite of the previous patch - huge, boring, a lot work to do and not visibly useful)</p>
+          <p>There are two main reasons that lead me to writing this patch:</p>
+          <p>1. With old linuxes the message box without parent ***ISN'T*** (the stars are there to make it look cool :-) modal - it can be hidden by the main application window, which is quite unpleasant - several times I ended with "totally unresponsive" codeblocks and then just realizing that there was some dialog in the background.</p>
+          <p>2. Even with recent linuxes when the message box is displayed from within a dialog, you can click on the dialog window and hide the message box - which could lead to similar problem as above. So message boxes should have dialogs as their parents whenever possible.</p>
+          <p>So what I did was:</p>
+          <p>1. When cbMessageBox is invoked from a dialog, the dialog should be its parent (about 90pct of the patch is adding "this" as a parent of the message box)</p>
+          <p>2. In cbMessageBox itself I set the parent to Manager::Get()-&gt;GetAppWindow() if no explicit parent is provided so if the main window is available, it should be a parent of the window so nothing should hide behind it. (I had to move the implementation from the header because there is now circular dependency between manager.h and globals.h)</p>
+          <p>3. I added a kind of hack into cbConfigurationPanel - I added a cbMessageBox method with identical interface as the one in globlas.h. It is used to fool the plugins that implement a configuration panel so when they invoke cbMessageBox from within a class inherited from cbConfigurationPanel, it actually calls the cbMessageBox method of this class and uses the config dialog as its parent. I added a getter method as well so the plugins could (and should) use it to obtain the dialog itself for instance when not calling cbMessageBox from within the class.</p>
+          <p>Of course, not all cases are fixed by this patch - for instance when a plugin calls a sdk method that displays a message box from within another dialog, the dialog cannot be the parent of the message box. However, still it fixes the problem in quite many cases and the message box should not hide behind the main window any more.</p>
+          <p>I'd like to do something similar with other wxDialog based windows that codeblocks uses - I'd just like to know your opinion in order not to do useless things.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2009-12-31 17:13:11</div>
+        <div class="panel-body">
+          <p>C::B does not compile anymore after applying this patch. Reason (configurationpanel.h):</p>
+          <p>In file included from D:\Devel\CodeBlocks\src\sdk\configurationpanel.cpp:10:</p>
+          <p>include/configurationpanel.h: In member function 'int cbConfigurationPanel::cbMessageBox(const wxString&amp;, const wxString&amp;, int, wxWindow*, int, int)':</p>
+          <p>include/configurationpanel.h:48: error: '::cbMessageBox' has not been declared</p>
+          <p>include/configurationpanel.h:50: error: '::cbMessageBox' has not been declared</p>
+          <p>Try a full rebuild (delete all PCH's before) to reproduce.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2010-01-01 07:20:24</div>
+        <div class="panel-body">
+          <p>Ok - the compilation error was easy to fix (missing #include "globals.h" only ;-)).</p>
+          <p>About the wxDialog stuff: We are testing a patch that replaces all wxDialog with wxScrollingDialog (you can try yourself using the scintilla branch). So I'd rather propose to wait until tis is applied. Otherwise it would result in a serious conflict not so easy to solve.Probably it's obsolete then anyways...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">techy 2010-01-01 15:43:40</div>
+        <div class="panel-body">
+          <p>(I'm usually compiling codeblocks from commandline make so maybe the configure scripts create different makefiles than codeblocks [like usage of precompiled headers], which would explain why I was able to compile it.)</p>
+          <p>I've just tested the scintilla branch and I agree that the settings dialogs should be scrollable somehow (I can't reach the OK and Cancel buttons under Linux on my 1280x800 resolution notebook display). But I don't think that the whole dialog should be scrollable - the listbook icons are already scrollable so it's quite strange to have them scrollable twice (together with the whole dialog). Wouldn't it be better to have a scrollbar for cbConfigurationPanel only?</p>
+          <p>Anyway, this thing looks like pretty unrelated to what I was planning to do. By "wxDialog based windows" I meant mainly the "small" dialogs like wxProgressDialog, wxTextEntryDialog, wxSingleChoiceDialog and so on and the only thing I wanted to do was to specify parent wondows for them (if they are invoked from a dialog, it would be the dialog, otherwise Manager::Get()-&gt;GetAppWindow()). This prevents them from being hidden by the parent window.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2010-08-18 21:53:45</div>
+        <div class="panel-body">
+          <p>Any progress on this patch?</p>
+          <p>The MessageBox behind the main window is pretty annoying problem on linux...</p>
+          <p>Unfortunately the patch doesn't apply in trunk any more :(</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2010-08-19 04:37:03</div>
+        <div class="panel-body">
+          <p>It's still working in my local copy, hence I am unsure about the modifications needed for plugins. Not only the once of our repo but also external once. I am careful not to break all of them...</p>
+          <p>But probably it's really time for a commit...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

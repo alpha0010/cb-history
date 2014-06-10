@@ -1,0 +1,105 @@
+Index: plugins/compilergcc/compileroptionsdlg.h
+===================================================================
+--- plugins/compilergcc/compileroptionsdlg.h	(revision 2016)
++++ plugins/compilergcc/compileroptionsdlg.h	(working copy)
+@@ -92,6 +92,7 @@
+ 		void OnAddExtraPathClick(wxCommandEvent& event);
+ 		void OnEditExtraPathClick(wxCommandEvent& event);
+ 		void OnRemoveExtraPathClick(wxCommandEvent& event);
++		void OnClearExtraPathClick(wxCommandEvent& event);
+ 		void OnUpdateUI(wxUpdateUIEvent& event);
+ 		void OnMyCharHook(wxKeyEvent& event);
+ 
+Index: plugins/compilergcc/compileroptionsdlg.cpp
+===================================================================
+--- plugins/compilergcc/compileroptionsdlg.cpp	(revision 2016)
++++ plugins/compilergcc/compileroptionsdlg.cpp	(working copy)
+@@ -67,6 +67,7 @@
+     EVT_UPDATE_UI(			XRCID("btnExtraAdd"),	    CompilerOptionsDlg::OnUpdateUI)
+     EVT_UPDATE_UI(			XRCID("btnExtraEdit"),	    CompilerOptionsDlg::OnUpdateUI)
+     EVT_UPDATE_UI(			XRCID("btnExtraDelete"),	CompilerOptionsDlg::OnUpdateUI)
++    EVT_UPDATE_UI(			XRCID("btnExtraClear"),	CompilerOptionsDlg::OnUpdateUI)
+     EVT_UPDATE_UI(			XRCID("txtCcompiler"),		CompilerOptionsDlg::OnUpdateUI)
+     EVT_UPDATE_UI(			XRCID("btnCcompiler"),		CompilerOptionsDlg::OnUpdateUI)
+     EVT_UPDATE_UI(			XRCID("txtCPPcompiler"),	CompilerOptionsDlg::OnUpdateUI)
+@@ -108,6 +109,7 @@
+     EVT_BUTTON(			    XRCID("btnExtraAdd"),	    CompilerOptionsDlg::OnAddExtraPathClick)
+     EVT_BUTTON(			    XRCID("btnExtraEdit"),	    CompilerOptionsDlg::OnEditExtraPathClick)
+     EVT_BUTTON(			    XRCID("btnExtraDelete"),	CompilerOptionsDlg::OnRemoveExtraPathClick)
++    EVT_BUTTON(			    XRCID("btnExtraClear"),	CompilerOptionsDlg::OnClearExtraPathClick)
+     EVT_SPIN_UP(			XRCID("spnLibs"),	        CompilerOptionsDlg::OnMoveLibUpClick)
+     EVT_SPIN_DOWN(			XRCID("spnLibs"),	        CompilerOptionsDlg::OnMoveLibDownClick)
+     EVT_SPIN_UP(			XRCID("spnDirs"),	        CompilerOptionsDlg::OnMoveDirUpClick)
+@@ -1438,6 +1440,22 @@
+     control->Delete(control->GetSelection());
+ }
+ 
++void CompilerOptionsDlg::OnClearExtraPathClick(wxCommandEvent& event)
++{
++    wxListBox* control = XRCCTRL(*this, "lstExtraPaths", wxListBox);
++    if (!control || control->IsEmpty())
++        return;
++
++    if (cbMessageBox(_("Remove all extra paths from the list?"), _("Confirmation"), wxICON_QUESTION | wxOK | wxCANCEL) == wxID_OK)
++    {
++        int compilerIdx = XRCCTRL(*this, "cmbCompiler", wxComboBox)->GetSelection();
++        Compiler* compiler = CompilerFactory::GetCompiler(compilerIdx);
++        wxArrayString empty;
++        compiler->SetExtraPaths(empty);
++        control->Clear();
++    }
++}
++
+ void CompilerOptionsDlg::OnMoveLibUpClick(wxSpinEvent& event)
+ {
+     wxListBox* lstLibs = XRCCTRL(*this, "lstLibs", wxListBox);
+@@ -1649,6 +1667,7 @@
+         XRCCTRL(*this, "btnExtraAdd", wxButton)->Enable(en);
+         XRCCTRL(*this, "btnExtraEdit", wxButton)->Enable(en && extraSel != -1);
+         XRCCTRL(*this, "btnExtraDelete", wxButton)->Enable(en && extraSel != -1);
++        XRCCTRL(*this, "btnExtraClear", wxButton)->Enable(en && extraSel != -1);
+         XRCCTRL(*this, "txtCcompiler", wxTextCtrl)->Enable(en);
+         XRCCTRL(*this, "btnCcompiler", wxButton)->Enable(en);
+         XRCCTRL(*this, "txtCPPcompiler", wxTextCtrl)->Enable(en);
+@@ -1735,7 +1754,7 @@
+     const wxChar* str_libs[4] = { _T("btnEditLib"),_T("btnAddLib"),_T("btnDelLib"),_T("btnClearLib") };
+     const wxChar* str_dirs[4] = { _T("btnEditDir"),_T("btnAddDir"),_T("btnDelDir"),_T("btnClearDir") };
+     const wxChar* str_vars[4] = { _T("btnEditVar"),_T("btnAddVar"),_T("btnDeleteVar"),_T("btnClearVar") };
+-    const wxChar* str_xtra[3] = { _T("btnExtraEdit"),_T("btnExtraAdd"),_T("btnExtraDelete") };
++    const wxChar* str_xtra[4] = { _T("btnExtraEdit"),_T("btnExtraAdd"),_T("btnExtraDelete"),_T("btnExtraClear") };
+ 
+     if(keycode == WXK_RETURN || keycode == WXK_NUMPAD_ENTER)
+         { myidx = 0; } // Edit
+Index: plugins/compilergcc/resources/compiler_options.xrc
+===================================================================
+--- plugins/compilergcc/resources/compiler_options.xrc	(revision 2016)
++++ plugins/compilergcc/resources/compiler_options.xrc	(working copy)
+@@ -855,17 +855,28 @@
+                                             <object class="wxButton" name="btnExtraAdd">
+                                               <label>Add</label>
+                                             </object>
++                                            <flag>wxRIGHT</flag>
++                                            <border>8</border>
+                                           </object>
+                                           <object class="sizeritem">
+                                             <object class="wxButton" name="btnExtraEdit">
+                                               <label>Edit</label>
+                                             </object>
++                                            <flag>wxRIGHT</flag>
++                                            <border>8</border>
+                                           </object>
+                                           <object class="sizeritem">
+                                             <object class="wxButton" name="btnExtraDelete">
+                                               <label>Delete</label>
+                                             </object>
++                                            <flag>wxRIGHT</flag>
++                                            <border>8</border>
+                                           </object>
++                                          <object class="sizeritem">
++                                            <object class="wxButton" name="btnExtraClear">
++                                              <label>Clear</label>
++                                            </object>
++                                          </object>
+                                         </object>
+                                         <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_CENTRE_HORIZONTAL</flag>
+                                         <border>8</border>

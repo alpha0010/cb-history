@@ -1,0 +1,128 @@
+Index: app.cpp
+===================================================================
+--- app.cpp	(revision 2454)
++++ app.cpp	(working copy)
+@@ -317,14 +317,36 @@
+     m_BatchWindowAutoClose = true;
+     m_pBatchBuildDialog = 0;
+ 
++    class Splash {
++    public:
++        Splash(const bool show) : m_pSplash(0)
++        {
++            if (show)
++            {
++                wxBitmap bmp = LoadPNGWindows2000Hack(ConfigManager::ReadDataPath() + _T("/images/splash_new.png"));
++                m_pSplash = new cbSplashScreen(bmp, -1, 0, -1, wxNO_BORDER | wxFRAME_NO_TASKBAR);
++                Manager::Yield();
++            }
++        }
++        ~Splash() {hide();}
++        void hide()
++        {
++            if (m_pSplash)
++            {
++                m_pSplash->Destroy();
++                m_pSplash = 0;
++            }
++        }
++    private:
++        cbSplashScreen* m_pSplash;
++    };
++
+ 	wxTheClipboard->Flush();
+ 
+     static CrashHandler crash_handler;
+ 
+     try
+     {
+-        m_pSplash = 0;
+-
+     #if (wxUSE_ON_FATAL_EXCEPTION == 1)
+         wxHandleFatalExceptions(true);
+     #endif
+@@ -342,8 +364,9 @@
+             return false;
+         }
+ 
+-        if (!m_Batch)
+-            ShowSplashScreen();
++        Splash splash(!m_Batch &&
++                      !m_NoSplash &&
++                      Manager::Get()->GetConfigManager(_T("app"))->ReadBool(_T("/environment/show_splash"), true));
+ 
+         InitLocale();
+         m_pSingleInstance = 0;
+@@ -366,7 +389,7 @@
+             m_pSingleInstance = new wxSingleInstanceChecker(name, tempFolder);
+             if (m_pSingleInstance->IsAnotherRunning())
+             {
+-                HideSplashScreen();
++                splash.hide();
+                 wxLogError(_("Another program instance is already running.\nCode::Blocks is currently configured to only allow one running instance.\n\nYou can access this Setting under the menu item 'Environment'."));
+                 return false;
+             }
+@@ -397,7 +420,7 @@
+         Manager::ProcessPendingEvents();
+ 
+         // finally, show the app
+-        HideSplashScreen();
++        splash.hide();
+         SetTopWindow(frame);
+         frame->Show();
+ 
+@@ -553,33 +576,10 @@
+         m_pBatchBuildDialog->EndModal(wxID_OK);
+ }
+ 
+-void CodeBlocksApp::ShowSplashScreen()
+-{
+-    HideSplashScreen();
+-
+-	if (!m_NoSplash && Manager::Get()->GetConfigManager(_T("app"))->ReadBool(_T("/environment/show_splash"), true) == true)
+-	{
+-        const wxString splashImage = _T("/images/splash_new.png");
+-        wxBitmap bmp = LoadPNGWindows2000Hack(ConfigManager::ReadDataPath() + splashImage);
+-		m_pSplash = new cbSplashScreen(bmp, -1l, 0, -1, wxNO_BORDER | wxFRAME_NO_TASKBAR);
+-		Manager::Yield();
+-	}
+-}
+-
+-void CodeBlocksApp::HideSplashScreen()
+-{
+-    if (m_pSplash)
+-    {
+-        m_pSplash->Destroy();
+-        m_pSplash = 0;
+-    }
+-}
+-
+ bool CodeBlocksApp::CheckResource(const wxString& res)
+ {
+     if (!wxFileExists(res))
+     {
+-        HideSplashScreen();
+     	wxString msg;
+     	msg.Printf(_T("Cannot find %s...\n"
+     		"%s was configured to be installed in '%s'.\n"
+Index: app.h
+===================================================================
+--- app.h	(revision 2454)
++++ app.h	(working copy)
+@@ -60,8 +60,6 @@
+         int BatchJob();
+         wxLocale m_locale; // locale we'll be using
+     private:
+-        void ShowSplashScreen();
+-        void HideSplashScreen();
+         bool CheckResource(const wxString& res);
+         void SetupPersonality(const wxString& personality);
+         void DelayLoadDdeFiles(MainFrame* frame);
+@@ -85,7 +83,6 @@
+ 		wxDialog* m_pBatchBuildDialog;
+         // batch jobs - end
+ 
+-        cbSplashScreen* m_pSplash;
+ 		wxSingleInstanceChecker* m_pSingleInstance;
+ 
+         DECLARE_EVENT_TABLE()

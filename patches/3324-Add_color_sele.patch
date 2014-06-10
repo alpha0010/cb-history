@@ -1,0 +1,119 @@
+Index: src/sdk/loggers.cpp
+===================================================================
+--- src/sdk/loggers.cpp	(wersja 8245)
++++ src/sdk/loggers.cpp	(kopia robocza)
+@@ -68,7 +68,8 @@
+ 
+     control->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
+ 
+-    int size = Manager::Get()->GetConfigManager(_T("message_manager"))->ReadInt(_T("/log_font_size"), platform::macosx ? 10 : 8);
++    ConfigManager* mcfg =Manager::Get()->GetConfigManager(_T("message_manager"));
++    int size = mcfg->ReadInt(_T("/log_font_size"), platform::macosx ? 10 : 8);
+ 
+     wxFont default_font(size, fixed ? wxFONTFAMILY_MODERN : wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+     wxFont bold_font(default_font);
+@@ -108,7 +109,7 @@
+     style[warning].SetFont(italic_font);
+ 
+     style[error].SetFont(bold_font);
+-    style[error].SetTextColour(BlendTextColour(*wxRED));
++    style[error].SetTextColour( mcfg->ReadColour(_T("/log_error_text_colour"),wxColour(0xf0, 0x00, 0x00)) );    // red
+ 
+     style[critical].SetFont(bold_font);
+     style[critical].SetTextColour(BlendTextColour(*wxWHITE));     // we're setting both fore and background colors here
+@@ -279,7 +280,8 @@
+     if (!control)
+         return;
+ 
+-    int size = Manager::Get()->GetConfigManager(_T("message_manager"))->ReadInt(_T("/log_font_size"), platform::macosx ? 10 : 8);
++    ConfigManager *mcfg = Manager::Get()->GetConfigManager(_T("message_manager"));
++    int size = mcfg->ReadInt(_T("/log_font_size"), platform::macosx ? 10 : 8);
+     wxFont default_font(size, fixed ? wxFONTFAMILY_MODERN : wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+     wxFont bold_font(default_font);
+     wxFont italic_font(default_font);
+@@ -306,9 +308,9 @@
+     style[failure].colour = BlendTextColour(wxColour(0x00, 0x00, 0xa0));
+ 
+     style[warning].font = italic_font;
+-    style[warning].colour = BlendTextColour(wxColour(0x00, 0x00, 0xa0));    // navy blue
++    style[warning].colour = mcfg->ReadColour(_T("/log_warning_text_colour"),wxColour(0x00, 0x00, 0xa0));    // navy blue
+ 
+-    style[error].colour = BlendTextColour(*wxRED);
++    style[error].colour = mcfg->ReadColour(_T("/log_error_text_colour"),wxColour(0xf0, 0x00, 0x00));    // red
+ 
+     style[critical].font = bold_font;
+     style[critical].colour = BlendTextColour(wxColour(0x0a, 0x00, 0x00));   // maroon
+Index: src/src/environmentsettingsdlg.cpp
+===================================================================
+--- src/src/environmentsettingsdlg.cpp	(wersja 8245)
++++ src/src/environmentsettingsdlg.cpp	(kopia robocza)
+@@ -71,6 +71,8 @@
+     EVT_BUTTON(XRCID("btnAuiInactiveCaptionGradientColour"), EnvironmentSettingsDlg::OnChooseColour)
+     EVT_BUTTON(XRCID("btnAuiInactiveCaptionTextColour"), EnvironmentSettingsDlg::OnChooseColour)
+     EVT_BUTTON(XRCID("btnResetDefaultColours"), EnvironmentSettingsDlg::OnResetDefaultColours)
++    EVT_BUTTON(XRCID("btnLogWarningTextColour"), EnvironmentSettingsDlg::OnChooseColour)
++    EVT_BUTTON(XRCID("btnLogErrorTextColour"), EnvironmentSettingsDlg::OnChooseColour)
+     EVT_CHECKBOX(XRCID("chkUseIPC"), EnvironmentSettingsDlg::OnUseIpcCheck)
+     EVT_CHECKBOX(XRCID("chkDoPlace"), EnvironmentSettingsDlg::OnPlaceCheck)
+     EVT_CHECKBOX(XRCID("chkPlaceHead"), EnvironmentSettingsDlg::OnHeadCheck)
+@@ -142,6 +144,8 @@
+     XRCCTRL(*this, "rbSettingsIconsSize", wxRadioBox)->SetSelection(cfg->ReadInt(_T("/environment/settings_size"), 0));
+     XRCCTRL(*this, "chkShowStartPage", wxCheckBox)->SetValue(cfg->ReadBool(_T("/environment/start_here_page"), true));
+     XRCCTRL(*this, "spnLogFontSize", wxSpinCtrl)->SetValue(mcfg->ReadInt(_T("/log_font_size"), 8));
++    XRCCTRL(*this, "btnLogWarningTextColour", wxButton)->SetBackgroundColour(mcfg->ReadColour(_T("/log_warning_text_colour"), wxColour(0x00, 0x00, 0xa0) )); //navy blue
++    XRCCTRL(*this, "btnLogErrorTextColour", wxButton)->SetBackgroundColour(mcfg->ReadColour(_T("/log_error_text_colour"), wxColour(0xf0, 0x00, 0x00) )); //red
+ 
+     bool en = mcfg->ReadBool(_T("/auto_hide"), false);
+     XRCCTRL(*this, "chkAutoHideMessages", wxCheckBox)->SetValue(en);
+@@ -524,6 +528,9 @@
+             cfg->Write(_T("/locale/language"), wxEmptyString);
+ 
+         mcfg->Write(_T("/log_font_size"),                    (int)  XRCCTRL(*this, "spnLogFontSize", wxSpinCtrl)->GetValue());
++        mcfg->Write(_T("/log_warning_text_colour"),                 XRCCTRL(*this, "btnLogWarningTextColour", wxButton)->GetBackgroundColour());
++        mcfg->Write(_T("/log_error_text_colour"),                 XRCCTRL(*this, "btnLogErrorTextColour", wxButton)->GetBackgroundColour());
++
+         cfg->Write(_T("/dialog_placement/do_place"),         (bool) XRCCTRL(*this, "chkDoPlace",     wxCheckBox)->GetValue());
+         cfg->Write(_T("/dialog_placement/dialog_position"),  (int)  XRCCTRL(*this, "chkPlaceHead",   wxCheckBox)->GetValue() ? pdlHead : pdlCentre);
+ 
+Index: src/src/resources/env_settings.xrc
+===================================================================
+--- src/src/resources/env_settings.xrc	(wersja 8245)
++++ src/src/resources/env_settings.xrc	(kopia robocza)
+@@ -377,7 +377,36 @@
+ 									</object>
+ 									<flag>wxTOP|wxBOTTOM|wxLEFT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+ 									<border>8</border>
+-								</object>
++                </object>
++                <object class="sizeritem">
++									<object class="wxFlexGridSizer">
++										<cols>2</cols>
++										<vgap>4</vgap>
++										<hgap>4</hgap>
++                    <object class="sizeritem">
++											<object class="wxStaticText" name="ID_STATICTEXT23">
++												<label>Warning message text colour:</label>
++											</object>
++											<flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++										</object>
++										<object class="sizeritem">
++											<object class="wxButton" name="btnLogWarningTextColour" />
++											<flag>wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT</flag>
++										</object>
++										<object class="sizeritem">
++											<object class="wxStaticText" name="ID_STATICTEXT24">
++												<label>Error message text colour:</label>
++											</object>
++											<flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++										</object>
++										<object class="sizeritem">
++											<object class="wxButton" name="btnLogErrorTextColour" />
++											<flag>wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT</flag>
++										</object>
++                  </object>
++                  <flag>wxLEFT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++                  <border>8</border>
++                </object>
+ 								<object class="sizeritem">
+ 									<object class="wxFlexGridSizer">
+ 										<cols>2</cols>

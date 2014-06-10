@@ -1,0 +1,42 @@
+--- codeblocks-1.0svn.orig/src/src/main.cpp	2008-06-07 12:04:42.000000000 +0200
++++ codeblocks-1.0svn.work/src/src/main.cpp	2008-06-08 15:12:39.000000000 +0200
+@@ -1220,6 +1221,7 @@
+ bool MainFrame::LayoutDifferent(const wxString& layout1,const wxString& layout2,const wxString& delimiter)
+ {
+     wxStringTokenizer strTok;
++    unsigned long j;
+ 
+     strTok.SetString(layout1, delimiter);
+     wxArrayString arLayout1;
+@@ -1229,7 +1231,14 @@
+         while(strTokColon.HasMoreTokens())
+         {
+             wxString theToken = strTokColon.GetNextToken();
+-            if (!theToken.StartsWith(_T("state="))) arLayout1.Add(theToken);
++            if (theToken.StartsWith(_T("state=")))
++            {
++            	theToken=theToken.Right(theToken.Len() - wxString(_T("state=")).Len());
++            	theToken.ToULong(&j);
++            	// we filter out the hidden/show state
++            	theToken=wxString::Format(_("state=%d"),j &  wxAuiPaneInfo::optionHidden);
++            }
++           	arLayout1.Add(theToken);
+         }
+     }
+ 
+@@ -1241,7 +1250,14 @@
+         while(strTokColon.HasMoreTokens())
+         {
+             wxString theToken = strTokColon.GetNextToken();
+-            if (!theToken.StartsWith(_T("state="))) arLayout2.Add(theToken);
++            if (theToken.StartsWith(_T("state=")))
++            {
++            	theToken=theToken.Right(theToken.Len() - wxString(_T("state=")).Len());
++            	theToken.ToULong(&j);
++            	// we filter out the hidden/show state
++            	theToken=wxString::Format(_("state=%d"),j &  wxAuiPaneInfo::optionHidden);
++            }
++           	arLayout2.Add(theToken);
+         }
+     }
+ 

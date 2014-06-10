@@ -1,0 +1,40 @@
+Index: src/plugins/codecompletion/parser/parser.cpp
+===================================================================
+--- src/plugins/codecompletion/parser/parser.cpp	(revision 4149)
++++ src/plugins/codecompletion/parser/parser.cpp	(working copy)
+@@ -430,8 +430,10 @@
+     m_Pool.BatchBegin();
+     for (unsigned int i = 0; i < filenames.GetCount(); ++i)
+     {
+-		LoaderBase* loader = Manager::Get()->GetFileManager()->Load(filenames[i], false);
++		LoaderBase* loader = NULL; //defer loading until later
+         Parse(filenames[i], true, loader);
+     }
+
+     // Allow future parses to take place in this same run
+@@ -471,9 +473,15 @@
+             wxCriticalSectionLocker lock(s_MutexProtection);
+             bool canparse = !m_pTokens->IsFileParsed(buffOrFile);
+             if(canparse)
+                canparse = m_pTokens->ReserveFileForParsing(buffOrFile,true) != 0;
+             if (!canparse)
++           {
++               if(opts.loader) // if a loader is already open at this point, the caller must clean it up
++                   Manager::Get()->GetMessageManager()->DebugLog(_T("CodeCompletion Plugin: FileLoader memory leak likely loading file ")+bufferOrFilename);
+                 break;
++           }
++           if(!opts.loader) //this should always be true (memory will leak if a loader has already been initialized before this point)
++               opts.loader=Manager::Get()->GetFileManager()->Load(bufferOrFilename, false);
+         }
+
+ //        Manager::Get()->GetMessageManager()->DebugLog(_T("Creating task for: %s"), buffOrFile.c_str());
+@@ -874,8 +882,12 @@
+         return;
+     if (filename.IsEmpty())
+         return;
+-	LoaderBase* loader = Manager::Get()->GetFileManager()->Load(filename, false);
++	LoaderBase* loader = NULL;//defer loading until later
+    Parse(filename, flags == 0, loader); // isLocal = (flags==0)
+ }
+
+ void Parser::StartStopWatch()

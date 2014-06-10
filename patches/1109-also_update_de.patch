@@ -1,0 +1,28 @@
+Index: src/plugins/debuggergdb/gdb_driver.cpp
+===================================================================
+--- src/plugins/debuggergdb/gdb_driver.cpp	(revision 2539)
++++ src/plugins/debuggergdb/gdb_driver.cpp	(working copy)
+@@ -28,6 +28,7 @@
+     static wxRegEx reBreak(_T("\032\032([^:]+):([0-9]+):[0-9]+:[begmidl]+:(0x[0-9A-z]+)"));
+ #endif
+ static wxRegEx reBreak2(_T("^(0x[A-z0-9]+) in (.*) from (.*)"));
++static wxRegEx reBreak3(_T("^(0x[A-z0-9]+) in (.*)"));
+ 
+ GDB_driver::GDB_driver(DebuggerGDB* plugin)
+     : DebuggerDriver(plugin),
+@@ -572,6 +574,15 @@
+                 m_Cursor.changed = true;
+                 needsUpdate = true;
+ 			}
++			else if (reBreak3.Matches(lines[i]) )
++			{
++			    m_Cursor.file=_T("");
++			    m_Cursor.function= reBreak3.GetMatch(lines[i], 2);
++                           m_Cursor.address = reBreak3.GetMatch(lines[i], 1);
++                           m_Cursor.line = -1;
++                           m_Cursor.changed = true;
++                           needsUpdate = true;
++			}
+         }
+     }
+     buffer.Clear();

@@ -1,0 +1,1278 @@
+Index: src/sdk/replacedlg.cpp
+===================================================================
+--- src/sdk/replacedlg.cpp	(revision 5925)
++++ src/sdk/replacedlg.cpp	(working copy)
+@@ -28,6 +28,12 @@
+ 
+ BEGIN_EVENT_TABLE(ReplaceDlg, wxDialog)
+     EVT_NOTEBOOK_PAGE_CHANGED(XRCID("nbReplace"), ReplaceDlg::OnFindChange)
++    EVT_CHECKBOX(XRCID("chkMultiLine1"), ReplaceDlg::OnMultiChange)
++    EVT_CHECKBOX(XRCID("chkMultiLine2"), ReplaceDlg::OnMultiChange)
++    EVT_CHECKBOX(XRCID("chkLimitTo1"), ReplaceDlg::OnLimitToChange)
++    EVT_CHECKBOX(XRCID("chkLimitTo2"), ReplaceDlg::OnLimitToChange)
++
++    EVT_SIZE(                           ReplaceDlg::OnSize)
+ 	EVT_CHECKBOX(XRCID("chkRegEx1"), 	ReplaceDlg::OnRegEx)
+ 	EVT_ACTIVATE(                       ReplaceDlg::OnActivate)
+ END_EVENT_TABLE()
+@@ -40,16 +46,45 @@
+ 	wxXmlResource::Get()->LoadDialog(this, parent, _T("dlgReplace"));
+     ConfigManager* cfg = Manager::Get()->GetConfigManager(_T("editor"));
+ 
++    // Get minimum size. This must be done before loading the values, or our dialog could get REALLY fat.
++    wxSize sizeSingle = XRCCTRL(*this, "tabReplaceSingle", wxPanel)->GetEffectiveMinSize();
++    wxSize sizeMulti  = XRCCTRL(*this, "tabReplaceMulti", wxPanel)->GetEffectiveMinSize();
++    wxSize sizeFilesSingle = XRCCTRL(*this, "tabReplaceInFilesSingle", wxPanel)->GetEffectiveMinSize();
++    wxSize sizeFilesMulti  = XRCCTRL(*this, "tabReplaceInFilesMulti", wxPanel)->GetEffectiveMinSize();
++
++    sizeSingle.IncTo(sizeMulti);
++    sizeFilesSingle.IncTo(sizeFilesMulti);
++
++    wxSize tmpsize = XRCCTRL(*this, "nbReplaceInFilesSingleMulti", wxPanel)->GetClientSize();
++    XRCCTRL(*this, "tabReplaceInFilesMulti", wxPanel)->SetSize(tmpsize);
++    XRCCTRL(*this, "tabReplaceInFilesSingle", wxPanel)->SetSize(tmpsize);
++
++    tmpsize = XRCCTRL(*this, "nbReplaceSingleMulti", wxPanel)->GetClientSize();
++    XRCCTRL(*this, "tabReplaceMulti", wxPanel)->SetSize(tmpsize);
++    XRCCTRL(*this, "tabReplaceSingle", wxPanel)->SetSize(tmpsize);
++
+ 	// load last searches
+ 	FillComboWithLastValues(XRCCTRL(*this, "cmbFind1", wxComboBox), CONF_GROUP _T("/last"));
+ 	FillComboWithLastValues(XRCCTRL(*this, "cmbReplace1", wxComboBox), CONF_GROUP _T("/lastReplace"));
+ 	FillComboWithLastValues(XRCCTRL(*this, "cmbFind2", wxComboBox), CONF_GROUP _T("/last"));
+ 	FillComboWithLastValues(XRCCTRL(*this, "cmbReplace2", wxComboBox), CONF_GROUP _T("/lastReplace"));
+ 
++	// load last multiline searches
++	XRCCTRL(*this, "txtMultiLineFind1", wxTextCtrl)->SetValue(cfg->Read(CONF_GROUP _T("/lastMultiLineFind"), _T("")));
++	XRCCTRL(*this, "txtMultiLineReplace1", wxTextCtrl)->SetValue(cfg->Read(CONF_GROUP _T("/lastMultiLineReplace"), _T("")));
++	XRCCTRL(*this, "txtMultiLineFind2", wxTextCtrl)->SetValue(cfg->Read(CONF_GROUP _T("/lastMultiLineFind"), _T("")));
++	XRCCTRL(*this, "txtMultiLineReplace2", wxTextCtrl)->SetValue(cfg->Read(CONF_GROUP _T("/lastMultiLineReplace"), _T("")));
++
+ 	// replace options
+ 	XRCCTRL(*this, "cmbFind1", wxComboBox)->SetValue(initial);
+-	XRCCTRL(*this, "chkWholeWord1", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/match_word"), false));
+-	XRCCTRL(*this, "chkStartWord1", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/start_word"), false));
++
++	bool flgWholeWord = cfg->ReadBool(CONF_GROUP _T("/match_word"), false);
++	bool flgStartWord = cfg->ReadBool(CONF_GROUP _T("/start_word"), false);
++	bool flgStartFile = cfg->ReadBool(CONF_GROUP _T("/start_file"), false);
++	XRCCTRL(*this, "chkLimitTo1", wxCheckBox)->SetValue(flgWholeWord | flgStartWord | flgStartFile);
++	XRCCTRL(*this, "rbLimitTo1", wxRadioBox)->Enable((bool)(flgWholeWord | flgStartWord | flgStartFile));
++	XRCCTRL(*this, "rbLimitTo1", wxRadioBox)->SetSelection(flgStartFile ? 2 : (flgStartWord ? 1 : 0));
++
+ 	XRCCTRL(*this, "chkMatchCase1", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/match_case"), false));
+ 	XRCCTRL(*this, "chkRegEx1", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/regex"), false));
+ 	XRCCTRL(*this, "rbDirection", wxRadioBox)->SetSelection(cfg->ReadInt(CONF_GROUP _T("/direction"), 1));
+@@ -61,13 +96,37 @@
+ 	XRCCTRL(*this, "chkAutoWrapSearch", wxCheckBox)->SetValue(cfg->ReadBool(_T("/find_options/auto_wrap_search"), true));
+ 
+ 	// replace in files options
++	flgWholeWord = cfg->ReadBool(CONF_GROUP _T("/match_word2"), false);
++	flgStartWord = cfg->ReadBool(CONF_GROUP _T("/start_word2"), false);
++	flgStartFile = cfg->ReadBool(CONF_GROUP _T("/start_file2"), false);
++	XRCCTRL(*this, "chkLimitTo2", wxCheckBox)->SetValue(flgWholeWord | flgStartWord | flgStartFile);
++	XRCCTRL(*this, "rbLimitTo2", wxRadioBox)->Enable((bool)(flgWholeWord | flgStartWord | flgStartFile));
++	XRCCTRL(*this, "rbLimitTo2", wxRadioBox)->SetSelection(flgStartFile ? 2 : (flgStartWord ? 1 : 0));
++
+ 	XRCCTRL(*this, "cmbFind2", wxComboBox)->SetValue(initial);
+-	XRCCTRL(*this, "chkWholeWord2", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/match_word2"), false));
+-	XRCCTRL(*this, "chkStartWord2", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/start_word2"), false));
+ 	XRCCTRL(*this, "chkMatchCase2", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/match_case2"), false));
+ 	XRCCTRL(*this, "chkRegEx2", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/regex2"), false));
+ 	XRCCTRL(*this, "rbScope2", wxRadioBox)->SetSelection(cfg->ReadInt(CONF_GROUP _T("/scope2"), 0));
+ 
++    XRCCTRL(*this, "nbReplaceSingleMulti", wxPanel)->SetMinSize(sizeSingle);
++    XRCCTRL(*this, "nbReplaceInFilesSingleMulti", wxPanel)->SetMinSize(sizeFilesSingle);
++
++	XRCCTRL(*this, "chkMultiLine1", wxCheckBox)->SetValue(false);
++	XRCCTRL(*this, "chkFixEOLs1", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/fix_eols1"), false));
++	XRCCTRL(*this, "chkFixEOLs1", wxCheckBox)->Enable(XRCCTRL(*this, "chkMultiLine1", wxCheckBox)->GetValue());
++
++	XRCCTRL(*this, "chkMultiLine2", wxCheckBox)->SetValue(false);
++	XRCCTRL(*this, "chkFixEOLs2", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/fix_eols2"), false));
++	XRCCTRL(*this, "chkFixEOLs2", wxCheckBox)->Enable(XRCCTRL(*this, "chkMultiLine2", wxCheckBox)->GetValue());
++
++    XRCCTRL(*this, "tabReplaceSingle", wxPanel)->Show();
++    XRCCTRL(*this, "tabReplaceMulti", wxPanel)->Hide();
++    XRCCTRL(*this, "tabReplaceMulti", wxPanel)->Disable();
++    XRCCTRL(*this, "tabReplaceInFilesSingle", wxPanel)->Show();
++    XRCCTRL(*this, "tabReplaceInFilesMulti", wxPanel)->Hide();
++    XRCCTRL(*this, "tabReplaceInFilesMulti", wxPanel)->Disable();
++//
++
+     if (findInFilesOnly)
+     {
+         XRCCTRL(*this, "nbReplace", wxNotebook)->DeletePage(0); // no active editor, so only replace-in-files
+@@ -78,6 +137,7 @@
+ 		XRCCTRL(*this, "nbReplace", wxNotebook)->SetSelection(1); // Search->Replace in Files was selected
+ 		XRCCTRL(*this, "cmbFind2", wxComboBox)->SetFocus();
+ 	}
++	GetSizer()->SetSizeHints(this);
+ }
+ 
+ ReplaceDlg::~ReplaceDlg()
+@@ -89,29 +149,50 @@
+ 	{
+ 	    SaveComboValues(XRCCTRL(*this, "cmbFind2", wxComboBox), CONF_GROUP _T("/last"));
+         SaveComboValues(XRCCTRL(*this, "cmbReplace2", wxComboBox), CONF_GROUP _T("/lastReplace"));
++
++        // Save last multi-line search & replace
++        cfg->Write(CONF_GROUP _T("/lastMultiLineFind"), XRCCTRL(*this, "txtMultiLineFind2", wxTextCtrl)->GetValue());
++        cfg->Write(CONF_GROUP _T("/lastMultiLineReplace"), XRCCTRL(*this, "txtMultiLineReplace2", wxTextCtrl)->GetValue());
+ 	}
+ 	else
+ 	{
+ 	    SaveComboValues(XRCCTRL(*this, "cmbFind1", wxComboBox), CONF_GROUP _T("/last"));
+         SaveComboValues(XRCCTRL(*this, "cmbReplace1", wxComboBox), CONF_GROUP _T("/lastReplace"));
++
++        // Save last multi-line search & replace
++        cfg->Write(CONF_GROUP _T("/lastMultiLineFind"), XRCCTRL(*this, "txtMultiLineFind1", wxTextCtrl)->GetValue());
++        cfg->Write(CONF_GROUP _T("/lastMultiLineReplace"), XRCCTRL(*this, "txtMultiLineReplace1", wxTextCtrl)->GetValue());
+ 	}
+ 
+     if (m_Complete)
+ 	{
+         // find(replace) options
+-        cfg->Write(CONF_GROUP _T("/match_word"), XRCCTRL(*this, "chkWholeWord1", wxCheckBox)->GetValue());
+-        cfg->Write(CONF_GROUP _T("/start_word"), XRCCTRL(*this, "chkStartWord1", wxCheckBox)->GetValue());
++        cfg->Write(CONF_GROUP _T("/fix_eols1"), XRCCTRL(*this, "chkFixEOLs1", wxCheckBox)->GetValue());
+         cfg->Write(CONF_GROUP _T("/match_case"), XRCCTRL(*this, "chkMatchCase1", wxCheckBox)->GetValue());
+         cfg->Write(CONF_GROUP _T("/regex"), XRCCTRL(*this, "chkRegEx1", wxCheckBox)->GetValue());
+         cfg->Write(CONF_GROUP _T("/direction"), XRCCTRL(*this, "rbDirection", wxRadioBox)->GetSelection());
+         cfg->Write(CONF_GROUP _T("/origin"), XRCCTRL(*this, "rbOrigin", wxRadioBox)->GetSelection());
++
++        bool flgLimitTo = XRCCTRL(*this, "chkLimitTo1", wxCheckBox)->GetValue();
++        int  valLimitTo = XRCCTRL(*this, "rbLimitTo1", wxRadioBox)->GetSelection();
++
++        cfg->Write(CONF_GROUP _T("/match_word"), flgLimitTo && valLimitTo == 0);
++        cfg->Write(CONF_GROUP _T("/start_word"), flgLimitTo && valLimitTo == 1);
++        cfg->Write(CONF_GROUP _T("/start_file"), flgLimitTo && valLimitTo == 2);
++
+         // special key, uses same config for both find & replace options
+         cfg->Write(_T("/find_options/auto_wrap_search"), XRCCTRL(*this, "chkAutoWrapSearch", wxCheckBox)->GetValue());
+ 	}
+ 
+ 	// find(replace) in files options
+-	cfg->Write(CONF_GROUP _T("/match_word2"), XRCCTRL(*this, "chkWholeWord2", wxCheckBox)->GetValue());
+-	cfg->Write(CONF_GROUP _T("/start_word2"), XRCCTRL(*this, "chkStartWord2", wxCheckBox)->GetValue());
++    bool flgLimitTo = XRCCTRL(*this, "chkLimitTo2", wxCheckBox)->GetValue();
++    int  valLimitTo = XRCCTRL(*this, "rbLimitTo2", wxRadioBox)->GetSelection();
++
++    cfg->Write(CONF_GROUP _T("/match_word2"), flgLimitTo && valLimitTo == 0);
++    cfg->Write(CONF_GROUP _T("/start_word2"), flgLimitTo && valLimitTo == 1);
++    cfg->Write(CONF_GROUP _T("/start_file2"), flgLimitTo && valLimitTo == 2);
++
++    cfg->Write(CONF_GROUP _T("/fix_eols2"), XRCCTRL(*this, "chkFixEOLs2", wxCheckBox)->GetValue());
+ 	cfg->Write(CONF_GROUP _T("/match_case2"), XRCCTRL(*this, "chkMatchCase2", wxCheckBox)->GetValue());
+ 	cfg->Write(CONF_GROUP _T("/regex2"), XRCCTRL(*this, "chkRegEx2", wxCheckBox)->GetValue());
+ 	cfg->Write(CONF_GROUP _T("/scope2"), XRCCTRL(*this, "rbScope2", wxRadioBox)->GetSelection());
+@@ -146,18 +227,36 @@
+ 
+ wxString ReplaceDlg::GetFindString() const
+ {
+-    if (IsFindInFiles())
+-        return XRCCTRL(*this, "cmbFind2", wxComboBox)->GetValue();
+-    else
+-        return XRCCTRL(*this, "cmbFind1", wxComboBox)->GetValue();
++    if (IsMultiLine())
++    {
++        if (IsFindInFiles())
++            return XRCCTRL(*this, "txtMultiLineFind2", wxTextCtrl)->GetValue();
++        else
++            return XRCCTRL(*this, "txtMultiLineFind1", wxTextCtrl)->GetValue();
++    } else {
++        if (IsFindInFiles())
++            return XRCCTRL(*this, "cmbFind2", wxComboBox)->GetValue();
++        else
++            return XRCCTRL(*this, "cmbFind1", wxComboBox)->GetValue();
++    }
+ }
+ 
+ wxString ReplaceDlg::GetReplaceString() const
+ {
+-    if (IsFindInFiles())
+-        return XRCCTRL(*this, "cmbReplace2", wxComboBox)->GetValue();
+-    else
+-        return XRCCTRL(*this, "cmbReplace1", wxComboBox)->GetValue();
++    if (IsMultiLine())
++    {
++        wxString tmpString;
++
++        if (IsFindInFiles())
++            return XRCCTRL(*this, "txtMultiLineReplace2", wxTextCtrl)->GetValue();
++        else
++            return XRCCTRL(*this, "txtMultiLineReplace1", wxTextCtrl)->GetValue();
++    } else {
++        if (IsFindInFiles())
++            return XRCCTRL(*this, "cmbReplace2", wxComboBox)->GetValue();
++        else
++            return XRCCTRL(*this, "cmbReplace1", wxComboBox)->GetValue();
++    }
+ }
+ 
+ bool ReplaceDlg::IsFindInFiles() const
+@@ -165,6 +264,14 @@
+ 	return !m_Complete || XRCCTRL(*this, "nbReplace", wxNotebook)->GetSelection() == 1;
+ }
+ 
++bool ReplaceDlg::IsMultiLine() const
++{
++    if(IsFindInFiles())
++        return XRCCTRL(*this, "chkMultiLine2", wxCheckBox)->GetValue();
++    else
++        return XRCCTRL(*this, "chkMultiLine1", wxCheckBox)->GetValue();
++}
++
+ bool ReplaceDlg::GetDeleteOldSearches() const
+ {
+     return false; // checkbox doesn't exist in both dialogs
+@@ -173,19 +280,45 @@
+ bool ReplaceDlg::GetMatchWord() const
+ {
+     if (IsFindInFiles())
+-		return XRCCTRL(*this, "chkWholeWord2", wxCheckBox)->GetValue();
++    {
++        bool flgLimitTo = XRCCTRL(*this, "chkLimitTo2", wxCheckBox)->GetValue();
++		return flgLimitTo && XRCCTRL(*this, "rbLimitTo2", wxRadioBox)->GetSelection() == 0;
++    }
+ 	else
+-        return XRCCTRL(*this, "chkWholeWord1", wxCheckBox)->GetValue();
++	{
++	    bool flgLimitTo = XRCCTRL(*this, "chkLimitTo1", wxCheckBox)->GetValue();
++		return flgLimitTo && XRCCTRL(*this, "rbLimitTo1", wxRadioBox)->GetSelection() == 0;
++	}
+ }
+ 
+ bool ReplaceDlg::GetStartWord() const
+ {
+     if (IsFindInFiles())
+-		return XRCCTRL(*this, "chkStartWord2", wxCheckBox)->GetValue();
++    {
++        bool flgLimitTo = XRCCTRL(*this, "chkLimitTo2", wxCheckBox)->GetValue();
++		return flgLimitTo && XRCCTRL(*this, "rbLimitTo2", wxRadioBox)->GetSelection() == 1;
++    }
+ 	else
+-        return XRCCTRL(*this, "chkStartWord1", wxCheckBox)->GetValue();
++	{
++	    bool flgLimitTo = XRCCTRL(*this, "chkLimitTo1", wxCheckBox)->GetValue();
++		return flgLimitTo && XRCCTRL(*this, "rbLimitTo1", wxRadioBox)->GetSelection() == 1;
++	}
+ }
+ 
++bool ReplaceDlg::GetStartFile() const
++{
++    if (IsFindInFiles())
++    {
++        bool flgLimitTo = XRCCTRL(*this, "chkLimitTo2", wxCheckBox)->GetValue();
++		return flgLimitTo && XRCCTRL(*this, "rbLimitTo2", wxRadioBox)->GetSelection() == 2;
++    }
++	else
++	{
++	    bool flgLimitTo = XRCCTRL(*this, "chkLimitTo1", wxCheckBox)->GetValue();
++		return flgLimitTo && XRCCTRL(*this, "rbLimitTo1", wxRadioBox)->GetSelection() == 2;
++	}
++}
++
+ bool ReplaceDlg::GetMatchCase() const
+ {
+     if (IsFindInFiles())
+@@ -239,26 +372,142 @@
+         return XRCCTRL(*this, "rbScope1", wxRadioBox)->GetSelection();
+ }
+ 
++bool ReplaceDlg::GetFixEOLs() const
++{
++    if (IsFindInFiles())
++		return XRCCTRL(*this, "chkFixEOLs2", wxCheckBox)->GetValue();
++	else
++		return XRCCTRL(*this, "chkFixEOLs1", wxCheckBox)->GetValue();
++}
++
+ // events
+ 
+-void ReplaceDlg::OnFindChange(wxNotebookEvent& event)
++void ReplaceDlg::OnSize(wxSizeEvent& event)
+ {
++    wxPanel* tmpPanel = XRCCTRL(*this, "nbReplaceInFilesSingleMulti", wxPanel);
++    if(tmpPanel)
++    {
++        wxSize tmpsize = tmpPanel->GetClientSize();
++        tmpPanel = XRCCTRL(*this, "tabReplaceInFilesMulti", wxPanel);
++        if(tmpPanel) tmpPanel->SetSize(tmpsize);
++        tmpPanel = XRCCTRL(*this, "tabReplaceInFilesSingle", wxPanel);
++        if(tmpPanel) tmpPanel->SetSize(tmpsize);
++    }
++
++    tmpPanel = XRCCTRL(*this, "nbReplaceSingleMulti", wxPanel);
++    if(tmpPanel)
++    {
++        wxSize tmpsize = tmpPanel->GetClientSize();
++        tmpPanel = XRCCTRL(*this, "tabReplaceMulti", wxPanel);
++        if(tmpPanel) tmpPanel->SetSize(tmpsize);
++        tmpPanel = XRCCTRL(*this, "tabReplaceSingle", wxPanel);
++        if(tmpPanel) tmpPanel->SetSize(tmpsize);
++    }
++    event.Skip();
++}
++
++void ReplaceDlg::OnMultiChange(wxCommandEvent& event)
++{
+     wxComboBox* cmbFind1 = XRCCTRL(*this, "cmbFind1", wxComboBox);
+     wxComboBox* cmbFind2 = XRCCTRL(*this, "cmbFind2", wxComboBox);
++    wxTextCtrl* txtFind1 = XRCCTRL(*this, "txtMultiLineFind1", wxTextCtrl);
++    wxTextCtrl* txtFind2 = XRCCTRL(*this, "txtMultiLineFind2", wxTextCtrl);
++    wxCheckBox* chkMultiLine1 = XRCCTRL(*this, "chkMultiLine1", wxCheckBox);
++    wxCheckBox* chkMultiLine2 = XRCCTRL(*this, "chkMultiLine2", wxCheckBox);
++    wxCheckBox* chkFixEOLs1 = XRCCTRL(*this, "chkFixEOLs1", wxCheckBox);
++    wxCheckBox* chkFixEOLs2 = XRCCTRL(*this, "chkFixEOLs2", wxCheckBox);
+ 
+-    if (cmbFind1 && cmbFind2)
++    wxPanel* tabReplaceSingle = XRCCTRL(*this, "tabReplaceSingle", wxPanel);
++    wxPanel* tabReplaceMulti = XRCCTRL(*this, "tabReplaceMulti", wxPanel);
++    wxPanel* tabReplaceInFilesSingle = XRCCTRL(*this, "tabReplaceInFilesSingle", wxPanel);
++    wxPanel* tabReplaceInFilesMulti = XRCCTRL(*this, "tabReplaceInFilesMulti", wxPanel);
++    wxWindow* controlToFocus = 0;
++
++    bool enabledMultiLine = false;
++    if (event.GetId() == XRCID("chkMultiLine1"))
+     {
++        enabledMultiLine = chkMultiLine1->GetValue();
++        if(chkMultiLine2) chkMultiLine2->SetValue(enabledMultiLine);
++        controlToFocus = enabledMultiLine ? dynamic_cast<wxWindow*>(txtFind1) : dynamic_cast<wxWindow*>(cmbFind1);
++    }
++    else if (event.GetId() == XRCID("chkMultiLine2"))
++    {
++        enabledMultiLine = chkMultiLine2->GetValue();
++        if(chkMultiLine1) chkMultiLine1->SetValue(enabledMultiLine);
++        controlToFocus = enabledMultiLine ? dynamic_cast<wxWindow*>(txtFind2) : dynamic_cast<wxWindow*>(cmbFind2);
++    }
++    else
++        return;
++
++    if(tabReplaceSingle)
++    {
++        tabReplaceSingle->Enable(!enabledMultiLine);
++        tabReplaceSingle->Show(!enabledMultiLine);
++    }
++    if(tabReplaceInFilesSingle)
++    {
++        tabReplaceInFilesSingle->Enable(!enabledMultiLine);
++        tabReplaceInFilesSingle->Show(!enabledMultiLine);
++    }
++    if(tabReplaceMulti)
++    {
++        tabReplaceMulti->Enable(enabledMultiLine);
++        tabReplaceMulti->Show(enabledMultiLine);
++    }
++    if(tabReplaceInFilesMulti)
++    {
++        tabReplaceInFilesMulti->Show(enabledMultiLine);
++        tabReplaceInFilesMulti->Enable(enabledMultiLine);
++    }
++    if(chkFixEOLs1)
++    {
++        chkFixEOLs1->Enable(enabledMultiLine);
++    }
++    chkFixEOLs2->Enable(enabledMultiLine);
++    if(controlToFocus) controlToFocus->SetFocus();
++
++    wxSizeEvent event1;
++    OnSize(event1);
++    Refresh();
++}
++
++void ReplaceDlg::OnFindChange(wxNotebookEvent& event)
++{
++    wxComboBox* cmbFind1  = XRCCTRL(*this, "cmbFind1", wxComboBox);
++    wxComboBox* cmbFind2  = XRCCTRL(*this, "cmbFind2", wxComboBox);
++    wxTextCtrl* txtFind1  = XRCCTRL(*this, "txtMultiLineFind1", wxTextCtrl);
++    wxTextCtrl* txtFind2  = XRCCTRL(*this, "txtMultiLineFind2", wxTextCtrl);
++    wxCheckBox* chkMultiLine1 = XRCCTRL(*this, "chkMultiLine1", wxCheckBox);
++    wxCheckBox* chkMultiLine2 = XRCCTRL(*this, "chkMultiLine2", wxCheckBox);
++
++    if (txtFind1 && txtFind2 && cmbFind1 && cmbFind2)
++    {
++
++        wxWindow* controlToFocus = 0;
+         if (XRCCTRL(*this, "nbReplace", wxNotebook)->GetSelection() == 1)
+         {
++            // Switched from "Find" to "Find in files"
++
++            txtFind2->SetValue(txtFind1->GetValue());
+             cmbFind2->SetValue(cmbFind1->GetValue());
+-            cmbFind2->SetFocus();
++
++            // If Multiline was active in "Find", activate it in "Find in files"
++            controlToFocus = chkMultiLine1->GetValue() ? dynamic_cast<wxWindow*>(txtFind2) : dynamic_cast<wxWindow*>(cmbFind2);
+         }
+         else
+         {
++            // Switched from "Find in files" to "Find"
++
++            txtFind1->SetValue(txtFind2->GetValue());
+             cmbFind1->SetValue(cmbFind2->GetValue());
+-            cmbFind1->SetFocus();
++
++            // If Multiline was active in "Find in Files", activate it in "Find"
++            controlToFocus = chkMultiLine2->GetValue() ? dynamic_cast<wxWindow*>(txtFind1) : dynamic_cast<wxWindow*>(cmbFind1);
+         }
++        if(controlToFocus) controlToFocus->SetFocus();
+     }
++    wxSizeEvent event1;
++    OnSize(event1);
+     event.Skip();
+ }
+ 
+@@ -268,14 +517,37 @@
+         XRCCTRL(*this, "rbDirection", wxRadioBox)->Enable(!XRCCTRL(*this, "chkRegEx1", wxCheckBox)->GetValue());
+ }
+ 
++void ReplaceDlg::OnLimitToChange(wxCommandEvent& event)
++{
++    if (event.GetId() == XRCID("chkLimitTo1"))
++        XRCCTRL(*this, "rbLimitTo1", wxRadioBox)->Enable(XRCCTRL(*this, "chkLimitTo1", wxCheckBox)->GetValue());
++    else
++        XRCCTRL(*this, "rbLimitTo2", wxRadioBox)->Enable(XRCCTRL(*this, "chkLimitTo2", wxCheckBox)->GetValue());
++}
++
++
+ void ReplaceDlg::OnActivate(wxActivateEvent& event)
+ {
+-    wxComboBox* cbp = 0;
+-    if (IsFindInFiles())
+-        cbp = XRCCTRL(*this, "cmbFind2", wxComboBox);
++    if (IsMultiLine())
++    {
++        wxTextCtrl* tcp = 0;
++        if (IsFindInFiles())
++            tcp = XRCCTRL(*this, "txtMultiLineFind2", wxTextCtrl);
++        else
++            tcp = XRCCTRL(*this, "txtMultiLineFind1", wxTextCtrl);
++
++        if (tcp != 0) tcp->SetFocus();
++    }
+     else
+-        cbp = XRCCTRL(*this, "cmbFind1", wxComboBox);
++    {
++        wxComboBox* cbp = 0;
++        if (IsFindInFiles())
++            cbp = XRCCTRL(*this, "cmbFind2", wxComboBox);
++        else
++            cbp = XRCCTRL(*this, "cmbFind1", wxComboBox);
+ 
+-    if (cbp != 0) cbp->SetFocus();
++        if (cbp != 0) cbp->SetFocus();
++
++    }
+     event.Skip();
+ }
+Index: src/sdk/finddlg.cpp
+===================================================================
+--- src/sdk/finddlg.cpp	(revision 5925)
++++ src/sdk/finddlg.cpp	(working copy)
+@@ -275,6 +275,18 @@
+     return XRCCTRL(*this, "txtSearchMask", wxTextCtrl)->GetValue();
+ }
+ 
++bool FindDlg::GetStartFile() const
++{
++// TODO (rick#1#): Implement FindDlg::GetStartFile()
++    return false;
++}
++
++bool FindDlg::GetFixEOLs() const
++{
++    // Fixing EOLs only applicable in "Replace"
++    return false;
++}
++
+ void FindDlg::UpdateUI()
+ {
+     bool on = XRCCTRL(*this, "rbScope2", wxRadioBox)->GetSelection() == 3; // find in search path
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(revision 5925)
++++ src/sdk/editormanager.cpp	(working copy)
+@@ -76,6 +76,7 @@
+     bool delOldSearches;
+     bool matchWord;
+     bool startWord;
++    bool startFile; //!< To be implemented.
+     bool matchCase;
+     bool regEx;
+     bool directionDown;
+@@ -90,8 +91,52 @@
+     int SearchInSelectionEnd;  //!< keep track of the end of a 'search' selection
+     bool autoWrapSearch;
+     bool findUsesSelectedText;
++    bool fixEOLs; //!< for multi-line S&R. Fixes EOLs in all the files searched.
++    int eolMode; //!< for multi-line S&R
++
++    void ConvertEOLs(int newmode);
++    bool IsMultiLine();
++
++    cbFindReplaceData()
++    {
++        eolMode = wxSCI_EOL_LF;
++        fixEOLs = false;
++    }
+ };
+ 
++void cbFindReplaceData::ConvertEOLs(int newmode)
++{
++    if(eolMode != newmode)
++    {
++        const wxChar* eol_lf = _T("\n");
++        const wxChar* eol_crlf = _T("\r\n");
++        const wxChar* eol_cr = _T("\r");
++
++        const wxChar* eol_from = eol_lf;
++        const wxChar* eol_to = eol_lf;
++        switch(eolMode)
++        {
++            case wxSCI_EOL_CR: eol_from = eol_cr; break;
++            case wxSCI_EOL_CRLF: eol_from = eol_crlf; break;
++            default: ;
++        }
++        switch(newmode)
++        {
++            case wxSCI_EOL_CR: eol_to = eol_cr; break;
++            case wxSCI_EOL_CRLF: eol_to = eol_crlf; break;
++            default: newmode = wxSCI_EOL_LF;
++        }
++        findText.Replace(eol_from, eol_to, true);
++        replaceText.Replace(eol_from, eol_to, true);
++        eolMode = newmode;
++    }
++}
++
++bool cbFindReplaceData::IsMultiLine()
++{
++    return  ((findText.Find(_T("\n")) != wxNOT_FOUND) || (findText.Find(_T("\r")) != wxNOT_FOUND));
++}
++
+ static const int idNBTabSplitHorz = wxNewId();
+ static const int idNBTabSplitVert = wxNewId();
+ static const int idNBTabUnsplit = wxNewId();
+@@ -1223,6 +1268,9 @@
+     m_LastFindReplaceData->end = 0;
+     m_LastFindReplaceData->findText = dlg->GetFindString();
+     m_LastFindReplaceData->replaceText = dlg->GetReplaceString();
++    m_LastFindReplaceData->eolMode = wxSCI_EOL_LF;
++    m_LastFindReplaceData->fixEOLs = dlg->GetFixEOLs();
++    m_LastFindReplaceData->startFile = dlg->GetStartFile();
+ 
+     m_LastFindReplaceData->findInFiles = dlg->IsFindInFiles();
+     if (!m_LastFindReplaceData->findInFiles)
+@@ -1287,8 +1335,15 @@
+ {
+     if (!control || !data)
+         return;
++    if(data->startFile) // Beginning-of-file needs the entire scope
++    {
++        int clen = control->GetLength();
++        int slen = data->findText.Len();
+ 
+-    if (!data->findInFiles)   // Find in current Editor
++        data->start = 0;
++        data->end = std::min(slen, clen);
++    }
++    else if (!data->findInFiles)   // Find in current Editor
+     {
+         int ssta = control->GetSelectionStart();
+         int send = control->GetSelectionEnd();
+@@ -1393,6 +1448,26 @@
+     int replacecount=0;
+     int foundcount=0;
+     int flags = 0;
++
++
++    {
++        int eolMode = control->GetEOLMode();
++        data->ConvertEOLs(eolMode); // Convert our S&R data to the file's EOL mode.
++        if(data->IsMultiLine() && data->fixEOLs)
++        {
++
++            // First we must ensure that the file has consistent line endings.
++            // As all the file's lines are affected, we disable change history for this step.
++
++            control->BeginUndoAction();
++            control->SetChangeCollection(false);
++            control->ConvertEOLs(eolMode);
++            control->SetChangeCollection(true);
++            control->EndUndoAction();
++        }
++    }
++    control->BeginUndoAction(); // The undo is set at this point in case we need to convert the EOLs.
++
+     CalculateFindReplaceStartEnd(control, data);
+ 
+     if (data->matchWord)
+@@ -1422,7 +1497,6 @@
+     }
+     #endif
+ 
+-    control->BeginUndoAction();
+     int pos = -1;
+     bool replace = false;
+     bool confirm = true;
+@@ -1461,6 +1535,11 @@
+             } else
+                 pos=-1;
+         }
++        if(data->startFile && pos > 0)
++        {
++            pos = -1; // Not found at the beginning of file
++        }
++
+         if (pos != -1 && data->start!=data->end)
+         {
+             control->GotoPos(pos);
+@@ -1618,11 +1697,23 @@
+     if (!data) return 0;
+     if (data->findText.IsEmpty()) return 0;
+ 
++    bool IsMultiLine = data->IsMultiLine();
++
+     // let's make a list of all the files to search in
+     wxArrayString filesList;
+ 
+-    if (data->scope == 0) // find in project files
++    if (data->scope == 0) // find in open files
+     {
++        // fill the search list with the open files
++        for (size_t i = 0; i < m_pNotebook->GetPageCount(); ++i)
++        {
++            cbEditor* ed = InternalGetBuiltinEditor(i);
++            if (ed)
++                filesList.Add(ed->GetFilename());
++        }
++    }
++    else if (data->scope == 1) // find in project files
++    {
+         // fill the search list with all the project files
+         cbProject* prj = Manager::Get()->GetProjectManager()->GetActiveProject();
+         if (!prj)
+@@ -1643,16 +1734,6 @@
+             }
+         }
+     }
+-    else if (data->scope == 1) // find in open files
+-    {
+-        // fill the search list with the open files
+-        for (size_t i = 0; i < m_pNotebook->GetPageCount(); ++i)
+-        {
+-            cbEditor* ed = InternalGetBuiltinEditor(i);
+-            if (ed)
+-                filesList.Add(ed->GetFilename());
+-        }
+-    }
+     else if (data->scope == 2) // find in workspace
+     {
+         // loop over all the projects in the workspace (they are contained in the ProjectManager)
+@@ -1796,9 +1877,31 @@
+         }
+ 
+         SetActiveEditor(ed);
+-        control->BeginUndoAction(); //undo
+ 
+         *data = dataCopy;
++
++        bool replacementsWereMade = false;
++        // If we fix the file's EOLs for multi-line S&R, we're actually modifying it.
++        // What we really want to know is whether we actually did a replacement.
++        // If not (and the file was not open in the first place), we can safely close the file.
++
++        {
++            // We should be checking if the data has EOLs before converting them. But searching is
++            // just as expensive as doing the conversion itself, so we just convert.
++            int eolMode = control->GetEOLMode();
++            data->ConvertEOLs(eolMode);
++
++            if(IsMultiLine && data->fixEOLs)
++            {
++                control->BeginUndoAction(); //undo
++                control->SetChangeCollection(false);
++                control->ConvertEOLs(eolMode);
++                control->SetChangeCollection(true);
++                control->EndUndoAction();
++            }
++        }
++
++        control->BeginUndoAction(); //undo
+         CalculateFindReplaceStartEnd(control, data, true);
+ 
+         //reset bools
+@@ -1836,6 +1939,12 @@
+                     pos=-1;
+             }
+ 
++            if(data->startFile && pos > 0)
++            {
++                pos = -1; // Not found at the beginning of file
++            }
++
++
+             if (pos == -1 || data->start==data->end)
+                 break;
+ 
+@@ -1911,6 +2020,7 @@
+             {
+                 if (replace)
+                 {
++                    replacementsWereMade = true;
+                     int lengthReplace = data->replaceText.Length();
+                     if (data->regEx)
+                     {
+@@ -1959,7 +2069,7 @@
+ 
+         //If i opened the file and no replacement was made,
+         //close the editor
+-        if (!ed->GetModified() && fileWasNotOpen)
++        if (!replacementsWereMade && fileWasNotOpen)
+             Close(ed, true);
+     }// for
+ 
+@@ -1985,6 +2095,7 @@
+ 
+     bool AdvRegex=false;
+     int flags = 0;
++    data->ConvertEOLs(control->GetEOLMode());
+     CalculateFindReplaceStartEnd(control, data);
+ 
+     if (data->matchWord)
+@@ -2249,7 +2360,14 @@
+             wxDir::GetAllFiles(data->searchPath, &filesList, masks[i], flags);
+         }
+     }
++    else if (data->scope == 4) // find in current file only
++    {
++        cbEditor* ed = GetBuiltinActiveEditor();
++        if (ed)
++            filesList.Add(ed->GetFilename());
++    }
+ 
++
+     // if the list is empty, leave
+     if (filesList.GetCount() == 0)
+     {
+Index: src/sdk/resources/replace_dialog.xrc
+===================================================================
+--- src/sdk/resources/replace_dialog.xrc	(revision 5925)
++++ src/sdk/resources/replace_dialog.xrc	(working copy)
+@@ -18,54 +18,145 @@
+               <object class="wxBoxSizer">
+                 <orient>wxVERTICAL</orient>
+                 <object class="sizeritem">
+-                  <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP|wxADJUST_MINSIZE</flag>
+-                  <border>8</border>
+-                  <object class="wxStaticText" name="">
+-                    <label>&amp;Text to search for:</label>
+-                  </object>
++                    <flag>wxGROW|wxALL</flag>
++                    <option>1</option>
++                    <object class="wxPanel" name="nbReplaceSingleMulti">
++                      <style>wxTAB_TRAVERSAL|wxBORDER_NONE</style>
++                        <object class="wxPanel" name="tabReplaceSingle">
++                            <style>wxTAB_TRAVERSAL|wxBORDER_NONE</style>
++                            <object class="wxBoxSizer">
++                                <orient>wxVERTICAL</orient>
++                                <object class="sizeritem">
++                                  <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP|wxADJUST_MINSIZE</flag>
++                                  <border>8</border>
++                                  <object class="wxStaticText" name="">
++                                    <label>&amp;Text to search for:</label>
++                                  </object>
++                                </object>
++                                <object class="sizeritem">
++                                  <flag>wxGROW|wxLEFT|wxRIGHT</flag>
++                                  <border>8</border>
++                                  <object class="wxComboBox" name="cmbFind1">
++                                    <content/>
++                                  </object>
++                                </object>
++                                <object class="sizeritem">
++                                  <object class="wxStaticText" name="">
++                                    <label>Re&amp;place with:</label>
++                                  </object>
++                                  <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP|wxADJUST_MINSIZE</flag>
++                                  <border>8</border>
++                                </object>
++                                <object class="sizeritem">
++                                  <flag>wxGROW|wxLEFT|wxRIGHT</flag>
++                                  <border>8</border>
++                                  <object class="wxComboBox" name="cmbReplace1">
++                                    <content/>
++                                  </object>
++                                </object>
++                            </object>
++                        </object>
++                        <object class="wxPanel" name="tabReplaceMulti">
++                            <hidden>1</hidden>
++                            <style>wxTAB_TRAVERSAL|wxBORDER_NONE</style>
++                            <object class="wxBoxSizer">
++                                <orient>wxVERTICAL</orient>
++                                <object class="sizeritem">
++                                  <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP|wxADJUST_MINSIZE</flag>
++                                  <border>8</border>
++                                  <object class="wxStaticText" name="">
++                                    <label>&amp;Text to search for:</label>
++                                  </object>
++                                </object>
++                                <object class="sizeritem">
++                                  <flag>wxGROW|wxLEFT|wxRIGHT</flag>
++                                  <border>8</border>
++                                  <option>1</option>
++                                  <object class="wxTextCtrl" name="txtMultiLineFind1">
++                                    <style>wxTE_MULTILINE|wxTE_LEFT|wxHSCROLL|wxALWAYS_SHOW_SB</style>
++                                    <size>200,40d</size>
++                                    <value />
++                                  </object>
++                                </object>
++                                <object class="sizeritem">
++                                  <object class="wxStaticText" name="">
++                                    <label>Re&amp;place with:</label>
++                                  </object>
++                                  <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP|wxADJUST_MINSIZE</flag>
++                                  <border>8</border>
++                                </object>
++                                <object class="sizeritem">
++                                  <flag>wxGROW|wxLEFT|wxRIGHT</flag>
++                                  <border>8</border>
++                                  <option>1</option>
++                                  <object class="wxTextCtrl" name="txtMultiLineReplace1">
++                                    <style>wxTE_MULTILINE|wxTE_LEFT|wxHSCROLL|wxALWAYS_SHOW_SB</style>
++                                    <size>200,40d</size>
++                                    <value />
++                                  </object>
++                                </object>
++                            </object>
++                        </object>
++                    </object>
+                 </object>
+                 <object class="sizeritem">
+-                  <flag>wxGROW|wxLEFT|wxRIGHT</flag>
+-                  <border>8</border>
+-                  <object class="wxComboBox" name="cmbFind1">
+-                    <content/>
+-                  </object>
++                    <flag>wxEXPAND|wxTOP|wxLEFT|wxRIGHT</flag>
++                    <border>8</border>
++                    <option>0</option>
++                    <object class="wxStaticBoxSizer">
++                        <label>Multi-line Search</label>
++                        <orient>wxVERTICAL</orient>
++                        <object class="sizeritem">
++                            <flag>wxBOTTOM</flag>
++                            <border>4</border>
++                            <object class="wxCheckBox" name="chkMultiLine1">
++                                <label>Enabled</label>
++                            </object>
++                        </object>
++                        <object class="sizeritem">
++                            <object class="wxCheckBox" name="chkFixEOLs1">
++                                <disabled>1</disabled>
++                                <label>Fix EOLs before search (slower but catches mixed line endings)</label>
++                            </object>
++                        </object>
++                    </object>
+                 </object>
+                 <object class="sizeritem">
+-                  <object class="wxStaticText" name="">
+-                    <label>Re&amp;place with:</label>
+-                  </object>
+-                  <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP|wxADJUST_MINSIZE</flag>
++                  <flag>wxGROW|wxALL</flag>
+                   <border>8</border>
+-                </object>
+-                <object class="sizeritem">
+-                  <flag>wxGROW|wxLEFT|wxRIGHT</flag>
+-                  <border>8</border>
+-                  <object class="wxComboBox" name="cmbReplace1">
+-                    <content/>
+-                  </object>
+-                </object>
+-                <object class="sizeritem">
+                   <object class="wxFlexGridSizer">
++                    <cols>3</cols>
++                    <rows>1</rows>
++                    <growablecols>1</growablecols>
+                     <object class="sizeritem">
+                       <object class="wxStaticBoxSizer">
+                         <label>Options</label>
+                         <orient>wxVERTICAL</orient>
+                         <object class="sizeritem">
+-                          <object class="wxCheckBox" name="chkWholeWord1">
+-                            <label>Whole &amp;word</label>
+-                          </object>
+-                          <flag>wxALL</flag>
+-                          <border>4</border>
++                            <object class="wxBoxSizer">
++                                <orient>wxHORIZONTAL</orient>
++                                <object class="sizeritem">
++                                    <flag>wxALL</flag>
++                                    <border>4</border>
++                                    <object class="wxCheckBox" name="chkLimitTo1" />
++                                </object>
++                                <object class="sizeritem">
++                                    <flag>wxALL</flag>
++                                    <border>4</border>
++                                    <object class="wxRadioBox" name="rbLimitTo1">
++                                        <label>Limit to:</label>
++                                        <dimension>1</dimension>
++                                        <style>wxRA_SPECIFY_COLS|wxBORDER_NONE</style>
++                                        <content>
++                                            <item>&amp;Whole word</item>
++                                            <item>St&amp;art word</item>
++                                            <item>Start &amp;file</item>
++                                        </content>
++                                    </object>
++                                </object>
++                            </object>
+                         </object>
+                         <object class="sizeritem">
+-                          <object class="wxCheckBox" name="chkStartWord1">
+-                            <label>St&amp;art word</label>
+-                          </object>
+-                          <flag>wxBOTTOM|wxLEFT|wxRIGHT</flag>
+-                          <border>4</border>
+-                        </object>
+-                        <object class="sizeritem">
+                           <object class="wxCheckBox" name="chkMatchCase1">
+                             <label>&amp;Match case</label>
+                           </object>
+@@ -105,37 +196,39 @@
+                       <border>4</border>
+                     </object>
+                     <object class="sizeritem">
+-                      <object class="wxRadioBox" name="rbOrigin">
+-                        <label>Origin</label>
+-                        <content>
+-                          <item>&amp;From cursor</item>
+-                          <item>&amp;Entire scope</item>
+-                        </content>
+-                        <dimension>1</dimension>
+-                        <style>wxRA_SPECIFY_COLS</style>
+-                      </object>
+-                      <flag>wxTOP|wxBOTTOM|wxRIGHT|wxEXPAND</flag>
+-                      <border>4</border>
++                        <object class="wxBoxSizer">
++                            <orient>wxVERTICAL</orient>
++                            <flag>wxTOP|wxLEFT|wxRIGHT|wxEXPAND</flag>
++                            <border>8</border>
++                            <object class="sizeritem">
++                              <object class="wxRadioBox" name="rbOrigin">
++                                <label>Origin</label>
++                                <content>
++                                  <item>&amp;From cursor</item>
++                                  <item>&amp;Entire scope</item>
++                                </content>
++                                <dimension>1</dimension>
++                                <style>wxRA_SPECIFY_COLS</style>
++                              </object>
++                              <flag>wxTOP|wxBOTTOM|wxRIGHT|wxEXPAND</flag>
++                              <border>4</border>
++                            </object>
++                            <object class="sizeritem">
++                              <object class="wxRadioBox" name="rbScope1">
++                                <label>Scope</label>
++                                <content>
++                                  <item>&amp;Global</item>
++                                  <item>&amp;Selected text</item>
++                                </content>
++                                <dimension>1</dimension>
++                                <style>wxRA_SPECIFY_COLS</style>
++                              </object>
++                              <flag>wxTOP|wxBOTTOM|wxLEFT|wxEXPAND</flag>
++                              <border>4</border>
++                            </object>
++                        </object>
+                     </object>
+-                    <object class="sizeritem">
+-                      <object class="wxRadioBox" name="rbScope1">
+-                        <label>Scope</label>
+-                        <content>
+-                          <item>&amp;Global</item>
+-                          <item>&amp;Selected text</item>
+-                        </content>
+-                        <dimension>1</dimension>
+-                        <style>wxRA_SPECIFY_COLS</style>
+-                      </object>
+-                      <flag>wxTOP|wxBOTTOM|wxLEFT|wxEXPAND</flag>
+-                      <border>4</border>
+-                    </object>
+-                    <cols>2</cols>
+-                    <rows>2</rows>
+-                    <growablecols>1</growablecols>
+                   </object>
+-                  <flag>wxTOP|wxLEFT|wxRIGHT|wxEXPAND</flag>
+-                  <border>8</border>
+                 </object>
+               </object>
+             </object>
+@@ -147,34 +240,113 @@
+               <object class="wxBoxSizer">
+                 <orient>wxVERTICAL</orient>
+                 <object class="sizeritem">
+-                  <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP|wxADJUST_MINSIZE</flag>
+-                  <border>8</border>
+-                  <object class="wxStaticText" name="">
+-                    <label>&amp;Text to search for:</label>
+-                  </object>
++                    <flag>wxGROW|wxALL</flag>
++                    <option>1</option>
++                    <object class="wxPanel" name="nbReplaceInFilesSingleMulti">
++                      <style>wxTAB_TRAVERSAL|wxBORDER_NONE</style>
++                        <object class="wxPanel" name="tabReplaceInFilesSingle">
++                            <style>wxTAB_TRAVERSAL|wxBORDER_NONE</style>
++                            <object class="wxBoxSizer">
++                                <orient>wxVERTICAL</orient>
++                                <object class="sizeritem">
++                                  <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP|wxADJUST_MINSIZE</flag>
++                                  <border>8</border>
++                                  <object class="wxStaticText" name="">
++                                    <label>&amp;Text to search for:</label>
++                                  </object>
++                                </object>
++                                <object class="sizeritem">
++                                  <flag>wxGROW|wxLEFT|wxRIGHT</flag>
++                                  <border>8</border>
++                                  <object class="wxComboBox" name="cmbFind2">
++                                    <content/>
++                                  </object>
++                                </object>
++                                <object class="sizeritem">
++                                  <object class="wxStaticText" name="">
++                                    <label>Re&amp;place with:</label>
++                                  </object>
++                                  <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP|wxADJUST_MINSIZE</flag>
++                                  <border>8</border>
++                                </object>
++                                <object class="sizeritem">
++                                  <flag>wxGROW|wxLEFT|wxRIGHT</flag>
++                                  <border>8</border>
++                                  <object class="wxComboBox" name="cmbReplace2">
++                                    <content/>
++                                  </object>
++                                </object>
++                            </object>
++                        </object>
++                        <object class="wxPanel" name="tabReplaceInFilesMulti">
++                            <hidden>1</hidden>
++                            <style>wxTAB_TRAVERSAL|wxBORDER_NONE</style>
++                            <object class="wxBoxSizer">
++                                <orient>wxVERTICAL</orient>
++                                <object class="sizeritem">
++                                  <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP|wxADJUST_MINSIZE</flag>
++                                  <border>8</border>
++                                  <object class="wxStaticText" name="">
++                                    <label>&amp;Text to search for:</label>
++                                  </object>
++                                </object>
++                                <object class="sizeritem">
++                                  <flag>wxGROW|wxLEFT|wxRIGHT</flag>
++                                  <border>8</border>
++                                  <option>1</option>
++                                  <object class="wxTextCtrl" name="txtMultiLineFind2">
++                                    <style>wxTE_MULTILINE|wxTE_LEFT|wxHSCROLL|wxALWAYS_SHOW_SB</style>
++                                    <size>200,40d</size>
++                                    <value />
++                                  </object>
++                                </object>
++                                <object class="sizeritem">
++                                  <object class="wxStaticText" name="">
++                                    <label>Re&amp;place with:</label>
++                                  </object>
++                                  <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP|wxADJUST_MINSIZE</flag>
++                                  <border>8</border>
++                                </object>
++                                <object class="sizeritem">
++                                  <flag>wxGROW|wxLEFT|wxRIGHT</flag>
++                                  <border>8</border>
++                                  <option>1</option>
++                                  <object class="wxTextCtrl" name="txtMultiLineReplace2">
++                                    <style>wxTE_MULTILINE|wxTE_LEFT|wxHSCROLL|wxALWAYS_SHOW_SB</style>
++                                    <size>200,40d</size>
++                                    <value />
++                                  </object>
++                                </object>
++                            </object>
++                        </object>
++                    </object>
+                 </object>
+                 <object class="sizeritem">
+-                  <flag>wxGROW|wxLEFT|wxRIGHT</flag>
+-                  <border>8</border>
+-                  <object class="wxComboBox" name="cmbFind2">
+-                    <content/>
+-                  </object>
++                    <flag>wxEXPAND|wxTOP|wxLEFT|wxRIGHT</flag>
++                    <border>8</border>
++                    <option>0</option>
++                    <object class="wxStaticBoxSizer">
++                        <label>Multi-line Search</label>
++                        <orient>wxVERTICAL</orient>
++                        <object class="sizeritem">
++                            <flag>wxBOTTOM</flag>
++                            <border>4</border>
++                            <object class="wxCheckBox" name="chkMultiLine2">
++                                <label>Enabled</label>
++                            </object>
++                        </object>
++                        <object class="sizeritem">
++                            <object class="wxCheckBox" name="chkFixEOLs2">
++                                <disabled>1</disabled>
++                                <label>Fix EOLs before search (slower but catches mixed line endings)</label>
++                            </object>
++                        </object>
++                        <object class="spacer">
++                            <size>2,2d</size>
++                        </object>
++                    </object>
+                 </object>
+                 <object class="sizeritem">
+-                  <object class="wxStaticText" name="">
+-                    <label>Re&amp;place with:</label>
+-                  </object>
+-                  <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP|wxADJUST_MINSIZE</flag>
+-                  <border>8</border>
+-                </object>
+-                <object class="sizeritem">
+-                  <flag>wxGROW|wxLEFT|wxRIGHT</flag>
+-                  <border>8</border>
+-                  <object class="wxComboBox" name="cmbReplace2">
+-                    <content/>
+-                  </object>
+-                </object>
+-                <object class="sizeritem">
+                   <flag>wxGROW|wxALL</flag>
+                   <border>8</border>
+                   <object class="wxFlexGridSizer">
+@@ -190,24 +362,32 @@
+                         <orient>wxVERTICAL</orient>
+                         <label>Options</label>
+                         <object class="sizeritem">
+-                          <flag>wxALIGN_LEFT|wxALL</flag>
+-                          <border>4</border>
+-                          <object class="wxCheckBox" name="chkWholeWord2">
+-                            <label>Whole &amp;word</label>
+-                            <checked>0</checked>
+-                          </object>
++                            <object class="wxBoxSizer">
++                                <orient>wxHORIZONTAL</orient>
++                                <object class="sizeritem">
++                                    <flag>wxALL</flag>
++                                    <border>4</border>
++                                    <object class="wxCheckBox" name="chkLimitTo2" />
++                                </object>
++                                <object class="sizeritem">
++                                    <flag>wxALL</flag>
++                                    <border>4</border>
++                                    <object class="wxRadioBox" name="rbLimitTo2">
++                                        <label>Limit to:</label>
++                                        <dimension>1</dimension>
++                                        <style>wxRA_SPECIFY_COLS|wxBORDER_NONE</style>
++                                        <content>
++                                            <item>&amp;Whole word</item>
++                                            <item>St&amp;art word</item>
++                                            <item>Start &amp;file</item>
++                                        </content>
++                                    </object>
++                                </object>
++                            </object>
+                         </object>
+                         <object class="sizeritem">
+                           <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxBOTTOM</flag>
+                           <border>4</border>
+-                          <object class="wxCheckBox" name="chkStartWord2">
+-                            <label>St&amp;art word</label>
+-                            <checked>0</checked>
+-                          </object>
+-                        </object>
+-                        <object class="sizeritem">
+-                          <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxBOTTOM</flag>
+-                          <border>4</border>
+                           <object class="wxCheckBox" name="chkMatchCase2">
+                             <label>&amp;Match case</label>
+                             <checked>0</checked>
+@@ -221,6 +401,14 @@
+                             <checked>0</checked>
+                           </object>
+                         </object>
++                        <object class="sizeritem">
++                          <flag>wxALIGN_LEFT|wxLEFT|wxTOP|wxRIGHT|wxBOTTOM</flag>
++                          <border>6</border>
++                          <object class="wxStaticText">
++                            <label> </label>
++                            <!-- just a filler -->
++                          </object>
++                        </object>
+                       </object>
+                     </object>
+                     <object class="sizeritem">
+@@ -233,6 +421,7 @@
+                           <item>&amp;Open files</item>
+                           <item>&amp;Project files</item>
+                           <item>Workspace files</item>
++                          <!-- "Current file" is useless in replace dialog -->
+                         </content>
+                       </object>
+                     </object>
+Index: src/include/findreplacebase.h
+===================================================================
+--- src/include/findreplacebase.h	(revision 5925)
++++ src/include/findreplacebase.h	(working copy)
+@@ -22,7 +22,9 @@
+ 		virtual bool GetDeleteOldSearches() const = 0;
+ 		virtual bool GetMatchWord() const = 0;
+ 		virtual bool GetStartWord() const = 0;
++		virtual bool GetStartFile() const = 0;
+ 		virtual bool GetMatchCase() const = 0;
++		virtual bool GetFixEOLs() const = 0;
+ 		virtual bool GetRegEx() const = 0;
+ 		virtual bool GetAutoWrapSearch() const = 0;
+ 		virtual bool GetFindUsesSelectedText() const = 0;
+Index: src/include/finddlg.h
+===================================================================
+--- src/include/finddlg.h	(revision 5925)
++++ src/include/finddlg.h	(working copy)
+@@ -27,6 +27,9 @@
+         bool GetRegEx() const;
+         bool GetAutoWrapSearch() const;
+         bool GetFindUsesSelectedText() const;
++		bool GetStartFile() const;
++		bool GetFixEOLs() const;
++
+         int GetDirection() const;
+         int GetOrigin() const;
+         int GetScope() const;
+Index: src/include/replacedlg.h
+===================================================================
+--- src/include/replacedlg.h	(revision 5925)
++++ src/include/replacedlg.h	(working copy)
+@@ -19,10 +19,14 @@
+ 		wxString GetFindString() const;
+ 		wxString GetReplaceString() const;
+ 		bool IsFindInFiles() const;
++		bool IsMultiLine() const;
+ 		bool GetDeleteOldSearches() const;
+ 		bool GetMatchWord() const;
+ 		bool GetStartWord() const;
+ 		bool GetMatchCase() const;
++        bool GetStartFile() const;
++        bool GetFixEOLs() const;
++
+ 		bool GetRegEx() const;
+ 		bool GetAutoWrapSearch() const;
+ 		bool GetFindUsesSelectedText() const;
+@@ -34,7 +38,10 @@
+ 		wxString GetSearchPath() const{ return wxEmptyString; }
+ 		wxString GetSearchMask() const{ return wxEmptyString; }
+ 
++		void OnSize(wxSizeEvent& event);
+ 		void OnFindChange(wxNotebookEvent& event);
++        void OnMultiChange(wxCommandEvent& event);
++        void OnLimitToChange(wxCommandEvent& event);
+ 		void OnRegEx(wxCommandEvent& event);
+ 		void OnActivate(wxActivateEvent& event);
+ 

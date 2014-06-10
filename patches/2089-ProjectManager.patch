@@ -1,0 +1,24 @@
+Index: src/sdk/projectmanager.cpp
+===================================================================
+--- src/sdk/projectmanager.cpp	(revision 4237)
++++ src/sdk/projectmanager.cpp	(working copy)
+@@ -2590,9 +2590,17 @@
+         if(name != new_name)
+         {
+             #if wxCHECK_VERSION(2, 8, 0)
+-            if (!wxRenameFile(path + name, path + new_name, false))
++            // workaround: on windows we allow overwriting if the user wants to change the case of the filename
++            bool overwrite = false;
++            if (platform::windows && name.IsSameAs(new_name, false))
++                overwrite = true;
++            if (!wxRenameFile(path + name, path + new_name, overwrite))
+             #else // wx-2.6 doesn't check whether it's overwriting an existing file
+-            if(wxFileExists(path + new_name))
++            // workaround: on windows we skip wxFileExists if the user wants to change the case of the filename
++            bool skip = false;
++            if (platform::windows && name.IsSameAs(new_name, false))
++                skip = true;
++            if(!skip && wxFileExists(path + new_name))
+             {
+                 cbMessageBox(_("Can't rename file ") + path + new_name +
+                              _("\nA file with specified filename already exists!") +

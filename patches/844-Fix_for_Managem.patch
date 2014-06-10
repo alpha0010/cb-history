@@ -1,0 +1,21 @@
+Index: main.cpp
+===================================================================
+--- main.cpp	(revision 2030)
++++ main.cpp	(working copy)
+@@ -546,6 +546,16 @@
+     DoUpdateLayout();
+     DoUpdateLayoutColors();
+     DoUpdateEditorStyle();
++
++    // wxFlatNotebooks are allocated by the Manager::Get() calls above.         //pecan 2/18/2006
++    // wxFlatNotebooks isn't using the wxFlatNnotebook drop target for          //pecan 2/18/2006
++    // CodeBlocks even though it sets them. It uses the wxPageContainer         //pecan 2/18/2006
++    // drop target to drag tabs around. So here we steal back our Drag'n'Drop   //pecan 2/18/2006
++    // targets in order to drop files into the project and files manager.       //pecan 2/18/2006
++    m_pEdMan->GetNotebook()->SetDropTarget(new wxMyFileDropTarget(this));       //pecan 2/18/2006
++    m_pPrjMan->GetNotebook()->SetDropTarget(new wxMyFileDropTarget(this));      //pecan 2/18/2006
++    m_pMsgMan->GetNotebook()->SetDropTarget(new wxMyFileDropTarget(this));      //pecan 2/18/2006
++
+ }
+ 
+ wxMenu* MainFrame::RecreateMenu(wxMenuBar* mbar, const wxString& name)

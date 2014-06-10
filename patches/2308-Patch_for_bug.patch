@@ -1,0 +1,116 @@
+Index: src/plugins/contrib/keybinder/menuutils.cpp
+===================================================================
+--- src/plugins/contrib/keybinder/menuutils.cpp	(revision 4801)
++++ src/plugins/contrib/keybinder/menuutils.cpp	(working copy)
+@@ -199,8 +199,8 @@
+     wxArrayString levels;
+ 
+     // break the full menu path string into levels
+-    for ( int i=0; i < levelCount; ++i )
+-    {
++    for ( int i=0; i < levelCount; ++i )
++    {
+     	levels.Add( fullMenuPath.BeforeFirst(wxT('\\')) );
+     	fullMenuPath.Remove(0, levels[i].Length()+1 );
+     	levels[i].Trim();
+@@ -257,10 +257,10 @@
+ // ----------------------------------------------------------------------------
+ // wxMenuCmd
+ // ----------------------------------------------------------------------------
+-
+-#if defined( __WXGTK__) || defined(__WXMAC__)
++#if not wxCHECK_VERSION(2, 8, 7)
++#if defined (__WXGTK__) || defined(__WXMAC__)
+ // ----------------------------------------------------------------------------
+-void wxMenuCmd::Update(wxMenuItem* pSpecificMenuItem) //for __WXGTK__
++void wxMenuCmd::Update(wxMenuItem* pSpecificMenuItem) //for __WXMAC__
+ // ----------------------------------------------------------------------------
+ {
+ //    //+v0.4.11
+@@ -332,10 +332,10 @@
+ 
+ #endif
+ }
+-#endif //update for __WXGTK__
++#endif //update for __WXGTK__ || __WXMAC__
++#endif // wxCHECK_VERSION(2, 8, 7)
+ // ----------------------------------------------------------------------------
+-
+-#if defined( __WXMSW__ )
++#if defined( __WXMSW__ ) || wxCHECK_VERSION(2, 8, 7)
+ // ----------------------------------------------------------------------------
+ void wxMenuCmd::Update(wxMenuItem* pSpecificMenuItem) // for __WXMSW__
+ // ----------------------------------------------------------------------------
+@@ -357,8 +357,11 @@
+     // leave numeric menu items alone. They get replaced by CodeBlocks
+     if (IsNumericMenuItem(pLclMnuItem))
+       return;
+-
++	#if wxCHECK_VERSION(2, 8, 7)
++    wxString strText = pLclMnuItem->GetItemLabel();
++	#else
+     wxString strText = pLclMnuItem->GetText();
++    #endif
+     //use full text to get label in order to preserve mnemonics/accelerators
+ 	wxString strLabel = strText.BeforeFirst(_T('\t'));
+     wxString newtext = strLabel; //no accel, contains mnemonic
+@@ -371,10 +374,16 @@
+ 		 LOGIT(wxT("wxMenuCmd::Update - Removing shortcuts [%d][%s] for [%d][%s]"),pLclMnuItem->GetId(), strText.c_str(), m_nId, newtext.c_str());
+ 		#endif
+ 		// set "non bitmapped" text to preserve menu width
++		#if wxCHECK_VERSION(2, 8, 7)
++        pLclMnuItem->SetItemLabel(newtext);
++        #else
+         pLclMnuItem->SetText(newtext);
++        #endif
++		#if defined( __WXMSW__ )
+          //now rebuild the menuitem if bitmapped
+          if (pLclMnuItem->GetBitmap().GetWidth())
+              pLclMnuItem = RebuildMenuitem(pLclMnuItem); //+v0.4.6
++		#endif //#if defined( __WXMSW__ )
+         return;
+     }
+ 
+@@ -395,12 +404,20 @@
+     #if LOGGING
+      LOGIT(wxT("wxMenuCmd::Update - Setting shortcuts for [%d][%s]"), pLclMnuItem->GetId(), newtext.c_str());
+     #endif
+-    pLclMnuItem->SetText(newtext);
++	#if wxCHECK_VERSION(2, 8, 7)
++	pLclMnuItem->SetItemLabel(newtext);
++	#else
++	pLclMnuItem->SetText(newtext);
++	#endif
++	#if defined( __WXMSW__ )
+     //now rebuild the menuitem if bitmapped
+     if (pLclMnuItem->GetBitmap().GetWidth())
+         pLclMnuItem = RebuildMenuitem(pLclMnuItem); //+v0.4.6
++	#endif //#if defined( __WXMSW__ )
+ 
+ }//Update
++#endif //if defined( __WXMSW__ ) || wxCHECK_VERSION(2, 8, 7)
++#if defined( __WXMSW__ )
+ //// ----------------------------------------------------------------------------
+ //// RebuildMenuitem
+ //// ----------------------------------------------------------------------------
+@@ -869,3 +886,4 @@
+ }
+ // ----------------------------------------------------------------------------
+ 
++
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(revision 4801)
++++ src/src/main.cpp	(working copy)
+@@ -1293,7 +1293,11 @@
+         {
+             if (!items[i]->IsCheckable())
+                 continue;
++			#if wxCHECK_VERSION(2, 8, 7)
++            items[i]->Check(items[i]->GetItemLabelText().IsSameAs(name));
++            #else
+             items[i]->Check(items[i]->GetText().IsSameAs(name));
++            #endif
+         }
+         Manager::Get()->GetConfigManager(_T("app"))->Write(_T("/main_frame/layout/default"), name);
+     }

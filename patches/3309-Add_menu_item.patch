@@ -1,0 +1,232 @@
+Index: trunk/src/include/editormanager.h
+===================================================================
+--- trunk/src/include/editormanager.h	(revision 8127)
++++ trunk/src/include/editormanager.h	(working copy)
+@@ -122,9 +122,11 @@
+         // If file is modified, queries to save (yes/no/cancel).
+         // Returns false on "cancel".
+         bool QueryClose(EditorBase* editor);
++        bool QueryCloseProject(cbProject* project);
+         bool QueryCloseAll();
+-        bool CloseAll(bool dontsave=false);
+-        bool CloseAllExcept(EditorBase* editor, bool dontsave=false);
++        bool CloseProject(cbProject* project, bool dontsave = false);
++        bool CloseAll(bool dontsave = false);
++        bool CloseAllExcept(EditorBase* editor, bool dontsave = false);
+         bool Save(const wxString& filename);
+         bool Save(int index);
+         bool SaveActive();
+Index: trunk/src/include/projectmanager.h
+===================================================================
+--- trunk/src/include/projectmanager.h	(revision 8127)
++++ trunk/src/include/projectmanager.h	(working copy)
+@@ -522,6 +522,7 @@
+         void OnRenameFile(wxCommandEvent& event);
+         void OnSaveProject(wxCommandEvent& event);
+         void OnCloseProject(wxCommandEvent& event);
++        void OnCloseProjectFiles(wxCommandEvent& event);
+         void OnSaveFile(wxCommandEvent& event);
+         void OnCloseFile(wxCommandEvent& event);
+         void OnOpenFile(wxCommandEvent& event);
+Index: trunk/src/sdk/editormanager.cpp
+===================================================================
+--- trunk/src/sdk/editormanager.cpp	(revision 8127)
++++ trunk/src/sdk/editormanager.cpp	(working copy)
+@@ -686,11 +686,48 @@
+     return true;
+ }
+ 
++bool EditorManager::CloseProject(cbProject* project, bool dontsave)
++{
++    if(!dontsave)
++        if(!QueryCloseProject(project))
++            return false;
++
++    m_pNotebook->Freeze();
++    for (int i = m_pNotebook->GetPageCount() - 1; i >= 0; --i)
++    {
++        EditorBase* eb = InternalGetEditorBase(i);
++        if(eb && eb->IsBuiltinEditor())
++        {
++            ProjectFile* prjf = ((cbEditor*)eb)->GetProjectFile();
++            if(prjf && (prjf->GetParentProject() == project))
++                Close(eb, true);
++        }
++    }
++    m_pNotebook->Thaw();
++    return true;
++}
++
+ bool EditorManager::CloseAll(bool dontsave)
+ {
+     return CloseAllExcept(GetEditor(_("Start here")), dontsave);
+ }
+ 
++bool EditorManager::QueryCloseProject(cbProject* project)
++{
++    for (int i = m_pNotebook->GetPageCount() - 1; i >= 0; --i)
++    {
++        EditorBase* eb = InternalGetEditorBase(i);
++        if(eb && eb->IsBuiltinEditor())
++        {
++            ProjectFile* prjf = ((cbEditor*)eb)->GetProjectFile();
++            if(prjf && (prjf->GetParentProject() == project))
++                if (!QueryClose(eb))
++                    return false; // aborted
++        }
++    }
++    return true;
++}
++
+ bool EditorManager::QueryCloseAll()
+ {
+     for (int i = m_pNotebook->GetPageCount() - 1; i >= 0; --i)
+Index: trunk/src/sdk/projectmanager.cpp
+===================================================================
+--- trunk/src/sdk/projectmanager.cpp	(revision 8127)
++++ trunk/src/sdk/projectmanager.cpp	(working copy)
+@@ -79,6 +79,7 @@
+ int idMenuSaveProject = wxNewId();
+ int idMenuSaveFile = wxNewId();
+ int idMenuCloseProject = wxNewId();
++int idMenuCloseProjectFiles = wxNewId();
+ int idMenuCloseFile = wxNewId();
+ int idMenuAddFilePopup = wxNewId();
+ int idMenuAddFilesRecursivelyPopup = wxNewId();
+@@ -338,6 +339,7 @@
+     EVT_MENU(idMenuSaveProject, ProjectManager::OnSaveProject)
+     EVT_MENU(idMenuSaveFile, ProjectManager::OnSaveFile)
+     EVT_MENU(idMenuCloseProject, ProjectManager::OnCloseProject)
++    EVT_MENU(idMenuCloseProjectFiles, ProjectManager::OnCloseProjectFiles)
+     EVT_MENU(idMenuCloseFile, ProjectManager::OnCloseFile)
+     EVT_MENU(idMenuOpenFile, ProjectManager::OnOpenFile)
+     EVT_MENU(idMenuProjectNotes, ProjectManager::OnNotes)
+@@ -717,6 +719,7 @@
+             menu.Enable(idMenuSaveProject, PopUpMenuOption);
+             menu.Append(idMenuCloseProject,             _("Close project"));
+             menu.Enable(idMenuCloseProject, PopUpMenuOption);
++            menu.Append(idMenuCloseProjectFiles,        _("Close all project files"));
+             menu.AppendSeparator();
+             menu.Append(idMenuAddFilePopup,             _("Add files..."));
+             menu.Enable(idMenuAddFilePopup, PopUpMenuOption);
+@@ -2537,6 +2540,22 @@
+     Manager::Get()->GetAppWindow()->Refresh();
+ }
+ 
++void ProjectManager::OnCloseProjectFiles(wxCommandEvent& WXUNUSED(event))
++{
++    wxTreeItemId sel = GetTreeSelection();
++    if (!sel.IsOk())
++        return;
++
++    FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(sel);
++    cbProject *proj = 0;
++    if (ftd)
++        proj = ftd->GetProject();
++
++    if(proj)
++        Manager::Get()->GetEditorManager()->CloseProject(proj);
++    Manager::Get()->GetAppWindow()->Refresh();
++}
++
+ void ProjectManager::OnSaveFile(wxCommandEvent& WXUNUSED(event))
+ {
+     wxTreeItemId sel = GetTreeSelection();
+Index: trunk/src/src/main.cpp
+===================================================================
+--- trunk/src/src/main.cpp	(revision 8127)
++++ trunk/src/src/main.cpp	(working copy)
+@@ -159,6 +159,7 @@
+ int idFileCloseWorkspace                = XRCID("idFileCloseWorkspace");
+ int idFileClose                         = XRCID("idFileClose");
+ int idFileCloseAll                      = XRCID("idFileCloseAll");
++int idFileCloseProjectFiles             = XRCID("idFileCloseProjectFiles");
+ int idFileCloseProject                  = XRCID("idFileCloseProject");
+ int idFileCloseAllProjects              = XRCID("idFileCloseAllProjects");
+ int idFilePrintSetup                    = XRCID("idFilePrintSetup");
+@@ -301,6 +302,7 @@
+     EVT_UPDATE_UI(idFileCloseWorkspace,                MainFrame::OnFileMenuUpdateUI)
+     EVT_UPDATE_UI(idFileClose,                         MainFrame::OnFileMenuUpdateUI)
+     EVT_UPDATE_UI(idFileCloseAll,                      MainFrame::OnFileMenuUpdateUI)
++    EVT_UPDATE_UI(idFileCloseProjectFiles,             MainFrame::OnFileMenuUpdateUI)
+     EVT_UPDATE_UI(idFilePrintSetup,                    MainFrame::OnFileMenuUpdateUI)
+     EVT_UPDATE_UI(idFilePrint,                         MainFrame::OnFileMenuUpdateUI)
+ 
+@@ -392,6 +394,7 @@
+     EVT_MENU(idFileCloseWorkspace,                MainFrame::OnFileCloseWorkspace)
+     EVT_MENU(idFileClose,                         MainFrame::OnFileClose)
+     EVT_MENU(idFileCloseAll,                      MainFrame::OnFileCloseAll)
++    EVT_MENU(idFileCloseProjectFiles,             MainFrame::OnFileCloseProjectFiles)
+     EVT_MENU(idFileCloseProject,                  MainFrame::OnFileCloseProject)
+     EVT_MENU(idFileCloseAllProjects,              MainFrame::OnFileCloseAllProjects)
+     EVT_MENU(idFilePrint,                         MainFrame::OnFilePrint)
+@@ -2834,6 +2837,13 @@
+     TemplateManager::Get()->SaveUserTemplate(Manager::Get()->GetProjectManager()->GetActiveProject());
+ }
+ 
++void MainFrame::OnFileCloseProjectFiles(wxCommandEvent& event)
++{
++    Manager::Get()->GetEditorManager()->CloseProject(Manager::Get()->GetProjectManager()->GetActiveProject());
++    DoUpdateStatusBar();
++    DoUpdateAppTitle();
++}
++
+ void MainFrame::OnFileCloseProject(wxCommandEvent& /*event*/)
+ {
+     // we 're not actually shutting down here, but we want to check if the
+@@ -3993,14 +4003,16 @@
+     cbWorkspace* wksp = Manager::Get()->GetProjectManager()->GetWorkspace();
+     wxMenuBar*   mbar = GetMenuBar();
+ 
+-    bool canCloseProject = (ProjectManager::CanShutdown() && EditorManager::CanShutdown())
++    bool canCloseProject  = (ProjectManager::CanShutdown() && EditorManager::CanShutdown())
+                             && prj && !prj->GetCurrentlyCompilingTarget();
+-    bool canClose        = ed && !(sh && Manager::Get()->GetEditorManager()->GetEditorsCount() == 1);
+-    bool canSaveFiles    = ed && !(sh && Manager::Get()->GetEditorManager()->GetEditorsCount() == 1);
+-    bool canSaveAll      =     (prj && prj->GetModified())
++    bool canClosePrjFiles = prj;
++    bool canClose         = ed && !(sh && Manager::Get()->GetEditorManager()->GetEditorsCount() == 1);
++    bool canSaveFiles     = ed && !(sh && Manager::Get()->GetEditorManager()->GetEditorsCount() == 1);
++    bool canSaveAll       =     (prj && prj->GetModified())
+                             || (wksp && !wksp->IsDefault() && wksp->GetModified())
+                             || canSaveFiles;
+ 
++    mbar->Enable(idFileCloseProjectFiles,             canClosePrjFiles);
+     mbar->Enable(idFileCloseProject,                  canCloseProject);
+     mbar->Enable(idFileOpenRecentFileClearHistory,    m_pFilesHistory->GetCount());
+     mbar->Enable(idFileOpenRecentProjectClearHistory, m_pProjectsHistory->GetCount());
+@@ -4232,6 +4244,7 @@
+ 
+     bool canCloseProject = (ProjectManager::CanShutdown() && EditorManager::CanShutdown());
+ 
++    mbar->Enable(idFileCloseProjectFiles,      prj);
+     mbar->Enable(idFileCloseProject,           prj && canCloseProject);
+     mbar->Enable(idFileCloseAllProjects,       prj && canCloseProject);
+     mbar->Enable(idFileSaveProject,            prj && prj->GetModified() && canCloseProject);
+Index: trunk/src/src/main.h
+===================================================================
+--- trunk/src/src/main.h	(revision 8127)
++++ trunk/src/src/main.h	(working copy)
+@@ -123,6 +123,7 @@
+         void OnFileCloseWorkspace(wxCommandEvent& event);
+         void OnFileClose(wxCommandEvent& event);
+         void OnFileCloseAll(wxCommandEvent& event);
++        void OnFileCloseProjectFiles(wxCommandEvent& event);
+         void OnFileCloseProject(wxCommandEvent& event);
+         void OnFileCloseAllProjects(wxCommandEvent& event);
+         void OnFilePrintSetup(wxCommandEvent& event);
+Index: trunk/src/src/resources/main_menu.xrc
+===================================================================
+--- trunk/src/src/resources/main_menu.xrc	(revision 8127)
++++ trunk/src/src/resources/main_menu.xrc	(working copy)
+@@ -125,6 +125,10 @@
+         <accel>Ctrl-Shift-W</accel>
+         <help>Close all open files</help>
+       </object>
++      <object class="wxMenuItem" name="idFileCloseProjectFiles">
++        <label>Close project`s files</label>
++        <help>Close all active project`s files</help>
++      </object>
+       <object class="wxMenuItem" name="idFileCloseProject">
+         <label>Close project</label>
+         <help>Close active project</help>

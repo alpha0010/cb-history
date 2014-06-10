@@ -1,0 +1,33 @@
+Index: src/plugins/contrib/wxSmith/wxwidgets/wxsitem.cpp
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/wxsitem.cpp	(revision 6198)
++++ src/plugins/contrib/wxSmith/wxwidgets/wxsitem.cpp	(working copy)
+@@ -1045,6 +1045,15 @@
+     return Code;
+ }
+ 
++wxSize wxsItem::Size(wxWindow* Parent)
++{
++    const wxSize minSize = GetBaseProps()->m_MinSize.GetSize(Parent);
++    if (minSize != wxDefaultSize)
++        return minSize;
++    else
++        return GetBaseProps()->m_Size.GetSize(Parent);
++}
++
+ bool wxsItem::OnMouseDClick(wxWindow* Preview,int PosX,int PosY)
+ {
+     // Search for first event (skip all categories)
+Index: src/plugins/contrib/wxSmith/wxwidgets/wxsitem.h
+===================================================================
+--- src/plugins/contrib/wxSmith/wxwidgets/wxsitem.h	(revision 6198)
++++ src/plugins/contrib/wxSmith/wxwidgets/wxsitem.h	(working copy)
+@@ -514,7 +514,7 @@
+         inline wxPoint Pos(wxWindow* Parent) { return GetBaseProps()->m_Position.GetPosition(Parent); }
+ 
+         /** \brief Easy access to size */
+-        inline wxSize Size(wxWindow* Parent) { return GetBaseProps()->m_Size.GetSize(Parent); }
++        wxSize Size(wxWindow* Parent);
+ 
+         /** \brief Easy access to style (can be used directly when generating preview) */
+         inline long Style() { return m_BaseProperties.m_StyleSet ? m_BaseProperties.m_StyleSet->GetWxStyle(m_BaseProperties.m_StyleBits,false) : 0; }

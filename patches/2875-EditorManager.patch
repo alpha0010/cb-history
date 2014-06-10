@@ -1,0 +1,31 @@
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(revision 5986)
++++ src/sdk/editormanager.cpp	(working copy)
+@@ -365,8 +365,11 @@
+ 
+ EditorBase* EditorManager::InternalGetEditorBase(int page)
+ {
+-    EditorBase* eb = static_cast<EditorBase*>(m_pNotebook->GetPage(page));
+-    return eb;
++    if (page < m_pNotebook->GetPageCount())
++    {
++        return static_cast<EditorBase*>(m_pNotebook->GetPage(page));
++    }
++    return 0;
+ }
+ 
+ cbEditor* EditorManager::InternalGetBuiltinEditor(int page)
+@@ -518,7 +521,11 @@
+ 
+ EditorBase* EditorManager::GetActiveEditor()
+ {
+-    return InternalGetEditorBase(m_pNotebook->GetSelection());
++    if (m_pNotebook->GetPageCount() > 0)
++    {
++        return InternalGetEditorBase(m_pNotebook->GetSelection());
++    }
++    return 0;
+ }
+ 
+ void EditorManager::ActivateNext()

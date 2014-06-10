@@ -1,0 +1,50 @@
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 7936)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -54,6 +54,8 @@
+ #define BOOKMARK_STYLE        wxSCI_MARK_ARROW
+ #define BREAKPOINT_STYLE      wxSCI_MARK_CIRCLE
+ #define DEBUG_STYLE           wxSCI_MARK_ARROW
++#define DEBUG_STYLE_HL        wxSCI_MARK_BACKGROUND
++//
+ 
+ enum
+ {
+@@ -62,7 +64,8 @@
+     BREAKPOINT_MARKER,
+     BOOKMARK_MARKER,
+     ERROR_MARKER,
+-    DEBUG_MARKER
++    DEBUG_MARKER,
++    DEBUG_MARKER_HL,
+ };
+ 
+ 
+@@ -1407,7 +1410,8 @@
+                                          (1 << BREAKPOINT_DISABLED_MARKER) |
+                                          (1 << BREAKPOINT_OTHER_MARKER) |
+                                          (1 << DEBUG_MARKER) |
+-                                         (1 << ERROR_MARKER));
++                                         (1 << ERROR_MARKER) |
++                                         (1 << DEBUG_MARKER_HL));
+     control->MarkerDefine(BOOKMARK_MARKER, BOOKMARK_STYLE);
+     control->MarkerSetBackground(BOOKMARK_MARKER, wxColour(0xA0, 0xA0, 0xFF));
+ 
+@@ -1438,6 +1442,8 @@
+     }
+     control->MarkerDefine(DEBUG_MARKER, DEBUG_STYLE);
+     control->MarkerSetBackground(DEBUG_MARKER, wxColour(0xFF, 0xFF, 0x00));
++    control->MarkerDefine(DEBUG_MARKER_HL, DEBUG_STYLE_HL);
++    control->MarkerSetBackground(DEBUG_MARKER_HL, wxColour(0x00, 0xFF, 0x00));
+     control->MarkerDefine(ERROR_MARKER, ERROR_STYLE);
+     control->MarkerSetBackground(ERROR_MARKER, wxColour(0xFF, 0x00, 0x00));
+ 
+@@ -2308,6 +2314,7 @@
+ void cbEditor::SetDebugLine(int line)
+ {
+     MarkLine(DEBUG_MARKER, line);
++    MarkLine(DEBUG_MARKER_HL, line);
+     m_pData->m_LastDebugLine = line;
+ }
+ 

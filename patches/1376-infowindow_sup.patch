@@ -1,0 +1,55 @@
+Index: src/sdk/infowindow.cpp
+===================================================================
+--- src/sdk/infowindow.cpp	(revision 2886)
++++ src/sdk/infowindow.cpp	(arbetskopia)
+@@ -9,7 +9,7 @@
+     #include "manager.h"
+ #endif
+ 
+-BEGIN_EVENT_TABLE(InfoWindow, wxPopupWindow)
++BEGIN_EVENT_TABLE(InfoWindow, wxInfoWindowBase)
+ EVT_TIMER(-1, InfoWindow::OnTimer)
+ EVT_MOTION(InfoWindow::OnMove)
+ EVT_LEFT_DOWN(InfoWindow::OnClick)
+@@ -118,7 +118,11 @@
+ 
+ 
+ InfoWindow::InfoWindow(const wxString& title, const wxString& message, unsigned int delay, unsigned int hysteresis)
+-            : wxPopupWindow(Manager::Get()->GetAppWindow(), wxSIMPLE_BORDER | wxWS_EX_TRANSIENT | wxCLIP_CHILDREN),
++            : wxInfoWindowBase(Manager::Get()->GetAppWindow(),
++#if !wxUSE_POPUPWIN
++              wxID_ANY, wxEmptyString, wxPoint(-21,-21), wxSize(20,20),
++#endif
++              wxSIMPLE_BORDER | wxWS_EX_TRANSIENT | wxCLIP_CHILDREN),
+               m_timer(new wxTimer(this, 0)), status(0), m_delay(delay), ks(2)
+     {
+         my_message_iterator = active_messages.insert(active_messages.begin(), message);
+Index: src/sdk/infowindow.h
+===================================================================
+--- src/sdk/infowindow.h	(revision 2886)
++++ src/sdk/infowindow.h	(arbetskopia)
+@@ -16,7 +16,9 @@
+ #include <wx/event.h>
+ #include <wx/timer.h>
+ #include <wx/string.h>
++#if wxUSE_POPUPWIN
+ #include <wx/popupwin.h>
++#endif
+ 
+ #undef new
+ #include <list>
+@@ -48,7 +50,13 @@
+     };
+ };
+ 
+-class InfoWindow : public wxPopupWindow
++#if wxUSE_POPUPWIN
++# define wxInfoWindowBase wxPopupWindow
++#else
++# define wxInfoWindowBase wxDialog
++#endif
++
++class InfoWindow : public wxInfoWindowBase
+ {
+     wxTimer *m_timer;
+     int left;

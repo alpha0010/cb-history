@@ -1,0 +1,85 @@
+Index: src/sdk/cbplugin.h
+===================================================================
+--- src/sdk/cbplugin.h	(revision 2189)
++++ src/sdk/cbplugin.h	(working copy)
+@@ -234,6 +234,19 @@
+         /** Same as Clean(ProjectBuildTarget*) but with a wxString argument. */
+         virtual int Clean(const wxString& target) = 0;
+ 
++		/** @brief DistClean the project/target.
++		  *
++		  * DistClean will typically remove any config files
++		  * and anything else that got created as part of
++		  * building a software package.
++		  *
++		  * @param target The specific build target to "distclean". If NULL, it
++		  * cleans all the build targets of the current project.
++		  */
++        virtual int DistClean(ProjectBuildTarget* target = 0L) = 0;
++        /** Same as DistClean(ProjectBuildTarget*) but with a wxString argument. */
++        virtual int DistClean(const wxString& target) = 0;
++
+ 		/** @brief Build the project/target.
+ 		  *
+ 		  * @param target The specific build target to build. If NULL, it
+Index: src/plugins/compilergcc/compilergcc.h
+===================================================================
+--- src/plugins/compilergcc/compilergcc.h	(revision 2189)
++++ src/plugins/compilergcc/compilergcc.h	(working copy)
+@@ -67,6 +67,8 @@
+         virtual int RunSingleFile(const wxString& filename);
+         virtual int Clean(ProjectBuildTarget* target = 0L);
+         virtual int Clean(const wxString& target);
++        virtual int DistClean(ProjectBuildTarget* target = 0L);
++        virtual int DistClean(const wxString& target);
+         virtual int Build(ProjectBuildTarget* target = 0L);
+         virtual int Build(const wxString& target);
+         virtual int Rebuild(ProjectBuildTarget* target = 0L);
+Index: src/plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- src/plugins/compilergcc/compilergcc.cpp	(revision 2189)
++++ src/plugins/compilergcc/compilergcc.cpp	(working copy)
+@@ -1590,6 +1590,43 @@
+     return 0;
+ }
+ 
++int CompilerGCC::DistClean(const wxString& target)
++{
++    if (!CheckProject())
++        return -1;
++    return DistClean(m_Project->GetBuildTarget(target.IsEmpty() ? m_LastTargetName : target));
++}
++
++int CompilerGCC::DistClean(ProjectBuildTarget* target)
++{
++    // make sure all project files are saved
++    if (m_Project && !m_Project->SaveAllFiles())
++        Manager::Get()->GetMessageManager()->Log(_("Could not save all files..."));
++
++	DoPrepareQueue();
++	if (!CompilerValid(target))
++		return -1;
++
++//	Manager::Get()->GetMacrosManager()->Reset();
++
++    if (m_Project)
++        wxSetWorkingDirectory(m_Project->GetBasePath());
++    CompilerFactory::GetCompiler(m_CompilerId)->Init(m_Project);
++
++    if (UseMake(target))
++    {
++        wxString cmd = GetMakeCommandFor(mcDistClean, target);
++        m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, m_Project, target));
++        return DoRunQueue();
++    }
++    else
++    {
++        NotImplemented(_T("CompilerGCC::Distclean() without a custom Makefile"));
++        return -1;
++    }
++    return 0;
++}
++
+ void CompilerGCC::OnExportMakefile(wxCommandEvent& event)
+ {
+     cbMessageBox(_("This functionality has been temporarily removed from Code::Blocks.\n"

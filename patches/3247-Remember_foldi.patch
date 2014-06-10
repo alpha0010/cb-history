@@ -1,0 +1,147 @@
+Index: src/include/projectfile.h
+===================================================================
+--- src/include/projectfile.h	(revision 7666)
++++ src/include/projectfile.h	(working copy)
+@@ -32,6 +32,8 @@
+ class ProjectFile;
+ typedef std::vector<ProjectFile*> ProjectFilesVector;
+ 
++WX_DEFINE_ARRAY_INT(int, editorFoldLinesArray);
++
+ /** Represents a file in a Code::Blocks project. */
+ class ProjectFile
+ {
+@@ -169,6 +171,9 @@
+         /** The position of the editor-tab for this file. */
+         int editorTabPos; // layout info
+ 
++        /** Fold lines */
++        wxArrayInt editorFoldLinesArray; // layout info
++
+         /** A map for custom builds. Key is compiler ID, value is pfCustomBuild struct. */
+         pfCustomBuildMap customBuild;
+ 
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 7666)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -893,6 +893,13 @@
+             }
+         }
+ 
++        ConfigManager* mgr = Manager::Get()->GetConfigManager(_T("editor"));
++        if (mgr->ReadBool(_T("/folding/show_folds"), true))
++        {
++            for (unsigned int i = 0; i < m_pProjectFile->editorFoldLinesArray.GetCount(); i++)
++                m_pControl->ToggleFold(m_pProjectFile->editorFoldLinesArray[i]);
++        }
++
+         m_pProjectFile->editorOpen = true;
+ 
+         if (Manager::Get()->GetConfigManager(_T("editor"))->ReadBool(_T("/tab_text_relative"), true))
+@@ -939,6 +946,13 @@
+             if (GetControl()==m_pControl2)
+                 m_pProjectFile->editorSplitActive = 2;
+         }
++
++        if (m_pProjectFile->editorFoldLinesArray.GetCount() != 0)
++            m_pProjectFile->editorFoldLinesArray.Clear();
++
++        int i = 0;
++        while ((i = m_pControl->ContractedFoldNext(i)) != -1)
++            m_pProjectFile->editorFoldLinesArray.Add(i++);
+     }
+ }
+ 
+Index: src/sdk/projectlayoutloader.cpp
+===================================================================
+--- src/sdk/projectlayoutloader.cpp	(revision 7666)
++++ src/sdk/projectlayoutloader.cpp	(working copy)
+@@ -127,27 +127,43 @@
+             if (elem->QueryIntAttribute("zoom_2", &getInt) == TIXML_SUCCESS)
+                 pf->editorZoom_2 = getInt;
+ 
+-            TiXmlElement* cursor = elem->FirstChildElement();
++            TiXmlElement* cursor = elem->FirstChildElement("Cursor");
+             if (cursor)
+             {
+-                if (cursor->QueryIntAttribute("position", &getInt) == TIXML_SUCCESS)
+-                    pf->editorPos = getInt;
+-                if (cursor->QueryIntAttribute("topLine", &getInt) == TIXML_SUCCESS)
+-                    pf->editorTopLine = getInt;
+-                if (pf->editorSplit != cbEditor::stNoSplit)
++                cursor = cursor->FirstChildElement();
++                if (cursor)
+                 {
+-                    cursor = cursor->NextSiblingElement();
+-                    if (cursor)
++                    if (cursor->QueryIntAttribute("position", &getInt) == TIXML_SUCCESS)
++                        pf->editorPos = getInt;
++                    if (cursor->QueryIntAttribute("topLine", &getInt) == TIXML_SUCCESS)
++                        pf->editorTopLine = getInt;
++                    if (pf->editorSplit != cbEditor::stNoSplit)
+                     {
+-                        if (cursor->QueryIntAttribute("position", &getInt) == TIXML_SUCCESS)
+-                            pf->editorPos_2 = getInt;
+-                        if (cursor->QueryIntAttribute("topLine", &getInt) == TIXML_SUCCESS)
+-                            pf->editorTopLine_2 = getInt;
++                        cursor = cursor->NextSiblingElement();
++                        if (cursor)
++                        {
++                            if (cursor->QueryIntAttribute("position", &getInt) == TIXML_SUCCESS)
++                                pf->editorPos_2 = getInt;
++                            if (cursor->QueryIntAttribute("topLine", &getInt) == TIXML_SUCCESS)
++                                pf->editorTopLine_2 = getInt;
++                        }
+                     }
+                 }
+             }
++
++            TiXmlElement* folding = elem->FirstChildElement("Folding");
++            if (folding)
++            {
++                folding = folding->FirstChildElement();
++                while (folding)
++                {
++                    if (folding->QueryIntAttribute("line", &getInt) == TIXML_SUCCESS)
++                        pf->editorFoldLinesArray.Add(getInt);
++
++                    folding = folding->NextSiblingElement();
++                }
++            }
+         }
+-
+         elem = elem->NextSiblingElement();
+     }
+ 
+@@ -190,16 +206,28 @@
+             node->SetAttribute("zoom_1", f->editorZoom);
+             node->SetAttribute("zoom_2", f->editorZoom_2);
+ 
+-            TiXmlElement* cursor_1 = static_cast<TiXmlElement*>(node->InsertEndChild(TiXmlElement("Cursor1")));
++
++            TiXmlElement* cursor = static_cast<TiXmlElement*>(node->InsertEndChild(TiXmlElement("Cursor")));
++            TiXmlElement* cursor_1 = static_cast<TiXmlElement*>(cursor->InsertEndChild(TiXmlElement("Cursor1")));
+             cursor_1->SetAttribute("position", f->editorPos);
+             cursor_1->SetAttribute("topLine", f->editorTopLine);
+ 
+             if(f->editorSplit != cbEditor::stNoSplit)
+             {
+-                TiXmlElement* cursor_2 = static_cast<TiXmlElement*>(node->InsertEndChild(TiXmlElement("Cursor2")));
++                TiXmlElement* cursor_2 = static_cast<TiXmlElement*>(cursor->InsertEndChild(TiXmlElement("Cursor2")));
+                 cursor_2->SetAttribute("position", f->editorPos_2);
+                 cursor_2->SetAttribute("topLine", f->editorTopLine_2);
+             }
++
++            if (f->editorFoldLinesArray.GetCount() > 0)
++            {
++                TiXmlElement* folding = static_cast<TiXmlElement*>(node->InsertEndChild(TiXmlElement("Folding")));
++                for (unsigned int i = 0; i < f->editorFoldLinesArray.GetCount(); i++)
++                {
++                    TiXmlElement* line = static_cast<TiXmlElement*>(folding->InsertEndChild(TiXmlElement("Collapse")));
++                    line->SetAttribute("line", f->editorFoldLinesArray[i]);
++                }
++            }
+         }
+     }
+     const wxArrayString& en = m_pProject->ExpandedNodes();

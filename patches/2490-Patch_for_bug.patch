@@ -1,0 +1,49 @@
+--- codeblocks-1.0svn.orig/src/src/main.h	2008-03-01 09:47:48.000000000 +0100
++++ codeblocks-1.0svn.work/src/src/main.h	2008-06-07 11:26:46.000000000 +0200
+@@ -52,6 +52,8 @@
+         wxAcceleratorTable* m_pAccel;
+         MainFrame(wxWindow* parent = (wxWindow*)NULL);
+         ~MainFrame();
++        // Needed to make sure DoUpdateLayout() is not called before MainFrame is shown
++        void StartupDone();
+ 
+         // needed for binding with SqPlus
+         MainFrame(const MainFrame& rhs){ cbThrow(_T("Can't use MainFrame's copy constructor")); }
+--- codeblocks-1.0svn.orig/src/src/main.cpp	2008-05-23 11:24:19.000000000 +0200
++++ codeblocks-1.0svn.work/src/src/main.cpp	2008-06-07 11:49:01.000000000 +0200
+@@ -527,8 +527,9 @@
+     RegisterScriptFunctions();
+     RunStartupScripts();
+ 
+-    m_StartupDone = true;
+-    DoUpdateLayout();
++//    Don't allow updates before the MainFrame is shown, because this leads to a Gtk-CRITICAL if child-windows are not docked.
++//    m_StartupDone = true;
++//    DoUpdateLayout();
+ 
+ //    if (Manager::Get()->GetLogManager()->HasErrors())
+ //    {
+@@ -559,6 +560,12 @@
+     //Manager::Get()->Free();
+ }
+ 
++void MainFrame::StartupDone()
++{
++    m_StartupDone = true;
++    DoUpdateLayout();
++}
++
+ void MainFrame::RegisterEvents()
+ {
+     Manager* pm = Manager::Get();
+--- codeblocks-1.0svn.orig/src/src/app.cpp	2008-06-03 09:33:37.000000000 +0200
++++ codeblocks-1.0svn.work/src/src/app.cpp	2008-06-07 11:53:01.000000000 +0200
+@@ -542,6 +542,8 @@
+         SetTopWindow(frame);
+         frame->Show();
+ 
++		frame->StartupDone(); // this function tells the MainFrame that Laout Updates are allowed
++
+         frame->ShowTips(); // this func checks if the user wants tips, so no need to check here
+ 
+         if(platform::windows)

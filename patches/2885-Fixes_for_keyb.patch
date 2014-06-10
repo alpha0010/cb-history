@@ -1,0 +1,59 @@
+Index: src/plugins/contrib/keybinder/keybinder.cpp
+===================================================================
+--- src/plugins/contrib/keybinder/keybinder.cpp	(revision 5986)
++++ src/plugins/contrib/keybinder/keybinder.cpp	(working copy)
+@@ -621,7 +621,10 @@
+ 
+ 	// create the wxCmd-derived class & init it
+ 	wxCmd* ret = fnc(cmdName, id);
+-	wxASSERT(ret);			// for debug builds
++// ret == NULL can easily happen on runtime when dynamic menu entries are stored 
++// into the config file and upon reload during startup the same entries don't 
++// exist - usage of wxASSERT isn't probably a good idea here...
++//	wxASSERT(ret);			// for debug builds
+ 	if (!ret) return NULL;	// for release builds
+ 	if (updateMnu) ret->Update();
+ 
+@@ -2137,6 +2140,9 @@
+ 	if (p == NULL)
+ 		return wxTreeItemId();		// an empty wxTreeItemId is always invalid...
+ 
++    if (m_pCommandsTree->ItemHasChildren(selection))
++        return wxTreeItemId();
++
+ 	return selection;
+ }
+ // ----------------------------------------------------------------------------
+@@ -2163,18 +2169,10 @@
+ bool wxKeyConfigPanel::IsSelectedValidCmd() const
+ // ----------------------------------------------------------------------------
+ {
+-////	if (IsUsingTreeCtrl())
+-////		return GetSelCmdId().IsOk();
+-
+ 	if (IsUsingTreeCtrl())
+-	{
+-	    // if tree item is a sub-menu don't allow key assignment //(pecan 2009/6/04)
+-	    if (m_pCommandsTree->ItemHasChildren(m_pCommandsTree->GetSelection()))
+-            return false;
+-	    return GetSelCmdId().IsOk();
+-	}
++		return GetSelCmdId().IsOk();
+ 	else
+-		return m_pCommandsList->GetSelection() >= 0;
++		return m_pCommandsList->GetSelection() >= 0;	
+ }
+ 
+ // ----------------------------------------------------------------------------
+Index: src/plugins/contrib/keybinder/cbkeybinder.cpp
+===================================================================
+--- src/plugins/contrib/keybinder/cbkeybinder.cpp	(revision 5986)
++++ src/plugins/contrib/keybinder/cbkeybinder.cpp	(working copy)
+@@ -1046,7 +1046,6 @@
+         // deleteing the EvtHandler here will crash CB
+         // detach before removing the ed ptr
+         DetachEditor(thisWindow, /*DeleteEvtHander*/false);
+-        m_EditorPtrs.Remove(thisWindow);
+ 
+         #ifdef LOGGING
+          LOGIT( _T("OnWindowDestroyEvent Removed %p"), thisWindow);

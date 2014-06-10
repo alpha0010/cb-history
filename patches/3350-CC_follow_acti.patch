@@ -1,0 +1,114 @@
+Index: src/plugins/codecompletion/codecompletion.cpp
+===================================================================
+--- src/plugins/codecompletion/codecompletion.cpp	(revision 8456)
++++ src/plugins/codecompletion/codecompletion.cpp	(working copy)
+@@ -2723,20 +2723,22 @@
+     PlaceWindow(&dlg);
+     if (dlg.ShowModal() == wxID_OK)
+     {
+-        int pos = ed->GetControl()->GetCurrentPos();
+-        int line = ed->GetControl()->LineFromPosition(pos);
+-        ed->GetControl()->GotoPos(ed->GetControl()->PositionFromLine(line));
++        cbStyledTextCtrl* control = ed->GetControl();
++        int pos = control->GetCurrentPos();
++        int line = control->LineFromPosition(pos);
++        control->GotoPos(control->PositionFromLine(line));
+ 
+         wxArrayString result = dlg.GetCode();
+         for (unsigned int i = 0; i < result.GetCount(); ++i)
+         {
+-            pos = ed->GetControl()->GetCurrentPos();
+-            line = ed->GetControl()->LineFromPosition(pos);
++            pos = control->GetCurrentPos();
++            line = control->LineFromPosition(pos);
+             wxString str = ed->GetLineIndentString(line - 1) + result[i];
+-            ed->GetControl()->SetTargetStart(pos);
+-            ed->GetControl()->SetTargetEnd(pos);
+-            ed->GetControl()->ReplaceTarget(str);
+-            ed->GetControl()->GotoPos(pos + str.Length());// - 3);
++            MatchCodeStyle(str, control->GetEOLMode(), ed->GetLineIndentString(line - 1), control->GetUseTabs(), control->GetTabWidth());
++            control->SetTargetStart(pos);
++            control->SetTargetEnd(pos);
++            control->ReplaceTarget(str);
++            control->GotoPos(pos + str.Length());// - 3);
+         }
+         success = 0;
+     }
+@@ -2848,7 +2850,8 @@
+             wxString str;
+             if (i > 0)
+                 str << _T("\n");
+-            str << ed->GetLineIndentString(line - 1);
++            else
++                str << ed->GetLineIndentString(line - 1);
+             if (addDoxgenComment)
+                 str << _T("/** @brief ") << token->m_Name << _T("\n  *\n  * @todo: document this function\n  */\n");
+             wxString type = token->m_BaseType;
+@@ -2868,14 +2871,22 @@
+             str << token->m_Name << token->GetStrippedArgs();
+             if (token->m_IsConst)
+                 str << _T(" const");
+-            str << _T("\n{\n}\n");
++            str << _T("\n{\n\t\n}\n");
+ 
++            MatchCodeStyle(str, control->GetEOLMode(), ed->GetLineIndentString(line - 1), control->GetUseTabs(), control->GetTabWidth());
++
+             // add code in editor
+             control->SetTargetStart(pos);
+             control->SetTargetEnd(pos);
+             control->ReplaceTarget(str);
+             control->GotoPos(pos + str.Length());
+         }
++        if (!indices.IsEmpty())
++        {
++            pos  = control->GetCurrentPos();
++            line = control->LineFromPosition(pos);
++            control->GotoPos(control->GetLineEndPosition(line - 2));
++        }
+         success = 0;
+     }
+ 
+@@ -2884,6 +2895,17 @@
+     return success;
+ }
+ 
++void CodeCompletion::MatchCodeStyle(wxString& str, int eolStyle, const wxString& indent, bool useTabs, int tabSize)
++{
++    str.Replace(wxT("\n"), (eolStyle == wxSCI_EOL_LF   ? wxT("\n")   :
++                            eolStyle == wxSCI_EOL_CRLF ? wxT("\r\n") :
++                          /*eolStyle == wxSCI_EOL_CR ?*/ wxT("\r")   ) + indent );
++    if (!useTabs)
++        str.Replace(wxT("\t"), wxString(wxT(' '), tabSize));
++    if (!indent.IsEmpty())
++        str.RemoveLast(indent.Length());
++}
++
+ // help method in finding the function position in the vector for the function containing the current line
+ void CodeCompletion::FunctionPosition(int &scopeItem, int &functionItem) const
+ {
+Index: src/plugins/codecompletion/insertclassmethoddlg.cpp
+===================================================================
+--- src/plugins/codecompletion/insertclassmethoddlg.cpp	(revision 8456)
++++ src/plugins/codecompletion/insertclassmethoddlg.cpp	(working copy)
+@@ -121,7 +121,7 @@
+             }
+             str << clb->GetString(i);
+             str.Replace(_T("&&"), _T("&"));
+-            array.Add(str + (m_Decl ? _T(";\n") : _T("\n{\n\n}\n\n")));
++            array.Add(str + (m_Decl ? _T(";\n") : _T("\n{\n\t\n}\n\n")));
+         }
+     }
+ 
+Index: src/plugins/codecompletion/codecompletion.h
+===================================================================
+--- src/plugins/codecompletion/codecompletion.h	(revision 8456)
++++ src/plugins/codecompletion/codecompletion.h	(working copy)
+@@ -202,6 +202,8 @@
+     /** ContextMenu->Insert-> All class methods*/
+     int DoAllMethodsImpl();
+ 
++    void MatchCodeStyle(wxString& str, int eolStyle = wxSCI_EOL_LF, const wxString& indent = wxEmptyString, bool useTabs = false, int tabSize = 4);
++
+     // CC's toolbar related functions
+     /** help method in finding the function position in the vector for the function containing the current line*/
+     void FunctionPosition(int &scopeItem, int &functionItem) const;

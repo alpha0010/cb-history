@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 3407 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #3407 <small>2013-01-15 21:24:23</small></h3>
+          <h4>p2rkw</h4>
+          CC: add nested enumerators to autocomplete list
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="3407-CC_add_nested.patch">3407-CC_add_nested.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::Bugfix</dd>
+            <dt>Status</dt><dd>Accepted</dd>
+            <dt>Close date</dt><dd>2013-01-31 23:35:06</dd>
+            <dt>Assigned to</dt><dd>tpetrov</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">p2rkw 2013-01-15 21:26:07</div>
+        <div class="panel-body">
+          <p>Test case:</p>
+          <p>struct B</p>
+          <p>{</p>
+          <p>enum Eb</p>
+          <p>{</p>
+          <p>ebAsd1, ebAsd2, ebAsd3,</p>
+          <p>};</p>
+          <p>enum{ unnamedEnumerator };</p>
+          <p>};</p>
+          <p>B::|</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">p2rkw 2013-01-15 21:50:14</div>
+        <div class="panel-body">
+          <p>Index: src/plugins/codecompletion/nativeparser_base.cpp</p>
+          <p>===================================================================</p>
+          <p>--- src/plugins/codecompletion/nativeparser_base.cpp	(wersja 8785)</p>
+          <p>+++ src/plugins/codecompletion/nativeparser_base.cpp	(kopia robocza)</p>
+          <p>@@ -1318,7 +1318,11 @@</p>
+          <p>if (!token)</p>
+          <p>continue;</p>
+          <p>if ( !AddChildrenOfUnnamed(tree, token, result) )</p>
+          <p>+                {</p>
+          <p>result.insert(*it);</p>
+          <p>+                    AddChildrenOfEnum(tree, token, result);</p>
+          <p>+                }</p>
+          <p>+</p>
+          <p>}</p>
+          <p>tree-&gt;RecalcInheritanceChain(parent);</p>
+          <p>@@ -1334,7 +1338,10 @@</p>
+          <p>if (!token)</p>
+          <p>continue;</p>
+          <p>if ( !AddChildrenOfUnnamed(tree, token, result) )</p>
+          <p>+                    {</p>
+          <p>result.insert(*it2);</p>
+          <p>+                        AddChildrenOfEnum(tree, token, result);</p>
+          <p>+                    }</p>
+          <p>}</p>
+          <p>}</p>
+          <p>}</p>
+          <p>Index: src/plugins/codecompletion/nativeparser_base.h</p>
+          <p>===================================================================</p>
+          <p>--- src/plugins/codecompletion/nativeparser_base.h	(wersja 8785)</p>
+          <p>+++ src/plugins/codecompletion/nativeparser_base.h	(kopia robocza)</p>
+          <p>@@ -396,7 +396,8 @@</p>
+          <p>// for GenerateResultSet()</p>
+          <p>bool AddChildrenOfUnnamed(TokenTree* tree, const Token* parent, TokenIdxSet&amp; result)</p>
+          <p>{</p>
+          <p>-        if (parent-&gt;m_TokenKind == tkClass &amp;&amp; parent-&gt;m_Name.StartsWith(g_UnnamedSymbol))</p>
+          <p>+        if (((parent-&gt;m_TokenKind &amp; (tkClass | tkEnum)) != 0)</p>
+          <p>+            &amp;&amp; parent-&gt;m_Name.StartsWith(g_UnnamedSymbol))</p>
+          <p>{</p>
+          <p>// add all its children</p>
+          <p>for (TokenIdxSet::const_iterator it = parent-&gt;m_Children.begin();</p>
+          <p>@@ -411,7 +412,25 @@</p>
+          <p>}</p>
+          <p>return false;</p>
+          <p>}</p>
+          <p>+</p>
+          <p>+    bool AddChildrenOfEnum(TokenTree* tree, const Token* parent, TokenIdxSet&amp; result)</p>
+          <p>+    {</p>
+          <p>+        if (parent-&gt;m_TokenKind == tkEnum)</p>
+          <p>+        {</p>
+          <p>+            // add all its children</p>
+          <p>+            for (TokenIdxSet::const_iterator it = parent-&gt;m_Children.begin();</p>
+          <p>+                                             it != parent-&gt;m_Children.end(); ++it)</p>
+          <p>+            {</p>
+          <p>+                Token* tokenChild = tree-&gt;at(*it);</p>
+          <p>+                if (tokenChild)</p>
+          <p>+                    result.insert(*it);</p>
+          <p>+            }</p>
+          <p>+            return true;</p>
+          <p>+        }</p>
+          <p>+        return false;</p>
+          <p>+    }</p>
+          <p>+</p>
+          <p>// for GenerateResultSet()</p>
+          <p>bool MatchText(const wxString&amp; text, const wxString&amp; target, bool caseSens, bool isPrefix)</p>
+          <p>{</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2013-01-21 15:46:00</div>
+        <div class="panel-body">
+          <p>tpetrov: As you stared to discuss it in the forums, I am assigning this to you temporarily so it doesn't get lost. Will give it a try, too and report back...</p>
+          <p>Assign to me if you feel nagged too much (hopefully not). :-)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

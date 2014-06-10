@@ -1,0 +1,2539 @@
+Index: configure.in
+===================================================================
+--- configure.in	(revision 5189)
++++ configure.in	(working copy)
+@@ -221,7 +221,6 @@
+ 	src/include/scripting/sqstdlib/Makefile
+ 	src/include/scripting/squirrel/Makefile
+ 	src/include/tinyxml/Makefile
+-	src/include/wxFlatNotebook/Makefile
+ 	src/include/wxscintilla/Makefile
+ 	src/sdk/Makefile
+ 	src/sdk/scripting/Makefile
+@@ -230,7 +229,6 @@
+ 	src/sdk/scripting/sqstdlib/Makefile
+ 	src/sdk/scripting/sqplus/Makefile
+ 	src/sdk/wxscintilla/Makefile
+-	src/sdk/wxFlatNotebook/Makefile
+ 	src/sdk/resources/Makefile
+ 	src/sdk/resources/lexers/Makefile
+ 	src/src/wxAUI/Makefile
+Index: src/sdk/projectmanager.cpp
+===================================================================
+--- src/sdk/projectmanager.cpp	(revision 5189)
++++ src/sdk/projectmanager.cpp	(working copy)
+@@ -38,7 +38,9 @@
+ #include <wx/utils.h>
+ #include <wx/textdlg.h>
+ #include <wx/progdlg.h>
+-#include "wx/wxFlatNotebook/wxFlatNotebook.h"
++#include <wx/filedlg.h>
++#include <wx/choicdlg.h>
++#include <wx/aui/auibook.h>
+ 
+ #include "incrementalselectlistdlg.h"
+ #include "filegroupsandmasks.h"
+@@ -157,6 +159,8 @@
+     EVT_TREE_ITEM_RIGHT_CLICK(ID_ProjectManager, ProjectManager::OnTreeItemRightClick)
+     EVT_COMMAND_RIGHT_CLICK(ID_ProjectManager, ProjectManager::OnRightClick)
+ 
++    EVT_AUINOTEBOOK_TAB_RIGHT_UP(idNB, ProjectManager::OnTabContextMenu)
++
+     EVT_MENU_RANGE(idOpenWith[0], idOpenWith[MAX_OPEN_WITH_ITEMS - 1], ProjectManager::OnOpenWith)
+     EVT_MENU(idOpenWithInternal, ProjectManager::OnOpenWith)
+     EVT_MENU(idNB_TabTop, ProjectManager::OnTabPosition)
+@@ -216,20 +220,14 @@
+     m_isCheckingForExternallyModifiedProjects(false),
+     m_CanSendWorkspaceChanged(false)
+ {
+-    m_pNotebook = new wxFlatNotebook(Manager::Get()->GetAppWindow(), idNB);
+-    m_pNotebook->SetWindowStyleFlag(Manager::Get()->GetConfigManager(_T("app"))->ReadInt(_T("/environment/project_tabs_style"), wxFNB_NO_X_BUTTON));
+-    m_pNotebook->SetImageList(new wxFlatNotebookImageList);
++    m_pNotebook = new wxAuiNotebook(Manager::Get()->GetAppWindow(), idNB, wxDefaultPosition, wxDefaultSize, wxAUI_NB_WINDOWLIST_BUTTON);
++    if (Manager::Get()->GetConfigManager(_T("app"))->ReadBool(_T("/environment/project_tabs_bottom"), false))
++		m_pNotebook->SetWindowStyleFlag(m_pNotebook->GetWindowStyleFlag() | wxAUI_NB_BOTTOM);
+ 
+-    wxMenu* NBmenu = new wxMenu(); // deleted automatically by wxFlatNotebook
+-    NBmenu->Append(idNB_TabTop, _("Tabs at top"));
+-    NBmenu->Append(idNB_TabBottom, _("Tabs at bottom"));
+-    m_pNotebook->SetRightClickMenu(NBmenu);
+-
+     m_InitialDir=wxFileName::GetCwd();
+     m_pActiveProject = 0L;
+     m_pProjects = new ProjectsArray;
+     m_pProjects->Clear();
+-    // m_pPanel = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL | wxCLIP_CHILDREN);
+     InitPane();
+ 
+     m_pFileGroups = new FilesGroupsAndMasks;
+@@ -272,7 +270,6 @@
+     delete m_pImages;m_pImages = 0;
+     delete m_pFileGroups;m_pFileGroups = 0;
+ 
+-    delete m_pNotebook->GetImageList();
+     m_pNotebook->Destroy();
+ }
+ 
+@@ -1646,16 +1643,25 @@
+ 
+ // events
+ 
++void ProjectManager::OnTabContextMenu(wxAuiNotebookEvent& event)
++{
++    wxMenu* NBmenu = new wxMenu();
++    NBmenu->Append(idNB_TabTop, _("Tabs at top"));
++    NBmenu->Append(idNB_TabBottom, _("Tabs at bottom"));
++    m_pNotebook->PopupMenu(NBmenu);
++    delete NBmenu;
++}
++
+ void ProjectManager::OnTabPosition(wxCommandEvent& event)
+ {
+     long style = m_pNotebook->GetWindowStyleFlag();
+-    style &= ~wxFNB_BOTTOM;
++    style &= ~wxAUI_NB_BOTTOM;
+ 
+     if (event.GetId() == idNB_TabBottom)
+-        style |= wxFNB_BOTTOM;
++        style |= wxAUI_NB_BOTTOM;
+     m_pNotebook->SetWindowStyleFlag(style);
+-    // (style & wxFNB_BOTTOM) saves info only about the the tabs position
+-    Manager::Get()->GetConfigManager(_T("app"))->Write(_T("/environment/project_tabs_bottom"), (bool)(style & wxFNB_BOTTOM));
++    // (style & wxAUI_NB_BOTTOM) saves info only about the the tabs position
++    Manager::Get()->GetConfigManager(_T("app"))->Write(_T("/environment/project_tabs_bottom"), (bool)(style & wxAUI_NB_BOTTOM));
+ }
+ 
+ void ProjectManager::OnTreeBeginDrag(wxTreeEvent& event)
+Index: src/sdk/editorbase.cpp
+===================================================================
+--- src/sdk/editorbase.cpp	(revision 5189)
++++ src/sdk/editorbase.cpp	(working copy)
+@@ -21,10 +21,11 @@
+     #include "cbproject.h" // FileTreeData
+     #include <wx/wfstream.h>
+ #endif
++
++#include <wx/aui/auibook.h>
++
+ #include "cbstyledtextctrl.h"
+ 
+-#include "wx/wxFlatNotebook/wxFlatNotebook.h"
+-
+ // needed for initialization of variables
+ int editorbase_RegisterId(int id)
+ {
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(revision 5189)
++++ src/sdk/editormanager.cpp	(working copy)
+@@ -42,6 +42,7 @@
+ #include <wx/progdlg.h>
+ #include <wx/fontutil.h>
+ #include <wx/tokenzr.h>
++#include <wx/aui/auibook.h>
+ 
+ #include "editorcolourset.h"
+ #include "editorconfigurationdlg.h"
+@@ -54,8 +55,6 @@
+ #include "projectfileoptionsdlg.h"
+ #include "filegroupsandmasks.h"
+ 
+-#include "wx/wxFlatNotebook/wxFlatNotebook.h"
+-
+ template<> EditorManager* Mgr<EditorManager>::instance = 0;
+ template<> bool  Mgr<EditorManager>::isShutdown = false;
+ 
+@@ -105,7 +104,6 @@
+ static const int idNBTabTop = wxNewId();
+ static const int idNBTabBottom = wxNewId();
+ static const int idNBProperties = wxNewId();
+-static const int idNB = wxNewId();
+ 
+ /** *******************************************************
+   * struct EditorManagerInternalData                      *
+@@ -133,10 +131,10 @@
+ BEGIN_EVENT_TABLE(EditorManager, wxEvtHandler)
+     EVT_APP_STARTUP_DONE(EditorManager::OnAppDoneStartup)
+     EVT_APP_START_SHUTDOWN(EditorManager::OnAppStartShutdown)
+-    EVT_FLATNOTEBOOK_PAGE_CHANGED(ID_NBEditorManager, EditorManager::OnPageChanged)
+-    EVT_FLATNOTEBOOK_PAGE_CHANGING(ID_NBEditorManager, EditorManager::OnPageChanging)
+-    EVT_FLATNOTEBOOK_PAGE_CLOSING(ID_NBEditorManager, EditorManager::OnPageClosing)
+-    EVT_FLATNOTEBOOK_CONTEXT_MENU(ID_NBEditorManager, EditorManager::OnPageContextMenu)
++    EVT_AUINOTEBOOK_PAGE_CHANGED(ID_NBEditorManager, EditorManager::OnPageChanged)
++    EVT_AUINOTEBOOK_PAGE_CHANGING(ID_NBEditorManager, EditorManager::OnPageChanging)
++    EVT_AUINOTEBOOK_PAGE_CLOSE(ID_NBEditorManager, EditorManager::OnPageClose)
++    EVT_AUINOTEBOOK_TAB_RIGHT_UP(ID_NBEditorManager, EditorManager::OnPageContextMenu)
+     EVT_MENU(idNBTabSplitHorz, EditorManager::OnGenericContextMenuHandler)
+     EVT_MENU(idNBTabSplitVert, EditorManager::OnGenericContextMenuHandler)
+     EVT_MENU(idNBTabUnsplit, EditorManager::OnGenericContextMenuHandler)
+@@ -163,8 +161,9 @@
+ {
+     m_pData = new EditorManagerInternalData(this);
+ 
+-    m_pNotebook = new wxFlatNotebook(Manager::Get()->GetAppWindow(), ID_NBEditorManager, wxDefaultPosition, wxDefaultSize, wxNO_FULL_REPAINT_ON_RESIZE | wxCLIP_CHILDREN);
+-    m_pNotebook->SetWindowStyleFlag(Manager::Get()->GetConfigManager(_T("app"))->ReadInt(_T("/environment/editor_tabs_style"), wxFNB_DEFAULT_STYLE | wxFNB_MOUSE_MIDDLE_CLOSES_TABS));
++    m_pNotebook = new wxAuiNotebook(Manager::Get()->GetAppWindow(), ID_NBEditorManager, wxDefaultPosition, wxDefaultSize, wxAUI_NB_DEFAULT_STYLE | wxAUI_NB_WINDOWLIST_BUTTON | wxNO_FULL_REPAINT_ON_RESIZE | wxCLIP_CHILDREN);
++    if (Manager::Get()->GetConfigManager(_T("app"))->ReadBool(_T("/environment/editor_tabs_bottom"), false))
++		m_pNotebook->SetWindowStyleFlag(m_pNotebook->GetWindowStyleFlag() | wxAUI_NB_BOTTOM);
+ 
+     Manager::Get()->GetLogManager()->DebugLog(_T("Initialize EditColourSet ....."));
+     m_Theme = new EditorColourSet(Manager::Get()->GetConfigManager(_T("editor"))->Read(_T("/colour_sets/active_colour_set"), COLORSET_DEFAULT));
+@@ -533,13 +532,11 @@
+ {
+     if (!ed)
+         return;
+-    if (ed->IsBuiltinEditor())
+-        static_cast<cbEditor*>(ed)->GetControl()->SetFocus();
+     int page = FindPageFromEditor(ed);
+     if (page != -1)
+-    {
+         m_pNotebook->SetSelection(page);
+-    }
++    if (ed->IsBuiltinEditor())
++        static_cast<cbEditor*>(ed)->GetControl()->SetFocus();
+ }
+ 
+ cbEditor* EditorManager::New(const wxString& newFileName)
+@@ -602,7 +599,7 @@
+     //    LOGSTREAM << wxString::Format(_T("RemoveEditorBase(): ed=%p, title=%s\n"), eb, eb ? eb->GetFilename().c_str() : _T(""));
+     int page = FindPageFromEditor(eb);
+    if (page != -1 && !Manager::isappShuttingDown())
+-        m_pNotebook->RemovePage(page, false);
++        m_pNotebook->RemovePage(page);
+ 
+     //    if (deleteObject)
+     //        eb->Destroy();
+@@ -730,7 +727,7 @@
+                     return false;
+             wxString filename = editor->GetFilename();
+             //            LOGSTREAM << wxString::Format(_T("Close(): ed=%p, title=%s\n"), editor, editor ? editor->GetTitle().c_str() : _T(""));
+-            m_pNotebook->DeletePage(idx, true);
++            m_pNotebook->DeletePage(idx);
+         }
+     }
+     return true;
+@@ -2441,7 +2438,7 @@
+         ed->Unsplit();
+ }
+ 
+-void EditorManager::OnPageChanged(wxFlatNotebookEvent& event)
++void EditorManager::OnPageChanged(wxAuiNotebookEvent& event)
+ {
+     EditorBase* eb = static_cast<EditorBase*>(m_pNotebook->GetPage(event.GetSelection()));
+     //    LOGSTREAM << wxString::Format(_T("OnPageChanged(): ed=%p, title=%s\n"), eb, eb ? eb->GetTitle().c_str() : _T(""));
+@@ -2454,26 +2451,33 @@
+     event.Skip(); // allow others to process it too
+ }
+ 
+-void EditorManager::OnPageChanging(wxFlatNotebookEvent& event)
++void EditorManager::OnPageChanging(wxAuiNotebookEvent& event)
+ {
+-    EditorBase* eb = static_cast<EditorBase*>(m_pNotebook->GetPage(event.GetOldSelection()));
+-    //    LOGSTREAM << wxString::Format(_T("OnPageChanging(): ed=%p, title=%s\n"), eb, eb ? eb->GetTitle().c_str() : _T(""));
+-    CodeBlocksEvent evt(cbEVT_EDITOR_DEACTIVATED, -1, 0, eb);
+-    Manager::Get()->GetPluginManager()->NotifyPlugins(evt);
+-
++	int old_sel = event.GetOldSelection();
++	if (old_sel != -1)
++	{
++		EditorBase* eb = static_cast<EditorBase*>(m_pNotebook->GetPage(old_sel));
++		//    LOGSTREAM << wxString::Format(_T("OnPageChanging(): ed=%p, title=%s\n"), eb, eb ? eb->GetTitle().c_str() : _T(""));
++		CodeBlocksEvent evt(cbEVT_EDITOR_DEACTIVATED, -1, 0, eb);
++	    Manager::Get()->GetPluginManager()->NotifyPlugins(evt);
++	}
+     event.Skip(); // allow others to process it too
+ }
+ 
+-void EditorManager::OnPageClosing(wxFlatNotebookEvent& event)
++void EditorManager::OnPageClose(wxAuiNotebookEvent& event)
+ {
+-    EditorBase* eb = static_cast<EditorBase*>(m_pNotebook->GetPage(event.GetSelection()));
+-    //    LOGSTREAM << wxString::Format(_T("OnPageClosing(): ed=%p, title=%s\n"), eb, eb ? eb->GetTitle().c_str() : _T(""));
+-    if (!QueryClose(eb))
+-        event.Veto();
++	int sel = event.GetSelection();
++	if (sel != -1)
++	{
++		EditorBase* eb = static_cast<EditorBase*>(m_pNotebook->GetPage(sel));
++		//    LOGSTREAM << wxString::Format(_T("OnPageClosing(): ed=%p, title=%s\n"), eb, eb ? eb->GetTitle().c_str() : _T(""));
++		if (!QueryClose(eb))
++			event.Veto();
++	}
+     event.Skip(); // allow others to process it too
+ }
+ 
+-void EditorManager::OnPageContextMenu(wxFlatNotebookEvent& event)
++void EditorManager::OnPageContextMenu(wxAuiNotebookEvent& event)
+ {
+     if (event.GetSelection() == -1)
+         return;
+@@ -2564,13 +2568,13 @@
+ void EditorManager::OnTabPosition(wxCommandEvent& event)
+ {
+     long style = m_pNotebook->GetWindowStyleFlag();
+-    style &= ~wxFNB_BOTTOM;
++    style &= ~wxAUI_NB_BOTTOM;
+ 
+     if (event.GetId() == idNBTabBottom)
+-        style |= wxFNB_BOTTOM;
++        style |= wxAUI_NB_BOTTOM;
+     m_pNotebook->SetWindowStyleFlag(style);
+-    // (style & wxFNB_BOTTOM) saves info only about the the tabs position
+-    Manager::Get()->GetConfigManager(_T("app"))->Write(_T("/environment/editor_tabs_bottom"), (bool)(style & wxFNB_BOTTOM));
++    // (style & wxAUI_NB_BOTTOM) saves info only about the the tabs position
++    Manager::Get()->GetConfigManager(_T("app"))->Write(_T("/environment/editor_tabs_bottom"), (bool)(style & wxAUI_NB_BOTTOM));
+ }
+ 
+ void EditorManager::OnProperties(wxCommandEvent& event)
+Index: src/sdk/Makefile.am
+===================================================================
+--- src/sdk/Makefile.am	(revision 5189)
++++ src/sdk/Makefile.am	(working copy)
+@@ -1,12 +1,11 @@
+-SUBDIRS = scripting wxscintilla wxFlatNotebook resources
++SUBDIRS = scripting wxscintilla resources
+ 
+ INCLUDES = $(WX_CXXFLAGS) \
+ 			-I$(top_srcdir)/src/include \
+ 			-I$(top_srcdir)/src/include/wxscintilla/include \
+ 			-I$(top_srcdir)/src/include/tinyxml \
+ 			-I$(top_srcdir)/src/include/scripting/include \
+-			-I$(top_srcdir)/src/include/scripting/sqplus \
+-			-I$(top_srcdir)/src/include/wxFlatNotebook/include
++			-I$(top_srcdir)/src/include/scripting/sqplus
+ 
+ lib_LTLIBRARIES = libcodeblocks.la
+ 
+@@ -18,8 +17,7 @@
+ 			scripting/sqstdlib/libsqstdlib.la \
+ 			scripting/squirrel/libsquirrel.la \
+ 			../base/tinyxml/libtinyxml.la \
+-			wxscintilla/libwxscintilla.la \
+-			wxFlatNotebook/libwxflatnotebook.la
++			wxscintilla/libwxscintilla.la
+ 
+ libcodeblocks_la_SOURCES = annoyingdialog.cpp \
+ 						autodetectcompilers.cpp \
+Index: src/plugins/codecompletion/nativeparser.cpp
+===================================================================
+--- src/plugins/codecompletion/nativeparser.cpp	(revision 5189)
++++ src/plugins/codecompletion/nativeparser.cpp	(working copy)
+@@ -26,7 +26,7 @@
+ #include <wx/regex.h>
+ #include <wx/log.h> // for wxSafeShowMessage()
+ #include <tinyxml/tinyxml.h>
+-#include "wx/wxFlatNotebook/wxFlatNotebook.h"
++#include <wx/aui/auibook.h>
+ #include "cbstyledtextctrl.h"
+ 
+ 
+Index: src/plugins/codecompletion/Makefile.am
+===================================================================
+--- src/plugins/codecompletion/Makefile.am	(revision 5189)
++++ src/plugins/codecompletion/Makefile.am	(working copy)
+@@ -2,7 +2,6 @@
+ 
+ INCLUDES = $(WX_CXXFLAGS) \
+ 		-I$(top_srcdir)/src/include \
+-		-I$(top_srcdir)/src/include/wxFlatNotebook/include \
+ 		-I$(top_srcdir)/src/include/wxscintilla/include
+ 
+ libdir = $(pkgdatadir)/plugins
+Index: src/include/projectmanager.h
+===================================================================
+--- src/include/projectmanager.h	(revision 5189)
++++ src/include/projectmanager.h	(working copy)
+@@ -27,8 +27,8 @@
+ class ProjectFile;
+ class FilesGroupsAndMasks;
+ class cbWorkspace;
+-class wxFlatNotebook;
+-class wxFlatNotebookEvent;
++class wxAuiNotebook;
++class wxAuiNotebookEvent;
+ 
+ DLLIMPORT extern int ID_ProjectManager; /* Used by both Project and Editor Managers */
+ WX_DEFINE_ARRAY(cbProject*, ProjectsArray);
+@@ -55,7 +55,7 @@
+         ProjectManager(const ProjectManager& rhs) { cbThrow(_T("Can't call ProjectManager's copy ctor!!!")); }
+         virtual void operator=(const ProjectManager& rhs){ cbThrow(_T("Can't assign an ProjectManager* !!!")); }
+ 
+-        wxFlatNotebook* GetNotebook() { return m_pNotebook; }
++        wxAuiNotebook* GetNotebook() { return m_pNotebook; }
+ 
+         const FilesGroupsAndMasks* GetFilesGroupsAndMasks() { return m_pFileGroups; }
+ 
+@@ -435,6 +435,7 @@
+         void InitPane();
+         void BuildTree();
+         void ShowMenu(wxTreeItemId id, const wxPoint& pt);
++        void OnTabContextMenu(wxAuiNotebookEvent& event);
+         void OnTabPosition(wxCommandEvent& event);
+         void OnProjectFileActivated(wxTreeEvent& event);
+         void OnExecParameters(wxCommandEvent& event);
+@@ -478,7 +479,7 @@
+         int DoAddFileToProject(const wxString& filename, cbProject* project, wxArrayInt& targets);
+         void RemoveFilesRecursively(wxTreeItemId& sel_id);
+ 
+-        wxFlatNotebook* m_pNotebook;
++        wxAuiNotebook* m_pNotebook;
+         wxTreeCtrl* m_pTree;
+         wxTreeItemId m_TreeRoot;
+         cbProject* m_pActiveProject;
+Index: src/include/editormanager.h
+===================================================================
+--- src/include/editormanager.h	(revision 5189)
++++ src/include/editormanager.h	(working copy)
+@@ -27,8 +27,8 @@
+ 
+ // forward decls
+ class EditorBase;
+-class wxFlatNotebook;
+-class wxFlatNotebookEvent;
++class wxAuiNotebook;
++class wxAuiNotebookEvent;
+ class wxMenuBar;
+ class EditorColourSet;
+ class cbProject;
+@@ -58,7 +58,7 @@
+         EditorManager(const EditorManager& rhs) { cbThrow(_T("Can't call EditorManager's copy ctor!!!")); }
+         virtual void operator=(const EditorManager& rhs){ cbThrow(_T("Can't assign an EditorManager* !!!")); }
+ 
+-        wxFlatNotebook* GetNotebook(){ return m_pNotebook; }
++        wxAuiNotebook* GetNotebook(){ return m_pNotebook; }
+         void CreateMenu(wxMenuBar* menuBar);
+         void ReleaseMenu(wxMenuBar* menuBar);
+         void Configure();
+@@ -124,10 +124,10 @@
+         void CheckForExternallyModifiedFiles();
+ 
+         void OnGenericContextMenuHandler(wxCommandEvent& event);
+-        void OnPageChanged(wxFlatNotebookEvent& event);
+-        void OnPageChanging(wxFlatNotebookEvent& event);
+-        void OnPageClosing(wxFlatNotebookEvent& event);
+-        void OnPageContextMenu(wxFlatNotebookEvent& event);
++        void OnPageChanged(wxAuiNotebookEvent& event);
++        void OnPageChanging(wxAuiNotebookEvent& event);
++        void OnPageClose(wxAuiNotebookEvent& event);
++        void OnPageContextMenu(wxAuiNotebookEvent& event);
+         void OnClose(wxCommandEvent& event);
+         void OnCloseAll(wxCommandEvent& event);
+         void OnCloseAllOthers(wxCommandEvent& event);
+@@ -169,7 +169,7 @@
+         int Replace(cbStyledTextCtrl* control, cbFindReplaceData* data);
+         int ReplaceInFiles(cbFindReplaceData* data);
+ 
+-        wxFlatNotebook* m_pNotebook;
++        wxAuiNotebook* m_pNotebook;
+         cbFindReplaceData* m_LastFindReplaceData;
+         EditorColourSet* m_Theme;
+         ListCtrlLogger* m_pSearchLog;
+Index: src/include/Makefile.am
+===================================================================
+--- src/include/Makefile.am	(revision 5189)
++++ src/include/Makefile.am	(working copy)
+@@ -1,4 +1,4 @@
+-SUBDIRS = scripting tinyxml wxscintilla wxFlatNotebook
++SUBDIRS = scripting tinyxml wxscintilla
+ 
+ if PRECOMPILE_HEADERS
+ BUILT_SOURCES = $(top_srcdir)/src/include/sdk_precomp.h.gch
+@@ -11,8 +11,7 @@
+ 			-I$(top_srcdir)/src/include/wxscintilla/include \
+ 			-I$(top_srcdir)/src/include/tinyxml \
+ 			-I$(top_srcdir)/src/include/scripting/include \
+-			-I$(top_srcdir)/src/include/scripting/sqplus \
+-			-I$(top_srcdir)/src/include/wxFlatNotebook/include
++			-I$(top_srcdir)/src/include/scripting/sqplus
+ 
+ # Because we are not generating any programs/libraries with this makefile,
+ # $(CXXCOMPILE) is empty.
+Index: src/src/infopane.h
+===================================================================
+--- src/src/infopane.h	(revision 5189)
++++ src/src/infopane.h	(working copy)
+@@ -9,23 +9,15 @@
+ 
+ #include <logmanager.h>
+ 
+-#ifdef CB_USE_AUI_NOTEBOOK
+-    #include <wx/aui/auibook.h>
+-    typedef wxAuiNotebook InfoPaneNotebook;
+-    typedef wxAuiNotebook PieceOfShitBaseClass;
+-    static const int infopane_flags = wxAUI_NB_WINDOWLIST_BUTTON | wxAUI_NB_SCROLL_BUTTONS | wxAUI_NB_TAB_MOVE | wxAUI_NB_TAB_SPLIT;
+-#else
+-    #include <wx/wxFlatNotebook/wxFlatNotebook.h>
+-    typedef wxFlatNotebook InfoPaneNotebook;
+-    typedef wxPanel PieceOfShitBaseClass;
+-    static const int infopane_flags = wxFNB_NO_X_BUTTON | wxFNB_FF2;
+-#endif
++#include <wx/aui/auibook.h>
+ 
++static const int infopane_flags = wxAUI_NB_WINDOWLIST_BUTTON | wxAUI_NB_SCROLL_BUTTONS | wxAUI_NB_TAB_MOVE | wxAUI_NB_TAB_SPLIT;
++
+ class wxWindow;
+ class wxCommandEvent;
+ class wxMouseEvent;
+ 
+-class InfoPane : public InfoPaneNotebook
++class InfoPane : public wxAuiNotebook
+ {
+     DECLARE_EVENT_TABLE()
+ 
+@@ -53,6 +45,8 @@
+     void OnCopy(wxCommandEvent& event);
+     void OnClear(wxCommandEvent& event);
+     void ContextMenu(wxContextMenuEvent& event);
++    void OnTabContextMenu(wxAuiNotebookEvent& event);
++    void OnTabPosition(wxCommandEvent& event);
+ 
+ 	int AddPagePrivate(wxWindow* p, const wxString& title, wxBitmap* icon = 0);
+ public:
+Index: src/src/environmentsettingsdlg.cpp
+===================================================================
+--- src/src/environmentsettingsdlg.cpp	(revision 5189)
++++ src/src/environmentsettingsdlg.cpp	(working copy)
+@@ -54,13 +54,8 @@
+ const int IMAGES_COUNT = sizeof(base_imgs) / sizeof(wxString);
+ 
+ BEGIN_EVENT_TABLE(EnvironmentSettingsDlg, wxDialog)
+-    EVT_UPDATE_UI(-1, EnvironmentSettingsDlg::OnUpdateUI)
+     EVT_BUTTON(XRCID("btnSetAssocs"), EnvironmentSettingsDlg::OnSetAssocs)
+     EVT_BUTTON(XRCID("btnManageAssocs"), EnvironmentSettingsDlg::OnManageAssocs)
+-    EVT_BUTTON(XRCID("btnFNBorder"), EnvironmentSettingsDlg::OnChooseColour)
+-    EVT_BUTTON(XRCID("btnFNFrom"), EnvironmentSettingsDlg::OnChooseColour)
+-    EVT_BUTTON(XRCID("btnFNTo"), EnvironmentSettingsDlg::OnChooseColour)
+-    EVT_BUTTON(XRCID("btnNbDefaults"), EnvironmentSettingsDlg::OnNbDefaults)
+     EVT_BUTTON(XRCID("btnAuiCaptionColour"), EnvironmentSettingsDlg::OnChooseColour)
+     EVT_BUTTON(XRCID("btnAuiCaptionTextColour"), EnvironmentSettingsDlg::OnChooseColour)
+     EVT_BUTTON(XRCID("btnAuiActiveCaptionColour"), EnvironmentSettingsDlg::OnChooseColour)
+@@ -164,11 +159,7 @@
+ 
+     // tab "Notebook"
+     XRCCTRL(*this, "cmbEditorTabs", wxComboBox)->SetSelection(cfg->ReadInt(_T("/environment/tabs_style"), 0));
+-    XRCCTRL(*this, "chkSmartTabs", wxCheckBox)->SetValue(cfg->ReadBool(_T("/environment/tabs_smart"), 0));
+     XRCCTRL(*this, "chkListTabs", wxCheckBox)->SetValue(cfg->ReadBool(_T("/environment/tabs_list"), 0));
+-    XRCCTRL(*this, "btnFNBorder", wxButton)->SetBackgroundColour(cfg->ReadColour(_T("/environment/gradient_border"), wxColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW))));
+-    XRCCTRL(*this, "btnFNFrom", wxButton)->SetBackgroundColour(cfg->ReadColour(_T("/environment/gradient_from"), wxColour(wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE))));
+-    XRCCTRL(*this, "btnFNTo", wxButton)->SetBackgroundColour(cfg->ReadColour(_T("/environment/gradient_to"), *wxWHITE));
+ 
+     // tab "Docking"
+     XRCCTRL(*this, "spnAuiBorder", wxSpinCtrl)->SetValue(cfg->ReadInt(_T("/environment/aui/border_size"), m_pArt->GetMetric(wxAUI_DOCKART_PANE_BORDER_SIZE)));
+@@ -310,13 +301,6 @@
+ #endif
+ }
+ 
+-void EnvironmentSettingsDlg::OnNbDefaults(wxCommandEvent& event)
+-{
+-    XRCCTRL(*this, "btnFNBorder", wxButton)->SetBackgroundColour(wxColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW)));
+-    XRCCTRL(*this, "btnFNFrom", wxButton)->SetBackgroundColour(wxColour(wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE)));
+-    XRCCTRL(*this, "btnFNTo", wxButton)->SetBackgroundColour(wxColour(wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE)));
+-}
+-
+ void EnvironmentSettingsDlg::OnChooseColour(wxCommandEvent& event)
+ {
+     wxColourData data;
+@@ -361,14 +345,6 @@
+     SetSettingsIconsStyle(lb->GetListView(), (SettingsIconsStyle)event.GetSelection());
+ }
+ 
+-void EnvironmentSettingsDlg::OnUpdateUI(wxUpdateUIEvent& event)
+-{
+-    bool en = XRCCTRL(*this, "cmbEditorTabs", wxComboBox)->GetSelection() == 1;
+-    XRCCTRL(*this, "btnFNBorder", wxButton)->Enable(en);
+-    XRCCTRL(*this, "btnFNFrom", wxButton)->Enable(en);
+-    XRCCTRL(*this, "btnFNTo", wxButton)->Enable(en);
+-}
+-
+ void EnvironmentSettingsDlg::EndModal(int retCode)
+ {
+     if (retCode == wxID_OK)
+@@ -411,11 +387,7 @@
+ 
+         // tab "Appearence"
+         cfg->Write(_T("/environment/tabs_style"),           (int)XRCCTRL(*this, "cmbEditorTabs", wxComboBox)->GetSelection());
+-        cfg->Write(_T("/environment/tabs_smart"),           (bool)XRCCTRL(*this, "chkSmartTabs", wxCheckBox)->GetValue());
+         cfg->Write(_T("/environment/tabs_list"),           (bool)XRCCTRL(*this, "chkListTabs", wxCheckBox)->GetValue());
+-        cfg->Write(_T("/environment/gradient_border"),      XRCCTRL(*this, "btnFNBorder", wxButton)->GetBackgroundColour());
+-        cfg->Write(_T("/environment/gradient_from"),        XRCCTRL(*this, "btnFNFrom", wxButton)->GetBackgroundColour());
+-        cfg->Write(_T("/environment/gradient_to"),          XRCCTRL(*this, "btnFNTo", wxButton)->GetBackgroundColour());
+         cfg->Write(_T("/environment/aui/border_size"),          (int)XRCCTRL(*this, "spnAuiBorder", wxSpinCtrl)->GetValue());
+         cfg->Write(_T("/environment/aui/sash_size"),            (int)XRCCTRL(*this, "spnAuiSash", wxSpinCtrl)->GetValue());
+         cfg->Write(_T("/environment/aui/caption_size"),         (int)XRCCTRL(*this, "spnAuiCaption", wxSpinCtrl)->GetValue());
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(revision 5189)
++++ src/src/main.cpp	(working copy)
+@@ -58,10 +58,12 @@
+ #include "batchbuild.h"
+ #include <wx/printdlg.h>
+ #include <wx/filename.h>
+-#include <wx/wxFlatNotebook/wxFlatNotebook.h>
++#include <wx/aui/auibook.h>
+ 
+ #include "uservarmanager.h"
+ #include "infowindow.h"
++#include "notebookstyles.h"
++#include "switcherdlg.h"
+ 
+ class wxMyFileDropTarget : public wxFileDropTarget
+ {
+@@ -207,6 +209,7 @@
+ int idViewStatusbar = XRCID("idViewStatusbar");
+ int idViewScriptConsole = XRCID("idViewScriptConsole");
+ int idViewFocusEditor = XRCID("idViewFocusEditor");
++int idViewSwitchTabs = XRCID("idViewSwitchTabs");
+ int idViewFullScreen = XRCID("idViewFullScreen");
+ 
+ int idSearchFind = XRCID("idSearchFind");
+@@ -418,6 +421,7 @@
+     EVT_MENU(idViewStatusbar, MainFrame::OnToggleStatusBar)
+     EVT_MENU(idViewScriptConsole, MainFrame::OnViewScriptConsole)
+     EVT_MENU(idViewFocusEditor, MainFrame::OnFocusEditor)
++    EVT_MENU(idViewSwitchTabs, MainFrame::OnSwitchTabs)
+     EVT_MENU(idViewFullScreen, MainFrame::OnToggleFullScreen)
+ 
+     EVT_MENU(idSettingsEnvironment, MainFrame::OnSettingsEnvironment)
+@@ -907,6 +911,28 @@
+ 
+     Manager::Get()->GetToolsManager()->BuildToolsMenu(m_ToolsMenu);
+ 
++    // Ctrl+Tab workaround for non windows platforms:
++    if ((platform::carbon) || (platform::gtk))
++    {
++        // Find the menu item for tab switching:
++        tmpidx = mbar->FindMenu(_("&View"));
++        if (tmpidx != wxNOT_FOUND)
++        {
++            wxMenu* view = mbar->GetMenu(tmpidx);
++            wxMenuItem* switch_item = view->FindItem(idViewSwitchTabs);
++            if (switch_item)
++            {
++                // Change the accelerator for this menu item:
++                wxString accel;
++                if (platform::carbon)
++                    accel = wxT("Alt+Tab");
++                else if (platform::gtk)
++                    accel = wxT("Ctrl+,");
++                switch_item->SetItemLabel(wxString(_("S&witch Tabs")) + wxT("\t") + accel);
++            }
++        }
++    }
++    
+     SetMenuBar(mbar);
+     InitializeRecentFilesHistory();
+ 
+@@ -1626,60 +1652,49 @@
+ #endif // wxUSE_STATUSBAR
+ }
+ 
+-void MainFrame::DoUpdateEditorStyle(wxFlatNotebook* target, const wxString& prefix, long defaultStyle)
++void MainFrame::DoUpdateEditorStyle(wxAuiNotebook* target, const wxString& prefix, long defaultStyle)
+ {
+     if (!target)
+         return;
+ 
+     ConfigManager* cfg = Manager::Get()->GetConfigManager(_T("app"));
++    target->SetTabCtrlHeight(-1);
+     long nbstyle = cfg->ReadInt(_T("/environment/tabs_style"), 0);
+     switch (nbstyle)
+     {
+-        case 1: // gradient
+-            nbstyle = wxFNB_FANCY_TABS;
++        case 1: // simple style
++            target->SetArtProvider(new wxAuiSimpleTabArt());
+             break;
+ 
+-        case 2: // vc71
+-            nbstyle = wxFNB_VC71;
++        case 2: // VC 7.1 style
++            target->SetArtProvider(new NbStyleVC71());
+             break;
+-
+-        case 3: // vc8
+-            nbstyle = wxFNB_VC8;
++            
++        default: // default style
++            target->SetArtProvider(new wxAuiDefaultTabArt());
+             break;
++    }
+ 
+-        default:
+-            nbstyle = 0;
+-            break;
+-    }
+-    nbstyle |= defaultStyle;
++    nbstyle = defaultStyle;
+     if (cfg->ReadBool(_T("/environment/") + prefix + _T("_tabs_bottom")))
+-        nbstyle |= wxFNB_BOTTOM;
++        nbstyle |= wxAUI_NB_BOTTOM;
+ 
+-    if (cfg->ReadBool(_T("/environment/tabs_smart")))
+-        nbstyle |= wxFNB_SMART_TABS;
+-
+     if (cfg->ReadBool(_T("/environment/tabs_list")))
+-    {
+-        nbstyle |= wxFNB_DROPDOWN_TABS_LIST;
+-        nbstyle |= wxFNB_NO_NAV_BUTTONS;
+-    }
++        nbstyle |= wxAUI_NB_WINDOWLIST_BUTTON;
+ 
+     target->SetWindowStyleFlag(nbstyle);
+-    target->SetGradientColorBorder(cfg->ReadColour(_T("/environment/gradient_border"), wxColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW))));
+-    target->SetGradientColorFrom(cfg->ReadColour(_T("/environment/gradient_from"), wxColour(wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE))));
+-    target->SetGradientColorTo(cfg->ReadColour(_T("/environment/gradient_to"), *wxWHITE));
+ }
+ 
+ void MainFrame::DoUpdateEditorStyle()
+ {
+-    wxFlatNotebook* fn = Manager::Get()->GetEditorManager()->GetNotebook();
+-    DoUpdateEditorStyle(fn, _T("editor"), wxFNB_MOUSE_MIDDLE_CLOSES_TABS | wxFNB_X_ON_TAB | wxFNB_NO_X_BUTTON);
++    wxAuiNotebook* an = Manager::Get()->GetEditorManager()->GetNotebook();
++    DoUpdateEditorStyle(an, _T("editor"), wxAUI_NB_DEFAULT_STYLE | wxNO_FULL_REPAINT_ON_RESIZE | wxCLIP_CHILDREN);
+ 
+-    fn = infoPane;
+-    DoUpdateEditorStyle(fn, _T("message"), wxFNB_NO_X_BUTTON);
++    an = infoPane;
++    DoUpdateEditorStyle(an, _T("message"), wxAUI_NB_SCROLL_BUTTONS | wxAUI_NB_TAB_MOVE | wxAUI_NB_TAB_SPLIT);
+ 
+-    fn = Manager::Get()->GetProjectManager()->GetNotebook();
+-    DoUpdateEditorStyle(fn, _T("project"), wxFNB_NO_X_BUTTON);
++    an = Manager::Get()->GetProjectManager()->GetNotebook();
++    DoUpdateEditorStyle(an, _T("project"), wxAUI_NB_SCROLL_BUTTONS);
+ }
+ 
+ void MainFrame::DoUpdateLayoutColours()
+@@ -3954,6 +3969,51 @@
+         ed->GetControl()->SetFocus();
+ }
+ 
++void MainFrame::OnSwitchTabs(wxCommandEvent& event)
++{
++    // Get the notebook from the editormanager:
++    wxAuiNotebook* nb = Manager::Get()->GetEditorManager()->GetNotebook();
++    if (!nb)
++        return;
++
++    // Create container and add all open editors:
++    wxSwitcherItems items;
++    items.AddGroup(_("Open files"), wxT("editors"));
++    for (size_t i = 0; i < nb->GetPageCount(); ++i)
++    {
++        wxString title = nb->GetPageText(i);
++        wxWindow* window = nb->GetPage(i);
++        
++        items.AddItem(title, title, i, nb->GetPageBitmap(i)).SetWindow(window);
++    }
++    
++    // Select the focused editor:
++    int idx = items.GetIndexForFocus();
++    if (idx != wxNOT_FOUND)
++        items.SetSelection(idx);
++
++    // Create the switcher dialog
++    wxSwitcherDialog dlg(items, wxGetApp().GetTopWindow());
++    
++    // Ctrl+Tab workaround for non windows platforms:
++    if (platform::cocoa)
++        dlg.SetModifierKey(WXK_ALT);
++    else if (platform::gtk)
++        dlg.SetExtraNavigationKey(wxT(','));
++
++    // Finally show the dialog:
++    int answer = dlg.ShowModal();
++    
++    // If necessary change the selected editor:
++    if ((answer == wxID_OK) && (dlg.GetSelection() != -1))
++    {
++        wxSwitcherItem& item = items.GetItem(dlg.GetSelection());
++        wxWindow* win = item.GetWindow();
++        nb->SetSelection(item.GetId());
++        win->SetFocus();
++    }
++}
++
+ void MainFrame::OnToggleFullScreen(wxCommandEvent& event)
+ {
+     ShowFullScreen( !IsFullScreen(), wxFULLSCREEN_NOTOOLBAR// | wxFULLSCREEN_NOSTATUSBAR
+Index: src/src/switcherdlg.h
+===================================================================
+--- src/src/switcherdlg.h	(revision 0)
++++ src/src/switcherdlg.h	(revision 0)
+@@ -0,0 +1,304 @@
++/////////////////////////////////////////////////////////////////////////////
++// Name:        switcherdlg.h
++// Purpose:     Pane switcher dialog
++// Author:      Julian Smart
++// Modified by:
++// Created:     2007-08-19
++// RCS-ID:      $Id: switcherdlg.h,v 1.2 2007/08/18 10:55:06 anthemion Exp $
++// Copyright:   (c) Julian Smart
++// Licence:     wxWidgets licence
++/////////////////////////////////////////////////////////////////////////////
++
++#ifndef _WX_SWITCHERDLG_H_
++#define _WX_SWITCHERDLG_H_
++
++#include "wx/dynarray.h"
++#include "wx/html/htmlwin.h"
++
++/*!
++ * wxSwitcherItem
++ * An object containing information about one item
++ */
++
++class wxSwitcherItem: public wxObject
++{
++    DECLARE_CLASS(wxSwitcherItem)
++public:
++    wxSwitcherItem() { Init(); }
++    wxSwitcherItem(const wxSwitcherItem& item) { Init(); Copy(item); }
++
++    bool operator== (const wxSwitcherItem& item) const;
++
++    void operator= (const wxSwitcherItem& item) { Copy(item); }
++
++    void Init();
++
++    void Copy(const wxSwitcherItem& item);
++
++    wxSwitcherItem& SetTitle(const wxString& title) { m_title = title; return (*this); }
++    const wxString& GetTitle() const { return m_title; }
++
++    wxSwitcherItem& SetName(const wxString& name) { m_name = name; return (*this); }
++    const wxString& GetName() const { return m_name; }
++
++    wxSwitcherItem& SetDescription(const wxString& descr) { m_description = descr; return (*this); }
++    const wxString& GetDescription() const { return m_description; }
++
++    wxSwitcherItem& SetId(int id) { m_id = id; return (*this); }
++    int GetId() const { return m_id; }
++
++    wxSwitcherItem& SetIsGroup(bool isGroup) { m_isGroup = isGroup; return (*this); }
++    bool GetIsGroup() const { return m_isGroup; }
++
++    wxSwitcherItem& BreakColumn(bool breakCol = true) { m_breakColumn = breakCol; return (*this); }
++    bool GetBreakColumn() const { return m_breakColumn; }
++
++    wxSwitcherItem& SetRect(const wxRect& rect) { m_rect = rect; return (*this); }
++    const wxRect& GetRect() const { return m_rect; }
++
++    wxSwitcherItem& SetTextColour(const wxColour& colour) { m_textColour = colour; return (*this); }
++    const wxColour& GetTextColour() const { return m_textColour; }
++
++    wxSwitcherItem& SetFont(const wxFont& font) { m_font = font; return (*this); }
++    const wxFont& GetFont() const { return m_font; }
++
++    wxSwitcherItem& SetBitmap(const wxBitmap& bitmap) { m_bitmap = bitmap; return (*this); }
++    const wxBitmap& GetBitmap() const { return m_bitmap; }
++
++    wxSwitcherItem& SetRowPos(int pos) { m_rowPos = pos; return (*this); }
++    int GetRowPos() const { return m_rowPos; }
++
++    wxSwitcherItem& SetColPos(int pos) { m_colPos = pos; return (*this); }
++    int GetColPos() const { return m_colPos; }
++
++    wxSwitcherItem& SetWindow(wxWindow* win) { m_window = win; return (*this); }
++    wxWindow* GetWindow() const { return m_window; }
++
++protected:
++
++    wxString    m_title;
++    wxString    m_name;
++    wxString    m_description;
++    int         m_id;
++    bool        m_isGroup;
++    bool        m_breakColumn;
++    wxRect      m_rect;
++    wxBitmap    m_bitmap;
++    wxColour    m_textColour;
++    wxFont      m_font;
++    int         m_rowPos;
++    int         m_colPos;
++    wxWindow*   m_window;
++};
++
++WX_DECLARE_OBJARRAY(wxSwitcherItem, wxSwitcherItemArray);
++
++/*!
++ * wxSwitcherItems
++ * An object containing switcher items
++ */
++
++class wxSwitcherItems: public wxObject
++{
++    DECLARE_CLASS(wxSwitcherItems)
++public:
++    wxSwitcherItems() { Init(); }
++    wxSwitcherItems(const wxSwitcherItems& items) { Init(); Copy(items); }
++
++    bool operator== (const wxSwitcherItems& items) const;
++
++    void operator= (const wxSwitcherItems& items) { Copy(items); }
++
++    void Init();
++
++    void Copy(const wxSwitcherItems& items);
++
++    // Public API
++
++    wxSwitcherItem& AddItem(const wxString& title, const wxString& name, int id = 0, const wxBitmap& bitmap = wxNullBitmap);
++    wxSwitcherItem& AddItem(const wxSwitcherItem& item);
++    wxSwitcherItem& AddGroup(const wxString& title, const wxString& name, int id = 0, const wxBitmap& bitmap = wxNullBitmap);
++
++    void Clear();
++
++    int FindItemByName(const wxString& name) const;
++    int FindItemById(int id) const;
++
++    void SetSelection(int sel);
++    void SetSelection(const wxString& name); // by name
++    int GetSelection() const { return m_selection; }
++
++    // Find the index for the item associated with the current focus
++    int GetIndexForFocus() const;
++
++    const wxSwitcherItem& GetItem(int i) const;
++    wxSwitcherItem& GetItem(int i);
++
++    int GetItemCount() const { return m_items.GetCount(); }
++
++    void SetRowCount(int rows) { m_rowCount = rows; }
++    int GetRowCount() const { return m_rowCount; }
++
++    void SetColumnCount(int cols) { m_columnCount = cols; }
++    int GetColumnCount() const { return m_columnCount; }
++
++    void SetBackgroundColour(const wxColour& colour) { m_backgroundColour = colour; }
++    const wxColour& GetBackgroundColour() const { return m_backgroundColour; }
++
++    void SetTextColour(const wxColour& colour) { m_textColour = colour; }
++    const wxColour& GetTextColour() const { return m_textColour; }
++
++    void SetSelectionColour(const wxColour& colour) { m_selectionColour = colour; }
++    const wxColour& GetSelectionColour() const { return m_selectionColour; }
++
++    void SetSelectionOutlineColour(const wxColour& colour) { m_selectionOutlineColour = colour; }
++    const wxColour& GetSelectionOutlineColour() const { return m_selectionOutlineColour; }
++
++    void SetItemFont(const wxFont& font) { m_itemFont = font; }
++    const wxFont& GetItemFont() const { return m_itemFont; }
++
++    // Implementation
++
++    void PaintItems(wxDC& dc, wxWindow* win);
++    wxSize CalculateItemSize(wxDC& dc);
++
++protected:
++
++    wxSwitcherItemArray m_items;
++    int                 m_selection;
++    int                 m_rowCount;
++    int                 m_columnCount;
++
++    wxColour            m_backgroundColour;
++    wxColour            m_textColour;
++    wxColour            m_selectionColour;
++    wxColour            m_selectionOutlineColour;
++
++    wxFont              m_itemFont;
++};
++
++
++/*!
++ * wxMultiColumnListCtrl
++ * A control for displaying several columns (not scrollable)
++ */
++
++class wxMultiColumnListCtrl: public wxControl
++{
++    DECLARE_CLASS(wxMultiColumnListCtrl)
++public:
++    wxMultiColumnListCtrl(wxWindow* parent, wxWindowID id, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = 0);
++    wxMultiColumnListCtrl() { Init(); }
++
++    bool Create(wxWindow* parent, wxWindowID id, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = 0);
++
++    // Public API
++
++    void SetItems(const wxSwitcherItems& items) { m_items = items; }
++    const wxSwitcherItems& GetItems() const { return m_items; }
++    wxSwitcherItems& GetItems() { return m_items; }
++
++    // Set an extra key that can be used to cycle through items,
++    // in case not using the Ctrl+Tab combination
++    void SetExtraNavigationKey(int keyCode) { m_extraNavigationKey = keyCode; }
++    int GetExtraNavigationKey() const { return m_extraNavigationKey; }
++
++    // Set the modifier used to invoke the dialog, and therefore to test for
++    // release
++    void SetModifierKey(int modifierKey) { m_modifierKey = modifierKey; }
++    int GetModifierKey() const { return m_modifierKey; }
++
++    // Event handlers
++
++    void OnPaint(wxPaintEvent& event);
++    void OnMouseEvent(wxMouseEvent& event);
++    void OnChar(wxKeyEvent& event);
++    void OnKey(wxKeyEvent& event);
++    void OnEraseBackground(wxEraseEvent& event);
++
++    // Overrides
++    virtual wxSize DoGetBestSize() const ;
++
++    // Implementation
++
++    void CalculateLayout();
++    void CalculateLayout(wxDC& dc);
++    void InvalidateLayout() { m_items.SetColumnCount(0); Refresh(); }
++    void Init();
++    void GenerateSelectionEvent();
++    void AdvanceToNextSelectableItem(int direction);
++
++protected:
++
++    wxSwitcherItems     m_items;
++    wxSize              m_overallSize;
++    int                 m_extraNavigationKey;
++    int                 m_modifierKey;
++
++DECLARE_EVENT_TABLE()
++};
++
++
++/*!
++ * wxSwitcherDialog shows a wxMultiColumnListCtrl with a list of panes
++ * and tabs for the user to choose. Ctrl+Tab cycles through them.
++ */
++
++class wxSwitcherDialog: public wxDialog
++{
++public:
++    // constructors and destructors
++    wxSwitcherDialog() { Init(); }
++    wxSwitcherDialog( const wxSwitcherItems& items, wxWindow *parent,
++        wxWindowID id = -1, const wxString& title = _("Pane Switcher"),
++        const wxPoint& pos = wxDefaultPosition,
++        const wxSize& size = wxDefaultSize,
++        long style = wxSTAY_ON_TOP|wxDIALOG_NO_PARENT|wxBORDER_SIMPLE );
++
++    bool Create(const wxSwitcherItems& items, wxWindow *parent,
++        wxWindowID id = -1, const wxString& title = _("Pane Switcher"),
++        const wxPoint& pos = wxDefaultPosition,
++        const wxSize& size = wxDefaultSize,
++        long style = wxSTAY_ON_TOP|wxDIALOG_NO_PARENT|wxBORDER_SIMPLE );
++
++    void Init();
++
++    void OnCloseWindow(wxCloseEvent& event);
++    void OnActivate(wxActivateEvent& event);
++    void OnSelectItem(wxCommandEvent& event);
++    void OnPaint(wxPaintEvent& event);
++
++    // Get the selected item
++    int GetSelection() const;
++
++    void ShowDescription(int i);
++
++    void SetBorderColour(const wxColour& colour) { m_borderColour = colour; }
++   
++    // Set an extra key that can be used to cycle through items,
++    // in case not using the Ctrl+Tab combination
++    void SetExtraNavigationKey(int keyCode);
++    int GetExtraNavigationKey() const { return m_extraNavigationKey; }
++
++    // Set the modifier used to invoke the dialog, and therefore to test for
++    // release
++    void SetModifierKey(int modifierKey);
++    int GetModifierKey() const { return m_modifierKey; }
++
++private:
++
++    wxMultiColumnListCtrl*  m_listCtrl;
++    wxHtmlWindow*           m_descriptionCtrl;
++    bool                    m_closing;
++    long                    m_switcherBorderStyle;
++    wxColour                m_borderColour;
++    int                     m_extraNavigationKey;
++    int                     m_modifierKey;
++
++    DECLARE_EVENT_TABLE()
++};
++
++
++#endif
++    // _WX_SWITCHERDLG_H_
++
+Index: src/src/notebookstyles.h
+===================================================================
+--- src/src/notebookstyles.h	(revision 0)
++++ src/src/notebookstyles.h	(revision 0)
+@@ -0,0 +1,32 @@
++/*
++ * This file is part of the Code::Blocks IDE and licensed under the GNU Lesser General Public License, version 3
++ * http://www.gnu.org/licenses/lgpl-3.0.html
++ */
++
++#ifndef NOTEBOOKSTYLES_H
++#define NOTEBOOKSTYLES_H
++
++#include <wx/aui/auibook.h>
++
++class wxDC;
++class wxWindow;
++class wxRect;
++class wxString;
++class wxBitmap;
++
++class NbStyleVC71 : public wxAuiDefaultTabArt
++{
++public:
++    NbStyleVC71();
++    wxAuiTabArt* Clone();
++    
++    void DrawTab(wxDC& dc, wxWindow* wnd, const wxAuiNotebookPage& page,
++                        const wxRect& in_rect, int close_button_state,
++                        wxRect* out_tab_rect, wxRect* out_button_rect,
++                        int* x_extent);
++
++    int GetBestTabCtrlSize(wxWindow* wnd, const wxAuiNotebookPageArray& pages,
++                            const wxSize& required_bmp_size);
++};
++
++#endif // NOTEBOOKSTYLES_H
+Index: src/src/infopane.cpp
+===================================================================
+--- src/src/infopane.cpp	(revision 5189)
++++ src/src/infopane.cpp	(working copy)
+@@ -25,46 +25,44 @@
+ 	int idClear = wxNewId();
+ 	int idCopySelectedToClipboard = wxNewId();
+ 	int idCopyAllToClipboard = wxNewId();
++	int idNB = wxNewId();
++	int idNB_TabTop = wxNewId();
++	int idNB_TabBottom = wxNewId();
+ };
+ 
+-BEGIN_EVENT_TABLE(InfoPane, PieceOfShitBaseClass)
++BEGIN_EVENT_TABLE(InfoPane, wxAuiNotebook)
+     EVT_MENU(idClear,  InfoPane::OnClear)
+     EVT_MENU_RANGE(idCopySelectedToClipboard, idCopyAllToClipboard,  InfoPane::OnCopy)
+     EVT_MENU(wxID_ANY,  InfoPane::OnMenu)
+     EVT_CONTEXT_MENU(InfoPane::ContextMenu)
++    EVT_AUINOTEBOOK_TAB_RIGHT_UP(idNB, InfoPane::OnTabContextMenu)
++    EVT_MENU(idNB_TabTop, InfoPane::OnTabPosition)
++    EVT_MENU(idNB_TabBottom, InfoPane::OnTabPosition)
+ END_EVENT_TABLE()
+ 
+ 
+-InfoPane::InfoPane(wxWindow* parent) : InfoPaneNotebook(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, infopane_flags), baseID(wxNewId())
++InfoPane::InfoPane(wxWindow* parent) : wxAuiNotebook(parent, idNB, wxDefaultPosition, wxDefaultSize, infopane_flags), baseID(wxNewId())
+ {
+ 	defaultBitmap = cbLoadBitmap(ConfigManager::GetDataFolder() + _T("/images/edit_16x16.png"), wxBITMAP_TYPE_PNG);
+-	
++	if (Manager::Get()->GetConfigManager(_T("app"))->ReadBool(_T("/environment/infopane_tabs_bottom"), false))
++		SetWindowStyleFlag(GetWindowStyleFlag() | wxAUI_NB_BOTTOM);
++
+     wxRegisterId(baseID + num_pages);
+     for(int i = 0; i < num_pages; ++i)
+     {
+         page[i] = Page();
+     }
+-
+-#ifndef CB_USE_AUI_NOTEBOOK
+-    SetImageList(new wxFlatNotebookImageList);
+-#endif
+ }
+ 
+ InfoPane::~InfoPane()
+ {
+-    delete GetImageList();
+ }
+ 
+ int InfoPane::AddPagePrivate(wxWindow* p, const wxString& title, wxBitmap* icon)
+ {
+ 	const wxBitmap& bmp = icon ? *icon : defaultBitmap;
+ 
+-#ifdef CB_USE_AUI_NOTEBOOK
+ 	AddPage(p, title, false, bmp);
+-#else
+-    GetImageList()->push_back(bmp);
+-	AddPage(p, title, false, GetImageList()->size() - 1);
+-#endif
+ 	return GetPageCount() - 1;
+ }
+ 
+@@ -205,8 +203,26 @@
+     PopupMenu(&menu);
+ }
+ 
++void InfoPane::OnTabContextMenu(wxAuiNotebookEvent& event)
++{
++    wxMenu* NBmenu = new wxMenu();
++    NBmenu->Append(idNB_TabTop, _("Tabs at top"));
++    NBmenu->Append(idNB_TabBottom, _("Tabs at bottom"));
++    PopupMenu(NBmenu);
++    delete NBmenu;
++}
+ 
++void InfoPane::OnTabPosition(wxCommandEvent& event)
++{
++    long style = GetWindowStyleFlag();
++    style &= ~wxAUI_NB_BOTTOM;
+ 
++    if (event.GetId() == idNB_TabBottom)
++        style |= wxAUI_NB_BOTTOM;
++    SetWindowStyleFlag(style);
++    // (style & wxAUI_NB_BOTTOM) saves info only about the the tabs position
++    Manager::Get()->GetConfigManager(_T("app"))->Write(_T("/environment/infopane_tabs_bottom"), (bool)(style & wxAUI_NB_BOTTOM));
++}
+ 
+ int InfoPane::AddLogger(Logger* logger, wxWindow* p, const wxString& title, wxBitmap* icon)
+ {
+Index: src/src/switcherdlg.cpp
+===================================================================
+--- src/src/switcherdlg.cpp	(revision 0)
++++ src/src/switcherdlg.cpp	(revision 0)
+@@ -0,0 +1,960 @@
++/////////////////////////////////////////////////////////////////////////////
++// Name:        switcherdlg.h
++// Purpose:     Pane switcher dialog
++// Author:      Julian Smart
++// Modified by:
++// Created:     2007-08-19
++// RCS-ID:      $Id: switcherdlg.cpp,v 1.5 2007/08/18 17:46:26 anthemion Exp $
++// Copyright:   (c) Julian Smart
++// Licence:     wxWidgets licence
++/////////////////////////////////////////////////////////////////////////////
++
++#include "wx/wx.h"
++
++#include "wx/settings.h"
++#include "wx/dcbuffer.h"
++
++#if defined(__WXMSW__) && wxUSE_UXTHEME
++#include "wx/msw/uxtheme.h"
++#endif
++
++#include "switcherdlg.h"
++
++#define wxSWITCHER_TEXT_MARGIN_X  4
++#define wxSWITCHER_TEXT_MARGIN_Y  2
++#define wxSWITCHER_USE_BUFFERED_PAINTING 1
++
++#include "wx/arrimpl.cpp"
++
++WX_DEFINE_OBJARRAY(wxSwitcherItemArray);
++
++/*!
++ * An object containing information about one item
++ */
++
++IMPLEMENT_CLASS(wxSwitcherItem, wxObject)
++
++void wxSwitcherItem::Init()
++{
++    m_id = 0;
++    m_isGroup = false;
++    m_breakColumn = false;
++    m_rowPos = 0;
++    m_colPos = 0;
++    m_window = NULL;
++}
++
++void wxSwitcherItem::Copy(const wxSwitcherItem& item)
++{
++    m_id = item.m_id;
++    m_name = item.m_name;
++    m_title = item.m_title;
++    m_isGroup = item.m_isGroup;
++    m_breakColumn = item.m_breakColumn;
++    m_rect = item.m_rect;
++    m_font = item.m_font;
++    m_textColour = item.m_textColour;
++    m_bitmap = item.m_bitmap;
++    m_description = item.m_description;
++    m_rowPos = item.m_rowPos;
++    m_colPos = item.m_colPos;
++    m_window = item.m_window;
++}
++
++bool wxSwitcherItem::operator== (const wxSwitcherItem& item) const
++{
++    return (
++    m_id == item.m_id &&
++    m_name == item.m_name &&
++    m_title == item.m_title &&
++    m_description == item.m_description &&
++    m_isGroup == item.m_isGroup &&
++    m_breakColumn == item.m_breakColumn &&
++    m_rect == item.m_rect &&
++    m_font == item.m_font &&
++    m_textColour == item.m_textColour &&
++    m_colPos == item.m_colPos &&
++    m_rowPos == item.m_rowPos &&
++    m_window == item.m_window
++        );
++}
++
++/*!
++ * wxSwitcherItems
++ * An object containing switcher items
++ */
++
++IMPLEMENT_CLASS(wxSwitcherItems, wxObject)
++
++bool wxSwitcherItems::operator== (const wxSwitcherItems& items) const
++{
++    if (m_items.GetCount() != items.m_items.GetCount())
++        return false;
++
++    if (m_selection != items.m_selection || m_rowCount != items.m_rowCount || m_columnCount != items.m_columnCount)
++        return false;
++
++    if (m_backgroundColour != items.m_backgroundColour || m_textColour != items.m_textColour ||
++        m_selectionColour != items.m_selectionColour || m_selectionOutlineColour != items.m_selectionOutlineColour ||
++        m_itemFont != items.m_itemFont)
++        return false;
++
++    size_t i;
++    for (i = 0; i < m_items.GetCount(); i++)
++    {
++        if (!(m_items[i] == items.m_items[i]))
++            return false;
++    }
++
++    return true;
++}
++
++void wxSwitcherItems::Init()
++{
++    m_selection = -1;
++    m_rowCount = 10;
++    m_columnCount = 0;
++
++#if defined(__WXMSW__) && wxUSE_UXTHEME
++    // If on Windows XP/Vista, use more appropriate colours.
++    if (wxUxThemeEngine::GetIfActive())
++    {
++        SetSelectionOutlineColour(wxColour(49, 106, 197));
++        SetSelectionColour(wxColour(193,210, 238));
++    }
++#endif
++}
++
++void wxSwitcherItems::Copy(const wxSwitcherItems& items)
++{
++    Clear();
++
++    size_t i;
++    for (i = 0; i < items.m_items.GetCount(); i++)
++    {
++        m_items.Add(items.m_items[i]);
++    }
++
++    m_selection = items.m_selection;
++    m_rowCount = items.m_rowCount;
++    m_columnCount = items.m_columnCount;
++
++    m_backgroundColour = items.m_backgroundColour;
++    m_textColour = items.m_textColour;
++    m_selectionColour = items.m_selectionColour;
++    m_selectionOutlineColour = items.m_selectionOutlineColour;
++    m_itemFont = items.m_itemFont;
++}
++
++wxSwitcherItem& wxSwitcherItems::AddItem(const wxString& title, const wxString& name, int id, const wxBitmap& bitmap)
++{
++    wxSwitcherItem item;
++    item.SetTitle(title);
++    item.SetName(name);
++    item.SetId(id);
++    item.SetBitmap(bitmap);
++
++    return AddItem(item);
++}
++
++wxSwitcherItem& wxSwitcherItems::AddItem(const wxSwitcherItem& item)
++{
++    m_items.Add(item);
++    return m_items[GetItemCount() - 1];
++}
++
++wxSwitcherItem& wxSwitcherItems::AddGroup(const wxString& title, const wxString& name, int id, const wxBitmap& bitmap)
++{
++    wxSwitcherItem& item = AddItem(title, name, id, bitmap);
++    item.SetIsGroup(true);
++
++    return item;
++}
++
++void wxSwitcherItems::Clear()
++{
++    m_items.Clear();
++}
++
++int wxSwitcherItems::FindItemByName(const wxString& name) const
++{
++    size_t i;
++    for (i = 0; i < m_items.GetCount(); i++)
++    {
++        if (m_items[i].GetName() == name)
++            return i;
++    }
++
++    return -1;
++}
++
++int wxSwitcherItems::FindItemById(int id) const
++{
++    size_t i;
++    for (i = 0; i < m_items.GetCount(); i++)
++    {
++        if (m_items[i].GetId() == id)
++            return i;
++    }
++
++    return -1;
++}
++
++void wxSwitcherItems::SetSelection(int sel)
++{
++    m_selection = sel;
++}
++
++void wxSwitcherItems::SetSelection(const wxString& name)
++{
++    int idx = FindItemByName(name);
++    if (idx != -1)
++        SetSelection(idx);
++}
++
++const wxSwitcherItem& wxSwitcherItems::GetItem(int i) const
++{
++    return m_items[i];
++}
++
++wxSwitcherItem& wxSwitcherItems::GetItem(int i)
++{
++    return m_items[i];
++}
++
++void wxSwitcherItems::PaintItems(wxDC& dc, wxWindow* win)
++{
++    wxColour backgroundColour = wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE);
++    wxColour standardTextColour = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
++    wxColour selectionColour = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT);
++    wxColour selectionOutlineColour = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
++    wxFont standardFont = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
++    wxFont groupFont = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
++    groupFont.SetWeight(wxBOLD);
++
++    if (GetBackgroundColour().Ok())
++        backgroundColour = GetBackgroundColour();
++
++    if (GetTextColour().Ok())
++        standardTextColour = GetTextColour();
++
++    if (GetSelectionColour().Ok())
++        selectionColour = GetSelectionColour();
++
++    if (GetSelectionOutlineColour().Ok())
++        selectionOutlineColour = GetSelectionOutlineColour();
++
++    if (GetItemFont().Ok())
++    {
++        standardFont = GetItemFont();   
++        groupFont = wxFont(standardFont.GetPointSize(), standardFont.GetFamily(), standardFont.GetStyle(),
++            wxBOLD, standardFont.GetUnderlined(), standardFont.GetFaceName());
++    }
++
++    int textMarginX = wxSWITCHER_TEXT_MARGIN_X;
++
++    dc.SetLogicalFunction(wxCOPY);
++    dc.SetBrush(wxBrush(backgroundColour));
++    dc.SetPen(*wxTRANSPARENT_PEN);
++    dc.DrawRectangle(win->GetClientRect());
++    dc.SetBackgroundMode(wxTRANSPARENT);
++
++    size_t i;
++    for (i = 0; i < m_items.GetCount(); i++)
++    {
++        wxSwitcherItem& item = m_items[i];
++        bool selected = ((int) i == m_selection);
++
++        if (selected)
++        {
++            dc.SetPen(wxPen(selectionOutlineColour));
++            dc.SetBrush(wxBrush(selectionColour));
++            dc.DrawRectangle(item.GetRect());
++        }
++
++        wxRect clippingRect(item.GetRect());
++        clippingRect.Deflate(1, 1);
++
++        dc.SetClippingRegion(clippingRect);
++
++        if (item.GetTextColour().Ok())
++            dc.SetTextForeground(item.GetTextColour());
++        else
++            dc.SetTextForeground(standardTextColour);
++        
++        if (item.GetFont().Ok())
++            dc.SetFont(item.GetFont());
++        else
++        {
++            if (item.GetIsGroup())
++                dc.SetFont(groupFont);
++            else
++                dc.SetFont(standardFont);
++        }
++
++        int w, h;
++        dc.GetTextExtent(item.GetTitle(), & w, & h);
++
++        int x = item.GetRect().x;
++
++        x += textMarginX;
++
++        if (!item.GetIsGroup())
++        {
++            if (item.GetBitmap().Ok() && item.GetBitmap().GetWidth() <= 16 && item.GetBitmap().GetHeight() <= 16)
++            {
++                dc.DrawBitmap(item.GetBitmap(), x, item.GetRect().y + (item.GetRect().height - item.GetBitmap().GetHeight()) / 2, true);
++            }
++
++            x += 16;
++
++            x += textMarginX;
++        }
++
++        int y = item.GetRect().y + (item.GetRect().height - h)/2;
++        dc.DrawText(item.GetTitle(), x, y);
++
++        dc.DestroyClippingRegion();
++    }
++}
++
++wxSize wxSwitcherItems::CalculateItemSize(wxDC& dc)
++{
++    // Start off allowing for an icon
++    wxSize sz(150, 16);
++    wxFont standardFont = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
++    wxFont groupFont = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
++    groupFont.SetWeight(wxBOLD);
++
++    int textMarginX = wxSWITCHER_TEXT_MARGIN_X;
++    int textMarginY = wxSWITCHER_TEXT_MARGIN_Y;
++    int maxWidth = 300;
++    int maxHeight = 40;
++
++    if (GetItemFont().Ok())
++        standardFont = GetItemFont();   
++
++    size_t i;
++    for (i = 0; i < m_items.GetCount(); i++)
++    {
++        wxSwitcherItem& item = m_items[i];
++
++        if (item.GetFont().Ok())
++            dc.SetFont(item.GetFont());
++        else
++        {
++            if (item.GetIsGroup())
++                dc.SetFont(groupFont);
++            else
++                dc.SetFont(standardFont);
++        }
++
++        int w, h;
++        dc.GetTextExtent(item.GetTitle(), & w, & h);
++
++        w += 16 + 2*textMarginX;
++
++        if (w > sz.x)
++            sz.x = wxMin(w, maxWidth);
++        if (h > sz.y)
++            sz.y = wxMin(h, maxHeight);
++    }
++
++    if (sz == wxSize(16, 16))
++        sz = wxSize(100, 25);
++    else
++    {
++        sz.x += textMarginX*2;
++        sz.y += textMarginY*2;
++    }
++
++    return sz;
++}
++
++// Find the index for the item associated with the current focus
++int wxSwitcherItems::GetIndexForFocus() const
++{
++    for (size_t i = 0; i < m_items.GetCount(); i++)
++    {
++        wxSwitcherItem& item = m_items[i];
++        if (item.GetWindow())
++        {
++            if (wxFindFocusDescendant(item.GetWindow()))
++                return i;
++        }
++    }
++
++    return wxNOT_FOUND;
++}
++
++/*
++ * A control for displaying several columns (not scrollable)
++ */
++
++BEGIN_EVENT_TABLE(wxMultiColumnListCtrl, wxControl)
++    EVT_PAINT(wxMultiColumnListCtrl::OnPaint)
++    EVT_ERASE_BACKGROUND(wxMultiColumnListCtrl::OnEraseBackground)
++    EVT_MOUSE_EVENTS(wxMultiColumnListCtrl::OnMouseEvent)
++    EVT_CHAR(wxMultiColumnListCtrl::OnChar)
++    EVT_KEY_DOWN(wxMultiColumnListCtrl::OnKey)
++    EVT_KEY_UP(wxMultiColumnListCtrl::OnKey)
++END_EVENT_TABLE()
++
++IMPLEMENT_CLASS(wxMultiColumnListCtrl, wxControl)
++
++wxMultiColumnListCtrl::wxMultiColumnListCtrl(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
++{
++    Init();
++
++    Create(parent, id, pos, size, style);
++}
++
++bool wxMultiColumnListCtrl::Create(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
++{
++    wxControl::Create(parent, id, pos, size, style);
++
++    SetInitialBestSize(size);
++
++    return true;
++}
++
++// Overrides
++wxSize wxMultiColumnListCtrl::DoGetBestSize() const
++{
++    return m_overallSize;
++}
++
++void wxMultiColumnListCtrl::OnEraseBackground(wxEraseEvent& WXUNUSED(event))
++{
++    // Do nothing
++}
++
++void wxMultiColumnListCtrl::OnPaint(wxPaintEvent& WXUNUSED(event))
++{
++#if wxSWITCHER_USE_BUFFERED_PAINTING
++    wxBufferedPaintDC dc(this);
++#else
++    wxPaintDC dc(this);
++#endif
++
++    wxRect rect = GetClientRect();
++
++    if (m_items.GetColumnCount() == 0)
++        CalculateLayout(dc);
++
++    if (m_items.GetColumnCount() == 0)
++        return;
++
++    m_items.PaintItems(dc, this);
++}
++
++void wxMultiColumnListCtrl::OnMouseEvent(wxMouseEvent& event)
++{
++    if (event.LeftDown())
++    {
++        SetFocus();
++    }
++}
++
++void wxMultiColumnListCtrl::OnChar(wxKeyEvent& WXUNUSED(event))
++{
++}
++
++void wxMultiColumnListCtrl::OnKey(wxKeyEvent& event)
++{
++    if (event.GetEventType() == wxEVT_KEY_UP)
++    {
++        if (event.GetKeyCode() == GetModifierKey())
++        {
++            wxWindow* topLevel = GetParent();
++            while (topLevel && !topLevel->IsTopLevel())
++                topLevel = topLevel->GetParent();
++            
++            if (topLevel)
++            {
++                wxCloseEvent closeEvent(wxEVT_CLOSE_WINDOW, topLevel->GetId());
++                closeEvent.SetEventObject(topLevel);
++                closeEvent.SetCanVeto(false);
++                
++                topLevel->GetEventHandler()->ProcessEvent(closeEvent);
++                return;
++            }
++        }
++        event.Skip();
++        return;
++    }
++
++    if (event.GetKeyCode() == WXK_ESCAPE || event.GetKeyCode() == WXK_RETURN)
++    {
++        if (event.GetKeyCode() == WXK_ESCAPE)
++            m_items.SetSelection(-1);
++
++        wxWindow* topLevel = GetParent();
++        while (topLevel && !topLevel->IsTopLevel())
++            topLevel = topLevel->GetParent();
++
++        if (topLevel)
++        {
++            wxCloseEvent closeEvent(wxEVT_CLOSE_WINDOW, topLevel->GetId());
++            closeEvent.SetEventObject(topLevel);
++            closeEvent.SetCanVeto(false);
++
++            topLevel->GetEventHandler()->ProcessEvent(closeEvent);
++            return;
++        }
++    }
++    else if (event.GetKeyCode() == WXK_TAB || event.GetKeyCode() == GetExtraNavigationKey())
++    {
++        if (event.ShiftDown())
++        {
++            m_items.SetSelection(m_items.GetSelection() - 1);
++            if (m_items.GetSelection() < 0)
++                m_items.SetSelection(m_items.GetItemCount() - 1);
++
++            AdvanceToNextSelectableItem(-1);
++        }
++        else
++        {
++            m_items.SetSelection(m_items.GetSelection() + 1);
++            if (m_items.GetSelection() >= m_items.GetItemCount())
++                m_items.SetSelection(0);
++
++            AdvanceToNextSelectableItem(1);
++        }
++
++        GenerateSelectionEvent();
++
++        Refresh();
++    }
++    else if (event.GetKeyCode() == WXK_DOWN || event.GetKeyCode() == WXK_NUMPAD_DOWN)
++    {
++        m_items.SetSelection(m_items.GetSelection() + 1);
++        if (m_items.GetSelection() >= m_items.GetItemCount())
++            m_items.SetSelection(0);
++        
++        AdvanceToNextSelectableItem(1);
++
++        GenerateSelectionEvent();
++        
++        Refresh();
++    }
++    else if (event.GetKeyCode() == WXK_UP || event.GetKeyCode() == WXK_NUMPAD_UP)
++    {
++        m_items.SetSelection(m_items.GetSelection() - 1);
++        if (m_items.GetSelection() < 0)
++            m_items.SetSelection(m_items.GetItemCount() - 1);
++        
++        AdvanceToNextSelectableItem(-1);
++
++        GenerateSelectionEvent();
++        
++        Refresh();
++    }
++    else if (event.GetKeyCode() == WXK_HOME || event.GetKeyCode() == WXK_NUMPAD_HOME)
++    {
++        m_items.SetSelection(0);
++        
++        AdvanceToNextSelectableItem(1);
++
++        GenerateSelectionEvent();
++        
++        Refresh();
++    }
++    else if (event.GetKeyCode() == WXK_END || event.GetKeyCode() == WXK_NUMPAD_END)
++    {
++        m_items.SetSelection(m_items.GetItemCount() - 1);
++        
++        AdvanceToNextSelectableItem(-1);
++
++        GenerateSelectionEvent();
++        
++        Refresh();
++    }
++    else if (event.GetKeyCode() == WXK_LEFT || event.GetKeyCode() == WXK_NUMPAD_LEFT)
++    {
++        wxSwitcherItem& item = m_items.GetItem(m_items.GetSelection());
++
++        int row = item.GetRowPos();
++        int newCol = item.GetColPos() - 1;
++        if (newCol < 0)
++            newCol = (m_items.GetColumnCount() - 1);
++
++        // Find the first item from the end whose row matches and whose column is equal or lower
++        int i;
++        for (i = m_items.GetItemCount()-1; i >= 0; i--)
++        {
++            wxSwitcherItem& item2 = m_items.GetItem(i);
++            if (item2.GetColPos() == newCol && item2.GetRowPos() <= row)
++            {
++                m_items.SetSelection(i);
++                break;
++            }
++        }
++
++        AdvanceToNextSelectableItem(-1);
++
++        GenerateSelectionEvent();
++        
++        Refresh();
++    }
++    else if (event.GetKeyCode() == WXK_RIGHT || event.GetKeyCode() == WXK_NUMPAD_RIGHT)
++    {
++        wxSwitcherItem& item = m_items.GetItem(m_items.GetSelection());
++
++        int row = item.GetRowPos();
++        int newCol = item.GetColPos() + 1;
++        if (newCol >= m_items.GetColumnCount())
++            newCol = 0;
++
++        // Find the first item from the end whose row matches and whose column is equal or lower
++        int i;
++        for (i = m_items.GetItemCount()-1; i >= 0; i--)
++        {
++            wxSwitcherItem& item2 = m_items.GetItem(i);
++            if (item2.GetColPos() == newCol && item2.GetRowPos() <= row)
++            {
++                m_items.SetSelection(i);
++                break;
++            }
++        }
++
++        AdvanceToNextSelectableItem(1);
++
++        GenerateSelectionEvent();
++        
++        Refresh();
++    }
++    else
++        event.Skip();
++}
++
++// Advance to the next selectable item
++void wxMultiColumnListCtrl::AdvanceToNextSelectableItem(int direction)
++{
++    if (m_items.GetItemCount() < 2)
++        return;
++
++    if (m_items.GetSelection() == -1)
++        m_items.SetSelection(0);
++
++    int oldSel = m_items.GetSelection();
++
++    while (true)
++    {
++        if (m_items.GetItem(m_items.GetSelection()).GetIsGroup())
++        {
++            m_items.SetSelection(m_items.GetSelection() + direction);
++            if (m_items.GetSelection() == -1)
++                m_items.SetSelection(m_items.GetItemCount()-1);
++            else if (m_items.GetSelection() == m_items.GetItemCount())
++                m_items.SetSelection(0);
++
++            if (m_items.GetSelection() == oldSel)
++                break;
++        }
++        else
++            break;
++    }
++}
++
++
++void wxMultiColumnListCtrl::GenerateSelectionEvent()
++{
++    wxCommandEvent event(wxEVT_COMMAND_LISTBOX_SELECTED, GetId());
++    event.SetEventObject(this);
++    event.SetInt(m_items.GetSelection());
++
++    GetEventHandler()->ProcessEvent(event);
++}
++
++void wxMultiColumnListCtrl::CalculateLayout()
++{
++    wxClientDC dc(this);
++    CalculateLayout(dc);
++}
++
++void wxMultiColumnListCtrl::CalculateLayout(wxDC& dc)
++{
++    if (m_items.GetSelection() == -1)
++        m_items.SetSelection(0);
++
++    int columnCount = 1;
++
++    // Spacing between edge of window or between columns
++    int xMargin = 4;
++    int yMargin = 4;
++
++    // Inter-row spacing
++    int rowSpacing = 2;
++
++    wxSize itemSize = m_items.CalculateItemSize(dc);
++    m_overallSize = wxSize(350, 200);
++
++    size_t i;
++    int currentRow = 0;
++    int x = xMargin;
++    int y = yMargin;
++
++    bool breaking = false;
++
++    for (i = 0; i < (size_t) m_items.GetItemCount(); i++)
++    {
++        wxSize oldOverallSize = m_overallSize;
++
++        m_items.GetItem(i).SetRect(wxRect(x, y, itemSize.x, itemSize.y));
++        m_items.GetItem(i).SetColPos(columnCount-1);
++        m_items.GetItem(i).SetRowPos(currentRow);
++
++        if (m_items.GetItem(i).GetRect().GetBottom() > m_overallSize.y)
++            m_overallSize.y = m_items.GetItem(i).GetRect().GetBottom() + yMargin;
++
++        if (m_items.GetItem(i).GetRect().GetRight() > m_overallSize.x)
++            m_overallSize.x = m_items.GetItem(i).GetRect().GetRight() + xMargin;
++
++        currentRow ++;
++
++        y += (rowSpacing + itemSize.y);
++
++        bool stopBreaking = breaking;
++
++        if ((currentRow > m_items.GetRowCount()) || (m_items.GetItem(i).GetBreakColumn() && !breaking && (currentRow != 1)))
++        {
++            currentRow = 0;
++            columnCount ++;
++            x += (xMargin + itemSize.x);
++            y = yMargin;
++
++            // Make sure we don't orphan a group
++            if (m_items.GetItem(i).GetIsGroup() || (m_items.GetItem(i).GetBreakColumn() && !breaking))
++            {
++                m_overallSize = oldOverallSize;
++
++                if (m_items.GetItem(i).GetBreakColumn())
++                    breaking = true;
++
++                // Repeat the last item, in the next column
++                i --;
++            }
++        }
++
++        if (stopBreaking)
++            breaking = false;
++    }
++
++    m_items.SetColumnCount(columnCount);
++
++    InvalidateBestSize();
++}
++
++void wxMultiColumnListCtrl::Init()
++{
++    m_overallSize = wxSize(200, 100);
++    m_modifierKey = WXK_CONTROL;
++    m_extraNavigationKey = 0;
++}
++
++/*!
++ * wxSwitcherDialog shows a wxMultiColumnListCtrl with a list of panes
++ * and tabs for the user to choose. Ctrl+Tab cycles through them.
++ */
++
++BEGIN_EVENT_TABLE(wxSwitcherDialog, wxDialog)
++    EVT_CLOSE(wxSwitcherDialog::OnCloseWindow)
++    EVT_ACTIVATE(wxSwitcherDialog::OnActivate)
++    EVT_LISTBOX(wxID_ANY, wxSwitcherDialog::OnSelectItem)
++    EVT_PAINT(wxSwitcherDialog::OnPaint)
++END_EVENT_TABLE()
++
++wxSwitcherDialog::wxSwitcherDialog( const wxSwitcherItems& items, wxWindow *parent, wxWindowID id,
++        const wxString& title, const wxPoint &position, const wxSize& size, long style )
++{
++    Init();
++
++    Create(items, parent, id, title, position, size, style);
++}
++
++bool wxSwitcherDialog::Create( const wxSwitcherItems& items, wxWindow *parent, wxWindowID id,
++        const wxString& title, const wxPoint &position, const wxSize& size, long style )
++{
++    m_switcherBorderStyle = (style & wxBORDER_MASK);
++    if (m_switcherBorderStyle == wxBORDER_NONE)
++        m_switcherBorderStyle = wxBORDER_SIMPLE;
++
++    style &= wxBORDER_MASK;
++    style |= wxBORDER_NONE;
++
++    wxDialog::Create( parent, id, title, position, size, style );
++
++    m_listCtrl = new wxMultiColumnListCtrl();
++    m_listCtrl->SetItems(items);
++    m_listCtrl->Create(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS|wxNO_BORDER);
++    m_listCtrl->CalculateLayout();
++
++    if (m_extraNavigationKey != -1)
++        m_listCtrl->SetExtraNavigationKey(m_extraNavigationKey);
++
++    if (m_modifierKey != -1)
++        m_listCtrl->SetModifierKey(m_modifierKey);
++
++    int borderStyle = wxSIMPLE_BORDER;
++
++    borderStyle = wxBORDER_NONE;
++#if defined(__WXMSW__) && wxCHECK_VERSION(2,8,5)
++    // borderStyle = wxBORDER_THEME;
++#endif
++
++    m_descriptionCtrl = new wxHtmlWindow(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 100), borderStyle);
++    m_descriptionCtrl->SetHTMLBackgroundColour(GetBackgroundColour());
++
++#ifdef __WXGTK20__
++    int fontSize = 11;
++    m_descriptionCtrl->SetStandardFonts(fontSize);
++#endif
++
++    wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
++    SetSizer(sizer);
++
++    sizer->Add(m_listCtrl, 1, wxALL|wxEXPAND, 10);
++    sizer->Add(m_descriptionCtrl, 0, wxALL|wxEXPAND, 10);
++
++    sizer->SetSizeHints(this);
++
++    m_listCtrl->SetFocus();
++
++    Centre(wxBOTH);
++
++    if (m_listCtrl->GetItems().GetSelection() == -1)
++        m_listCtrl->GetItems().SetSelection(0);
++
++    m_listCtrl->AdvanceToNextSelectableItem(1);
++
++    ShowDescription(m_listCtrl->GetItems().GetSelection());
++
++    return true;
++}
++
++void wxSwitcherDialog::Init()
++{
++    m_listCtrl = NULL;
++    m_descriptionCtrl = NULL;
++    m_closing = false;
++    m_switcherBorderStyle = 0;
++
++    m_modifierKey = -1;
++    m_extraNavigationKey = -1;
++
++#if defined(__WXMSW__) && wxUSE_UXTHEME
++    if (wxUxThemeEngine::GetIfActive())
++        m_borderColour = wxColour(49, 106, 197);
++    else
++#endif
++    m_borderColour = *wxBLACK;
++}
++
++void wxSwitcherDialog::OnCloseWindow(wxCloseEvent& WXUNUSED(event))
++{
++    if (m_closing)
++        return;
++
++    if (IsModal())
++    {
++        m_closing = true;
++
++        if (GetSelection() == -1)
++            EndModal(wxID_CANCEL);
++        else
++            EndModal(wxID_OK);
++    }
++}
++
++// Get the selected item
++int wxSwitcherDialog::GetSelection() const
++{
++    return m_listCtrl->GetItems().GetSelection();
++}
++
++void wxSwitcherDialog::OnActivate(wxActivateEvent& event)
++{
++    if (!event.GetActive())
++    {
++        if (!m_closing)
++        {
++            m_closing = true;
++            EndModal(wxID_CANCEL);
++        }
++    }
++}
++
++void wxSwitcherDialog::OnPaint(wxPaintEvent& WXUNUSED(event))
++{
++    wxPaintDC dc(this);
++
++    if (m_switcherBorderStyle == wxBORDER_SIMPLE)
++    {
++        dc.SetPen(wxPen(m_borderColour));
++        dc.SetBrush(*wxTRANSPARENT_BRUSH);
++
++        wxRect rect(GetClientRect());
++        dc.DrawRectangle(rect);
++
++        // Draw border around the HTML control
++        rect = m_descriptionCtrl->GetRect();
++        rect.Inflate(1,1);
++        dc.DrawRectangle(rect);
++    }
++}
++
++void wxSwitcherDialog::OnSelectItem(wxCommandEvent& event)
++{
++    ShowDescription(event.GetSelection());
++}
++
++// Convert a colour to a 6-digit hex string
++static wxString ColourToHexString(const wxColour& col)
++{
++    wxString hex;
++
++    hex += wxDecToHex(col.Red());
++    hex += wxDecToHex(col.Green());
++    hex += wxDecToHex(col.Blue());
++
++    return hex;
++}
++
++
++void wxSwitcherDialog::ShowDescription(int i)
++{
++    wxSwitcherItem& item = m_listCtrl->GetItems().GetItem(i);
++
++    wxColour colour = m_listCtrl->GetItems().GetBackgroundColour();
++    if (!colour.Ok())
++        colour = GetBackgroundColour();
++
++    wxString backgroundColourHex = ColourToHexString(colour);
++
++    wxString html = wxT("<body bgcolor=\"#") + backgroundColourHex + wxT("\"><b>") + item.GetTitle() + wxT("</b>");
++
++    if (!item.GetDescription().IsEmpty())
++    {
++        html += wxT("<p>");
++        html += item.GetDescription();
++    }
++
++    html += wxT("</body>");
++
++    m_descriptionCtrl->SetPage(html);
++}
++
++void wxSwitcherDialog::SetExtraNavigationKey(int keyCode)
++{
++    m_extraNavigationKey = keyCode;
++    if (m_listCtrl)
++        m_listCtrl->SetExtraNavigationKey(keyCode);
++}
++
++void wxSwitcherDialog::SetModifierKey(int modifierKey)
++{
++    m_modifierKey = modifierKey;
++    if (m_listCtrl)
++        m_listCtrl->SetModifierKey(modifierKey);
++}
+Index: src/src/app.cpp
+===================================================================
+--- src/src/app.cpp	(revision 5189)
++++ src/src/app.cpp	(working copy)
+@@ -23,7 +23,7 @@
+ #include <wx/clipbrd.h>
+ #include <wx/taskbar.h>
+ 
+-#include <wx/wxFlatNotebook/wxFlatNotebook.h>
++#include <wx/aui/auibook.h>
+ #include <cbexception.h>
+ #include <wx/debugrpt.h>
+ #include <configmanager.h>
+Index: src/src/environmentsettingsdlg.h
+===================================================================
+--- src/src/environmentsettingsdlg.h	(revision 5189)
++++ src/src/environmentsettingsdlg.h	(working copy)
+@@ -25,9 +25,7 @@
+         void OnPageChanged(wxListbookEvent& event);
+         void OnSetAssocs(wxCommandEvent& event);
+         void OnManageAssocs(wxCommandEvent& event);
+-        void OnNbDefaults(wxCommandEvent& event);
+         void OnChooseColour(wxCommandEvent& event);
+-        void OnUpdateUI(wxUpdateUIEvent& event);
+         void OnPlaceCheck(wxCommandEvent& event);
+         void OnHeadCheck(wxCommandEvent& event);
+         void OnAutoHide(wxCommandEvent& event);
+Index: src/src/notebookstyles.cpp
+===================================================================
+--- src/src/notebookstyles.cpp	(revision 0)
++++ src/src/notebookstyles.cpp	(revision 0)
+@@ -0,0 +1,177 @@
++/*
++ * This file is part of the Code::Blocks IDE and licensed under the GNU General Public License, version 3
++ * http://www.gnu.org/licenses/gpl-3.0.html
++ */
++
++#include <wx/dc.h>
++#include <wx/window.h>
++#include <wx/gdicmn.h>
++#include <wx/string.h>
++#include <wx/settings.h>
++#include <wx/dcclient.h>
++#include <wx/aui/auibook.h>
++#include "notebookstyles.h"
++
++// Some general constants:
++namespace
++{
++    const int c_vertical_border_padding = 4;
++}
++
++/******************************************************************************
++* Renderer for Microsoft (tm) Visual Studio 7.1 like tabs                     *
++******************************************************************************/
++
++NbStyleVC71::NbStyleVC71() : wxAuiDefaultTabArt()
++{
++}
++
++wxAuiTabArt* NbStyleVC71::Clone()
++{
++    NbStyleVC71* clone = new NbStyleVC71();
++    
++    clone->SetNormalFont(m_normal_font);
++    clone->SetSelectedFont(m_selected_font);
++    clone->SetMeasuringFont(m_measuring_font);
++    
++    return clone;
++}
++
++void NbStyleVC71::DrawTab(wxDC& dc, wxWindow* wnd,
++                            const wxAuiNotebookPage& page,
++                            const wxRect& in_rect, int close_button_state,
++                            wxRect* out_tab_rect, wxRect* out_button_rect,
++                            int* x_extent)
++{
++    // if the caption is empty, measure some temporary text
++    wxString caption = page.caption;
++    if (caption.empty())
++        caption = wxT("Xj");
++
++    wxCoord textx;
++    wxCoord texty;
++    if (page.active)
++        dc.SetFont(m_selected_font);
++    else
++        dc.SetFont(m_normal_font);
++    dc.GetTextExtent(caption, &textx, &texty);
++    
++    // Visual studio 7.1 style
++    // This code is based on the renderer included in wxFlatNotebook:
++    // http://svn.berlios.de/wsvn/codeblocks/trunk/src/sdk/wxFlatNotebook/src/wxFlatNotebook/renderer.cpp?rev=5106
++    wxPen borderPen = wxPen(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW));
++
++    // figure out the size of the tab
++    wxSize tab_size = GetTabSize(dc, wnd, page.caption, wxNullBitmap,
++                                    page.active, close_button_state, x_extent);
++
++    wxCoord tab_height = m_tab_ctrl_height - 3;
++    wxCoord tab_width = tab_size.x;
++    wxCoord tab_x = in_rect.x;
++    wxCoord tab_y = in_rect.y + in_rect.height - tab_height;
++    int clip_width = tab_width;
++    if (tab_x + clip_width > in_rect.x + in_rect.width - 4)
++        clip_width = (in_rect.x + in_rect.width) - tab_x - 4;
++    dc.SetClippingRegion(tab_x, tab_y, clip_width + 1, tab_height - 3);
++    
++    dc.SetPen((page.active) ? wxPen(wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE)) : borderPen);
++    dc.SetBrush((page.active) ? wxBrush(wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE)) : wxBrush(wxColour(247, 243, 233)));
++
++    if (page.active)
++    {
++        int tabH = (m_flags & wxAUI_NB_BOTTOM) ? tab_height - 5 : tab_height - 3;
++
++        dc.DrawRectangle(tab_x, tab_y, tab_width, tabH);
++
++        // Draw a black line on the left side of the
++        // rectangle
++        wxPen pen = wxPen(*wxBLACK);
++        dc.SetPen(pen);
++
++        int blackLineY1 = c_vertical_border_padding;
++        int blackLineY2 = tabH;
++        dc.DrawLine(tab_x + tab_width, blackLineY1, tab_x + tab_width, blackLineY2);
++
++        // To give the tab more 3D look we do the following
++        // Incase the tab is on top,
++        // Draw a thik white line on topof the rectangle
++        // Otherwise, draw a thin (1 pixel) black line at the bottom
++        pen = wxPen((m_flags & wxAUI_NB_BOTTOM) ? *wxBLACK : *wxWHITE);
++        dc.SetPen(pen);
++        int whiteLinePosY = (m_flags & wxAUI_NB_BOTTOM) ? blackLineY2 : c_vertical_border_padding ;
++        dc.DrawLine(tab_x, whiteLinePosY, tab_x + tab_width + 1, whiteLinePosY);
++
++        // Draw a white vertical line to the left of the tab
++        dc.SetPen(*wxWHITE_PEN);
++        if (m_flags & wxAUI_NB_BOTTOM)
++            blackLineY2 += 1;
++        dc.DrawLine(tab_x, blackLineY1, tab_x, blackLineY2);
++    }
++    else
++    {
++        // We dont draw a rectangle for non selected tabs, but only
++        // vertical line on the left
++        int blackLineY1 = (m_flags & wxAUI_NB_BOTTOM) ? c_vertical_border_padding + 2 : c_vertical_border_padding + 1;
++        int blackLineY2 = tab_height - 5;
++        dc.DrawLine(tab_x + tab_width, blackLineY1, tab_x + tab_width, blackLineY2);
++    }
++
++    wxPoint border_points[2];
++    if (m_flags & wxAUI_NB_BOTTOM)
++    {
++        border_points[0] = wxPoint(tab_x, tab_y);
++        border_points[1] = wxPoint(tab_x, tab_y + tab_height - 6);
++    }
++    else // if (m_flags & wxAUI_NB_TOP)
++    {
++        border_points[0] = wxPoint(tab_x, tab_y + tab_height - 4);
++        border_points[1] = wxPoint(tab_x, tab_y + 2);
++    }
++
++    int drawn_tab_yoff = border_points[1].y;
++    int drawn_tab_height = border_points[0].y - border_points[1].y;    
++    int text_offset = tab_x + 8;
++
++    // draw tab text
++    dc.DrawText(page.caption, text_offset,
++                drawn_tab_yoff + drawn_tab_height / 2 - texty / 2 - 1);
++
++    // draw 'x' on tab (if enabled)
++    if (close_button_state != wxAUI_BUTTON_STATE_HIDDEN)
++    {
++        int close_button_width = m_active_close_bmp.GetWidth();
++        wxBitmap bmp = m_disabled_close_bmp;
++        
++        if ((close_button_state == wxAUI_BUTTON_STATE_HOVER) ||
++                    (close_button_state == wxAUI_BUTTON_STATE_PRESSED))
++            bmp = m_active_close_bmp;
++
++        wxRect rect(tab_x + tab_width - close_button_width - 3,
++                    drawn_tab_yoff + (drawn_tab_height / 2) - (bmp.GetHeight() / 2),
++                    close_button_width, tab_height);
++
++        // Indent the button if it is pressed down:
++        if (close_button_state == wxAUI_BUTTON_STATE_PRESSED)
++        {
++            rect.x++;
++            rect.y++;
++        }
++        dc.DrawBitmap(bmp, rect.x, rect.y, true);
++        *out_button_rect = rect;
++    }
++
++    *out_tab_rect = wxRect(tab_x, tab_y, tab_width, tab_height);
++    dc.DestroyClippingRegion();
++}
++
++int NbStyleVC71::GetBestTabCtrlSize(wxWindow* wnd,
++                                    const wxAuiNotebookPageArray& WXUNUSED(pages),
++                                    const wxSize& WXUNUSED(required_bmp_size))
++{
++    wxClientDC dc(wnd);
++    dc.SetFont(m_measuring_font);
++    int x_ext = 0;
++    wxSize s = GetTabSize(dc, wnd, wxT("ABCDEFGHIj"), wxNullBitmap, true,
++                            wxAUI_BUTTON_STATE_HIDDEN, &x_ext);
++    return s.y + 4;
++}
+Index: src/src/Makefile.am
+===================================================================
+--- src/src/Makefile.am	(revision 5189)
++++ src/src/Makefile.am	(working copy)
+@@ -5,7 +5,6 @@
+ 			-I$(top_srcdir)/src/include \
+ 			-I$(top_srcdir)/src/include/scripting/include \
+ 			-I$(top_srcdir)/src/include/scripting/sqplus \
+-			-I$(top_srcdir)/src/include/wxFlatNotebook/include \
+ 			-I$(top_srcdir)/src/src/wxAUI
+ 
+ if CODEBLOCKS_LINUX
+@@ -36,12 +35,14 @@
+ 			environmentsettingsdlg.cpp \
+ 			infopane.cpp \
+ 			main.cpp \
++			notebookstyles.cpp \
+ 			prefix.cpp \
+ 			printdlg.cpp \
+ 			scriptconsole.cpp \
+ 			scriptingsettingsdlg.cpp \
+ 			splashscreen.cpp \
+-			startherepage.cpp
++			startherepage.cpp \
++			switcherdlg.cpp
+ 
+ noinst_HEADERS = app.h \
+ 			appglobals.h \
+@@ -54,12 +55,14 @@
+ 			environmentsettingsdlg.h \
+ 			infopane.h \
+ 			main.h \
++			notebookstyles.h \
+ 			prefix.h \
+ 			printdlg.h \
+ 			scriptconsole.h \
+ 			scriptingsettingsdlg.h \
+ 			splashscreen.h \
+-			startherepage.h
++			startherepage.h \
++			switcherdlg.h
+ 
+ man_MANS = codeblocks.1
+ 
+Index: src/src/main.h
+===================================================================
+--- src/src/main.h	(revision 5189)
++++ src/src/main.h	(working copy)
+@@ -38,7 +38,7 @@
+ extern int idStartHerePageLink;
+ extern int idStartHerePageVarSubst;
+ 
+-class wxFlatNotebook;
++class wxAuiNotebook;
+ class InfoPane;
+ class wxGauge;
+ 
+@@ -187,6 +187,7 @@
+         void OnToggleBar(wxCommandEvent& event);
+         void OnToggleStatusBar(wxCommandEvent& event);
+         void OnFocusEditor(wxCommandEvent& event);
++        void OnSwitchTabs(wxCommandEvent& event);
+         void OnToggleFullScreen(wxCommandEvent& event);
+ 
+         // plugin events
+@@ -285,7 +286,7 @@
+         void DoUpdateLayout();
+         void DoUpdateLayoutColours();
+         void DoUpdateEditorStyle();
+-        void DoUpdateEditorStyle(wxFlatNotebook* target, const wxString& prefix, long defaultStyle);
++        void DoUpdateEditorStyle(wxAuiNotebook* target, const wxString& prefix, long defaultStyle);
+ 
+         void ShowHideStartPage(bool forceHasProject = false);
+         void ShowHideScriptConsole();
+Index: src/src/resources/main_menu.xrc
+===================================================================
+--- src/src/resources/main_menu.xrc	(revision 5189)
++++ src/src/resources/main_menu.xrc	(working copy)
+@@ -527,6 +527,11 @@
+         <label>Focus editor</label>
+         <help>Set focus on the active editor</help>
+       </object>
++      <object class="wxMenuItem" name="idViewSwitchTabs">
++        <label>S&amp;witch Tabs</label>
++        <accel>Ctrl+Tab</accel>
++        <help>Switch between open editor tabs</help>
++      </object>
+     </object>
+     <object class="wxMenu" name="menu_search">
+       <label>Sea&amp;rch</label>
+Index: src/src/resources/env_settings.xrc
+===================================================================
+--- src/src/resources/env_settings.xrc	(revision 5189)
++++ src/src/resources/env_settings.xrc	(working copy)
+@@ -350,9 +350,8 @@
+ 											<object class="wxComboBox" name="cmbEditorTabs">
+ 												<content>
+ 													<item>Default</item>
+-													<item>Fancy gradient</item>
++													<item>Simple tabs</item>
+ 													<item>Microsoft (tm) Visual Studio 7.1</item>
+-													<item>Microsoft (tm) Visual Studio 8</item>
+ 												</content>
+ 												<style>wxCB_READONLY</style>
+ 											</object>
+@@ -369,67 +368,6 @@
+ 									<size>0,16</size>
+ 								</object>
+ 								<object class="sizeritem">
+-									<object class="wxStaticBoxSizer">
+-										<label>Gradient style colours</label>
+-										<orient>wxVERTICAL</orient>
+-										<object class="sizeritem">
+-											<object class="wxFlexGridSizer">
+-												<cols>2</cols>
+-												<vgap>4</vgap>
+-												<hgap>4</hgap>
+-												<object class="sizeritem">
+-													<object class="wxStaticText" name="ID_STATICTEXT2">
+-														<label>Border colour:</label>
+-													</object>
+-													<flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+-												</object>
+-												<object class="sizeritem">
+-													<object class="wxButton" name="btnFNBorder" />
+-													<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+-												</object>
+-												<object class="sizeritem">
+-													<object class="wxStaticText" name="ID_STATICTEXT3">
+-														<label>From colour:</label>
+-													</object>
+-													<flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+-												</object>
+-												<object class="sizeritem">
+-													<object class="wxButton" name="btnFNFrom" />
+-													<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+-												</object>
+-												<object class="sizeritem">
+-													<object class="wxStaticText" name="ID_STATICTEXT4">
+-														<label>To colour:</label>
+-													</object>
+-													<flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+-												</object>
+-												<object class="sizeritem">
+-													<object class="wxButton" name="btnFNTo" />
+-													<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+-												</object>
+-											</object>
+-											<flag>wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
+-											<border>4</border>
+-										</object>
+-										<object class="sizeritem">
+-											<object class="wxButton" name="btnNbDefaults">
+-												<label>Read from system theme</label>
+-											</object>
+-											<flag>wxTOP|wxALIGN_TOP|wxALIGN_CENTER_HORIZONTAL</flag>
+-											<border>24</border>
+-										</object>
+-									</object>
+-									<flag>wxTOP|wxBOTTOM|wxLEFT|wxALIGN_TOP|wxALIGN_CENTER_HORIZONTAL</flag>
+-									<border>8</border>
+-								</object>
+-								<object class="sizeritem">
+-									<object class="wxCheckBox" name="chkSmartTabs">
+-										<label>Use Smart Tab-switching scheme</label>
+-									</object>
+-									<flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
+-									<border>8</border>
+-								</object>
+-								<object class="sizeritem">
+ 									<object class="wxCheckBox" name="chkListTabs">
+ 										<label>Use drop-down tab list</label>
+ 									</object>

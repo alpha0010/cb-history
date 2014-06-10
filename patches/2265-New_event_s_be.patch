@@ -1,0 +1,67 @@
+Index: include/sdk_events.h
+===================================================================
+--- include/sdk_events.h	(revision 4693)
++++ include/sdk_events.h	(working copy)
+@@ -59,7 +59,7 @@
+ 		// for some editor events
+ 		int m_X;
+ 		int m_Y;
+-		
++
+ 		wxString m_TargetName;
+ 		wxString m_OldTargetName;
+ 	private:
+@@ -237,6 +237,10 @@
+ #define EVT_PROJECT_ACTIVATE(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_PROJECT_ACTIVATE, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&fn, (wxObject *) NULL ),
+ extern EVTIMPORT const wxEventType cbEVT_PROJECT_FILE_ADDED;
+ #define EVT_PROJECT_FILE_ADDED(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_PROJECT_FILE_ADDED, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&fn, (wxObject *) NULL ),
++extern EVTIMPORT const wxEventType cbEVT_PROJECT_FILES_ADDED_BEGIN;
++#define cbEVT_PROJECT_FILES_ADDED_BEGIN(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_PROJECT_FILES_ADDED_BEGIN, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&fn, (wxObject *) NULL ),
++extern EVTIMPORT const wxEventType cbEVT_PROJECT_FILES_ADDED_END;
++#define cbEVT_PROJECT_FILES_ADDED_END(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_PROJECT_FILES_ADDED_END, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&fn, (wxObject *) NULL ),
+ extern EVTIMPORT const wxEventType cbEVT_PROJECT_FILE_REMOVED;
+ #define EVT_PROJECT_FILE_REMOVED(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_PROJECT_FILE_REMOVED, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&fn, (wxObject *) NULL ),
+ extern EVTIMPORT const wxEventType cbEVT_PROJECT_POPUP_MENU;
+Index: sdk/projectmanager.cpp
+===================================================================
+--- sdk/projectmanager.cpp	(revision 4693)
++++ sdk/projectmanager.cpp	(working copy)
+@@ -1380,6 +1380,12 @@
+ 
+     if (addedFiles.GetCount() != 0)
+     {
++        // send the event indicating files are going to be added
++        CodeBlocksEvent begin_event(cbEVT_PROJECT_FILES_ADDED_BEGIN);
++        begin_event.SetProject(project);
++        begin_event.SetInt(addedFiles.GetCount());
++        Manager::Get()->GetPluginManager()->NotifyPlugins(begin_event);
++
+         for (unsigned int i = 0; i < addedFiles.GetCount(); ++i)
+         {
+             CodeBlocksEvent event(cbEVT_PROJECT_FILE_ADDED);
+@@ -1387,6 +1393,12 @@
+             event.SetString(addedFiles[i]);
+             Manager::Get()->GetPluginManager()->NotifyPlugins(event);
+         }
++
++        // send the event indicating the end of files addition
++        CodeBlocksEvent end_event(cbEVT_PROJECT_FILES_ADDED_END);
++        end_event.SetProject(project);
++        end_event.SetInt(addedFiles.GetCount());
++        Manager::Get()->GetPluginManager()->NotifyPlugins(end_event);
+     }
+     return targets.GetCount();
+ }
+Index: sdk/sdk_events.cpp
+===================================================================
+--- sdk/sdk_events.cpp	(revision 4693)
++++ sdk/sdk_events.cpp	(working copy)
+@@ -109,6 +109,8 @@
+ const wxEventType cbEVT_PROJECT_SAVE = wxNewEventType();
+ const wxEventType cbEVT_PROJECT_ACTIVATE = wxNewEventType();
+ const wxEventType cbEVT_PROJECT_FILE_ADDED = wxNewEventType();
++const wxEventType cbEVT_PROJECT_FILES_ADDED_BEGIN = wxNewEventType();
++const wxEventType cbEVT_PROJECT_FILES_ADDED_END = wxNewEventType();
+ const wxEventType cbEVT_PROJECT_FILE_REMOVED = wxNewEventType();
+ const wxEventType cbEVT_PROJECT_POPUP_MENU = wxNewEventType();
+ const wxEventType cbEVT_PROJECT_TARGETS_MODIFIED = wxNewEventType();

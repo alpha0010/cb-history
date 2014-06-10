@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 2803 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #2803 <small>2009-07-30 20:48:57</small></h3>
+          <h4>techy</h4>
+          Faster header/source swapping
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="2803-Faster_header.patch">2803-Faster_header.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Bugfix</dd>
+            <dt>Status</dt><dd>Accepted</dd>
+            <dt>Close date</dt><dd>2009-12-31 14:31:07</dd>
+            <dt>Assigned to</dt><dd>mortenmacfly</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">techy 2009-07-30 21:04:20</div>
+        <div class="panel-body">
+          <p>Right now when swapping header/source, CodeBlocks first builds a list of directories where the header/source might be located and then tries to find it in these directories (with all possibilities of extensions). This is a rather brute-force approach which is terribly slow for projects with lots of directories (it takes like 3 seconds when pressing F11 when the full project I'm developing at work is loaded). Instead, we can first look if we find the file among the opened files (which is quite probable - it is definitely there when pressing F11 for the second time on the same pair of header/source) and then among the project files. I kept the original way of header/source swapping when this method fails (it's up to you if you keep it or decide to remove it). Actually, the directory list for the project is built while the file is being searched in the project files so no time is lost.</p>
+          <p>A nice side-effect (actually the original reason why I started looking at the code) is that with this patch the capitalization of extensions doesn't matter. For instance in our project we use .C and .H extensions and the original method just failed to find them because it was searching for .c and .h.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2009-08-24 06:59:02</div>
+        <div class="panel-body">
+          <p>The capitalisation modification is no good, unfortunately. It breaks some projects on Linux, where there is a difference between a file named "file.c" and "file.C". Both can be in one directory. Could you pinpoint me to the part that ignores the case? (I would need to remove that.) Thanks!</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">techy 2009-08-30 21:49:46</div>
+        <div class="panel-body">
+          <p>Well, I'd really prefer to avoid the original way of swapping headers/sources. What you originally did was:</p>
+          <p>1. you find all directories where the sources are located</p>
+          <p>2. for each of these directories you take the current filename without the extension and append all possible header (source) extensions and test if this filename exists</p>
+          <p>Point 2 is the place where the case sensitiveness problem arises as you do this:</p>
+          <p>if (ft == ftHeader)</p>
+          <p>{</p>
+          <p>fname.SetExt(FileFilters::C_EXT);</p>
+          <p>if (fname.FileExists())</p>
+          <p>break;</p>
+          <p>fname.SetExt(FileFilters::CC_EXT);</p>
+          <p>if (fname.FileExists())</p>
+          <p>break;</p>
+          <p>fname.SetExt(FileFilters::CPP_EXT);</p>
+          <p>if (fname.FileExists())</p>
+          <p>break;</p>
+          <p>fname.SetExt(FileFilters::CXX_EXT);</p>
+          <p>if (fname.FileExists())</p>
+          <p>break;</p>
+          <p>fname.SetExt(FileFilters::INL_EXT);</p>
+          <p>if (fname.FileExists())</p>
+          <p>break;</p>
+          <p>FileFilters::C_EXT, ..., FileFilters::INL_EXT are all lowercase and when you test for the presence of these files when extensions .C or .H are used, the lowercase variants don't exist of course.</p>
+          <p>As I said before, this approach is a source of a serious performance problem when the sources are present in hundreds of directories. Suppose that the sources exist in 500 directories - then 500 * 5 = 2500 tests of file existence are needed and as the kernel has to be called each time during this test, this leads to a slow header/source swapping (3s on my machine, which is very annoying because this is something you do very frequently). Of course, if you fix the lower/upper case issue by trying to append .c, .C, .cpp, .CPP, ... you double the number of necessary tests so in the above example you get to 5000 tests of file existence, which is something I want to avoid.</p>
+          <p>Please look at the updated patch. There are only three extra lines compared to the first version. In addition I test here the case of the first letter of the extension of the tested file, which has to correspond to the case of the first letter of the extension of the active file. (I haven't tested this but the change is so small that I hope I haven't screwed up anything - anyway, I hope you got the idea.)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2009-10-06 09:47:48</div>
+        <div class="panel-body">
+          <p>I realised a bug in this patch (that cases C:B to crash).</p>
+          <p>Notice this line:</p>
+          <p>wxString const &amp;activeName = opf-&gt;file.GetName();</p>
+          <p>in</p>
+          <p>EditorManager::SwapActiveHeaderSource()</p>
+          <p>...</p>
+          <p>"opf" might not be available at this point. So you are accessing a NULL pointer. Could your fix this, probably?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">techy 2009-11-07 00:21:29</div>
+        <div class="panel-body">
+          <p>(Sorry for late reply, I have been very busy recently.)</p>
+          <p>Do you still experience the problem? Do you have a testcase how to reproduce it? It is very strange because when looking into the code there is</p>
+          <p>if (opf)</p>
+          <p>previously, so this shouldn't happen.</p>
+          <p>Anyway, I'm sending a second revision of the patch, which, contrary to the original version that was a quick hack, changes more things in header/source swapping to:</p>
+          <p>1. make it less messy</p>
+          <p>2. make it work with extensions regardless of their capitalization even for include files of the project</p>
+          <p>3. make it find header/source even if the capitalization is not correct, but no file with correct capitalization was found.</p>
+          <p>So what swapping header/source does now:</p>
+          <p>1. searches for header/source in opened files - the extension must have the same capitalization as the active header/source</p>
+          <p>2. if not successful, searches in project files - it prefers the same capitalization of the extension as the active header/source - however, if no file with the same capitalization is found and there exists some header/source with different extension capitalization, it opens this file</p>
+          <p>3. if not successful, it builds the list containing the project include dir, the target include dir and the dir where the active file is located.</p>
+          <p>4. for each of the directories from step 3 it finds all files with the same base name (without extension) and for each of these files it tests whether it is header/source - again, prefer the same capitalization (this fixes the case where previously, files in the include dirs ending with e.g. Hpp weren't taken as headers, because the tests were done only for existence of files with hpp and HPP ext)</p>
+          <p>5. If nothing found, show the dialog about new file creation.</p>
+          <p>This patch completely removes ProjectManager::GetHeaderSource as it is unnecessary now.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">techy 2009-11-10 23:47:55</div>
+        <div class="panel-body">
+          <p>OK, after looking at Patch #2841and Bug #016338, here is a revised version of the previous patch. Basically, there is one more initial step:</p>
+          <p>0. Seatch for header/source in the active file's directory</p>
+          <p>(the remaining 5 steps are as before)</p>
+          <p>Note that Patch #2841 isn't correct - it searches for header/source _only_ in the active file's directory so it wouldn't work for header/sources that are placed in separate directories.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2009-11-11 14:56:30</div>
+        <div class="panel-body">
+          <p>Why did you remove</p>
+          <p>ProjectManager::GetHeaderSource(const wxFileName &amp;fname)</p>
+          <p>from project manager again?</p>
+          <p>IMHO it's not the focus f the editor manager to locate files in a project. I did that on purpose.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">techy 2009-11-11 16:23:25</div>
+        <div class="panel-body">
+          <p>Hi, I removed it because the function is not needed any more (and it wasn't completely correct because it would find only e.g. "cpp" or "CPP", but not "Cpp"). For project and target include files the header/source search works differently now if you have a closer look.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">techy 2009-12-20 18:46:00</div>
+        <div class="panel-body">
+          <p>This is a very slightly modified previous version of the patch - we can try to find the file among the open files even if no project is opened - moved this part of the code before we check whether we have a project opened. Apart from that, the patch is unchanged.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">techy 2009-12-28 16:27:17</div>
+        <div class="panel-body">
+          <p>Ahhh - C++ implicit conversion related bug. There was this code:</p>
+          <p>if (wxIsupper(testedFile.GetExt()[0]) == extStartsWithCapital)</p>
+          <p>{</p>
+          <p>//something</p>
+          <p>}</p>
+          <p>where extStartsWithCapital was bool. Apparently wxIsupper(testedFile.GetExt()[0]) returns int (255) so bool gets converted to int (1) and the expression is always false. (I hate the implicit conversions that C and C++ makes!) This fixes it:</p>
+          <p>bool isUpper = wxIsupper(testedFile.GetExt()[0]);</p>
+          <p>if (isUpper == extStartsWithCapital)</p>
+          <p>{</p>
+          <p>//something</p>
+          <p>}</p>
+          <p>Otherwise no change.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2009-12-28 17:34:39</div>
+        <div class="panel-body">
+          <p>Good catch! ;-)</p>
+          <p>I am about to commit some of your patches, soon. Probably already today evening if I hopefully find the time. I've quite some patches pending... It's hard to have some spare time these days... :-(</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">techy 2009-12-28 18:17:08</div>
+        <div class="panel-body">
+          <p>Great!</p>
+          <p>One more (hopefully last) change - the dialogue saying "The file seems not to exist. Do you want to create it?" when header/source is not found is pretty annoying - most of the time I hit this is when the source file doesn't have its own header file and I have never pressed "Yes" in this dialogue. Therefore I think that "No" should be the default value, which is the only change made in this patch.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

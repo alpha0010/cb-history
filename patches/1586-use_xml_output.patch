@@ -1,0 +1,80 @@
+Index: src/build_tools/autorevision/autorevision.cpp
+===================================================================
+--- src/build_tools/autorevision/autorevision.cpp	(revision 3151)
++++ src/build_tools/autorevision/autorevision.cpp	(working copy)
+@@ -91,36 +91,57 @@
+ }
+ 
+ 
++#define DATELEN 19
++#define DATESEPARATORPOS 10
+ 
+ bool QuerySvn(const string& workingDir, string& revision, string &date)
+ {
+-    string svncmd("svn info ");
++    string svncmd("svn --xml info ");
+     svncmd.append(workingDir);
+     FILE *svn = popen(svncmd.c_str(), "r");
++    string xml="";
+ 
++    revision="";
++    date="";
++
+     if(svn)
+     {
+         char buf[1024];
+-        string line;
+-        while(fgets(buf, 4095, svn))
++        while(fgets(buf, 1024, svn))
+         {
+-            line.assign(buf);
+-            if(line.find("Revision:") != string::npos)
+-            {
+-                revision = line.substr(strlen("Revision: "));
++            int bpos=strlen(buf)-1;
++            while (bpos && (buf[bpos]=='\r' || buf[bpos]=='\n') )
++                buf[bpos--]=' ';
++            xml += buf;
++	}
++        pclose(svn);
+ 
+-                    string lbreak("\r\n");
+-                    size_t i;
+-                    while((i = revision.find_first_of(lbreak)) != string::npos)
+-                        revision.erase(revision.length()-1);
+-            }
+-            if(line.find("Last Changed Date: ") != string::npos)
+-            {
+-                    date = line.substr(strlen("Last Changed Date: "), strlen("2006-01-01 12:34:56"));
+-            }
+-        }
++        string::size_type commit_start = xml.find("<commit");
++        string::size_type commit_end   = xml.find("</commit>");
++        if (commit_start == string::npos || commit_end == string::npos)
++            return false;
++
++        string::size_type revision_start = xml.find("revision=\"",commit_start);
++	string::size_type revision_end   = xml.find("\">"        ,commit_start);
++        if ( revision_start == string::npos || revision_end == string::npos )
++            return false;
++
++        revision_start+=strlen("revision=\"");
++        if ( revision_end > commit_end )
++            return false;
++
++	string::size_type date_start = xml.find("<date>",revision_end);
++        if (date_start == string::npos)
++            return false;
++
++        date_start+=6; // "<date>"
++	if (date_start+DATELEN > commit_end)
++            return false;
++
++        revision=xml.substr(revision_start, revision_end-revision_start);
++        date = xml.substr(date_start, DATELEN);
++	date[DATESEPARATORPOS]=' ';
+     }
+-    pclose(svn);
+     return !revision.empty();
+ }
+ 

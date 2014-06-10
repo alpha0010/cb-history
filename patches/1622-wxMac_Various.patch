@@ -1,0 +1,151 @@
+Index: src/plugins/compilergcc/compileroptionsdlg.cpp
+===================================================================
+--- src/plugins/compilergcc/compileroptionsdlg.cpp	(revision 3176)
++++ src/plugins/compilergcc/compileroptionsdlg.cpp	(working copy)
+@@ -1556,7 +1556,7 @@
+             _("Choose library to link"),
+             false,
+             true,
+-            _("Library files (*.a, *.so, *.lib)|*.a;*.so;*.lib|All files (*)|*"));
++            _("Library files (*.a, *.so, *.lib, *.dylib, *.bundle)|*.a;*.so;*.lib;*.dylib;*.bundle|All files (*)|*"));
+ 
+     PlaceWindow(&dlg);
+     if (dlg.ShowModal() == wxID_OK)
+@@ -1581,7 +1581,7 @@
+             _("Choose library to link"),
+             false,
+             false,
+-            _("Library files (*.a, *.so, *.lib)|*.a;*.so;*.lib|All files (*)|*"));
++            _("Library files (*.a, *.so, *.lib, *.dylib, *.bundle)|*.a;*.so;*.lib;*.dylib;*.bundle|All files (*)|*"));
+ 
+     PlaceWindow(&dlg);
+     if (dlg.ShowModal() == wxID_OK)
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 3178)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -926,7 +926,7 @@
+ #if defined(__WXMSW__)
+     const int default_eol = 0; //CR&LF
+ #elif defined(__WXMAC__)
+-    const int default_eol = 1; //CR
++    const int default_eol = 2; //LF (in the past the default was CR but Apple encourages LF nowadays)
+ #elif defined(__UNIX__)
+     const int default_eol = 2; //LF
+ #endif
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 3178)
++++ src/sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -133,7 +133,7 @@
+ #if defined(__WXMSW__)
+ 	const int default_eol = 0; //CR&LF
+ #elif defined(__WXMAC__)
+-    const int default_eol = 1; //CR
++    const int default_eol = 2; //LF (in the past the default was CR but Apple encourages LF nowadays)
+ #elif defined(__UNIX__)
+ 	const int default_eol = 2; //LF
+ #endif
+Index: src/sdk/filefilters.cpp
+===================================================================
+--- src/sdk/filefilters.cpp	(revision 3178)
++++ src/sdk/filefilters.cpp	(working copy)
+@@ -155,6 +155,9 @@
+ #ifdef __WXMSW__
+     const wxString FileFilters::DYNAMICLIB_EXT           = _T("dll");
+     const wxString FileFilters::EXECUTABLE_EXT           = _T("exe");
++#elif __WXMAC__
++    const wxString FileFilters::DYNAMICLIB_EXT	         = _T("dylib");
++    const wxString FileFilters::EXECUTABLE_EXT	         = _T("");
+ #else
+     const wxString FileFilters::DYNAMICLIB_EXT	         = _T("so");
+     const wxString FileFilters::EXECUTABLE_EXT	         = _T("");
+Index: src/sdk/pluginmanager.cpp
+===================================================================
+--- src/sdk/pluginmanager.cpp	(revision 3178)
++++ src/sdk/pluginmanager.cpp	(working copy)
+@@ -748,6 +748,8 @@
+ {
+ #ifdef __WXMSW__
+     #define PLUGINS_MASK _T("*.dll")
++#elif __WXMAC__
++    #define PLUGINS_MASK _T("*.dylib")
+ #else
+     #define PLUGINS_MASK _T("*.so")
+ #endif
+@@ -769,6 +771,8 @@
+             // defaults
+             #ifdef __WXMSW__
+             bbplugins.Add(_T("compiler.dll"));
++            #elif __WXMAC__
++            bbplugins.Add(_T("libcompiler.dylib"));
+             #else
+             bbplugins.Add(_T("libcompiler.so"));
+             #endif
+Index: src/sdk/scripting/bindings/sc_consts.cpp
+===================================================================
+--- src/sdk/scripting/bindings/sc_consts.cpp	(revision 3178)
++++ src/sdk/scripting/bindings/sc_consts.cpp	(working copy)
+@@ -19,18 +19,28 @@
+ 
+     void Register_Constants()
+     {
+-        // platform constants
+-        BIND_INT_CONSTANT_NAMED(0, "PLATFORM_MSW");
+-        BIND_INT_CONSTANT_NAMED(1, "PLATFORM_GTK");
+-        BIND_INT_CONSTANT_NAMED(99, "PLATFORM_UNKNOWN");
+-        #ifdef __WXMSW__
+-            BIND_INT_CONSTANT_NAMED(0, "PLATFORM");
+-        #elif __WXGTK__
+-            BIND_INT_CONSTANT_NAMED(1, "PLATFORM");
+-        #else
+-            BIND_INT_CONSTANT_NAMED(99, "PLATFORM");
+-        #endif
+-
++        // platform constants
++        BIND_INT_CONSTANT_NAMED(0, "PLATFORM_MSW");
++        BIND_INT_CONSTANT_NAMED(1, "PLATFORM_GTK");
++        BIND_INT_CONSTANT_NAMED(2, "PLATFORM_MAC");
++        BIND_INT_CONSTANT_NAMED(3, "PLATFORM_OS2");
++        BIND_INT_CONSTANT_NAMED(4, "PLATFORM_X11");       
++        BIND_INT_CONSTANT_NAMED(99, "PLATFORM_UNKNOWN");
++        
++        #ifdef __WXMSW__
++            BIND_INT_CONSTANT_NAMED(0, "PLATFORM");
++        #elif __WXGTK__
++            BIND_INT_CONSTANT_NAMED(1, "PLATFORM");
++        #elif __WXMAC__
++            BIND_INT_CONSTANT_NAMED(2, "PLATFORM");
++        #elif __WXOS2__
++            BIND_INT_CONSTANT_NAMED(3, "PLATFORM");
++        #elif __WXX11__
++            BIND_INT_CONSTANT_NAMED(4, "PLATFORM");
++        #else
++            BIND_INT_CONSTANT_NAMED(99, "PLATFORM");
++        #endif        
++        
+         BIND_INT_CONSTANT_NAMED(PLUGIN_SDK_VERSION_MAJOR, "PLUGIN_SDK_VERSION_MAJOR");
+         BIND_INT_CONSTANT_NAMED(PLUGIN_SDK_VERSION_MINOR, "PLUGIN_SDK_VERSION_MINOR");
+         BIND_INT_CONSTANT_NAMED(PLUGIN_SDK_VERSION_RELEASE, "PLUGIN_SDK_VERSION_RELEASE");
+Index: src/src/compilersettingsdlg.cpp
+===================================================================
+--- src/src/compilersettingsdlg.cpp	(revision 3176)
++++ src/src/compilersettingsdlg.cpp	(working copy)
+@@ -70,6 +70,8 @@
+         // defaults
+         #ifdef __WXMSW__
+         bbplugins.Add(_T("compiler.dll"));
++        #elif __WXMAC__
++        bbplugins.Add(_T("libcompiler.dylib"));
+         #else
+         bbplugins.Add(_T("libcompiler.so"));
+         #endif
+@@ -241,6 +243,8 @@
+ 
+         #ifdef __WXMSW__
+         const wxString compiler = _T("compiler.dll");
++        #elif __WXMAC__
++        const wxString compiler = _T("libcompiler.dylib");
+         #else
+         const wxString compiler = _T("libcompiler.so");
+         #endif

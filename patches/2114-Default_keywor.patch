@@ -1,0 +1,584 @@
+Index: src/plugins/contrib/help_plugin/HelpConfigDialog.cpp
+===================================================================
+--- src/plugins/contrib/help_plugin/HelpConfigDialog.cpp	(revision 4649)
++++ src/plugins/contrib/help_plugin/HelpConfigDialog.cpp	(working copy)
+@@ -34,6 +34,9 @@
+   EVT_CHECKBOX(XRCID("chkDefault"), HelpConfigDialog::OnCheckbox)
+   EVT_CHECKBOX(XRCID("chkExecute"), HelpConfigDialog::OnCheckboxExecute)
+   EVT_CHECKBOX(XRCID("chkEmbeddedViewer"), HelpConfigDialog::OnCheckboxEmbeddedViewer)
++  // Patch by Yorgos Pagles: Add new gui elements' events for setting the new attributes
++  EVT_CHOICE(XRCID("chkCase"), HelpConfigDialog::OnCaseChoice)
++  EVT_TEXT(XRCID("textDefaultKeyword"), HelpConfigDialog::OnDefaultKeywordEntry)
+ END_EVENT_TABLE()
+ 
+ 
+@@ -61,6 +64,9 @@
+     XRCCTRL(*this, "chkExecute", wxCheckBox)->SetValue(m_Vector[0].second.isExecutable);
+     XRCCTRL(*this, "chkEmbeddedViewer", wxCheckBox)->SetValue(m_Vector[0].second.openEmbeddedViewer);
+     XRCCTRL(*this, "chkDefault", wxCheckBox)->SetValue(HelpCommon::getDefaultHelpIndex() == 0);
++    // Patch by Yorgos Pagles: Show the new attributes
++    XRCCTRL(*this, "chkCase", wxChoice)->SetSelection(m_Vector[0].second.keywordCase);
++    XRCCTRL(*this, "textDefaultKeyword", wxTextCtrl)->SetValue(m_Vector[0].second.defaultKeyword);
+   }
+ }
+ 
+@@ -83,6 +89,9 @@
+   	m_Vector[index].second.name = XRCCTRL(*this, "txtHelp", wxTextCtrl)->GetValue();
+   	m_Vector[index].second.isExecutable = XRCCTRL(*this, "chkExecute", wxCheckBox)->IsChecked();
+   	m_Vector[index].second.openEmbeddedViewer = XRCCTRL(*this, "chkEmbeddedViewer", wxCheckBox)->IsChecked();
++    // Patch by Yorgos Pagles: Write the new attributes
++    m_Vector[lst->GetSelection()].second.keywordCase = static_cast<HelpCommon::StringCase>(XRCCTRL(*this, "chkCase", wxChoice)->GetSelection());
++    m_Vector[lst->GetSelection()].second.defaultKeyword = XRCCTRL(*this, "textDefaultKeyword", wxTextCtrl)->GetValue();
+   }
+   else
+   {
+@@ -90,6 +99,9 @@
+     hfa.name = XRCCTRL(*this, "txtHelp", wxTextCtrl)->GetValue();
+     hfa.isExecutable = XRCCTRL(*this, "chkExecute", wxCheckBox)->IsChecked();
+     hfa.openEmbeddedViewer = XRCCTRL(*this, "chkEmbeddedViewer", wxCheckBox)->IsChecked();
++  	// Patch by Yorgos Pagles: Write the new attributes
++    hfa.keywordCase = static_cast<HelpCommon::StringCase>(XRCCTRL(*this, "chkCase", wxChoice)->GetSelection());
++    hfa.defaultKeyword = XRCCTRL(*this, "textDefaultKeyword", wxTextCtrl)->GetValue();
+   	m_Vector.push_back(make_pair(lst->GetString(index), hfa));
+   }
+ }
+@@ -133,12 +145,18 @@
+     XRCCTRL(*this, "chkExecute", wxCheckBox)->SetValue(m_Vector[lst->GetSelection()].second.isExecutable);
+     XRCCTRL(*this, "chkEmbeddedViewer", wxCheckBox)->SetValue(m_Vector[lst->GetSelection()].second.openEmbeddedViewer);
+     XRCCTRL(*this, "chkDefault", wxCheckBox)->SetValue(HelpCommon::getDefaultHelpIndex() == lst->GetSelection());
++    // Patch by Yorgos Pagles: Show the new attributes
++    XRCCTRL(*this, "chkCase", wxChoice)->SetSelection(m_Vector[lst->GetSelection()].second.keywordCase);
++    XRCCTRL(*this, "textDefaultKeyword", wxTextCtrl)->SetValue(m_Vector[lst->GetSelection()].second.defaultKeyword);
+   }
+   else
+   {
+   	XRCCTRL(*this, "chkDefault", wxCheckBox)->SetValue(false);
+   	XRCCTRL(*this, "chkExecute", wxCheckBox)->SetValue(false);
+   	XRCCTRL(*this, "chkEmbeddedViewer", wxCheckBox)->SetValue(false);
++    // Patch by Yorgos Pagles: Show the new attributes
++    XRCCTRL(*this, "chkCase", wxChoice)->SetSelection(0);
++    XRCCTRL(*this, "textDefaultKeyword", wxTextCtrl)->SetValue(_T(""));
+   }
+ }
+ 
+@@ -175,6 +193,9 @@
+     XRCCTRL(*this, "chkExecute", wxCheckBox)->SetValue(false);
+     XRCCTRL(*this, "chkEmbeddedViewer", wxCheckBox)->SetValue(false);
+     XRCCTRL(*this, "txtHelp", wxTextCtrl)->SetValue(_T(""));
++    // Patch by Yorgos Pagles: Show the new attributes
++    XRCCTRL(*this, "chkCase", wxChoice)->SetSelection(0);
++    XRCCTRL(*this, "textDefaultKeyword", wxTextCtrl)->SetValue(_T(""));
+ 
+     if (cbMessageBox(_("Would you like to browse for the help file?\n(Check \"Help->Plugins->Help plugin\" for a reason you would like to choose No)"), _("Browse"), wxICON_QUESTION | wxYES_NO) == wxID_YES)
+     {
+@@ -235,6 +256,9 @@
+     XRCCTRL(*this, "txtHelp", wxTextCtrl)->SetValue(m_Vector[lst->GetSelection()].first);
+     XRCCTRL(*this, "chkExecute", wxCheckBox)->SetValue(m_Vector[lst->GetSelection()].second.isExecutable);
+     XRCCTRL(*this, "chkEmbeddedViewer", wxCheckBox)->SetValue(m_Vector[lst->GetSelection()].second.openEmbeddedViewer);
++    // Patch by Yorgos Pagles: Show the new attributes
++    XRCCTRL(*this, "chkCase", wxChoice)->SetSelection(m_Vector[lst->GetSelection()].second.keywordCase);
++    XRCCTRL(*this, "textDefaultKeyword", wxTextCtrl)->SetValue(m_Vector[lst->GetSelection()].second.defaultKeyword);
+   }
+   else
+   {
+@@ -242,6 +266,9 @@
+     XRCCTRL(*this, "chkExecute", wxCheckBox)->SetValue(false);
+     XRCCTRL(*this, "chkEmbeddedViewer", wxCheckBox)->SetValue(false);
+     XRCCTRL(*this, "chkDefault", wxCheckBox)->SetValue(false);
++    // Patch by Yorgos Pagles: Show the new attributes
++    XRCCTRL(*this, "chkCase", wxChoice)->SetSelection(0);
++    XRCCTRL(*this, "textDefaultKeyword", wxTextCtrl)->SetValue(_T(""));
+   }
+ 
+   m_LastSel = lst->GetSelection();
+@@ -335,6 +362,21 @@
+   }
+ }
+ 
++// Patch by Yorgos Pagles: Handle the events of the new gui elements
++void HelpConfigDialog::OnCaseChoice(wxCommandEvent &event)
++{
++  int current = XRCCTRL(*this, "lstHelp", wxListBox)->GetSelection();
++  wxChoice *keywordCaseCtrl = XRCCTRL(*this, "chkCase", wxChoice);
++  m_Vector[current].second.keywordCase = static_cast<HelpCommon::StringCase>(keywordCaseCtrl->GetSelection());
++}
++
++void HelpConfigDialog::OnDefaultKeywordEntry(wxCommandEvent &event)
++{
++  int current = XRCCTRL(*this, "lstHelp", wxListBox)->GetSelection();
++  wxTextCtrl *defaultKeywordCtrl = XRCCTRL(*this, "textDefaultKeyword", wxTextCtrl);
++  m_Vector[current].second.defaultKeyword = defaultKeywordCtrl->GetValue();
++}
++
+ void HelpConfigDialog::UpdateUI(wxUpdateUIEvent &event)
+ {
+   int sel = XRCCTRL(*this, "lstHelp", wxListBox)->GetSelection();
+@@ -346,6 +388,9 @@
+   XRCCTRL(*this, "chkDefault", wxCheckBox)->Enable(sel != -1);
+   XRCCTRL(*this, "chkExecute", wxCheckBox)->Enable(sel != -1);
+   XRCCTRL(*this, "chkEmbeddedViewer", wxCheckBox)->Enable(sel != -1);
++  // Patch by Yorgos Pagles: Disable the new items
++  XRCCTRL(*this, "chkCase", wxChoice)->Enable(sel != -1);
++  XRCCTRL(*this, "textDefaultKeyword", wxTextCtrl)->Enable(sel != -1);
+ 
+   if (sel == -1 || count == 1)
+   {
+Index: src/plugins/contrib/help_plugin/help_common.cpp
+===================================================================
+--- src/plugins/contrib/help_plugin/help_common.cpp	(revision 4649)
++++ src/plugins/contrib/help_plugin/help_common.cpp	(working copy)
+@@ -21,6 +21,11 @@
+       hfa.name = conf->Read(list[i] + _T("/file"), wxEmptyString);
+       conf->Read(list[i] + _T("/isexec"), &hfa.isExecutable);
+       conf->Read(list[i] + _T("/embeddedviewer"), &hfa.openEmbeddedViewer);
++      // Patch by Yorgos Pagles: Read new attributes from settings
++      int keyWordCase=0;
++      (conf->Read(list[i] + _T("/keywordcase"), &keyWordCase));
++      hfa.keywordCase = static_cast<HelpCommon::StringCase>(keyWordCase);
++      hfa.defaultKeyword = conf->Read(list[i] + _T("/defaultkeyword"), wxEmptyString);
+ 
+       if (!name.IsEmpty() && !hfa.name.IsEmpty())
+       {
+@@ -56,6 +61,9 @@
+       conf->Write(key + _T("file"), hfa.name);
+       conf->Write(key + _T("isexec"), hfa.isExecutable);
+       conf->Write(key + _T("embeddedviewer"), hfa.openEmbeddedViewer);
++      // Patch by Yorgos Pagles: Write new attributes in settings
++      conf->Write(key + _T("keywordcase"), static_cast<int>(hfa.keywordCase));
++      conf->Write(key + _T("defaultkeyword"), hfa.defaultKeyword);
+     }
+   }
+ 
+Index: src/plugins/contrib/help_plugin/HelpConfigDialog.h
+===================================================================
+--- src/plugins/contrib/help_plugin/HelpConfigDialog.h	(revision 4649)
++++ src/plugins/contrib/help_plugin/HelpConfigDialog.h	(working copy)
+@@ -32,6 +32,9 @@
+     void OnCheckbox(wxCommandEvent &event);
+     void OnCheckboxExecute(wxCommandEvent &event);
+     void OnCheckboxEmbeddedViewer(wxCommandEvent &event);
++    // Patch by Yorgos Pagles: Add new gui elements' events for setting the new attributes
++    void OnDefaultKeywordEntry(wxCommandEvent &event);
++    void OnCaseChoice(wxCommandEvent &event);
+     void UpdateUI(wxUpdateUIEvent &event);
+ 
+   private:
+Index: src/plugins/contrib/help_plugin/help_common.h
+===================================================================
+--- src/plugins/contrib/help_plugin/help_common.h	(revision 4649)
++++ src/plugins/contrib/help_plugin/help_common.h	(working copy)
+@@ -11,11 +11,19 @@
+ class HelpCommon
+ {
+   public:
++
++    // Patch by Yorgos Pagles: Add keyword case choises
++    enum StringCase {Preserve=0,UpperCase,LowerCase};
++
+     struct HelpFileAttrib
+     {
+       wxString name;
+       bool isExecutable;
+       bool openEmbeddedViewer;
++      // Patch by Yorgos Pagles: Add keyword case and default
++      // keyword substitution attributes in Help file attributes
++      StringCase keywordCase;
++      wxString defaultKeyword;
+ 
+       HelpFileAttrib() : isExecutable(false), openEmbeddedViewer(false) { }
+     };
+Index: src/plugins/contrib/help_plugin/help_plugin.cpp
+===================================================================
+--- src/plugins/contrib/help_plugin/help_plugin.cpp	(revision 4649)
++++ src/plugins/contrib/help_plugin/help_plugin.cpp	(working copy)
+@@ -468,12 +468,24 @@
+         pbar->Check(idViewMANViewer, false);
+ }
+ 
+-void HelpPlugin::LaunchHelp(const wxString &c_helpfile, bool isExecutable, bool openEmbeddedViewer, const wxString &keyword)
++void HelpPlugin::LaunchHelp(const wxString &c_helpfile, bool isExecutable, bool openEmbeddedViewer, HelpCommon::StringCase keyCase, const wxString &defkeyword, const wxString &c_keyword)
+ {
+   const static wxString http_prefix(_T("http://"));
+   const static wxString man_prefix(_T("man:"));
+   wxString helpfile(c_helpfile);
+ 
++  // Patch by Yorgos Pagles: Use the new attributes to calculate the keyword
++  wxString keyword = c_keyword.IsEmpty() ? defkeyword : c_keyword;
++
++  if(keyCase == HelpCommon::UpperCase)
++  {
++    keyword.MakeUpper();
++  }
++  else if (keyCase == HelpCommon::LowerCase)
++  {
++    keyword.MakeLower();
++  }
++
+   helpfile.Replace(_T("$(keyword)"), keyword);
+   Manager::Get()->GetMacrosManager()->ReplaceMacros(helpfile);
+ 
+@@ -622,5 +634,6 @@
+ 
+   int id = event.GetId();
+   HelpCommon::HelpFileAttrib hfa = HelpFileFromId(id);
+-  LaunchHelp(hfa.name, hfa.isExecutable, hfa.openEmbeddedViewer, text);
++  // Patch by Yorgos Pagles: Use the new keyword calculation
++  LaunchHelp(hfa.name, hfa.isExecutable, hfa.openEmbeddedViewer, hfa.keywordCase, hfa.defaultKeyword, text);
+ }
+Index: src/plugins/contrib/help_plugin/help_plugin.h
+===================================================================
+--- src/plugins/contrib/help_plugin/help_plugin.h	(revision 4649)
++++ src/plugins/contrib/help_plugin/help_plugin.h	(working copy)
+@@ -36,7 +36,8 @@
+     void RemoveFromHelpMenu(int id, const wxString &help);
+     void AddFile();
+     HelpCommon::HelpFileAttrib HelpFileFromId(int id);
+-    void LaunchHelp(const wxString &helpfile, bool isExecutable, bool openEmbeddedViewer, const wxString &keyword = wxEmptyString);
++    // Patch from Yorgos Pagles: Take into consideration the new attributes when launching a help file
++    void LaunchHelp(const wxString &helpfile, bool isExecutable, bool openEmbeddedViewer, HelpCommon::StringCase keyCase = HelpCommon::Preserve, const wxString &defkeyword = wxEmptyString, const wxString &keyword = wxEmptyString);
+ 
+   private:
+     wxMenuBar *m_pMenuBar;
+Index: src/plugins/contrib/help_plugin/help_plugin.xrc
+===================================================================
+--- src/plugins/contrib/help_plugin/help_plugin.xrc	(revision 4649)
++++ src/plugins/contrib/help_plugin/help_plugin.xrc	(working copy)
+@@ -1,178 +1,162 @@
+-<?xml version="1.0" encoding="utf-8"?>
++<?xml version="1.0" encoding="utf-8" ?>
+ <resource>
+-  <object class="wxBitmap" name="ZoomInBitmap">zoomin.png</object>
+-  <object class="wxBitmap" name="ZoomOutBitmap">zoomout.png</object>
+-  <object class="wxPanel" name="HelpConfigDialog">
+-    <object class="wxBoxSizer">
+-      <orient>wxVERTICAL</orient>
+-      <object class="sizeritem">
+-        <option>1</option>
+-        <flag>wxLEFT|wxEXPAND</flag>
+-        <object class="wxBoxSizer">
+-          <orient>wxVERTICAL</orient>
+-          <object class="sizeritem">
+-            <option>1</option>
+-            <flag>wxEXPAND</flag>
+-            <border>5</border>
+-            <object class="wxBoxSizer">
+-              <orient>wxHORIZONTAL</orient>
+-              <object class="sizeritem">
+-                <option>1</option>
+-                <flag>wxLEFT|wxTOP|wxBOTTOM|wxEXPAND</flag>
+-                <border>5</border>
+-                <object class="wxListBox" name="lstHelp">
+-
+-                  <style>wxLB_SINGLE</style>
+-
+-                  <content/>
+-                </object>
+-              </object>
+-              <object class="sizeritem">
+-                <option>0</option>
+-                <flag>wxTOP</flag>
+-                <border>5</border>
+-                <object class="wxBoxSizer">
+-                  <orient>wxVERTICAL</orient>
+-                  <object class="sizeritem">
+-                    <option>0</option>
+-                    <flag>wxLEFT|wxRIGHT</flag>
+-                    <border>5</border>
+-                    <object class="wxButton" name="btnAdd">
+-
+-                      <label>Add</label>
+-
+-                      <default>0</default>
+-                    </object>
+-                  </object>
+-                  <object class="sizeritem">
+-                    <option>0</option>
+-                    <flag>wxLEFT|wxRIGHT</flag>
+-                    <border>5</border>
+-                    <object class="wxButton" name="btnRename">
+-
+-                      <label>Rename</label>
+-
+-                      <default>0</default>
+-                    </object>
+-                  </object>
+-                  <object class="sizeritem">
+-                    <option>0</option>
+-                    <flag>wxLEFT|wxRIGHT</flag>
+-                    <border>5</border>
+-                    <object class="wxButton" name="btnDelete">
+-
+-                      <label>Delete</label>
+-
+-                      <default>0</default>
+-                    </object>
+-                  </object>
+-                  <object class="spacer">
+-
+-                    <size>10,10</size>
+-
+-                    <option>0</option>
+-
+-                    <flag>wxALL</flag>
+-
+-                    <border>5</border>
+-                  </object>
+-                  <object class="sizeritem">
+-                    <option>0</option>
+-                    <flag>wxLEFT|wxRIGHT</flag>
+-                    <border>5</border>
+-                    <object class="wxButton" name="btnUp">
+-
+-                      <enabled>0</enabled>
+-
+-                      <label>Up</label>
+-
+-                      <default>0</default>
+-                    </object>
+-                  </object>
+-                  <object class="sizeritem">
+-                    <option>0</option>
+-                    <flag>wxLEFT|wxRIGHT</flag>
+-                    <border>5</border>
+-                    <object class="wxButton" name="btnDown">
+-
+-                      <enabled>0</enabled>
+-
+-                      <label>Down</label>
+-
+-                      <default>0</default>
+-                    </object>
+-                  </object>
+-                </object>
+-              </object>
+-            </object>
+-          </object>
+-          <object class="sizeritem">
+-            <option>0</option>
+-            <flag>wxEXPAND</flag>
+-            <border>5</border>
+-            <object class="wxBoxSizer">
+-              <orient>wxHORIZONTAL</orient>
+-              <object class="sizeritem">
+-                <option>1</option>
+-                <flag>wxLEFT|wxALIGN_CENTER_VERTICAL</flag>
+-                <border>5</border>
+-                <object class="wxTextCtrl" name="txtHelp">
+-
+-                  <value></value>
+-                </object>
+-              </object>
+-              <object class="sizeritem">
+-                <option>0</option>
+-                <flag>wxRIGHT|wxALIGN_CENTER_VERTICAL</flag>
+-                <border>5</border>
+-                <object class="wxButton" name="btnBrowse">
+-
+-                  <size>22,-1</size>
+-
+-                  <label>...</label>
+-
+-                  <default>0</default>
+-                </object>
+-              </object>
+-            </object>
+-          </object>
+-          <object class="sizeritem">
+-            <option>0</option>
+-            <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxGROW</flag>
+-            <border>5</border>
+-            <object class="wxStaticText">
+-              <label>TIP: $$(keyword) will be replaced by the word under the cursor</label>
+-              <fg>#800000</fg>
+-            </object>
+-          </object>
+-          <object class="sizeritem">
+-            <option>0</option>
+-            <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxGROW</flag>
+-            <border>5</border>
+-            <object class="wxCheckBox" name="chkDefault">
+-              <label>This is the default help file (shortcut: F1)</label>
+-            </object>
+-          </object>
+-          <object class="sizeritem">
+-            <option>0</option>
+-            <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxGROW</flag>
+-            <border>5</border>
+-            <object class="wxCheckBox" name="chkExecute">
+-              <label>This line represents a full command to be executed</label>
+-            </object>
+-          </object>
+-          <object class="sizeritem">
+-            <option>0</option>
+-            <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxGROW</flag>
+-            <border>5</border>
+-            <object class="wxCheckBox" name="chkEmbeddedViewer">
+-              <label>Open this file with the embedded help viewer (only for HTML files)</label>
+-            </object>
+-          </object>
+-        </object>
+-
+-        <border>8</border>
+-      </object>
+-    </object>
+-  </object>
++	<object class="wxBitmap" name="ZoomInBitmap">zoomin.png</object>
++	<object class="wxBitmap" name="ZoomOutBitmap">zoomout.png</object>
++	<object class="wxPanel" name="HelpConfigDialog">
++		<object class="wxBoxSizer">
++			<orient>wxVERTICAL</orient>
++			<object class="sizeritem">
++				<object class="wxBoxSizer">
++					<orient>wxVERTICAL</orient>
++					<object class="sizeritem">
++						<object class="wxBoxSizer">
++							<object class="sizeritem">
++								<object class="wxListBox" name="lstHelp">
++									<style>wxLB_SINGLE</style>
++								</object>
++								<flag>wxTOP|wxBOTTOM|wxLEFT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++								<border>5</border>
++								<option>1</option>
++							</object>
++							<object class="sizeritem">
++								<object class="wxBoxSizer">
++									<orient>wxVERTICAL</orient>
++									<object class="sizeritem">
++										<object class="wxButton" name="btnAdd">
++											<label>Add</label>
++										</object>
++										<flag>wxLEFT|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++										<border>5</border>
++									</object>
++									<object class="sizeritem">
++										<object class="wxButton" name="btnRename">
++											<label>Rename</label>
++										</object>
++										<flag>wxLEFT|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++										<border>5</border>
++									</object>
++									<object class="sizeritem">
++										<object class="wxButton" name="btnDelete">
++											<label>Delete</label>
++										</object>
++										<flag>wxLEFT|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++										<border>5</border>
++									</object>
++									<object class="spacer">
++										<flag>wxALL|wxALIGN_LEFT|wxALIGN_TOP</flag>
++										<border>5</border>
++										<size>10,10</size>
++									</object>
++									<object class="sizeritem">
++										<object class="wxButton" name="btnUp">
++											<label>Up</label>
++											<enabled>0</enabled>
++										</object>
++										<flag>wxLEFT|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++										<border>5</border>
++									</object>
++									<object class="sizeritem">
++										<object class="wxButton" name="btnDown">
++											<label>Down</label>
++											<enabled>0</enabled>
++										</object>
++										<flag>wxLEFT|wxRIGHT|wxALIGN_LEFT|wxALIGN_TOP</flag>
++										<border>5</border>
++									</object>
++								</object>
++								<flag>wxTOP|wxALIGN_LEFT|wxALIGN_TOP</flag>
++								<border>5</border>
++							</object>
++						</object>
++						<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++						<border>5</border>
++						<option>1</option>
++					</object>
++					<object class="sizeritem">
++						<object class="wxBoxSizer">
++							<object class="sizeritem">
++								<object class="wxTextCtrl" name="txtHelp" />
++								<flag>wxLEFT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++								<border>5</border>
++								<option>1</option>
++							</object>
++							<object class="sizeritem">
++								<object class="wxButton" name="btnBrowse">
++									<label>...</label>
++									<size>22,-1</size>
++								</object>
++								<flag>wxRIGHT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++								<border>5</border>
++							</object>
++						</object>
++						<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++						<border>5</border>
++					</object>
++					<object class="sizeritem">
++						<object class="wxStaticText" name="ID_STATICTEXT1">
++							<label>TIP: $$(keyword) will be replaced by the word under the cursor</label>
++							<fg>#800000</fg>
++						</object>
++						<flag>wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++						<border>5</border>
++					</object>
++					<object class="sizeritem">
++						<object class="wxCheckBox" name="chkDefault">
++							<label>This is the default help file (shortcut: F1)</label>
++						</object>
++						<flag>wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++						<border>5</border>
++					</object>
++					<object class="sizeritem">
++						<object class="wxCheckBox" name="chkExecute">
++							<label>This line represents a full command to be executed</label>
++						</object>
++						<flag>wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++						<border>5</border>
++					</object>
++					<object class="sizeritem">
++						<object class="wxCheckBox" name="chkEmbeddedViewer">
++							<label>Open this file with the embedded help viewer (only for HTML files)</label>
++						</object>
++						<flag>wxBOTTOM|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++						<border>5</border>
++					</object>
++					<object class="sizeritem">
++						<object class="wxChoice" name="chkCase">
++							<content>
++								<item>Preserve keyword case</item>
++								<item>Convert keyword to uppercase</item>
++								<item>Convert keyword to lowercase</item>
++							</content>
++							<size>-1,-1</size>
++						</object>
++						<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++						<border>5</border>
++					</object>
++					<object class="sizeritem">
++						<object class="wxBoxSizer">
++							<object class="sizeritem">
++								<object class="wxStaticText" name="ID_STATICTEXT2">
++									<label>Default keyword value:</label>
++								</object>
++								<flag>wxALL|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++								<border>5</border>
++							</object>
++							<object class="sizeritem">
++								<object class="wxTextCtrl" name="textDefaultKeyword" />
++								<flag>wxALL|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++								<border>5</border>
++								<option>1</option>
++							</object>
++						</object>
++						<flag>wxALL|wxEXPAND|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL</flag>
++						<border>5</border>
++					</object>
++				</object>
++				<flag>wxLEFT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++				<border>8</border>
++				<option>1</option>
++			</object>
++		</object>
++	</object>
+ </resource>

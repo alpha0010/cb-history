@@ -1,0 +1,76 @@
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 6508)
++++ src/sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -114,6 +114,7 @@
+     m_EnableChangebar = cfg->ReadBool(_T("/margin/use_changebar"), true);
+     XRCCTRL(*this, "chkUseChangebar", wxCheckBox)->SetValue(m_EnableChangebar);
+     XRCCTRL(*this, "chkShowIndentGuides", wxCheckBox)->SetValue(cfg->ReadBool(_T("/show_indent_guides"), false));
++    XRCCTRL(*this, "chkBraceSmartIndent", wxCheckBox)->SetValue(cfg->ReadBool(_T("/brace_smart_indent"), true));
+     XRCCTRL(*this, "chkTabIndents", wxCheckBox)->SetValue(cfg->ReadBool(_T("/tab_indents"), true));
+     XRCCTRL(*this, "chkBackspaceUnindents", wxCheckBox)->SetValue(cfg->ReadBool(_T("/backspace_unindents"), true));
+     XRCCTRL(*this, "chkWordWrap", wxCheckBox)->SetValue(cfg->ReadBool(_T("/word_wrap"), false));
+@@ -881,6 +882,7 @@
+         cfg->Write(_T("/brace_completion"),                    XRCCTRL(*this, "chkBraceCompletion", wxCheckBox)->GetValue());
+         cfg->Write(_T("/use_tab"),                             XRCCTRL(*this, "chkUseTab", wxCheckBox)->GetValue());
+         cfg->Write(_T("/show_indent_guides"),                  XRCCTRL(*this, "chkShowIndentGuides", wxCheckBox)->GetValue());
++        cfg->Write(_T("/brace_smart_indent"),                  XRCCTRL(*this, "chkBraceSmartIndent", wxCheckBox)->GetValue());
+         cfg->Write(_T("/tab_indents"),                         XRCCTRL(*this, "chkTabIndents", wxCheckBox)->GetValue());
+         cfg->Write(_T("/backspace_unindents"),                 XRCCTRL(*this, "chkBackspaceUnindents", wxCheckBox)->GetValue());
+         cfg->Write(_T("/word_wrap"),                           XRCCTRL(*this, "chkWordWrap", wxCheckBox)->GetValue());
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 6508)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -3038,19 +3038,24 @@
+                     case wxSCI_LEX_CPP:
+                     case wxSCI_LEX_D:
+                         {
+-                            int string_style = control->GetLexer() == wxSCI_LEX_CPP ? wxSCI_C_STRING : wxSCI_D_STRING;
+-
+-                            int brace_position = m_pData->GetFirstBraceInLine(string_style);
+-                            if (brace_position >= 0)
++                            ConfigManager* configManager = Manager::Get()->GetConfigManager(_T("editor"));
++                            bool braceIndent = configManager->ReadBool(_T("/brace_smart_indent"), true);
++                            if (braceIndent)
+                             {
+-                                if(control->GetUseTabs())
++                                int style = control->GetLexer() == wxSCI_LEX_CPP ? wxSCI_C_STRING : wxSCI_D_STRING;
++
++                                int brace_position = m_pData->GetFirstBraceInLine(style);
++                                if (brace_position >= 0)
+                                 {
+-                                    brace_position /= control->GetTabWidth();
+-                                    indent = wxString(_T('\t'), brace_position);
++                                    if (control->GetUseTabs())
++                                    {
++                                        brace_position /= control->GetTabWidth();
++                                        indent = wxString(_T('\t'), brace_position);
++                                    }
++                                    else
++                                        indent = wxString(_T(' '), brace_position); // n spaces
++                                    break;
+                                 }
+-                                else
+-                                    indent = wxString(_T(' '), brace_position); // n spaces
+-                                break;
+                             }
+                         }
+ 
+Index: src/sdk/resources/editor_configuration.xrc
+===================================================================
+--- src/sdk/resources/editor_configuration.xrc	(revision 6508)
++++ src/sdk/resources/editor_configuration.xrc	(working copy)
+@@ -292,6 +292,12 @@
+ 															<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
+ 														</object>
+ 														<object class="sizeritem">
++															<object class="wxCheckBox" name="chkBraceSmartIndent">
++																<label>Brace Smart Indent</label>
++															</object>
++															<flag>wxALIGN_LEFT|wxALIGN_TOP</flag>
++														</object>
++														<object class="sizeritem">
+ 															<object class="wxBoxSizer">
+ 																<object class="sizeritem">
+ 																	<object class="wxStaticText" name="ID_STATICTEXT3">

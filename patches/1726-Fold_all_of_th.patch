@@ -1,0 +1,85 @@
+Index: src/sdk/wxscintilla/src/scintilla/src/LexCPP.cxx
+===================================================================
+--- src/sdk/wxscintilla/src/scintilla/src/LexCPP.cxx	(revision 3455)
++++ src/sdk/wxscintilla/src/scintilla/src/LexCPP.cxx	(working copy)
+@@ -97,7 +97,7 @@
+ 
+ 		if (sc.atLineStart) {
+ 			if (sc.state == SCE_C_STRING) {
+-				// Prevent SCE_C_STRINGEOL from leaking back to previous line which 
++				// Prevent SCE_C_STRINGEOL from leaking back to previous line which
+ 				// ends with a line continuation by locking in the state upto this position.
+ 				sc.SetState(SCE_C_STRING);
+ 			}
+@@ -399,16 +399,61 @@
+ 			}
+ 		}
+ 		if (style == SCE_C_OPERATOR) {
+-			if (ch == '{') {
+-				// Measure the minimum before a '{' to allow
+-				// folding on "} else {"
+-				if (levelMinCurrent > levelNext) {
+-					levelMinCurrent = levelNext;
+-				}
+-				levelNext++;
+-			} else if (ch == '}') {
+-				levelNext--;
+-			}
++            if (ch == '{')
++            {
++               // Measure the minimum before a '{' to allow
++               // folding on "} else {"
++               if(visibleChars == 0)
++               {
++                  bool foundBracket = false;
++                  int thisCharPosition = i - 1;
++                  int thisLinePosition = lineCurrent;
++                  char thisChar = '{';
++                  while(foundBracket == false && thisCharPosition > startPos)
++                  {
++                     thisChar = styler.SafeGetCharAt(thisCharPosition);
++                     if(!isspacechar(thisChar) == true)
++                     {
++                        foundBracket = true;
++                        thisLinePosition = styler.GetLine(thisCharPosition);
++                     }
++                     thisCharPosition--;
++                  }
++                  if(foundBracket == true)
++                  {
++                     if (levelMinCurrent > levelNext)
++                     {
++                        levelMinCurrent = levelNext;
++                     }
++                     levelNext++;
++                     while(thisLinePosition != lineCurrent)
++                     {
++                         int levelUse = levelCurrent;
++                         int lev = levelUse | levelNext << 16;
++                        if (visibleChars == 0 && foldCompact)
++                           lev |= SC_FOLDLEVELWHITEFLAG;
++                        if (levelUse < levelNext)
++                           lev |= SC_FOLDLEVELHEADERFLAG;
++                         styler.SetLevel(thisLinePosition, lev);
++                         thisLinePosition++;
++                         levelCurrent = levelNext;
++                         levelMinCurrent = levelCurrent;
++                     }
++                  }
++               }
++               else
++               {
++                  if (levelMinCurrent > levelNext)
++                  {
++                     levelMinCurrent = levelNext;
++                  }
++                  levelNext++;
++               }
++            }
++            else if (ch == '}')
++            {
++                levelNext--;
++            }
+ 		}
+ 		if (atEOL) {
+ 			int levelUse = levelCurrent;

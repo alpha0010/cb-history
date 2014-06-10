@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 2796 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #2796 <small>2009-07-30 20:09:38</small></h3>
+          <h4>techy</h4>
+          Various memory problem fixes (part 2)
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="2796-Various_memory.patch">2796-Various_memory.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Bugfix</dd>
+            <dt>Status</dt><dd>Accepted</dd>
+            <dt>Close date</dt><dd>2009-12-17 06:45:02</dd>
+            <dt>Assigned to</dt><dd>mortenmacfly</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">techy 2009-07-30 20:17:55</div>
+        <div class="panel-body">
+          <p>Currently when opening a file with</p>
+          <p>cbEditor* EditorManager::Open(const wxString&amp; filename, int pos, ProjectFile* data)</p>
+          <p>a loader is first created and then passed to</p>
+          <p>cbEditor* EditorManager::Open(LoaderBase* fileLdr, const wxString&amp; filename, int pos,ProjectFile* data)</p>
+          <p>However, the second mentioned function doesn't use this loader when the file is already opened and just returns the corresponding editor. In this case the loader is not deallocated which leads to a memory leak.</p>
+          <p>This patch doesn't create a loader when the file is already opened. As a side effect, switching between opened files is considerably faster on a (rather ancient) linux I use at work because the file isn't loaded unnecessarily every time I switch between already opened files.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">techy 2009-11-07 00:36:34</div>
+        <div class="panel-body">
+          <p>Are you planning to apply the patch? This is the most important of my memory-problem fixes - the application leaks the complete contents of the file every time you switch the buffer e.g. by F11. The other memory fixes were just cosmetic to make valgrind to shut up.</p>
+          <p>To see the leaks, repeat the following:</p>
+          <p>1. Create a HUGE (several MB) source and header file and insert them into a project.</p>
+          <p>2. Start whatever you use to see how much memory a process occupies.</p>
+          <p>3. Start pressing F11 and see how the memory usage increases.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2009-11-07 17:19:52</div>
+        <div class="panel-body">
+          <p>Yes, I'll commit it (soon, probably). I've tested it very heavy and a long time and wanted Linux devs to give it a try, too. I still got no feedback which is good (because it means nothing bad happens) bt still waiting for the agreement.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">techy 2009-11-08 22:30:29</div>
+        <div class="panel-body">
+          <p>Good to hear! I have been using this patch under SUSE 9 and SLES 10 at work (plus Ubuntu on my home machine) during the last 4 month without any issues.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

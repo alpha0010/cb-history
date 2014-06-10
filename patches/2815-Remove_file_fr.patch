@@ -1,0 +1,65 @@
+Index: src/sdk/projectmanager.cpp
+===================================================================
+--- src/sdk/projectmanager.cpp	(revision 5731)
++++ src/sdk/projectmanager.cpp	(working copy)
+@@ -157,6 +157,7 @@
+ 
+     EVT_TREE_ITEM_ACTIVATED(ID_ProjectManager, ProjectManager::OnProjectFileActivated)
+     EVT_TREE_ITEM_RIGHT_CLICK(ID_ProjectManager, ProjectManager::OnTreeItemRightClick)
++    EVT_TREE_KEY_DOWN(ID_ProjectManager, ProjectManager::OnKeyDown)
+     EVT_COMMAND_RIGHT_CLICK(ID_ProjectManager, ProjectManager::OnRightClick)
+ 
+     EVT_AUINOTEBOOK_TAB_RIGHT_UP(idNB, ProjectManager::OnTabContextMenu)
+@@ -2089,14 +2090,17 @@
+     }
+     else if (event.GetId() == idMenuRemoveFilePopup)
+     {
+-        // remove single file
+-        prj->BeginRemoveFiles();
+-        RemoveFileFromProject(ftd->GetProjectFile(), prj);
+-        prj->CalculateCommonTopLevelPath();
+-        if (prj->GetCommonTopLevelPath() == oldpath)
+-            m_pTree->Delete(sel);
+-        prj->EndRemoveFiles();
+-        RebuildTree();
++        if(ftd->GetProjectFile())
++        {
++            // remove single file
++            prj->BeginRemoveFiles();
++            RemoveFileFromProject(ftd->GetProjectFile(), prj);
++            prj->CalculateCommonTopLevelPath();
++            if (prj->GetCommonTopLevelPath() == oldpath)
++                m_pTree->Delete(sel);
++            prj->EndRemoveFiles();
++            RebuildTree();
++        }
+     }
+     else if (event.GetId() == idMenuRemoveFolderFilesPopup)
+     {
+@@ -2843,3 +2847,14 @@
+         CloseWorkspace();
+     }
+ }
++
++void ProjectManager::OnKeyDown(wxTreeEvent& event)
++{
++    const wxKeyEvent& key_event = event.GetKeyEvent();
++
++    if(key_event.GetKeyCode() == WXK_DELETE || key_event.GetKeyCode() == WXK_NUMPAD_DELETE)
++    {
++        wxCommandEvent command(0, idMenuRemoveFilePopup);
++        OnRemoveFileFromProject(command);
++    }
++}
+Index: src/include/projectmanager.h
+===================================================================
+--- src/include/projectmanager.h	(revision 5731)
++++ src/include/projectmanager.h	(working copy)
+@@ -478,6 +478,7 @@
+         void OnUpdateUI(wxUpdateUIEvent& event);
+         void OnIdle(wxIdleEvent& event);
+         void OnAppDoneStartup(CodeBlocksEvent& event);
++        void OnKeyDown(wxTreeEvent& event);
+ 
+         void DoOpenSelectedFile();
+         void DoOpenFile(ProjectFile* pf, const wxString& filename);

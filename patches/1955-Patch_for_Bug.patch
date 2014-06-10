@@ -1,0 +1,42 @@
+Index: src/plugins/codecompletion/codecompletion.cpp
+===================================================================
+--- src/plugins/codecompletion/codecompletion.cpp	(revision 3823)
++++ src/plugins/codecompletion/codecompletion.cpp	(working copy)
+@@ -135,6 +135,7 @@
+     EVT_EDITOR_OPEN(CodeCompletion::OnEditorActivated)
+     EVT_EDITOR_ACTIVATED(CodeCompletion::OnEditorActivated)
+     EVT_EDITOR_TOOLTIP(CodeCompletion::OnValueTooltip)
++    EVT_EDITOR_CLOSE(CodeCompletion::OnEditorClose)
+ 
+     EVT_APP_STARTUP_DONE(CodeCompletion::OnAppDoneStartup)
+     EVT_PROJECT_OPEN(CodeCompletion::OnProjectOpened)
+@@ -1187,6 +1188,17 @@
+     event.Skip();
+ }
+ 
++void CodeCompletion::OnEditorClose(CodeBlocksEvent& event)
++{
++    // clear toolbar when closing editor
++    m_Function->Clear();
++    m_Scope->Clear();
++    m_FunctionsScope.clear();
++    m_NameSpaces.clear();
++
++    event.Skip();
++}
++
+ void CodeCompletion::OnFunctionsParsingTimer(wxTimerEvent& event)
+ {
+     // time to parse the file for functions
+Index: src/plugins/codecompletion/codecompletion.h
+===================================================================
+--- src/plugins/codecompletion/codecompletion.h	(revision 3823)
++++ src/plugins/codecompletion/codecompletion.h	(working copy)
+@@ -79,6 +79,7 @@
+         void OnUserListSelection(CodeBlocksEvent& event);
+         void OnReparseActiveEditor(CodeBlocksEvent& event);
+         void OnEditorActivated(CodeBlocksEvent& event);
++        void OnEditorClose(CodeBlocksEvent& event);
+         void OnParserEnd(wxCommandEvent& event);
+         void OnValueTooltip(CodeBlocksEvent& event);
+         void DoCodeComplete();

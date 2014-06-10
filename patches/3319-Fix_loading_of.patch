@@ -1,0 +1,303 @@
+Index: src/include/globals.h
+===================================================================
+--- src/include/globals.h	(revision 8236)
++++ src/include/globals.h	(working copy)
+@@ -206,6 +206,8 @@
+ 
+ extern DLLIMPORT wxString URLEncode(const wxString &str);
+ 
++extern DLLIMPORT wxString ExpandBackticks(wxString &str);
++
+ /// Check if CommonControls version is at least 6 (XP and up)
+ extern DLLIMPORT bool UsesCommonControls6();
+ 
+Index: src/include/compilercommandgenerator.h
+===================================================================
+--- src/include/compilercommandgenerator.h	(revision 8236)
++++ src/include/compilercommandgenerator.h	(working copy)
+@@ -20,7 +20,6 @@
+ 
+ typedef std::map<ProjectBuildTarget*, wxString> OptionsMap;
+ typedef std::map<ProjectBuildTarget*, wxArrayString> SearchDirsMap;
+-typedef std::map<wxString, wxString> BackticksMap;
+ 
+ /** Generate command-lines needed to produce a build.
+   * This pre-generates everything when Init() is called.
+@@ -98,9 +97,7 @@
+     private:
+         wxString GetProcessedIncludeDir(Compiler* compiler, ProjectBuildTarget* target,
+                                         const wxArrayString& inc_dirs, const wxString& inc_switch);
+-        wxString ExpandBackticks(wxString& str);
+         void SearchDirsFromBackticks(Compiler* compiler, ProjectBuildTarget* target, const wxString& btOutput);
+-        BackticksMap m_Backticks;
+         wxArrayString m_NotLoadedScripts;
+         wxArrayString m_ScriptsWithErrors;
+ };
+Index: src/sdk/editorcolourset.cpp
+===================================================================
+--- src/sdk/editorcolourset.cpp	(revision 8236)
++++ src/sdk/editorcolourset.cpp	(working copy)
+@@ -651,34 +651,34 @@
+ 
+         for (unsigned int i = 0; i < it->second.m_Colours.GetCount(); ++i)
+         {
+-            OptionColour* opt = it->second.m_Colours.Item(i);
+-            if (!opt)
+-                continue;
+             wxString tmpKey;
+             tmpKey << key << _T("/style") << wxString::Format(_T("%d"), i);
+-
+-            if (cfg->Exists(tmpKey + _T("/name")))
+-                opt->name = cfg->Read(tmpKey + _T("/name"));
+-            else
++            if (!cfg->Exists(tmpKey + _T("/name")))
+             {
+                 // make sure we didn't create it accidentally
+                 cfg->DeleteSubPath(tmpKey);
+                 continue;
+             }
++            wxString name = cfg->Read(tmpKey + _T("/name"));
++            for (size_t j = 0; j < it->second.m_Colours.GetCount(); ++j)
++            {
++                OptionColour* opt = it->second.m_Colours.Item(j);
++                if (!opt || opt->name != name)
++                    continue;
+ 
+-            if (cfg->Exists(tmpKey + _T("/fore")))
+-                opt->fore = cfg->ReadColour(tmpKey + _T("/fore"), opt->fore);
+-            if (cfg->Exists(tmpKey + _T("/back")))
+-                opt->back = cfg->ReadColour(tmpKey + _T("/back"), opt->back);
+-            if (cfg->Exists(tmpKey + _T("/bold")))
+-                opt->bold = cfg->ReadBool(tmpKey + _T("/bold"), opt->bold);
+-            if (cfg->Exists(tmpKey + _T("/italics")))
+-                opt->italics = cfg->ReadBool(tmpKey + _T("/italics"), opt->italics);
+-            if (cfg->Exists(tmpKey + _T("/underlined")))
+-                opt->underlined = cfg->ReadBool(tmpKey + _T("/underlined"), opt->underlined);
+-
+-            if (cfg->Exists(tmpKey + _T("/isStyle")))
+-                opt->isStyle = cfg->ReadBool(tmpKey + _T("/isStyle"), opt->isStyle);
++                if (cfg->Exists(tmpKey + _T("/fore")))
++                    opt->fore = cfg->ReadColour(tmpKey     + _T("/fore"),       opt->fore);
++                if (cfg->Exists(tmpKey + _T("/back")))
++                    opt->back = cfg->ReadColour(tmpKey     + _T("/back"),       opt->back);
++                if (cfg->Exists(tmpKey + _T("/bold")))
++                    opt->bold = cfg->ReadBool(tmpKey       + _T("/bold"),       opt->bold);
++                if (cfg->Exists(tmpKey + _T("/italics")))
++                    opt->italics = cfg->ReadBool(tmpKey    + _T("/italics"),    opt->italics);
++                if (cfg->Exists(tmpKey + _T("/underlined")))
++                    opt->underlined = cfg->ReadBool(tmpKey + _T("/underlined"), opt->underlined);
++                if (cfg->Exists(tmpKey + _T("/isStyle")))
++                    opt->isStyle = cfg->ReadBool(tmpKey    + _T("/isStyle"),    opt->isStyle);
++            }
+         }
+         wxString tmpkey;
+         for (int i = 0; i <= wxSCI_KEYWORDSET_MAX; ++i)
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 8236)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -1576,7 +1576,7 @@
+     ConfigManager* mgr = Manager::Get()->GetConfigManager(_T("editor"));
+ 
+     // Interpret #if/#else/#endif to grey out code that is not active
+-    control->SetProperty(_T("lexer.cpp.track.preprocessor"), mgr->ReadBool(_T("/track_preprocessor"), false) ? _T("1") : _T("0"));
++    control->SetProperty(_T("lexer.cpp.track.preprocessor"), mgr->ReadBool(_T("/track_preprocessor"), true) ? _T("1") : _T("0"));
+ 
+     // code folding
+     if (mgr->ReadBool(_T("/folding/show_folds"), true))
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(revision 8236)
++++ src/sdk/editormanager.cpp	(working copy)
+@@ -3045,8 +3045,8 @@
+ {
+     cbProject* prj = Manager::Get()->GetProjectManager()->GetActiveProject();
+     if (   !prj
+-        || !Manager::Get()->GetConfigManager(wxT("editor"))->ReadBool(wxT("/track_preprocessor"), false)
+-        || !Manager::Get()->GetConfigManager(wxT("editor"))->ReadBool(wxT("/collect_prj_defines"), false) )
++        || !Manager::Get()->GetConfigManager(wxT("editor"))->ReadBool(wxT("/track_preprocessor"),  true)
++        || !Manager::Get()->GetConfigManager(wxT("editor"))->ReadBool(wxT("/collect_prj_defines"), true) )
+     {
+         event.Skip();
+         return;
+@@ -3067,13 +3067,31 @@
+         lst = &prj->GetFilesList();
+         id  = prj->GetCompilerID();
+     }
++    Compiler* comp = CompilerFactory::GetCompiler(id); // get global flags
++    if (comp)
++        AppendArray(comp->GetCompilerOptions(), compilerFlags);
+ 
+     wxArrayString defines;
+     for (size_t i = 0; i < compilerFlags.Count(); ++i)
+     {
+-        if (   (compilerFlags[i].Left(2) == wxT("-D"))
+-            || (compilerFlags[i].Left(2) == wxT("/D")) )
++        if (   compilerFlags[i].StartsWith(wxT("-D"))
++            || compilerFlags[i].StartsWith(wxT("/D")) )
++        {
+             defines.Add(compilerFlags[i].Mid(2));
++        }
++        else if (compilerFlags[i].Find(wxT("`")) != wxNOT_FOUND)
++        {
++            wxString str = compilerFlags[i];
++            ExpandBackticks(str);
++            str.Replace(wxT("`"), wxT(" ")); // remove any leftover backticks to prevent an infinite loop
++            AppendArray(GetArrayFromString(str, wxT(" ")), compilerFlags);
++        }
++        else if (   compilerFlags[i] == wxT("-ansi")
++                 || compilerFlags[i] == wxT("-std=c90")
++                 || compilerFlags[i] == wxT("-std=c++98"))
++        {
++            defines.Add(wxT("__STRICT_ANSI__"));
++        }
+     }
+ 
+     defines.Add(wxT("__cplusplus"));
+Index: src/sdk/compilercommandgenerator.cpp
+===================================================================
+--- src/sdk/compilercommandgenerator.cpp	(revision 8236)
++++ src/sdk/compilercommandgenerator.cpp	(working copy)
+@@ -996,60 +996,8 @@
+   return inc_string;
+ }
+ 
+-/** Adds support for backtick'd expressions under windows. */
+-wxString CompilerCommandGenerator::ExpandBackticks(wxString& str)
+-{
+-    wxString ret;
+ 
+-    // this function is not windows-only anymore because we parse the backticked command's output
+-    // for compiler/linker search dirs
+ 
+-    size_t start = str.find(_T('`'));
+-    if (start == wxString::npos)
+-        return ret; // no backticks here
+-    size_t end = str.find(_T('`'), start + 1);
+-    if (end == wxString::npos)
+-        return ret; // no ending backtick; error?
+-
+-    while (start != wxString::npos && end != wxString::npos)
+-    {
+-        wxString cmd = str.substr(start + 1, end - start - 1);
+-        cmd.Trim(true);
+-        cmd.Trim(false);
+-        if (cmd.IsEmpty())
+-            break;
+-
+-        wxString bt;
+-        BackticksMap::iterator it = m_Backticks.find(cmd);
+-        if (it != m_Backticks.end())
+-        {
+-            // in cache :)
+-            bt = it->second;
+-        }
+-        else
+-        {
+-            Manager::Get()->GetLogManager()->DebugLog(F(_T("Caching result of `%s`"), cmd.wx_str()));
+-            wxArrayString output;
+-            if (platform::WindowsVersion() >= platform::winver_WindowsNT2000)
+-                wxExecute(_T("cmd /c ") + cmd, output, wxEXEC_NODISABLE);
+-            else
+-                wxExecute(cmd, output, wxEXEC_NODISABLE);
+-            bt = GetStringFromArray(output, _T(" "));
+-            // add it in the cache
+-            m_Backticks[cmd] = bt;
+-            Manager::Get()->GetLogManager()->DebugLog(_T("Cached"));
+-        }
+-        ret << bt << _T(' ');
+-        str = str.substr(0, start) + bt + str.substr(end + 1, wxString::npos);
+-
+-        // find next occurrence
+-        start = str.find(_T('`'));
+-        end = str.find(_T('`'), start + 1);
+-    }
+-
+-    return ret;
+-}
+-
+ // parse the result of a backticked expression for compiler/linker search dirs
+ void CompilerCommandGenerator::SearchDirsFromBackticks(Compiler* compiler, ProjectBuildTarget* target, const wxString& btOutput)
+ {
+Index: src/sdk/globals.cpp
+===================================================================
+--- src/sdk/globals.cpp	(revision 8236)
++++ src/sdk/globals.cpp	(working copy)
+@@ -759,6 +759,62 @@
+     return ret;
+ }
+ 
++/** Adds support for backtick'd expressions under Windows. */
++typedef std::map<wxString, wxString> BackticksMap;
++BackticksMap m_Backticks; // all calls share the same cache
++wxString ExpandBackticks(wxString& str) // backticks are written in-place to str
++{
++    wxString ret;
++
++    // this function is not windows-only anymore because we parse the backticked command's output
++    // for compiler/linker search dirs
++
++    size_t start = str.find(_T('`'));
++    if (start == wxString::npos)
++        return ret; // no backticks here
++    size_t end = str.find(_T('`'), start + 1);
++    if (end == wxString::npos)
++        return ret; // no ending backtick; error?
++
++    while (start != wxString::npos && end != wxString::npos)
++    {
++        wxString cmd = str.substr(start + 1, end - start - 1);
++        cmd.Trim(true);
++        cmd.Trim(false);
++        if (cmd.IsEmpty())
++            break;
++
++        wxString bt;
++        BackticksMap::iterator it = m_Backticks.find(cmd);
++        if (it != m_Backticks.end())
++        {
++            // in cache :)
++            bt = it->second;
++        }
++        else
++        {
++            Manager::Get()->GetLogManager()->DebugLog(F(_T("Caching result of `%s`"), cmd.wx_str()));
++            wxArrayString output;
++            if (platform::WindowsVersion() >= platform::winver_WindowsNT2000)
++                wxExecute(_T("cmd /c ") + cmd, output, wxEXEC_NODISABLE);
++            else
++                wxExecute(cmd, output, wxEXEC_NODISABLE);
++            bt = GetStringFromArray(output, _T(" "));
++            // add it in the cache
++            m_Backticks[cmd] = bt;
++            Manager::Get()->GetLogManager()->DebugLog(_T("Cached"));
++        }
++        ret << bt << _T(' ');
++        str = str.substr(0, start) + bt + str.substr(end + 1, wxString::npos);
++
++        // find next occurrence
++        start = str.find(_T('`'));
++        end = str.find(_T('`'), start + 1);
++    }
++
++    return ret; // return a list of the replaced expressions
++}
++
+ bool IsWindowReallyShown(wxWindow* win)
+ {
+     while (win && win->IsShown())
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 8236)
++++ src/sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -140,8 +140,8 @@
+     XRCCTRL(*this, "cmbViewWS",                   wxComboBox)->SetSelection(cfg->ReadInt(_T("/view_whitespace"),         0));
+     XRCCTRL(*this, "rbTabText",                   wxRadioBox)->SetSelection(cfg->ReadBool(_T("/tab_text_relative"),      true)? 1 : 0);
+ 
+-    XRCCTRL(*this, "chkTrackPreprocessor",        wxCheckBox)->SetValue(cfg->ReadBool(_T("/track_preprocessor"),         false));
+-    XRCCTRL(*this, "chkCollectPrjDefines",        wxCheckBox)->SetValue(cfg->ReadBool(_T("/collect_prj_defines"),        false));
++    XRCCTRL(*this, "chkTrackPreprocessor",        wxCheckBox)->SetValue(cfg->ReadBool(_T("/track_preprocessor"),         true));
++    XRCCTRL(*this, "chkCollectPrjDefines",        wxCheckBox)->SetValue(cfg->ReadBool(_T("/collect_prj_defines"),        true));
+     XRCCTRL(*this, "chkPlatDefines",              wxCheckBox)->SetValue(cfg->ReadBool(_T("/platform_defines"),           false));
+     XRCCTRL(*this, "chkColoursWxSmith",           wxCheckBox)->SetValue(cfg->ReadBool(_T("/highlight_wxsmith"),          true));
+ 

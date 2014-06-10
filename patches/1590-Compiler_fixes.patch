@@ -1,0 +1,55 @@
+Index: src/plugins/contrib/symtab/symtabexec.cpp
+===================================================================
+--- src/plugins/contrib/symtab/symtabexec.cpp	(revision 3152)
++++ src/plugins/contrib/symtab/symtabexec.cpp	(working copy)
+@@ -22,6 +22,7 @@
+ #include <wx/ffile.h>
+ #include <wx/filedlg.h>
+ #include <wx/progdlg.h>
++#include <wx/button.h>
+ 
+ #include "symtabexec.h"
+ 
+Index: src/plugins/contrib/help_plugin/HelpConfigDialog.cpp
+===================================================================
+--- src/plugins/contrib/help_plugin/HelpConfigDialog.cpp	(revision 3152)
++++ src/plugins/contrib/help_plugin/HelpConfigDialog.cpp	(working copy)
+@@ -38,7 +38,7 @@
+ : m_LastSel(0),
+ m_pPlugin(plugin)
+ {
+-  wxXmlResource::Get()->LoadPanel(this, parent, _T("HelpConfigDialog"));
++  wxXmlResource::Get()->LoadPanel(this, parent, wxT("HelpConfigDialog"));
+   HelpCommon::LoadHelpFilesVector(m_Vector);
+ 
+   wxListBox *lst = XRCCTRL(*this, "lstHelp", wxListBox);
+@@ -91,12 +91,14 @@
+     wxEmptyString,
+     wxEmptyString,
+     wxEmptyString,
++#ifdef __WXMSW__
+     _T(
+-#ifdef __WXMSW__
+       "Windows help files (*.chm;*.hlp)|*.hlp;*.chm|"
+-#endif
+       "All files (*.*)|*.*"
+     )
++#else
++    _T("All files (*.*)|*.*")
++#endif
+   );
+ 
+   if (!filename.IsEmpty())
+Index: src/plugins/astyle/astyle/astyle.h
+===================================================================
+--- src/plugins/astyle/astyle/astyle.h	(revision 3152)
++++ src/plugins/astyle/astyle/astyle.h	(working copy)
+@@ -31,6 +31,8 @@
+ #include <string>
+ #include <vector>
+ 
++#include <cctype>
++
+ using namespace std;
+ 
+ // disable secure version deprecation warnings for .NET 2005

@@ -1,0 +1,136 @@
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 3459)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -74,6 +74,7 @@
+     EVT_CONTEXT_MENU(cbStyledTextCtrl::OnContextMenu)
+     EVT_KILL_FOCUS(cbStyledTextCtrl::OnKillFocus)
+     EVT_MIDDLE_DOWN(cbStyledTextCtrl::OnGPM)
++    EVT_KEY_DOWN(cbStyledTextCtrl::OnKeyDown)
+ END_EVENT_TABLE()
+ 
+ cbStyledTextCtrl::cbStyledTextCtrl(wxWindow* pParent, int id, const wxPoint& pos, const wxSize& size, long style)
+@@ -136,8 +137,111 @@
+ #endif
+ }
+ 
++void cbStyledTextCtrl::OnKeyDown (wxKeyEvent& evt) //Used to check if code is unfolded before a delete
++{
++   int keyPressed = evt.GetKeyCode();
++   if(keyPressed == WXK_DELETE || keyPressed == WXK_BACK)
++   {
++      ConfigManager* mgr = Manager::Get()->GetConfigManager(_T("editor"));
++      if(mgr->ReadBool(_T("/folding/show_folds"), true)) //Only try to fix folds if the folds are used
++      {
++         int currentLine = GetCurrentLine();
++         int currentSelectionStart = GetSelectionStart();
++         int currentSelectionEnd = GetSelectionEnd();
++         int selectionSize = currentSelectionEnd - currentSelectionStart;
++         if(selectionSize != 0) //Determine if there is a selection involved
++         {
++            int selectionStartLine = LineFromPosition(currentSelectionStart);
++            int selectionEndLine = LineFromPosition(currentSelectionEnd);
+ 
++            int foldLevelStartLine = GetFoldLevel(selectionStartLine);
++            int foldLevelEndLine = GetFoldLevel(selectionEndLine);
+ 
++            int foldStartParent = GetFoldParent(selectionStartLine);
++            int foldEndParent = GetFoldParent(selectionEndLine);
++
++            if ((foldLevelStartLine & wxSCI_FOLDLEVELHEADERFLAG) &&
++            (wxSCI_FOLDLEVELBASE <= (foldLevelStartLine & wxSCI_FOLDLEVELNUMBERMASK)))
++            {
++               foldStartParent = selectionStartLine;
++            }
++
++            if ((foldLevelEndLine & wxSCI_FOLDLEVELHEADERFLAG) &&
++            (wxSCI_FOLDLEVELBASE <= (foldLevelEndLine & wxSCI_FOLDLEVELNUMBERMASK)))
++            {
++               foldEndParent = selectionEndLine;
++            }
++
++            if(foldStartParent != -1)
++            {
++               if(GetFoldExpanded(foldStartParent) == false)
++               {
++                  ToggleFold(foldStartParent);
++               }
++            }
++
++            if(foldEndParent != -1)
++            {
++               if(GetFoldExpanded(foldEndParent) == false)
++               {
++                  ToggleFold(foldEndParent);
++               }
++            }
++         }
++         else //If no selection involved
++         {
++            int foldParent = GetFoldParent(currentLine);
++            int foldLevel = GetFoldLevel(currentLine);
++
++            if ((foldLevel & wxSCI_FOLDLEVELHEADERFLAG) &&
++            (wxSCI_FOLDLEVELBASE <= (foldLevel & wxSCI_FOLDLEVELNUMBERMASK)))
++            {
++               foldParent = currentLine;
++            }
++
++            if(foldParent != -1)
++            {
++               if(GetFoldExpanded(foldParent) == false)
++               {
++                  ToggleFold(foldParent);
++               }
++               else
++               {
++                  int prevLine = currentLine - 1;
++                  if(prevLine > 0)
++                  {
++                     int prevFoldParent = GetFoldParent(prevLine);
++                     if( prevFoldParent != -1)
++                     {
++                        if(GetFoldExpanded(prevFoldParent) == false)
++                        {
++                           ToggleFold(prevFoldParent);
++                        }
++                     }
++                  }
++               }
++            }
++            else
++            {
++               int prevLine = currentLine - 1;
++               if(prevLine > 0)
++               {
++                  int prevFoldParent = GetFoldParent(prevLine);
++                  if( prevFoldParent != -1)
++                  {
++                     if(GetFoldExpanded(prevFoldParent) == false)
++                     {
++                        ToggleFold(prevFoldParent);
++                     }
++                  }
++               }
++            }
++         }
++      }
++   }
++   evt.Skip();
++}
++
+ /* This struct holds private data for the cbEditor class.
+  * It's a paradigm to avoid rebuilding the entire project (as cbEditor is a basic dependency)
+  * for just adding a private var or method.
+Index: src/sdk/cbeditor.h
+===================================================================
+--- src/sdk/cbeditor.h	(revision 3459)
++++ src/sdk/cbeditor.h	(working copy)
+@@ -28,6 +28,7 @@
+ 		void OnContextMenu(wxContextMenuEvent& event);
+ 		void OnKillFocus(wxFocusEvent& event);
+ 		void OnGPM(wxMouseEvent& event);
++		void OnKeyDown (wxKeyEvent& evt);
+ 	private:
+ 		wxWindow* m_pParent;
+ 		DECLARE_EVENT_TABLE()

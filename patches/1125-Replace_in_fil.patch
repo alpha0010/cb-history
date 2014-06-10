@@ -1,0 +1,1264 @@
+Index: src/sdk/confirmreplacedlg.cpp
+===================================================================
+--- src/sdk/confirmreplacedlg.cpp	(revision 2551)
++++ src/sdk/confirmreplacedlg.cpp	(working copy)
+@@ -34,15 +34,20 @@
+ #include "confirmreplacedlg.h"
+ 
+ BEGIN_EVENT_TABLE(ConfirmReplaceDlg, wxDialog)
+-	EVT_BUTTON(XRCID("btnYes"), 	ConfirmReplaceDlg::OnYes)
+-	EVT_BUTTON(XRCID("btnNo"), 		ConfirmReplaceDlg::OnNo)
+-	EVT_BUTTON(XRCID("btnAll"), 	ConfirmReplaceDlg::OnAll)
+-	EVT_BUTTON(XRCID("btnCancel"),	ConfirmReplaceDlg::OnCancel)
++	EVT_BUTTON(XRCID("btnYes"), 	    ConfirmReplaceDlg::OnYes)
++	EVT_BUTTON(XRCID("btnNo"), 		    ConfirmReplaceDlg::OnNo)
++	EVT_BUTTON(XRCID("btnAllInFile"),   ConfirmReplaceDlg::OnAllInFile)
++	EVT_BUTTON(XRCID("btnSkipFile"),    ConfirmReplaceDlg::OnSkipFile)
++	EVT_BUTTON(XRCID("btnAll"), 	    ConfirmReplaceDlg::OnAll)
++	EVT_BUTTON(XRCID("btnCancel"),	    ConfirmReplaceDlg::OnCancel)
+ END_EVENT_TABLE()
+ 
+-ConfirmReplaceDlg::ConfirmReplaceDlg(wxWindow* parent, const wxString& label)
++ConfirmReplaceDlg::ConfirmReplaceDlg(wxWindow* parent, bool replaceInFiles, const wxString& label)
+ {
+-	wxXmlResource::Get()->LoadDialog(this, parent, _T("dlgConfirmReplace"));
++    if (replaceInFiles)
++        wxXmlResource::Get()->LoadDialog(this, parent, _T("dlgConfirmReplaceMultiple"));
++    else
++        wxXmlResource::Get()->LoadDialog(this, parent, _T("dlgConfirmReplace"));
+ 	XRCCTRL(*this, "lblMessage", wxStaticText)->SetLabel(label);
+ }
+ 
+@@ -60,6 +65,16 @@
+ 	EndModal(crNo);
+ }
+ 
++void ConfirmReplaceDlg::OnAllInFile(wxCommandEvent& event)
++{
++    EndModal(crAllInFile);
++}
++
++void ConfirmReplaceDlg::OnSkipFile(wxCommandEvent& event)
++{
++    EndModal(crSkipFile);
++}
++
+ void ConfirmReplaceDlg::OnAll(wxCommandEvent& event)
+ {
+ 	EndModal(crAll);
+Index: src/sdk/confirmreplacedlg.h
+===================================================================
+--- src/sdk/confirmreplacedlg.h	(revision 2551)
++++ src/sdk/confirmreplacedlg.h	(working copy)
+@@ -10,6 +10,8 @@
+ {
+ 	crYes = 0,
+ 	crNo,
++	crAllInFile,
++	crSkipFile,
+ 	crAll,
+ 	crCancel
+ };
+@@ -17,10 +19,13 @@
+ class ConfirmReplaceDlg : public wxDialog
+ {
+ 	public:
+-		ConfirmReplaceDlg(wxWindow* parent, const wxString& label = _("Replace this occurence?"));
++		ConfirmReplaceDlg(wxWindow* parent, bool replaceInFiles = false, 
++            const wxString& label = _("Replace this occurrence?"));
+ 		~ConfirmReplaceDlg();
+ 		void OnYes(wxCommandEvent& event);
+ 		void OnNo(wxCommandEvent& event);
++		void OnAllInFile(wxCommandEvent& event);
++		void OnSkipFile(wxCommandEvent& event);
+ 		void OnAll(wxCommandEvent& event);
+ 		void OnCancel(wxCommandEvent& event);
+ 		void CalcPosition(cbStyledTextCtrl* ed);
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(revision 2551)
++++ src/sdk/editormanager.cpp	(working copy)
+@@ -951,7 +951,7 @@
+                 wxString msg;
+                 msg.Printf(_("File %s is modified outside the IDE...\nDo you want to reload it (you will lose any unsaved work)?"),
+                            ed->GetFilename().c_str());
+-                ConfirmReplaceDlg dlg(Manager::Get()->GetAppWindow(), msg);
++                ConfirmReplaceDlg dlg(Manager::Get()->GetAppWindow(), false, msg);
+                 dlg.SetTitle(_("Reload file?"));
+                 PlaceWindow(&dlg);
+                 ret = dlg.ShowModal();
+@@ -1161,7 +1161,7 @@
+     if (!replace)
+         dlg = new FindDlg(Manager::Get()->GetAppWindow(), phraseAtCursor, hasSelection, !ed, explicitly_find_in_files);
+     else
+-        dlg = new ReplaceDlg(Manager::Get()->GetAppWindow(), phraseAtCursor, hasSelection);
++        dlg = new ReplaceDlg(Manager::Get()->GetAppWindow(), phraseAtCursor, hasSelection, !ed, explicitly_find_in_files);
+ 
+     PlaceWindow(dlg);
+     if (dlg->ShowModal() == wxID_CANCEL)
+@@ -1205,23 +1205,26 @@
+     if (!replace)
+     {
+         if (m_LastFindReplaceData->findInFiles)
+-        {
+-            int ans = FindInFiles(m_LastFindReplaceData);
+-            // FindInFiles() is done, default back to Find in Editor
+-            m_LastFindReplaceData->findInFiles = false;
+-            return ans;
+-        }
++            return FindInFiles(m_LastFindReplaceData);
+         else
+             return Find(control, m_LastFindReplaceData);
+     }
+     else
+     {
+         m_LastFindReplaceData->initialreplacing = true;
+-        return Replace(control, m_LastFindReplaceData);
++        
++        if (m_LastFindReplaceData->findInFiles)
++            return ReplaceInFiles(m_LastFindReplaceData);
++        else
++            return Replace(control, m_LastFindReplaceData);
+     }
++    
++    //Default back to find or replace in Editor
++    if(m_LastFindReplaceData->findInFiles)
++        m_LastFindReplaceData->findInFiles = false;
+ }
+ 
+-void EditorManager::CalculateFindReplaceStartEnd(cbStyledTextCtrl* control, cbFindReplaceData* data)
++void EditorManager::CalculateFindReplaceStartEnd(cbStyledTextCtrl* control, cbFindReplaceData* data, bool replace)
+ {
+     if (!control || !data)
+         return;
+@@ -1270,7 +1273,8 @@
+     }
+     else        // FindInFiles
+     {           // searching direction down, entire scope
+-        data->start = control->GetCurrentPos();
++        //Replace needs the entire scope, while find can wrap around.
++        data->start = ( replace ? 0 : control->GetCurrentPos() );
+         data->end   = control->GetLength();
+     }
+ }
+@@ -1424,6 +1428,264 @@
+     return pos;
+ }
+ 
++int EditorManager::ReplaceInFiles(cbFindReplaceData* data)
++{
++    if (!data) return 0;
++    if (data->findText.IsEmpty()) return 0;
++
++    // let's make a list of all the files to search in
++    wxArrayString filesList;
++
++    if (data->scope == 0) // find in project files
++    {
++        // fill the search list with all the project files
++        cbProject* prj = Manager::Get()->GetProjectManager()->GetActiveProject();
++        if (!prj)
++            return 0;
++
++        wxString fullpath = _T("");
++        for (int i = 0; i < prj->GetFilesCount(); ++i)
++        {
++            ProjectFile* pf = prj->GetFile(i);
++            if (pf)
++            {
++                fullpath = pf->file.GetFullPath();
++                if (filesList.Index(fullpath) == -1) // avoid adding duplicates
++                {
++                    if(wxFileExists(fullpath))  // Does the file exist?
++                        filesList.Add(fullpath);
++                }
++            }
++        }
++    }
++    else if (data->scope == 1) // find in open files
++    {
++        // fill the search list with the open files
++        for (int i = 0; i < m_pNotebook->GetPageCount(); ++i)
++        {
++            cbEditor* ed = InternalGetBuiltinEditor(i);
++            if (ed)
++                filesList.Add(ed->GetFilename());
++        }
++    }
++    else if (data->scope == 2) // find in workspace
++    {
++		// loop over all the projects in the workspace (they are contained in the ProjectManager)
++		const ProjectsArray* pProjects = Manager::Get()->GetProjectManager()->GetProjects();
++		if(pProjects)
++		{
++			int count = pProjects->GetCount();
++			for (int idxProject = 0; idxProject < count; ++idxProject)
++			{
++				cbProject* pProject = pProjects->Item(idxProject);
++				if(pProject)
++				{
++					wxString fullpath = _T("");
++					for (int idxFile = 0; idxFile < pProject->GetFilesCount(); ++idxFile)
++					{
++						ProjectFile* pf = pProject->GetFile(idxFile);
++						if (pf)
++						{
++							fullpath = pf->file.GetFullPath();
++							if (filesList.Index(fullpath) == -1) // avoid adding duplicates
++							{
++								if(wxFileExists(fullpath))  // Does the file exist?
++									filesList.Add(fullpath);
++							}
++						}
++					} // end for : idx : idxFile
++				}
++			} // end for : idx : idxProject
++		}
++    }
++
++    // if the list is empty, leave
++    int filesCount = filesList.GetCount();
++    if (filesCount == 0)
++    {
++        cbMessageBox(_("No files to search in!"), _("Error"), wxICON_WARNING);
++        return 0;
++    }
++    
++    int flags = 0;
++    if (data->matchWord)
++        flags |= wxSCI_FIND_WHOLEWORD;
++    if (data->startWord)
++        flags |= wxSCI_FIND_WORDSTART;
++    if (data->matchCase)
++        flags |= wxSCI_FIND_MATCHCASE;
++    if (data->regEx)
++        flags |= wxSCI_FIND_REGEXP;
++    
++    bool replace = false;
++    bool confirm = true;
++    bool stop = false;
++    bool wholeFile = false;
++    bool all = false;
++    int pos = -1;
++    
++    wxPoint LastDlgPosition;
++    bool HaveLastDlgPosition = false;
++    
++    // keep a copy of the find struct
++    cbFindReplaceData dataCopy = *data;
++    
++    for (int i = 0; i<filesCount || stop; ++i)
++    {
++        cbEditor *ed = NULL;
++        cbStyledTextCtrl *control = NULL;
++        bool fileWasNotOpen = false;
++        
++        //Check if this file is already open
++        EditorBase *eb = IsOpen(filesList[i]);
++        if (eb)
++        {
++            //File was already open
++            fileWasNotOpen = false;
++            
++            ed = GetBuiltinEditor(eb);
++            if (ed) control = ed->GetControl();
++        }
++        
++        //If it's still NULL, open a new editor
++        if (!control)
++        {
++            //File was not open, i opened it.
++            fileWasNotOpen = true;
++            
++            ed = Open(filesList[i]);
++            if (ed) control = ed->GetControl();
++        }
++        //Still NULL?
++        if (!control || !ed)
++            continue;
++        
++        SetActiveEditor(ed);
++        control->BeginUndoAction(); //undo
++        
++        *data = dataCopy;
++        CalculateFindReplaceStartEnd(control, data, true);
++        
++        //reset bools
++        wholeFile = false;
++        if (!all) confirm = true;
++        
++        //Replace in this file
++        while(!stop || wholeFile)
++        {
++            int lengthFound = 0;
++            pos = control->FindText(data->start, data->end, data->findText, 
++                flags, &lengthFound);
++            
++            if (pos == -1)
++                break;
++            
++            control->GotoPos(pos);
++            control->EnsureVisible(control->LineFromPosition(pos));
++            control->SetSelection(pos, pos + lengthFound);
++            data->start = pos;
++            data->initialreplacing = false;  // special treatment only necessary the first time
++            
++            if (confirm)
++            {
++                ConfirmReplaceDlg dlg(Manager::Get()->GetAppWindow(), true);
++                // dlg.CalcPosition(control);
++                // TODO (thomas#1#): Check whether the existing code actually works with twin view
++                // else, we need something like:
++                // PlaceWindow(&dlg, pdlRelative);
++
++                // NOTE (Tiwag#1#): dlg.CalcPosition doesn't work for me with dual monitor setup,
++                //     workaround : remember last dialog position, user can position
++                //                  it outside of text where he wants
++                // Move dialog to last position if already available,
++                // else place it according to environments settings
++                if ( HaveLastDlgPosition )
++                    dlg.Move(LastDlgPosition);
++                else
++                    dlg.CalcPosition(control);
++
++                int ans = dlg.ShowModal();
++                LastDlgPosition = dlg.GetPosition();
++                HaveLastDlgPosition = true;
++                switch (ans)
++                {
++                    case crYes:
++                        replace = true;
++                        break;
++                    case crNo:
++                        replace = false;
++                        break;
++                    case crAllInFile:
++                        confirm = false;
++                        replace = true;
++                        wholeFile = true;
++                        break;
++                    case crSkipFile:
++                        confirm = false;
++                        replace = false;
++                        wholeFile = true;
++                        break;
++                    case crAll:
++                        replace = true;
++                        confirm = false;
++                        all = true;
++                        break;
++                    case crCancel:
++                        stop = true;
++                        break;
++                }
++            }
++            
++            if (!stop)
++            {
++                if (replace)
++                {
++                    int lengthReplace = data->replaceText.Length();
++                    if (data->regEx)
++                    {
++                        // set target same as selection
++                        control->SetTargetStart(control->GetSelectionStart());
++                        control->SetTargetEnd(control->GetSelectionEnd());
++                        // replace with regEx support
++                        lengthReplace = control->ReplaceTargetRE(data->replaceText);
++                        // reset target
++                        control->SetTargetStart(0);
++                        control->SetTargetEnd(0);
++                    }
++                    else
++                        control->ReplaceSelection(data->replaceText);
++                    
++                    data->start += lengthReplace;
++                    
++                    // adjust end pos by adding the length difference
++                    //between find and replace strings
++                    int diff = lengthReplace - lengthFound;
++                    if (data->directionDown)
++                        data->end += diff;
++                    else
++                        data->end -= diff;
++                }
++                else
++                {
++                    if (data->directionDown)
++                        data->start += lengthFound;
++                    else
++                        data->start -= lengthFound;
++                }
++            }
++        }
++        
++        control->EndUndoAction(); // undo
++        
++        //If i opened the file and no replacement was made, 
++        //close the editor
++        if (!ed->GetModified() && fileWasNotOpen)
++            Close(ed, true);
++    }
++    
++    return pos;
++}
++
+ int EditorManager::Find(cbStyledTextCtrl* control, cbFindReplaceData* data)
+ {
+     if (!control || !data)
+@@ -1626,8 +1888,8 @@
+                                  wxPD_AUTO_HIDE | wxPD_APP_MODAL | wxPD_CAN_ABORT);
+ 
+     PlaceWindow(progress);
++    
+     // keep a copy of the find struct
+-
+     cbFindReplaceData localData = *data;
+ 
+     if ( !data->delOldSearches )
+Index: src/sdk/editormanager.h
+===================================================================
+--- src/sdk/editormanager.h	(revision 2551)
++++ src/sdk/editormanager.h	(working copy)
+@@ -100,6 +100,7 @@
+         int Find(cbStyledTextCtrl* control, cbFindReplaceData* data);
+         int FindInFiles(cbFindReplaceData* data);
+         int Replace(cbStyledTextCtrl* control, cbFindReplaceData* data);
++        int ReplaceInFiles(cbFindReplaceData* data);
+         int FindNext(bool goingDown, cbStyledTextCtrl* control = 0, cbFindReplaceData* data = 0);
+ 
+         void Print(PrintScope ps, PrintColourMode pcm, bool line_numbers);
+@@ -173,7 +174,7 @@
+     private:
+         EditorManager();
+         ~EditorManager();
+-        void CalculateFindReplaceStartEnd(cbStyledTextCtrl* control, cbFindReplaceData* data);
++        void CalculateFindReplaceStartEnd(cbStyledTextCtrl* control, cbFindReplaceData* data, bool replace = false);
+         void OnCheckForModifiedFiles(wxCommandEvent& event);
+ 
+         wxFlatNotebook* m_pNotebook;
+Index: src/sdk/replacedlg.cpp
+===================================================================
+--- src/sdk/replacedlg.cpp	(revision 2551)
++++ src/sdk/replacedlg.cpp	(working copy)
+@@ -44,32 +44,51 @@
+ #define CONF_GROUP _T("/replace_options")
+ 
+ BEGIN_EVENT_TABLE(ReplaceDlg, wxDialog)
+-	EVT_CHECKBOX(XRCID("chkRegEx"), 	ReplaceDlg::OnRegEx)
++    EVT_NOTEBOOK_PAGE_CHANGED(XRCID("nbReplace"), ReplaceDlg::OnFindChange)
++	EVT_CHECKBOX(XRCID("chkRegEx1"), 	ReplaceDlg::OnRegEx)
++	EVT_ACTIVATE(                       ReplaceDlg::OnActivate)
+ END_EVENT_TABLE()
+ 
+-ReplaceDlg::ReplaceDlg(wxWindow* parent, const wxString& initial, bool hasSelection)
+-	: FindReplaceBase(parent, initial, hasSelection)
++ReplaceDlg::ReplaceDlg(wxWindow* parent, const wxString& initial, bool hasSelection, 
++    bool findInFilesOnly, bool replaceInFilesActive)
++	: FindReplaceBase(parent, initial, hasSelection),
++	m_Complete(!replaceInFilesActive)
+ {
+ 	wxXmlResource::Get()->LoadDialog(this, parent, _T("dlgReplace"));
+     ConfigManager* cfg = Manager::Get()->GetConfigManager(_T("editor"));
+ 
+ 	// load last searches
+-	FillComboWithLastValues(XRCCTRL(*this, "cmbFind", wxComboBox), CONF_GROUP _T("/last"));
+-	FillComboWithLastValues(XRCCTRL(*this, "cmbReplace", wxComboBox), CONF_GROUP _T("/lastReplace"));
++	FillComboWithLastValues(XRCCTRL(*this, "cmbFind1", wxComboBox), CONF_GROUP _T("/last"));
++	FillComboWithLastValues(XRCCTRL(*this, "cmbReplace1", wxComboBox), CONF_GROUP _T("/lastReplace"));
++	FillComboWithLastValues(XRCCTRL(*this, "cmbFind2", wxComboBox), CONF_GROUP _T("/last"));
++	FillComboWithLastValues(XRCCTRL(*this, "cmbReplace2", wxComboBox), CONF_GROUP _T("/lastReplace"));
+ 
+-	// find options
+-	XRCCTRL(*this, "cmbFind", wxComboBox)->SetValue(initial);
+-	XRCCTRL(*this, "chkWholeWord", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/match_word"), false));
+-	XRCCTRL(*this, "chkStartWord", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/start_word"), false));
+-	XRCCTRL(*this, "chkMatchCase", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/match_case"), false));
+-	XRCCTRL(*this, "chkRegEx", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/regex"), false));
++	// replace options
++	XRCCTRL(*this, "cmbFind1", wxComboBox)->SetValue(initial);
++	XRCCTRL(*this, "chkWholeWord1", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/match_word"), false));
++	XRCCTRL(*this, "chkStartWord1", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/start_word"), false));
++	XRCCTRL(*this, "chkMatchCase1", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/match_case"), false));
++	XRCCTRL(*this, "chkRegEx1", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/regex"), false));
+ 	XRCCTRL(*this, "rbDirection", wxRadioBox)->SetSelection(cfg->ReadInt(CONF_GROUP _T("/direction"), 1));
+-	XRCCTRL(*this, "rbDirection", wxRadioBox)->Enable(!XRCCTRL(*this, "chkRegEx", wxCheckBox)->GetValue()); // if regex, only forward searches
++	XRCCTRL(*this, "rbDirection", wxRadioBox)->Enable(!XRCCTRL(*this, "chkRegEx1", wxCheckBox)->GetValue()); // if regex, only forward searches
+ 	XRCCTRL(*this, "rbOrigin", wxRadioBox)->SetSelection(cfg->ReadInt(CONF_GROUP _T("/origin"), 0));
+-	XRCCTRL(*this, "rbScope", wxRadioBox)->SetSelection(hasSelection);
+-	XRCCTRL(*this, "rbScope", wxRadioBox)->Enable(hasSelection);
+-
+-	XRCCTRL(*this, "cmbFind", wxComboBox)->SetFocus();
++	XRCCTRL(*this, "rbScope1", wxRadioBox)->SetSelection(hasSelection);
++	XRCCTRL(*this, "rbScope1", wxRadioBox)->Enable(hasSelection);
++	
++	// replace in files options
++	XRCCTRL(*this, "cmbFind2", wxComboBox)->SetValue(initial);
++	XRCCTRL(*this, "chkWholeWord2", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/match_word"), false));
++	XRCCTRL(*this, "chkStartWord2", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/start_word"), false));
++	XRCCTRL(*this, "chkMatchCase2", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/match_case"), false));
++	XRCCTRL(*this, "chkRegEx2", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/regex"), false));
++    
++    if (findInFilesOnly)
++        XRCCTRL(*this, "nbReplace", wxNotebook)->DeletePage(0); // no active editor, so only replace-in-files
++	else if (replaceInFilesActive)
++	{
++		XRCCTRL(*this, "nbReplace", wxNotebook)->SetSelection(1); // Search->Replace in Files was selected
++		XRCCTRL(*this, "cmbFind2", wxComboBox)->SetFocus();
++	}
+ }
+ 
+ ReplaceDlg::~ReplaceDlg()
+@@ -77,16 +96,34 @@
+     ConfigManager* cfg = Manager::Get()->GetConfigManager(_T("editor"));
+ 
+ 	// save last searches (up to 10)
+-	SaveComboValues(XRCCTRL(*this, "cmbFind", wxComboBox), CONF_GROUP _T("/last"));
+-	SaveComboValues(XRCCTRL(*this, "cmbReplace", wxComboBox), CONF_GROUP _T("/lastReplace"));
+-
+-	// find options
+-	cfg->Write(CONF_GROUP _T("/match_word"), XRCCTRL(*this, "chkWholeWord", wxCheckBox)->GetValue());
+-	cfg->Write(CONF_GROUP _T("/start_word"), XRCCTRL(*this, "chkStartWord", wxCheckBox)->GetValue());
+-	cfg->Write(CONF_GROUP _T("/match_case"), XRCCTRL(*this, "chkMatchCase", wxCheckBox)->GetValue());
+-	cfg->Write(CONF_GROUP _T("/regex"), XRCCTRL(*this, "chkRegEx", wxCheckBox)->GetValue());
+-	cfg->Write(CONF_GROUP _T("/direction"), XRCCTRL(*this, "rbDirection", wxRadioBox)->GetSelection());
+-	cfg->Write(CONF_GROUP _T("/origin"), XRCCTRL(*this, "rbOrigin", wxRadioBox)->GetSelection());
++	if (IsFindInFiles())
++	{
++	    SaveComboValues(XRCCTRL(*this, "cmbFind2", wxComboBox), CONF_GROUP _T("/last"));
++        SaveComboValues(XRCCTRL(*this, "cmbReplace2", wxComboBox), CONF_GROUP _T("/lastReplace"));
++	}
++	else
++	{
++	    SaveComboValues(XRCCTRL(*this, "cmbFind1", wxComboBox), CONF_GROUP _T("/last"));
++        SaveComboValues(XRCCTRL(*this, "cmbReplace1", wxComboBox), CONF_GROUP _T("/lastReplace"));
++	}
++    
++    if (m_Complete)
++	{
++        // find options
++        cfg->Write(CONF_GROUP _T("/match_word"), XRCCTRL(*this, "chkWholeWord1", wxCheckBox)->GetValue());
++        cfg->Write(CONF_GROUP _T("/start_word"), XRCCTRL(*this, "chkStartWord1", wxCheckBox)->GetValue());
++        cfg->Write(CONF_GROUP _T("/match_case"), XRCCTRL(*this, "chkMatchCase1", wxCheckBox)->GetValue());
++        cfg->Write(CONF_GROUP _T("/regex"), XRCCTRL(*this, "chkRegEx1", wxCheckBox)->GetValue());
++        cfg->Write(CONF_GROUP _T("/direction"), XRCCTRL(*this, "rbDirection", wxRadioBox)->GetSelection());
++        cfg->Write(CONF_GROUP _T("/origin"), XRCCTRL(*this, "rbOrigin", wxRadioBox)->GetSelection());
++	}
++	
++	// find in files options
++	cfg->Write(CONF_GROUP _T("/match_word2"), XRCCTRL(*this, "chkWholeWord2", wxCheckBox)->GetValue());
++	cfg->Write(CONF_GROUP _T("/start_word2"), XRCCTRL(*this, "chkStartWord2", wxCheckBox)->GetValue());
++	cfg->Write(CONF_GROUP _T("/match_case2"), XRCCTRL(*this, "chkMatchCase2", wxCheckBox)->GetValue());
++	cfg->Write(CONF_GROUP _T("/regex2"), XRCCTRL(*this, "chkRegEx2", wxCheckBox)->GetValue());
++	cfg->Write(CONF_GROUP _T("/scope2"), XRCCTRL(*this, "rbScope2", wxRadioBox)->GetSelection());
+ }
+ 
+ void ReplaceDlg::FillComboWithLastValues(wxComboBox* combo, const wxString& configKey)
+@@ -116,57 +153,117 @@
+ 
+ wxString ReplaceDlg::GetFindString() const
+ {
+-	return XRCCTRL(*this, "cmbFind", wxComboBox)->GetValue();
++    if (IsFindInFiles())
++        return XRCCTRL(*this, "cmbFind2", wxComboBox)->GetValue();
++    else
++        return XRCCTRL(*this, "cmbFind1", wxComboBox)->GetValue();
+ }
+ 
+ wxString ReplaceDlg::GetReplaceString() const
+ {
+-	return XRCCTRL(*this, "cmbReplace", wxComboBox)->GetValue();
++    if (IsFindInFiles())
++        return XRCCTRL(*this, "cmbReplace2", wxComboBox)->GetValue();
++    else
++        return XRCCTRL(*this, "cmbReplace1", wxComboBox)->GetValue();
+ }
+ 
++bool ReplaceDlg::IsFindInFiles() const
++{
++	return !m_Complete || XRCCTRL(*this, "nbReplace", wxNotebook)->GetSelection() == 1;
++}
++
+ bool ReplaceDlg::GetDeleteOldSearches() const
+ {
+-	return true;
++    return false; // checkbox doesn't exist in both dialogs 
+ }
+ 
+ bool ReplaceDlg::GetMatchWord() const
+ {
+-	return XRCCTRL(*this, "chkWholeWord", wxCheckBox)->GetValue();
++    if (IsFindInFiles())
++		return XRCCTRL(*this, "chkWholeWord2", wxCheckBox)->GetValue();
++	else
++        return XRCCTRL(*this, "chkWholeWord1", wxCheckBox)->GetValue();
+ }
+ 
+ bool ReplaceDlg::GetStartWord() const
+ {
+-	return XRCCTRL(*this, "chkStartWord", wxCheckBox)->GetValue();
++    if (IsFindInFiles())
++		return XRCCTRL(*this, "chkStartWord2", wxCheckBox)->GetValue();
++	else
++        return XRCCTRL(*this, "chkStartWord1", wxCheckBox)->GetValue();
+ }
+ 
+ bool ReplaceDlg::GetMatchCase() const
+ {
+-	return XRCCTRL(*this, "chkMatchCase", wxCheckBox)->GetValue();
++    if (IsFindInFiles())
++		return XRCCTRL(*this, "chkMatchCase2", wxCheckBox)->GetValue();
++	else
++        return XRCCTRL(*this, "chkMatchCase1", wxCheckBox)->GetValue();
+ }
+ 
+ bool ReplaceDlg::GetRegEx() const
+ {
+-	return XRCCTRL(*this, "chkRegEx", wxCheckBox)->GetValue();
++    if (IsFindInFiles())
++		return XRCCTRL(*this, "chkRegEx2", wxCheckBox)->GetValue();
++	else
++		return XRCCTRL(*this, "chkRegEx1", wxCheckBox)->GetValue();
+ }
+ 
+ int ReplaceDlg::GetDirection() const
+ {
+-	return XRCCTRL(*this, "rbDirection", wxRadioBox)->GetSelection();
++    if (IsFindInFiles())
++        return 1;
++    else
++        return XRCCTRL(*this, "rbDirection", wxRadioBox)->GetSelection();
+ }
+ 
+ int ReplaceDlg::GetOrigin() const
+ {
+-	return XRCCTRL(*this, "rbOrigin", wxRadioBox)->GetSelection();
++    if (IsFindInFiles())
++		return 1;
++	else
++        return XRCCTRL(*this, "rbOrigin", wxCheckBox)->GetValue();
+ }
+ 
+ int ReplaceDlg::GetScope() const
+ {
+-	return XRCCTRL(*this, "rbScope", wxRadioBox)->GetSelection();
++    if (IsFindInFiles())
++		return XRCCTRL(*this, "rbScope2", wxRadioBox)->GetSelection();
++	else
++        return XRCCTRL(*this, "rbScope1", wxCheckBox)->GetValue();
+ }
+ 
+ // events
+ 
++void ReplaceDlg::OnFindChange(wxNotebookEvent& event)
++{
++    wxComboBox* cmbFind1 = XRCCTRL(*this, "cmbFind1", wxComboBox);
++    wxComboBox* cmbFind2 = XRCCTRL(*this, "cmbFind2", wxComboBox);
++
++    if (cmbFind1 && cmbFind2)
++    {
++        if (XRCCTRL(*this, "nbReplace", wxNotebook)->GetSelection() == 1)
++            cmbFind2->SetValue(cmbFind1->GetValue());
++        else
++            cmbFind1->SetValue(cmbFind2->GetValue());
++    }
++    event.Skip();
++}
++
+ void ReplaceDlg::OnRegEx(wxCommandEvent& event)
+ {
+-	XRCCTRL(*this, "rbDirection", wxRadioBox)->Enable(!XRCCTRL(*this, "chkRegEx", wxCheckBox)->GetValue());
++    if (m_Complete)
++        XRCCTRL(*this, "rbDirection", wxRadioBox)->Enable(!XRCCTRL(*this, "chkRegEx1", wxCheckBox)->GetValue());
+ }
++
++void ReplaceDlg::OnActivate(wxActivateEvent& event)
++{
++    wxComboBox* cbp = 0;
++    if (IsFindInFiles())
++        cbp = XRCCTRL(*this, "cmbFind2", wxComboBox);
++    else
++        cbp = XRCCTRL(*this, "cmbFind1", wxComboBox);
++
++    if (cbp != 0) cbp->SetFocus();
++    event.Skip();
++}
+Index: src/sdk/replacedlg.h
+===================================================================
+--- src/sdk/replacedlg.h	(revision 2551)
++++ src/sdk/replacedlg.h	(working copy)
+@@ -8,11 +8,12 @@
+ class ReplaceDlg : public FindReplaceBase
+ {
+ 	public:
+-		ReplaceDlg(wxWindow* parent, const wxString& initial = wxEmptyString, bool hasSelection = false);
++		ReplaceDlg(wxWindow* parent, const wxString& initial = wxEmptyString, bool hasSelection = false, 
++            bool findInFilesOnly = false, bool replaceInFilesActive = false);
+ 		~ReplaceDlg();
+ 		wxString GetFindString() const;
+ 		wxString GetReplaceString() const;
+-		bool IsFindInFiles() const { return false; }
++		bool IsFindInFiles() const;
+ 		bool GetDeleteOldSearches() const;
+ 		bool GetMatchWord() const;
+ 		bool GetStartWord() const;
+@@ -26,8 +27,12 @@
+ 		wxString GetSearchPath() const{ return wxEmptyString; }
+ 		wxString GetSearchMask() const{ return wxEmptyString; }
+ 
++		void OnFindChange(wxNotebookEvent& event);
+ 		void OnRegEx(wxCommandEvent& event);
++		void OnActivate(wxActivateEvent& event);
++		
+ 	private:
++        bool m_Complete;
+ 		void FillComboWithLastValues(wxComboBox* combo, const wxString& configKey);
+ 		void SaveComboValues(wxComboBox* combo, const wxString& configKey);
+ 		DECLARE_EVENT_TABLE()
+Index: src/sdk/resources/confirm_replace.xrc
+===================================================================
+--- src/sdk/resources/confirm_replace.xrc	(revision 2551)
++++ src/sdk/resources/confirm_replace.xrc	(working copy)
+@@ -6,7 +6,7 @@
+       <orient>wxVERTICAL</orient>
+       <object class="sizeritem">
+         <object class="wxStaticText" name="lblMessage">
+-          <label>Replace this occurence?
++          <label>Replace this occurrence?
+ 
+ </label>
+         </object>
+@@ -49,4 +49,4 @@
+       </object>
+     </object>
+   </object>
+-</resource>
+\ No newline at end of file
++</resource>
+Index: src/sdk/resources/confirm_replace_multiple.xrc
+===================================================================
+--- src/sdk/resources/confirm_replace_multiple.xrc	(revision 0)
++++ src/sdk/resources/confirm_replace_multiple.xrc	(revision 0)
+@@ -0,0 +1,65 @@
++<?xml version="1.0" ?>
++<resource>
++  <object class="wxDialog" name="dlgConfirmReplaceMultiple">
++    <title>Confirm replace multiple</title>
++    <object class="wxBoxSizer">
++      <orient>wxVERTICAL</orient>
++      <object class="sizeritem">
++        <object class="wxStaticText" name="lblMessage">
++          <label>Replace this occurrence?
++</label>
++        </object>
++        <flag>wxALL|wxGROW</flag>
++        <border>8</border>
++      </object>
++      <object class="sizeritem">
++        <object class="wxBoxSizer">
++          <orient>wxHORIZONTAL</orient>
++          <object class="sizeritem">
++            <object class="wxButton" name="btnYes">
++              <label>&amp;Yes</label>
++              <default>1</default>
++            </object>
++            <flag>wxRIGHT</flag>
++            <border>4</border>
++          </object>
++          <object class="sizeritem">
++            <object class="wxButton" name="btnNo">
++              <label>&amp;No</label>
++            </object>
++            <flag>wxRIGHT</flag>
++            <border>4</border>
++          </object>
++          <object class="sizeritem">
++            <object class="wxButton" name="btnAllInFile">
++              <label>&amp;All in this file</label>
++            </object>
++            <flag>wxRIGHT</flag>
++            <border>4</border>
++          </object>
++          <object class="sizeritem">
++            <object class="wxButton" name="btnSkipFile">
++              <label>&amp;Skip this file</label>
++            </object>
++            <flag>wxRIGHT</flag>
++            <border>4</border>
++          </object>
++          <object class="sizeritem">
++            <object class="wxButton" name="btnAll">
++              <label>&amp;All</label>
++            </object>
++            <flag>wxRIGHT</flag>
++            <border>4</border>
++          </object>
++          <object class="sizeritem">
++            <object class="wxButton" name="btnCancel">
++              <label>&amp;Cancel</label>
++            </object>
++          </object>
++        </object>
++        <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxGROW</flag>
++        <border>4</border>
++      </object>
++    </object>
++  </object>
++</resource>
+Index: src/sdk/resources/replace_dialog.xrc
+===================================================================
+--- src/sdk/resources/replace_dialog.xrc	(revision 2551)
++++ src/sdk/resources/replace_dialog.xrc	(working copy)
+@@ -1,148 +1,263 @@
+ <?xml version="1.0" ?>
+ <resource>
+-  <object class="wxDialog" name="dlgReplace">
+-    <title>Replace</title>
+-    <centered>1</centered>
+-    <object class="wxBoxSizer">
+-      <orient>wxVERTICAL</orient>
+-      <object class="sizeritem">
+-        <object class="wxStaticText">
+-          <label>&amp;Text to search for:</label>
+-        </object>
+-        <flag>wxTOP|wxLEFT|wxRIGHT</flag>
+-        <border>8</border>
+-      </object>
+-      <object class="sizeritem">
+-        <object class="wxComboBox" name="cmbFind">
+-          <content/>
+-        </object>
+-        <flag>wxLEFT|wxRIGHT|wxEXPAND</flag>
+-        <border>8</border>
+-      </object>
+-      <object class="sizeritem">
+-        <object class="wxStaticText" name="">
+-          <label>&amp;Replace with:</label>
+-        </object>
+-        <flag>wxTOP|wxLEFT|wxRIGHT</flag>
+-        <border>8</border>
+-      </object>
+-      <object class="sizeritem">
+-        <object class="wxComboBox" name="cmbReplace">
+-          <content/>
+-        </object>
+-        <flag>wxLEFT|wxRIGHT|wxEXPAND</flag>
+-        <border>8</border>
+-      </object>
+-      <object class="sizeritem">
+-        <object class="wxFlexGridSizer">
+-          <object class="sizeritem">
+-            <object class="wxStaticBoxSizer">
+-              <label>Options</label>
+-              <orient>wxVERTICAL</orient>
+-              <object class="sizeritem">
+-                <object class="wxCheckBox" name="chkWholeWord">
+-                  <label>Whole &amp;word</label>
++    <object class="wxDialog" name="dlgReplace">
++        <style>wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER</style>
++        <title>Replace</title>
++        <centered>1</centered>
++        <object class="wxBoxSizer">
++            <orient>wxVERTICAL</orient>
++            <object class="sizeritem">
++                <flag>wxGROW|wxALL</flag>
++                <border>8</border>
++                <option>1</option>
++                <object class="wxNotebook" name="nbReplace">
++                    <object class="notebookpage">
++                        <label>Replace</label>
++                        <object class="wxPanel" name="tabReplace">
++                            <style>wxTAB_TRAVERSAL</style>
++                            <object class="wxBoxSizer">
++                                <orient>wxVERTICAL</orient>
++                                <object class="sizeritem">
++                                    <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP|wxADJUST_MINSIZE</flag>
++                                    <border>8</border>
++                                    <object class="wxStaticText" name="">
++                                        <label>&amp;Text to search for:</label>
++                                    </object>
++                                </object>
++                                <object class="sizeritem">
++                                    <flag>wxGROW|wxLEFT|wxRIGHT</flag>
++                                    <border>8</border>
++                                    <object class="wxComboBox" name="cmbFind1">
++                                        <content/>
++                                    </object>
++                                </object>
++                                <object class="sizeritem">
++                                    <object class="wxStaticText" name="">
++                                        <label>&amp;Replace with:</label>
++                                    </object>
++                                    <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP|wxADJUST_MINSIZE</flag>
++                                    <border>8</border>
++                                </object>
++                                <object class="sizeritem">
++                                    <flag>wxGROW|wxLEFT|wxRIGHT</flag>
++                                    <border>8</border>
++                                    <object class="wxComboBox" name="cmbReplace1">
++                                        <content/>
++                                    </object>
++                                </object>
++                                <object class="sizeritem">
++                                    <object class="wxFlexGridSizer">
++                                        <object class="sizeritem">
++                                            <object class="wxStaticBoxSizer">
++                                                <label>Options</label>
++                                                <orient>wxVERTICAL</orient>
++                                                <object class="sizeritem">
++                                                    <object class="wxCheckBox" name="chkWholeWord1">
++                                                        <label>Whole &amp;word</label>
++                                                    </object>
++                                                    <flag>wxALL</flag>
++                                                    <border>4</border>
++                                                </object>
++                                                <object class="sizeritem">
++                                                    <object class="wxCheckBox" name="chkStartWord1">
++                                                        <label>St&amp;art word</label>
++                                                    </object>
++                                                    <flag>wxBOTTOM|wxLEFT|wxRIGHT</flag>
++                                                    <border>4</border>
++                                                </object>
++                                                <object class="sizeritem">
++                                                    <object class="wxCheckBox" name="chkMatchCase1">
++                                                        <label>Match &amp;case</label>
++                                                    </object>
++                                                    <flag>wxBOTTOM|wxLEFT|wxRIGHT</flag>
++                                                    <border>4</border>
++                                                </object>
++                                                <object class="sizeritem">
++                                                    <object class="wxCheckBox" name="chkRegEx1">
++                                                        <label>Regular e&amp;xpression</label>
++                                                    </object>
++                                                    <flag>wxBOTTOM|wxLEFT|wxRIGHT</flag>
++                                                    <border>4</border>
++                                                </object>
++                                            </object>
++                                            <flag>wxTOP|wxBOTTOM|wxRIGHT|wxEXPAND</flag>
++                                            <border>4</border>
++                                        </object>
++                                        <object class="sizeritem">
++                                            <object class="wxRadioBox" name="rbDirection">
++                                                <label>Direction</label>
++                                                <content>
++                                                    <item>&amp;Up</item>
++                                                    <item>&amp;Down</item>
++                                                </content>
++                                                <dimension>1</dimension>
++                                                <style>wxRA_SPECIFY_COLS</style>
++                                            </object>
++                                            <flag>wxTOP|wxBOTTOM|wxLEFT|wxEXPAND</flag>
++                                            <border>4</border>
++                                        </object>
++                                        <object class="sizeritem">
++                                            <object class="wxRadioBox" name="rbOrigin">
++                                                <label>Origin</label>
++                                                <content>
++                                                    <item>&amp;From cursor</item>
++                                                    <item>&amp;Entire scope</item>
++                                                </content>
++                                                <dimension>1</dimension>
++                                                <style>wxRA_SPECIFY_COLS</style>
++                                            </object>
++                                            <flag>wxTOP|wxBOTTOM|wxRIGHT|wxEXPAND</flag>
++                                            <border>4</border>
++                                        </object>
++                                        <object class="sizeritem">
++                                            <object class="wxRadioBox" name="rbScope1">
++                                                <label>Scope</label>
++                                                <content>
++                                                    <item>&amp;Global</item>
++                                                    <item>&amp;Selected text</item>
++                                                </content>
++                                                <dimension>1</dimension>
++                                                <style>wxRA_SPECIFY_COLS</style>
++                                            </object>
++                                            <flag>wxTOP|wxBOTTOM|wxLEFT|wxEXPAND</flag>
++                                            <border>4</border>
++                                        </object>
++                                        <cols>2</cols>
++                                        <rows>2</rows>
++                                        <growablecols>1</growablecols>
++                                    </object>
++                                    <flag>wxTOP|wxLEFT|wxRIGHT|wxEXPAND</flag>
++                                    <border>8</border>
++                                </object>
++                            </object>
++                        </object>
++                    </object>
++                    
++                    <object class="notebookpage">
++                        <label>Replace in files</label>
++                        <object class="wxPanel" name="tabReplaceInFiles">
++                            <style>wxTAB_TRAVERSAL</style>
++                            <object class="wxBoxSizer">
++                                <orient>wxVERTICAL</orient>
++                                <object class="sizeritem">
++                                    <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP|wxADJUST_MINSIZE</flag>
++                                    <border>8</border>
++                                    <object class="wxStaticText" name="">
++                                        <label>&amp;Text to search for:</label>
++                                    </object>
++                                </object>
++                                <object class="sizeritem">
++                                    <flag>wxGROW|wxLEFT|wxRIGHT</flag>
++                                    <border>8</border>
++                                    <object class="wxComboBox" name="cmbFind2">
++                                        <content/>
++                                    </object>
++                                </object>
++                                <object class="sizeritem">
++                                    <object class="wxStaticText" name="">
++                                        <label>&amp;Replace with:</label>
++                                    </object>
++                                    <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP|wxADJUST_MINSIZE</flag>
++                                    <border>8</border>
++                                </object>
++                                <object class="sizeritem">
++                                    <flag>wxGROW|wxLEFT|wxRIGHT</flag>
++                                    <border>8</border>
++                                    <object class="wxComboBox" name="cmbReplace2">
++                                        <content/>
++                                    </object>
++                                </object>
++                                <object class="sizeritem">
++                                    <flag>wxGROW|wxALL</flag>
++                                    <border>8</border>
++                                    <object class="wxFlexGridSizer">
++                                        <cols>2</cols>
++                                        <rows>2</rows>
++                                        <vgap>8</vgap>
++                                        <hgap>8</hgap>
++                                        <growablecols>0</growablecols>
++                                        <object class="sizeritem">
++                                            <flag>wxGROW|wxGROW</flag>
++                                            <border>0</border>
++                                            <object class="wxStaticBoxSizer" name="wxID_ANY">
++                                                <orient>wxVERTICAL</orient>
++                                                <label>Options</label>
++                                                <object class="sizeritem">
++                                                    <flag>wxALIGN_LEFT|wxALL</flag>
++                                                    <border>4</border>
++                                                    <object class="wxCheckBox" name="chkWholeWord2">
++                                                        <label>Whole &amp;word</label>
++                                                        <checked>0</checked>
++                                                    </object>
++                                                </object>
++                                                <object class="sizeritem">
++                                                    <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxBOTTOM</flag>
++                                                    <border>4</border>
++                                                    <object class="wxCheckBox" name="chkStartWord2">
++                                                        <label>St&amp;art word</label>
++                                                        <checked>0</checked>
++                                                    </object>
++                                                </object>
++                                                <object class="sizeritem">
++                                                    <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxBOTTOM</flag>
++                                                    <border>4</border>
++                                                    <object class="wxCheckBox" name="chkMatchCase2">
++                                                        <label>Match &amp;case</label>
++                                                        <checked>0</checked>
++                                                    </object>
++                                                </object>
++                                                <object class="sizeritem">
++                                                    <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxBOTTOM</flag>
++                                                    <border>4</border>
++                                                    <object class="wxCheckBox" name="chkRegEx2">
++                                                        <label>Regular e&amp;xpression</label>
++                                                        <checked>0</checked>
++                                                    </object>
++                                                </object>
++                                            </object>
++                                        </object>
++                                        <object class="sizeritem">
++                                            <flag>wxGROW|wxGROW</flag>
++                                            <border>0</border>
++                                            <object class="wxRadioBox" name="rbScope2">
++                                                <style>wxRA_SPECIFY_COLS</style>
++                                                <label>Scope</label>
++                                                <content>
++                                                    <item>&amp;Project files</item>
++                                                    <item>&amp;Open files</item>
++                                                    <item>Workspace files</item>
++                                                </content>
++                                            </object>
++                                        </object>
++                                    </object>
++                                </object>
++                            </object>
++                        </object>
++                    </object>
+                 </object>
+-                <flag>wxALL</flag>
+-                <border>4</border>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxCheckBox" name="chkStartWord">
+-                  <label>St&amp;art word</label>
++            </object>
++            <object class="sizeritem">
++                <flag>wxALIGN_CENTER_HORIZONTAL|wxLEFT|wxRIGHT|wxBOTTOM</flag>
++                <border>8</border>
++                <object class="wxBoxSizer">
++                    <orient>wxHORIZONTAL</orient>
++                    <object class="sizeritem">
++                        <flag>wxALIGN_TOP|wxRIGHT</flag>
++                        <border>8</border>
++                        <object class="wxButton" name="wxID_OK">
++                            <label>&amp;Replace</label>
++                            <default>1</default>
++                        </object>
++                    </object>
++                    <object class="sizeritem">
++                        <flag>wxALIGN_TOP</flag>
++                        <border>0</border>
++                        <object class="wxButton" name="wxID_CANCEL">
++                            <label>&amp;Cancel</label>
++                        </object>
++                    </object>
+                 </object>
+-                <flag>wxBOTTOM|wxLEFT|wxRIGHT</flag>
+-                <border>4</border>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxCheckBox" name="chkMatchCase">
+-                  <label>Match &amp;case</label>
+-                </object>
+-                <flag>wxBOTTOM|wxLEFT|wxRIGHT</flag>
+-                <border>4</border>
+-              </object>
+-              <object class="sizeritem">
+-                <object class="wxCheckBox" name="chkRegEx">
+-                  <label>Regular e&amp;xpression</label>
+-                </object>
+-                <flag>wxBOTTOM|wxLEFT|wxRIGHT</flag>
+-                <border>4</border>
+-              </object>
+             </object>
+-            <flag>wxTOP|wxBOTTOM|wxRIGHT|wxEXPAND</flag>
+-            <border>4</border>
+-          </object>
+-          <object class="sizeritem">
+-            <object class="wxRadioBox" name="rbDirection">
+-              <label>Direction</label>
+-              <content>
+-                <item>&amp;Up</item>
+-                <item>&amp;Down</item>
+-              </content>
+-              <dimension>1</dimension>
+-              <style>wxRA_SPECIFY_COLS</style>
+-            </object>
+-            <flag>wxTOP|wxBOTTOM|wxLEFT|wxEXPAND</flag>
+-            <border>4</border>
+-          </object>
+-          <object class="sizeritem">
+-            <object class="wxRadioBox" name="rbOrigin">
+-              <label>Origin</label>
+-              <content>
+-                <item>&amp;From cursor</item>
+-                <item>&amp;Entire scope</item>
+-              </content>
+-              <dimension>1</dimension>
+-              <style>wxRA_SPECIFY_COLS</style>
+-            </object>
+-            <flag>wxTOP|wxBOTTOM|wxRIGHT|wxEXPAND</flag>
+-            <border>4</border>
+-          </object>
+-          <object class="sizeritem">
+-            <object class="wxRadioBox" name="rbScope">
+-              <label>Scope</label>
+-              <content>
+-                <item>&amp;Global</item>
+-                <item>&amp;Selected text</item>
+-              </content>
+-              <dimension>1</dimension>
+-              <style>wxRA_SPECIFY_COLS</style>
+-            </object>
+-            <flag>wxTOP|wxBOTTOM|wxLEFT|wxEXPAND</flag>
+-            <border>4</border>
+-          </object>
+-          <cols>2</cols>
+-          <rows>2</rows>
+-          <growablecols>1</growablecols>
+         </object>
+-        <flag>wxTOP|wxLEFT|wxRIGHT|wxEXPAND</flag>
+-        <border>8</border>
+-      </object>
+-      <object class="sizeritem">
+-        <object class="wxStaticLine"/>
+-        <flag>wxALL|wxEXPAND</flag>
+-        <border>8</border>
+-      </object>
+-      <object class="sizeritem">
+-        <object class="wxBoxSizer">
+-          <orient>wxHORIZONTAL</orient>
+-          <object class="sizeritem">
+-            <object class="wxButton" name="wxID_OK">
+-              <label>&amp;Replace</label>
+-              <default>1</default>
+-            </object>
+-            <flag>wxRIGHT</flag>
+-            <border>8</border>
+-          </object>
+-          <object class="sizeritem">
+-            <object class="wxButton" name="wxID_CANCEL">
+-              <label>&amp;Cancel</label>
+-            </object>
+-          </object>
+-        </object>
+-        <flag>wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_CENTRE_HORIZONTAL</flag>
+-        <border>8</border>
+-      </object>
+     </object>
+-    <style>wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxRESIZE_BOX</style>
+-  </object>
+ </resource>
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(revision 2551)
++++ src/src/main.cpp	(working copy)
+@@ -178,6 +179,7 @@
+ int idSearchFindNext = XRCID("idSearchFindNext");
+ int idSearchFindPrevious = XRCID("idSearchFindPrevious");
+ int idSearchReplace = XRCID("idSearchReplace");
++int idSearchReplaceInFiles = XRCID("idSearchReplaceInFiles");
+ int idSearchGotoLine = XRCID("idSearchGotoLine");
+ 
+ int idProjectNew = XRCID("idProjectNew");
+@@ -265,6 +268,7 @@
+     EVT_UPDATE_UI(idSearchFindNext, MainFrame::OnSearchMenuUpdateUI)
+     EVT_UPDATE_UI(idSearchFindPrevious, MainFrame::OnSearchMenuUpdateUI)
+     EVT_UPDATE_UI(idSearchReplace, MainFrame::OnSearchMenuUpdateUI)
++    EVT_UPDATE_UI(idSearchReplaceInFiles, MainFrame::OnSearchMenuUpdateUI)
+     EVT_UPDATE_UI(idSearchGotoLine, MainFrame::OnSearchMenuUpdateUI)
+ 
+     EVT_UPDATE_UI(idViewToolMain, MainFrame::OnViewMenuUpdateUI)
+@@ -338,12 +343,13 @@
+     EVT_MENU(idEditUncommentSelected, MainFrame::OnEditUncommentSelected)
+     EVT_MENU(idEditToggleCommentSelected, MainFrame::OnEditToggleCommentSelected)
+ 
+-    EVT_MENU(idSearchFind,  MainFrame::OnSearchFind)
+-    EVT_MENU(idSearchFindInFiles,  MainFrame::OnSearchFind)
+-    EVT_MENU(idSearchFindNext,  MainFrame::OnSearchFindNext)
+-    EVT_MENU(idSearchFindPrevious,  MainFrame::OnSearchFindNext)
+-    EVT_MENU(idSearchReplace,  MainFrame::OnSearchReplace)
+-    EVT_MENU(idSearchGotoLine,  MainFrame::OnSearchGotoLine)
++    EVT_MENU(idSearchFind, MainFrame::OnSearchFind)
++    EVT_MENU(idSearchFindInFiles, MainFrame::OnSearchFind)
++    EVT_MENU(idSearchFindNext, MainFrame::OnSearchFindNext)
++    EVT_MENU(idSearchFindPrevious, MainFrame::OnSearchFindNext)
++    EVT_MENU(idSearchReplace, MainFrame::OnSearchReplace)
++    EVT_MENU(idSearchReplaceInFiles, MainFrame::OnSearchReplace)
++    EVT_MENU(idSearchGotoLine, MainFrame::OnSearchGotoLine)
+ 
+     EVT_MENU(idViewLayoutSave, MainFrame::OnViewLayoutSave)
+     EVT_MENU(idViewLayoutDelete, MainFrame::OnViewLayoutDelete)
+@@ -2478,7 +2498,7 @@
+ 
+ void MainFrame::OnSearchReplace(wxCommandEvent& event)
+ {
+-	Manager::Get()->GetEditorManager()->ShowFindDialog(true);
++	Manager::Get()->GetEditorManager()->ShowFindDialog(true, event.GetId() == idSearchReplaceInFiles);
+ }
+ 
+ void MainFrame::OnSearchGotoLine(wxCommandEvent& event)

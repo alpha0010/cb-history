@@ -1,0 +1,26 @@
+Index: sdk/cbeditor.cpp
+===================================================================
+--- sdk/cbeditor.cpp	(revision 2864)
++++ sdk/cbeditor.cpp	(working copy)
+@@ -1272,8 +1272,20 @@
+ 
+                 wxString macroName = code.SubString(macroPos + 2, macroPosEnd - 1);
+                 msgMan->DebugLog(_T("Found macro: %s"), macroName.c_str());
+-                wxString macro = wxGetTextFromUser(_("Please enter the text for \"") + macroName + _T("\":"), _("Macro substitution"));
+-                code.Replace(_T("$(") + macroName + _T(")"), macro);
++
++                if (macroName == _T("date"))
++                {
++                    code.Replace(_T("$(") + macroName + _T(")"), wxDateTime::Now().Format(_T("%c"), wxDateTime::Local));
++                }
++                else if (macroName == _T("file"))
++                {
++                    code.Replace(_T("$(") + macroName + _T(")"), Manager::Get()->GetEditorManager()->GetActiveEditor()->GetShortName().c_str());
++                }
++                else
++                {
++                    wxString macro = wxGetTextFromUser(_("Please enter the text for \"") + macroName + _T("\":"), _("Macro substitution"));
++                    code.Replace(_T("$(") + macroName + _T(")"), macro);
++                }
+                 macroPos = code.Find(_T("$("));
+             }

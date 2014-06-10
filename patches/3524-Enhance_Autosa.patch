@@ -1,0 +1,1329 @@
+Index: include/cbeditor.h
+===================================================================
+--- include/cbeditor.h	(revision 9454)
++++ include/cbeditor.h	(working copy)
+@@ -108,6 +108,12 @@
+         /** Returns true if editor is modified, false otherwise */
+         bool GetModified() const;
+ 
++        /** Returns true if an autosaved, unaltered file is open in editor, false otherwise */
++        bool GetAutoSaved() const;
++
++        /** Set autosaved flag externally  */
++        void SetAutoSaved(bool flag);
++
+         /** Set the editor's modification state to \c modified. */
+         void SetModified(bool modified = true);
+ 
+@@ -187,8 +193,8 @@
+         /** Sets the last modification time for the file to 'now'. Used to detect modifications outside the editor. */
+         void Touch();
+ 
+-        /** Reloads the file from disk. @return True on success, False on failure. */
+-        bool Reload(bool detectEncoding = true);
++        /** Reloads the file (or another, a save) from disk. @return True on success, False on failure. */
++        bool Reload(bool detectEncoding = true,const wxString &AlternateFilename = _T(""));
+ 
+         /** Print the file.
+           * @param selectionOnly Should the selected text be printed only?
+@@ -322,7 +328,7 @@
+         void SetEditorStyleAfterFileOpen();
+         static void InternalSetEditorStyleBeforeFileOpen(cbStyledTextCtrl* control);
+         static void InternalSetEditorStyleAfterFileOpen(cbStyledTextCtrl* control);
+-        bool Open(bool detectEncoding = true);
++        bool Open(bool detectEncoding = true,const wxString &SavedFilename = _T(""));
+         void DoAskForCodeCompletion(); // relevant to code-completion plugins
+         static wxColour GetOptionColour(const wxString& option, const wxColour _default);
+         void NotifyPlugins(wxEventType type, int intArg = 0, const wxString& strArg = wxEmptyString, int xArg = 0, int yArg = 0);
+Index: include/cbproject.h
+===================================================================
+--- include/cbproject.h	(revision 9454)
++++ include/cbproject.h	(working copy)
+@@ -124,6 +124,16 @@
+           */
+         void SetModified(bool modified = true);
+ 
++        /** Mark the project as autosaved recovery.
++          * @param AutoSaved If true, the project is marked as autosaved. If false, as not-AutoSaved.
++          */
++        void SetAutoSaved(bool AutoSaved = true);
++
++        /** Get AutoSaved flag
++          * @return true if open from autosaved file and not modified, false otherwise.
++          */
++        bool GetAutoSaved(void);
++
+         /** Access a file of the project.
+           * @param index The index of the file. Must be greater or equal than zero and less than GetFilesCount().
+           * @return A pointer to the file or NULL if not found.
+@@ -336,6 +346,14 @@
+           */
+         bool Save();
+ 
++        /** Save the project. (autosave feature)
++          * @return True if successful, false otherwise.
++          * @param FileName Filename to autosave project
++          * @param FileNameLayout Filename to autosave layout file
++          * @note No update of modified flag of project
++          */
++        bool SaveFullAuto(wxString &FileNamePrj,wxString &FileNameLayout);
++
+         /** Save the project under a different name.
+           * A dialog pops up for the user to choose a new filename for the project.
+           * @return True if successful, false otherwise.
+@@ -355,6 +373,13 @@
+           */
+         bool LoadLayout();
+ 
++        /** Load the project's layout.
++          * @see SaveLayout() for info.
++          * @param Filename filename for reading layout (if empty, take projet filename)
++          * @return True if successful, false otherwise.
++          */
++        bool LoadLayoutFile(wxString Filename);
++
+         /** Notify that file(s) will be added shortly.
+           * This function should be called before calling AddFile().
+           * When done calling AddFile() as many times as needed, call
+@@ -672,8 +697,13 @@
+           */
+         virtual FilesList& GetFilesList(){ return m_Files; }
+ 
++        /** Permit to force reopen of a project
++          * @param Filename : optional filename for reading layout (if empty, take projet filename)
++          */
++        void Open(wxString Filename = _(""));
++
+     private:
+-        void Open();
++
+         void ExpandVirtualBuildTargetGroup(const wxString& alias, wxArrayString& result) const;
+         ProjectBuildTarget* AddDefaultBuildTarget();
+         int IndexOfBuildTargetName(const wxString& targetName) const;
+@@ -696,6 +726,7 @@
+         wxArrayString     m_ExpandedNodes;
+         wxArrayString     m_SelectedNodes;
+         bool              m_Loaded;
++        bool              m_AutoSaved;
+         wxTreeItemId      m_ProjectNode;
+ 
+         wxArrayString m_VirtualFolders; // not saved, just used throughout cbProject's lifetime
+Index: include/cbworkspace.h
+===================================================================
+--- include/cbworkspace.h	(revision 9454)
++++ include/cbworkspace.h	(working copy)
+@@ -117,6 +117,8 @@
+         wxString GetPreferredTarget() const;
+ 
+         void ActiveProjectChanged();
++        void Load(wxString Filename = _T("")); // utility function
++        bool LoadLayout(wxString Filename = _T(""));
+ 
+     private:
+         bool m_IsOK; // succeeded loading?
+@@ -126,9 +128,7 @@
+         wxString m_Title; // title
+         wxString m_PreferredTargetName;
+ 
+-        void Load(); // utility function
+         bool SaveLayout();
+-        bool LoadLayout();
+ };
+ 
+ #endif // CBWORKSPACE_H
+Index: include/editorbase.h
+===================================================================
+--- include/editorbase.h	(revision 9454)
++++ include/editorbase.h	(working copy)
+@@ -119,6 +119,11 @@
+           * @return True on success, false otherwise. */
+         virtual bool SaveAs() { return true; }
+ 
++        /** @brief Set
++          *
++          * Indicate that document is an autosaved version */
++        virtual void SetAutoSaved(bool flag) {  }
++
+         /** @brief Is this a built-in editor?
+           *
+           * Query if this is a built-in editor (a.k.a cbEditor).
+Index: include/projectloader.h
+===================================================================
+--- include/projectloader.h	(revision 9454)
++++ include/projectloader.h	(working copy)
+@@ -50,9 +50,10 @@
+           * This version of Save, can override the \<Extensions\> element.
+           * @param filename The file to save.
+           * @param pExtensions A pointer of type TiXmlElement. This will be added as
++          * @param resetModifiedFlag true if we should reset "modified" flag of project (used to false for autosave)
+           * the \<Extensions\> element.
+           * @return True on success, false on failure. */
+-        bool Save(const wxString& filename, TiXmlElement* pExtensions);
++        bool Save(const wxString& filename, TiXmlElement* pExtensions,bool resetModifiedFlag = true);
+ 
+         /** Export a target as a new project.
+           * In other words, save a copy of the project containing only the specified target.
+Index: include/projectmanager.h
+===================================================================
+--- include/projectmanager.h	(revision 9454)
++++ include/projectmanager.h	(working copy)
+@@ -361,9 +361,10 @@
+           */
+         static bool IsBusy();
+         /** Get the current workspace filename.
++          * @param if true, and no workspace open, don't create a new empty workspace
+           * @return The current workspace filename.
+           */
+-        cbWorkspace* GetWorkspace();
++        cbWorkspace* GetWorkspace(bool raw = false);
+ 
+         /** @brief Adds a project as a dependency of another project.
+           * Projects inside workspaces allow you to set dependencies between them.
+Index: include/sdk_events.h
+===================================================================
+--- include/sdk_events.h	(revision 9454)
++++ include/sdk_events.h	(working copy)
+@@ -332,6 +332,8 @@
+ #define EVT_WORKSPACE_CHANGED(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_WORKSPACE_CHANGED, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&fn, (wxObject *) NULL ),
+ extern EVTIMPORT const wxEventType cbEVT_WORKSPACE_LOADING_COMPLETE;
+ #define EVT_WORKSPACE_LOADING_COMPLETE(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_WORKSPACE_LOADING_COMPLETE, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&fn, (wxObject *) NULL ),
++extern EVTIMPORT const wxEventType cbEVT_WORKSPACE_CLOSED;
++#define EVT_WORKSPACE_CLOSED(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_WORKSPACE_CLOSED, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&fn, (wxObject *) NULL ),
+ 
+ // build targets events
+ extern EVTIMPORT const wxEventType cbEVT_BUILDTARGET_ADDED;
+Index: plugins/autosave/autosave.cpp
+===================================================================
+--- plugins/autosave/autosave.cpp	(revision 9454)
++++ plugins/autosave/autosave.cpp	(working copy)
+@@ -33,8 +33,13 @@
+ #include "cbstyledtextctrl.h"
+ 
+ #include "projectloader.h"
++#include "projectlayoutloader.h"
++#include "multiselectdlg.h"
+ #include "autosave.h"
+ 
++#define LOGD(x) Manager::Get()->GetLogManager()->DebugLog(x);
++
++
+ // this auto-registers the plugin
+ namespace
+ {
+@@ -48,12 +53,19 @@
+ Autosave::Autosave()
+ {
+     //ctor
++    lockSave = false;
++    workspaceOpended = false;
+ }
+ 
+ Autosave::~Autosave()
+ {
+ }
+ 
++wxString Autosave::GetSaveFileName(const wxString& str)
++{
++    return str+_T(".save");
++}
++
+ void Autosave::OnAttach()
+ {
+     if(!Manager::LoadResource(_T("autosave.zip")))
+@@ -65,8 +77,404 @@
+     timer2 = new wxTimer(this, 20000);
+ 
+     Start();
++
++    // register event sinks
++    Manager* pm = Manager::Get();
++    pm->RegisterEventSink(cbEVT_PROJECT_OPEN, new cbEventFunctor<Autosave, CodeBlocksEvent>(this, &Autosave::OnProjectOpened));
++    pm->RegisterEventSink(cbEVT_PROJECT_CLOSE, new cbEventFunctor<Autosave, CodeBlocksEvent>(this, &Autosave::OnProjectClosed));
++    pm->RegisterEventSink(cbEVT_EDITOR_OPEN, new cbEventFunctor<Autosave, CodeBlocksEvent>(this, &Autosave::OnEditorOpened));
++    pm->RegisterEventSink(cbEVT_EDITOR_CLOSE, new cbEventFunctor<Autosave, CodeBlocksEvent>(this, &Autosave::OnEditorClosed));
++    pm->RegisterEventSink(cbEVT_WORKSPACE_LOADING_COMPLETE, new cbEventFunctor<Autosave, CodeBlocksEvent>(this, &Autosave::OnWorkspaceOpened));
++    pm->RegisterEventSink(cbEVT_WORKSPACE_CLOSED, new cbEventFunctor<Autosave, CodeBlocksEvent>(this, &Autosave::OnWorkspaceClosed));
+ }
+ 
++bool Autosave::HasAutoSavedItem(wxString fic_prj,wxString &info,wxString &fic_prj_save,wxString &fic_layout_save,wxString item)
++{
++    fic_prj_save=GetSaveFileName(fic_prj);
++    wxString fic_layout=fic_prj;
++    if (item==_("Project"))
++    {
++        wxFileName f(fic_layout);
++        f.SetExt(_T("layout"));
++        fic_layout=f.GetFullPath();
++    }
++    else
++    {
++        wxFileName f(fic_layout+_T(".layout"));
++        fic_layout=f.GetFullPath();
++    }
++    fic_layout_save=GetSaveFileName(fic_layout);
++
++    //ProjectManager *pm = Manager::Get()->GetProjectManager();
++    // No save, no job
++    bool fprj=::wxFileExists(fic_prj_save);
++    bool flay=::wxFileExists(fic_layout_save);
++    if (!fprj && !flay) return false;
++
++    wxFileName fname_prj(fic_prj);
++    wxFileName fname_layout(fic_layout);
++    wxFileName fname_prj_save(fic_prj_save);
++    wxFileName fname_layout_save(fic_layout_save);
++    wxDateTime t_prj_save;
++    wxDateTime t_layout_save;
++    wxDateTime t_prj;
++    wxDateTime t_layout;
++    if (fprj){
++        t_prj_save = fname_prj_save.GetModificationTime();
++        t_prj = fname_prj.GetModificationTime();
++        }
++    if (flay){
++        t_layout = fname_layout.GetModificationTime();
++        t_layout_save = fname_layout_save.GetModificationTime();
++        }
++    // Have an autsaved file ?
++    bool has = ((fprj && t_prj_save.IsLaterThan(t_prj)) ||
++        (flay && t_layout_save.IsLaterThan(t_layout)));
++        // File is newer
++    if (has)
++    {
++        wxString fic_name;
++        wxDateTime fic_orig_date;
++        wxDateTime fic_save_date;
++        if (fprj && (!flay || t_prj.IsEarlierThan(t_layout)))
++        {
++            fic_name = fic_prj;
++            fic_orig_date = t_prj;
++            fic_save_date = t_prj_save;
++        }
++        else
++        {
++            fic_name = fic_layout;
++            fic_orig_date = t_layout;
++            fic_save_date = t_layout_save;
++        }
++
++        info =  _("Autosaved ") + item + _(" exist for") + _T(" : ") + fic_name + _T("\r\n") +
++                _("Original ")  + item + _(" date") + _T(" : ") + fic_orig_date.Format(_T("%m/%d/%y %H:%M:%S")) + _T("\r\n") +
++                _("Autosaved ") + item + _(" date") + _T(" : ") + fic_save_date.Format(_T("%m/%d/%y %H:%M:%S")) + _T("\r\n") +
++                _("Open autosaved ") + item + _T(" ? ");
++    }
++    return has;
++}
++
++bool Autosave::ReloadProject(cbProject *prj,wxString &fic_prj_save,wxString &fic_layout_save)
++{
++    prj->CloseAllFiles(true);
++    prj->ClearAllProperties();
++    prj->Open(fic_prj_save);
++    // No error check here, if it failed, we already have correct project vut just layout is missing
++    if (!prj->LoadLayoutFile(fic_layout_save))
++    {
++        LOGD(_("Error loading projet layout : ")+fic_layout_save);
++    }
++    prj->SetModified(true);
++    prj->SetAutoSaved(true);
++    return true;
++}
++
++bool Autosave::SearchAutoSavedProject(cbProject* prj)
++{
++    AutoSaveMethod method = (AutoSaveMethod)Manager::Get()->GetConfigManager(_T("autosave"))->ReadInt(_T("method"));
++    // With other method, no save file
++    if (method!=SaveToDotSave && method!=SaveToDotSaveLogRotate) return false;
++
++    wxString fic_prj=prj->GetFilename();
++    wxString info;
++    wxString fic_prj_save,fic_layout_save;
++    if (HasAutoSavedItem(fic_prj,info,fic_prj_save,fic_layout_save,_("Project")))
++    {
++
++        switch (::wxMessageBox(info,_("Autosaved Project action"),wxYES_NO|wxICON_QUESTION ))
++        {
++            case wxYES:
++                if (!ReloadProject(prj,fic_prj_save,fic_layout_save)) return false;
++                return true;
++                break;
++        }
++    }
++    return false;
++}
++
++void Autosave::SearchAutoSavedFileInProject(cbProject* prj)
++{
++    wxArrayString array;
++    for (FilesList::const_iterator fl_it = prj->GetFilesList().begin();
++                                       fl_it != prj->GetFilesList().end(); ++fl_it)
++    {
++        ProjectFile* curFile = *fl_it;
++        if (!curFile)
++            continue;
++        wxString fic=curFile->file.GetFullPath();
++        if (!::wxFileExists(GetSaveFileName(fic)))
++            continue;
++        wxFileName forig(fic);
++        wxFileName fsave(GetSaveFileName(fic));
++        // Is there an autosaved file ?
++        if (fsave.GetModificationTime().IsLaterThan(forig.GetModificationTime()))
++        {
++            array.Add(fic);
++        }
++    }
++    if (!array.GetCount()) return;
++    // There are autosaved file
++    MultiSelectDlg dlg(0, array, true, _("Theses files were autosaved, check file you want to recover :"),_("Autosaved Files"));
++    PlaceWindow(&dlg);
++    if (dlg.ShowModal() != wxID_OK)
++        return;
++    array = dlg.GetSelectedStrings();
++
++    for (wxArrayString::const_iterator fl_it = array.begin(); fl_it !=array.end(); ++fl_it)
++    {
++        ProjectFile* curFile = prj->GetFileByFilename(*fl_it,false);
++        if (curFile)
++        {
++            //curFile->editorOpen=true;
++            cbEditor* ed = Manager::Get()->GetEditorManager()->Open(*fl_it);
++            if (ed)
++            {
++                ed->Show(true);
++                if (!ed->GetProjectFile())
++                    ed->SetProjectFile(curFile);
++                ed->Reload(true,GetSaveFileName(*fl_it));
++            }
++        }
++    }
++}
++
++void Autosave::SearchAutoSavedProjectInWorkspace(cbWorkspace* workspace)
++{
++    wxArrayString array;
++    wxString fic_layout_save,fic_prj_save;
++    wxString info;
++    ProjectsArray* arr = Manager::Get()->GetProjectManager()->GetProjects();
++    for (ProjectsArray::const_iterator fl_it = arr->begin();
++                                       fl_it != arr->end(); ++fl_it)
++    {
++        wxString prj = (*fl_it)->GetFilename();
++        if (!prj) continue;
++        if (HasAutoSavedItem(prj,info,fic_prj_save,fic_layout_save,_T("")))
++            array.Add(prj);
++    }
++    if (!array.GetCount()) return;
++    // There are autosaved files
++    MultiSelectDlg dlg(0, array, true, _("Theses projects were autosaved, check projects you want to recover :"),_("Autosaved Projects"));
++    PlaceWindow(&dlg);
++    if (dlg.ShowModal() != wxID_OK)
++        return;
++    array = dlg.GetSelectedStrings();
++    bool update = false;
++    for (ProjectsArray::const_iterator fl_it = arr->begin();
++                                       fl_it != arr->end(); ++fl_it)
++    {
++        wxString prj = (*fl_it)->GetFilename();
++        if (array.Index(prj) != wxNOT_FOUND)
++        {
++            // Just to recover fic_prj_save & fic_layout_save
++            HasAutoSavedItem(prj,info,fic_prj_save,fic_layout_save,_T(""));
++            ReloadProject((*fl_it),fic_prj_save,fic_layout_save);
++            update = true;
++        }
++        SearchAutoSavedFileInProject((*fl_it));
++    }
++    if (update) Manager::Get()->GetProjectManager()->GetUI().RebuildTree();
++}
++
++void Autosave::SearchAutoSavedWorkspace(cbWorkspace* workspace)
++{
++    ProjectManager *pm = Manager::Get()->GetProjectManager();
++    wxString fic=workspace->GetFilename();
++    wxString fic_save;
++    wxString fic_save_layout;
++    wxString info;
++
++    if (HasAutoSavedItem(fic,info,fic_save,fic_save_layout,_T("Workspace"))){
++        switch (::wxMessageBox(info,_("Autosaved Workspace action"),wxYES_NO|wxICON_QUESTION )){
++            case wxYES:
++                pm->CloseAllProjects(true);
++                Manager::Get()->GetProjectManager()->GetUI().FreezeTree();
++                workspace->Load(fic_save);
++                workspace->LoadLayout(fic_save_layout);
++                Manager::Get()->GetProjectManager()->GetUI().FinishLoadingWorkspace(pm->GetActiveProject(), workspace->GetTitle());
++                Manager::Get()->GetProjectManager()->GetUI().UnfreezeTree();
++                workspace->SetModified(true);
++                break;
++            }
++    }
++
++}
++
++void Autosave::OnWorkspaceOpened(CodeBlocksEvent& event)
++{
++    AutoSaveMethod method = (AutoSaveMethod)Manager::Get()->GetConfigManager(_T("autosave"))->ReadInt(_T("method"));
++    // With other method, no save file
++    if (method!=SaveToDotSave && method!=SaveToDotSaveLogRotate) return;
++
++    lockSave = true;
++    ProjectManager *pm = Manager::Get()->GetProjectManager();
++    cbWorkspace *workspace = pm->GetWorkspace();
++
++    SearchAutoSavedWorkspace(workspace);
++    lockSave = false;
++    SearchAutoSavedProjectInWorkspace(workspace);
++    workspaceOpended = true;
++    workspaceFilename = workspace->GetFilename();
++}
++
++void Autosave::OnWorkspaceClosed(CodeBlocksEvent& event)
++{
++    AutoSaveMethod method = (AutoSaveMethod)Manager::Get()->GetConfigManager(_T("autosave"))->ReadInt(_T("method"));
++    // With other method, no save file
++    if (method!=SaveToDotSave && method!=SaveToDotSaveLogRotate) return;
++    // If we are loading, no remove
++    if (lockSave) return;
++    if (!Manager::Get()->IsAppStartedUp()) return;
++    // Workspace was not previously opened, exit
++    if (!workspaceOpended) return;
++    workspaceOpended = false;
++    // If file is not modified at close time, we should delete autosaved version
++    wxString fic=workspaceFilename;
++    wxString fic_save;
++    wxString fic_save_layout;
++    wxString info;
++
++    if (!HasAutoSavedItem(fic,info,fic_save,fic_save_layout,_("Workspace"))) return;
++
++    switch (::wxMessageBox(_("Remove AutoSaved Workspace : ") + fic_save + _T(" ?"),_("Autosaved Workspace action"),wxYES_NO|wxICON_QUESTION )){
++        case wxYES:
++            ::wxRemoveFile(fic_save);
++            ::wxRemoveFile(fic_save_layout);
++            break;
++    }
++}
++
++void Autosave::OnProjectOpened(CodeBlocksEvent& event)
++{
++    AutoSaveMethod method = (AutoSaveMethod)Manager::Get()->GetConfigManager(_T("autosave"))->ReadInt(_T("method"));
++    if (method!=SaveToDotSave && method!=SaveToDotSaveLogRotate) return;
++    cbProject* prj=event.GetProject();
++
++    // Only search autosaved project when we are not loading workspace
++    // This hack because IsLoadingWorkspace() is already returned to false
++    if (event.GetX()) return;
++    if (lockSave) return;
++    SearchAutoSavedProject(prj);
++    SearchAutoSavedFileInProject(prj);
++}
++
++void Autosave::OnProjectClosed(CodeBlocksEvent& event)
++{
++    cbProject* prj=event.GetProject();
++    AutoSaveMethod method = (AutoSaveMethod)Manager::Get()->GetConfigManager(_T("autosave"))->ReadInt(_T("method"));
++    // With other method, no save file
++    if (method!=SaveToDotSave && method!=SaveToDotSaveLogRotate) return;
++    // We are loading workspace ? no remove
++    if (lockSave) return;
++    // If file is not modified at close time, we should delete autosaved version
++    if (prj->GetModified() || (!prj->GetModified() && !prj->GetAutoSaved()))
++    {
++        prj->SetAutoSaved(false);
++        wxString fic,fic_save;
++        fic=prj->GetFilename();
++        fic_save=GetSaveFileName(fic);
++        // No save, no job
++        if (!::wxFileExists(fic_save)) return;
++        wxFileName fname(fic);
++        wxFileName fname_save(fic_save);
++        wxDateTime t_save = fname_save.GetModificationTime();
++        wxDateTime t_orig=fname.GetModificationTime();
++        if (t_save.IsEarlierThan(t_orig)) return;
++
++        switch (::wxMessageBox(_("Remove AutoSaved Project : ") + fic_save + _T(" ?"),_("Autosaved Project action"),wxYES_NO|wxICON_QUESTION )){
++            case wxYES:
++                ::wxRemoveFile(fic_save);
++                wxString fic_layout=fic;
++                wxFileName f(fic_layout);
++                f.SetExt(_T("layout"));
++                fic_layout=f.GetFullPath();
++                ::wxRemoveFile(GetSaveFileName(fic_layout));
++                break;
++        }
++    }
++}
++
++void Autosave::OnEditorClosed(CodeBlocksEvent& event)
++{
++    EditorBase* eb = event.GetEditor();
++    AutoSaveMethod method = (AutoSaveMethod)Manager::Get()->GetConfigManager(_T("autosave"))->ReadInt(_T("method"));
++    // With other method, no save file
++    if (method!=SaveToDotSave && method!=SaveToDotSaveLogRotate) return;
++    // We are loading workspace ? no remove
++    if (lockSave) return;
++    if (!eb || !eb->IsBuiltinEditor()) return;
++    // If file is not modified at close time, we should delete autosaved version
++    if (!eb->GetModified() && !(((cbEditor*)eb)->GetAutoSaved()))
++    {
++        ((cbEditor*)eb)->SetAutoSaved(false);
++        wxString fic,fic_save;
++        fic=eb->GetFilename();
++        fic_save=GetSaveFileName(fic);
++        // No save, no job
++        if (!::wxFileExists(fic_save)) return;
++        wxFileName fname(fic_save);
++        wxDateTime t_save = fname.GetModificationTime();
++        wxDateTime t_orig=((cbEditor*)eb)->GetLastModificationTime();
++        if (t_save.IsEarlierThan(t_orig)) return;
++
++        switch (::wxMessageBox(_("Remove AutoSaved File : ") + fic_save + _T(" ?"),_("Autosaved File action"),wxYES_NO|wxICON_QUESTION )){
++            case wxYES:
++                ::wxRemoveFile(fic_save);
++                break;
++        }
++    }
++    else
++    {
++        ((cbEditor*)eb)->SetAutoSaved(false);
++    }
++}
++
++void Autosave::OnEditorOpened(CodeBlocksEvent& event)
++{
++    EditorBase* eb = event.GetEditor();
++    wxString fic, fic_save;
++    AutoSaveMethod method = (AutoSaveMethod)Manager::Get()->GetConfigManager(_T("autosave"))->ReadInt(_T("method"));
++
++    // With other method, no save file
++    if (method!=SaveToDotSave && method!=SaveToDotSaveLogRotate) return;
++    if (lockSave) return;
++
++    fic=eb->GetFilename();
++    fic_save=GetSaveFileName(fic);
++    // No save, no job
++    if (!::wxFileExists(fic_save)) return;
++    // We are loading a project, autosaved will be handled in project loading
++    if (Manager::Get()->GetProjectManager()->IsLoading()) return;
++    // We are loading a workspace will be handled in workspace loading
++    ProjectManager *pm = Manager::Get()->GetProjectManager();
++    if (pm->IsLoadingWorkspace()) return;
++
++    wxFileName fname(fic_save);
++    wxDateTime t_save = fname.GetModificationTime();
++    wxDateTime t_orig=((cbEditor*)eb)->GetLastModificationTime();
++    // Are we are currenctly recursing event (for autosaved file) ? So exit
++    if (t_save.IsLaterThan(t_orig)){
++    {
++        // File is newer
++        wxString info;
++        wxString item = _("File");
++        info =  _("Autosaved ")  + item + _(" exist for") + _T(" : ") + fic + _T("\r\n") +
++                _("Original ")   + item + _(" date") + _T(" : ") + t_orig.Format(_T("%m/%d/%y %H:%M:%S")) + _T("\r\n") +
++                _("Autosaved ")  + item + _(" date") + _T(" : ") + t_save.Format(_T("%m/%d/%y %H:%M:%S")) + _T("\r\n") +
++                _("Open autosaved ") + item + _T(" ? ");
++
++        switch (::wxMessageBox(info,_("Autosaved File action"),wxYES_NO|wxICON_QUESTION )){
++            case wxYES:
++                ((cbEditor*)eb)->Reload(true,fic_save);
++                break;
++            }
++        }
++    }
++}
++
+ void Autosave::Start()
+ {
+     ConfigManager *cfg = Manager::Get()->GetConfigManager(_T("autosave"));
+@@ -89,12 +497,12 @@
+     timer2 = 0;
+ }
+ 
+-void Autosave::SaveProject(cbProject *p, int method)
++void Autosave::SaveProject(cbProject *p, AutoSaveMethod method)
+ {
+     PluginManager *plm = Manager::Get()->GetPluginManager();
+     switch(method)
+     {
+-        case 0:
++        case BackupAndSave:
+         {
+             if(p->GetModified())
+             {
+@@ -112,7 +520,7 @@
+                 p->SaveLayout();
+             break;
+         }
+-        case 1:
++        case Save:
+         {
+             if(p->GetModified() && p->Save())
+             {
+@@ -122,32 +530,20 @@
+             p->SaveLayout();
+             break;
+         }
+-        case 2:
+-        case 3: // doesn't really make sense to keep so many versions of a project file
++        case SaveToDotSave:
++        case SaveToDotSaveLogRotate: // doesn't really make sense to keep so many versions of a project file
+         {
+             if (p->IsLoaded() == false)
+                 return;
+             if(p->GetModified())
+             {
+-                ProjectLoader loader(p);
+-                if(loader.Save(p->GetFilename() + _T(".save")))
+-                {
+-                    CodeBlocksEvent e(cbEVT_PROJECT_SAVE, 0, p);
+-                    plm->NotifyPlugins(e);
+-                }
+-                p->SetModified(); // the actual project file is still not updated!
++                wxFileName file = p->GetFilename();
++                file.SetExt(_T("layout"));
++                wxString prj, layout;
++                prj=GetSaveFileName(p->GetFilename());
++                layout=GetSaveFileName(file.GetFullPath());
++                p->SaveFullAuto(prj,layout);
+             }
+-            wxFileName file = wxFileName(p->GetFilename());
+-            file.SetExt(_T("layout"));
+-            wxString filename = file.GetFullPath();
+-            wxString temp = filename + _T(".temp");
+-            wxString save = filename + _T(".save");
+-            if(::wxFileExists(filename) && ::wxCopyFile(filename, temp))
+-            {
+-                p->SaveLayout();
+-                ::wxRenameFile(filename, save);
+-                ::wxRenameFile(temp, filename);
+-            }
+             break;
+         }
+         default:
+@@ -155,11 +551,13 @@
+     }
+ }
+ 
++
+ void Autosave::OnTimer(wxTimerEvent& e)
+ {
++    if (lockSave) return;
+     if(e.GetId() == 10000)
+     {
+-        int method = Manager::Get()->GetConfigManager(_T("autosave"))->ReadInt(_T("method"));
++        AutoSaveMethod method = (AutoSaveMethod)Manager::Get()->GetConfigManager(_T("autosave"))->ReadInt(_T("method"));
+         bool allProjects = Manager::Get()->GetConfigManager(_T("autosave"))->ReadBool(_T("all_projects"), true);
+         bool doWorkspace = Manager::Get()->GetConfigManager(_T("autosave"))->ReadBool(_T("do_workspace"), true);
+         ProjectManager *pm = Manager::Get()->GetProjectManager();
+@@ -175,23 +573,26 @@
+                 SaveProject(p, method);
+ 
+             cbWorkspace *workspace = pm->GetWorkspace();
+-            if (doWorkspace && workspace && workspace->GetModified())
++            if (doWorkspace && workspace && workspace->GetModified()/* && !workspace->IsDefault() */)
+             {
+                 switch(method)
+                 {
+-                    case 0:
++                    case BackupAndSave:
+                         if(::wxRenameFile(workspace->GetFilename(), workspace->GetFilename() + _T(".bak")))
+                             workspace->Save();
+                         break;
+-                    case 1:
++                    case Save:
+                         workspace->Save();
+                         break;
+-                    case 2:
+-                    case 3:
++                    case SaveToDotSave:
++                    case SaveToDotSaveLogRotate:
+                     {
+                         WorkspaceLoader loader;
+-                        loader.Save(workspace->GetTitle(), workspace->GetFilename() + wxT(".save"));
++                        loader.Save(workspace->GetTitle(), GetSaveFileName(workspace->GetFilename()));
+                         workspace->SetModified(true);
++                        wxFileName file = workspace->GetFilename();
++                        file.SetExt(_T("workspace.layout"));
++                        loader.SaveLayout( GetSaveFileName(file.GetFullPath()));
+                         break;
+                     }
+                     default:
+@@ -202,7 +603,7 @@
+     }
+     else if(e.GetId() == 20000)
+     {
+-        int method = Manager::Get()->GetConfigManager(_T("autosave"))->ReadInt(_T("method"));
++        AutoSaveMethod method = (AutoSaveMethod)Manager::Get()->GetConfigManager(_T("autosave"))->ReadInt(_T("method"));
+         EditorManager* em = Manager::Get()->GetEditorManager();
+ 
+         if(em)
+@@ -215,24 +616,24 @@
+                     wxFileName fn(ed->GetFilename());
+                     switch(method)
+                     {
+-                        case 0:
++                        case BackupAndSave:
+                         {
+                             if(::wxRenameFile(fn.GetFullPath(), fn.GetFullPath() + _T(".bak")))
+                                 cbSaveToFile(fn.GetFullPath(), ed->GetControl()->GetText(), ed->GetEncoding(), ed->GetUseBom());
+                             break;
+                         }
+-                        case 1:
++                        case Save:
+                         {
+                             ed->Save();
+                             break;
+                         }
+-                        case 2:
++                        case SaveToDotSave:
+                         {
+-                            cbSaveToFile(fn.GetFullPath() + _T(".save"), ed->GetControl()->GetText(), ed->GetEncoding(), ed->GetUseBom());
++                            cbSaveToFile(GetSaveFileName(fn.GetFullPath()), ed->GetControl()->GetText(), ed->GetEncoding(), ed->GetUseBom());
+                             ed->SetModified(); // the "real" file has not been saved!
+                             break;
+                         }
+-                        case 3:
++                        case SaveToDotSaveLogRotate:
+                         {
+                             wxString tmp1;
+                             wxString tmp2;
+@@ -269,7 +670,6 @@
+ {
+     AutosaveConfigDlg* dlg = new AutosaveConfigDlg(parent, this);
+     // deleted by the caller
+-
+     return dlg;
+ }
+ 
+@@ -308,7 +708,7 @@
+ 
+     XRCCTRL(*this, "source_mins", wxTextCtrl)->Enable(doSources);
+ 
+-    XRCCTRL(*this, "method", wxChoice)->SetSelection(cfg->ReadInt(_T("method"), 2));
++    XRCCTRL(*this, "method", wxChoice)->SetSelection(cfg->ReadInt(_T("method"), Autosave::SaveToDotSave));
+ }
+ 
+ void AutosaveConfigDlg::SaveSettings()
+Index: plugins/autosave/autosave.h
+===================================================================
+--- plugins/autosave/autosave.h	(revision 9454)
++++ plugins/autosave/autosave.h	(working copy)
+@@ -20,7 +20,15 @@
+     wxTimer *timer1;
+     wxTimer *timer2;
+ 
++
+ 	public:
++        typedef enum{
++            BackupAndSave,
++            Save,
++            SaveToDotSave,
++            SaveToDotSaveLogRotate
++        }AutoSaveMethod;
++
+ 		Autosave();
+ 		~Autosave();
+ 		int GetConfigurationPriority() const{ return  50; }
+@@ -30,8 +38,25 @@
+ 		void OnRelease(bool appShutDown); // fires when the plugin is released from the application
+ 		virtual cbConfigurationPanel* GetConfigurationPanel(wxWindow* parent);
+         void OnTimer(wxTimerEvent& event);
+-        void SaveProject(cbProject *p, int method);
++        void SaveProject(cbProject *p, AutoSaveMethod method);
++        void OnWorkspaceClosed(CodeBlocksEvent& event);
++        void OnProjectOpened(cb_unused CodeBlocksEvent& event);
++        void OnEditorOpened(CodeBlocksEvent& event);
++        void OnEditorClosed(CodeBlocksEvent& event);
++        void OnProjectClosed(CodeBlocksEvent& event);
++        void OnWorkspaceOpened(CodeBlocksEvent& event);
+     DECLARE_EVENT_TABLE()
++    private:
++        bool lockSave;
++        bool workspaceOpended;
++        wxString workspaceFilename;
++        wxString GetSaveFileName(const wxString& str);
++        bool SearchAutoSavedProject(cbProject* prj);
++        void SearchAutoSavedFileInProject(cbProject* prj);
++        void SearchAutoSavedProjectInWorkspace(cbWorkspace* workspace);
++        void SearchAutoSavedWorkspace(cbWorkspace* workspace);
++        bool HasAutoSavedItem(wxString fic_prj,wxString &info,wxString &fic_prj_save,wxString &fic_layout_save,wxString item);
++        bool ReloadProject(cbProject *prj,wxString &fic_prj_save,wxString &fic_layout_save);
+ };
+ 
+ 
+Index: plugins/openfileslist/openfileslistplugin.cpp
+===================================================================
+--- plugins/openfileslist/openfileslistplugin.cpp	(revision 9454)
++++ plugins/openfileslist/openfileslistplugin.cpp	(working copy)
+@@ -316,6 +316,8 @@
+ void OpenFilesListPlugin::OnEditorClosed(CodeBlocksEvent& event)
+ {
+ //  Manager::Get()->GetLogManager()->Log(_T("OnEditorClosed: ") + event.GetEditor()->GetFilename());
++    if (m_EditorArray.Index(event.GetEditor())!= wxNOT_FOUND)
++        m_EditorArray.Remove(event.GetEditor());
+     RefreshOpenFilesTree(event.GetEditor(), true);
+ }
+ 
+Index: sdk/cbeditor.cpp
+===================================================================
+--- sdk/cbeditor.cpp	(revision 9454)
++++ sdk/cbeditor.cpp	(working copy)
+@@ -106,6 +106,7 @@
+         m_byteOrderMarkLength(0),
+         m_lineNumbersWidth(0),
+         m_lineNumbersWidth2(0),
++        m_IsAutosavedFile(false),
+         m_pFileLoader(fileLoader)
+     {
+         m_encoding = wxLocale::GetSystemEncoding();
+@@ -484,6 +485,8 @@
+     int m_lineNumbersWidth;
+     int m_lineNumbersWidth2;
+ 
++    bool m_IsAutosavedFile;
++
+     LoaderBase* m_pFileLoader;
+ };
+ ////////////////////////////////////////////////////////////////////////////////
+@@ -844,8 +847,29 @@
+     return m_Modified || m_pControl->GetModify();
+ }
+ 
++void cbEditor::SetAutoSaved(bool flag)
++{
++    m_pData->m_IsAutosavedFile=flag;
++}
++
+ void cbEditor::SetModified(bool modified)
+ {
++    // If we used an autosaved file
++    //  -and we would set "non modified". Set it to modified, a autosaved is a modification
++    //  -and we would set "modified". Here we consider we have a truly new original file, clear autosaved flag
++    // Note : sequence : get automodified file, do modification, undo them close file and do not save it
++    // will lead to a lost of autosaved file
++    if (m_pData && m_pData->m_IsAutosavedFile)
++    {
++        if (!modified)
++        {
++            modified=true;
++        }
++        else
++        {
++            m_pData->m_IsAutosavedFile=false;
++        }
++    }
+     if (modified != m_Modified)
+     {
+         m_Modified = modified;
+@@ -860,6 +884,12 @@
+     }
+ }
+ 
++bool cbEditor::GetAutoSaved() const
++{
++    if (!m_pData) return false;
++    return m_pData->m_IsAutosavedFile;
++}
++
+ void cbEditor::SetEditorTitle(const wxString& title)
+ {
+     if (m_Modified)
+@@ -1633,14 +1663,14 @@
+     SetModified(true);
+ }
+ 
+-bool cbEditor::Reload(bool detect_encoding)
++bool cbEditor::Reload(bool detect_encoding, const wxString &AlternateFilename)
+ {
+     // keep current pos
+     const int pos = m_pControl ? m_pControl->GetCurrentPos() : 0;
+     const int pos2 = m_pControl2 ? m_pControl2->GetCurrentPos() : 0;
+ 
+     // call open
+-    if (!Open(detect_encoding))
++    if (!Open(detect_encoding,AlternateFilename))
+     {
+         return false;
+     }
+@@ -1672,17 +1702,32 @@
+         m_lang = HL_AUTO;
+ }
+ 
+-bool cbEditor::Open(bool detectEncoding)
++bool cbEditor::Open(bool detectEncoding,const wxString &SavedFilename)
+ {
+-    if (m_pProjectFile)
++    wxString Filename=m_Filename;
++    if (SavedFilename.IsEmpty())    // regular open, update project
+     {
+-        if (!wxFileExists(m_Filename))
+-            m_pProjectFile->SetFileState(fvsMissing);
+-        else if (!wxFile::Access(m_Filename.c_str(), wxFile::write)) // readonly
+-            m_pProjectFile->SetFileState(fvsReadOnly);
++        if (m_pProjectFile)
++        {
++            if (!wxFileExists(Filename))
++                m_pProjectFile->SetFileState(fvsMissing);
++            else if (!wxFile::Access(Filename.c_str(), wxFile::write)) // readonly
++                m_pProjectFile->SetFileState(fvsReadOnly);
++        }
+     }
++    else
++    {
++        Filename=SavedFilename;    // Update with last saved file
++        if (!m_pData)
++            return false;
+ 
+-    if (!wxFileExists(m_Filename))
++        if (m_pData->m_pFileLoader) // we must update file loader too ...
++        {
++            delete m_pData->m_pFileLoader;
++            m_pData->m_pFileLoader = 0;
++        }
++    }
++    if (!wxFileExists(Filename))
+         return false;
+ 
+     // open file
+@@ -1695,7 +1740,7 @@
+         return false;
+ 
+     if (!m_pData->m_pFileLoader)
+-        m_pData->m_pFileLoader = Manager::Get()->GetFileManager()->Load(m_Filename, false);
++        m_pData->m_pFileLoader = Manager::Get()->GetFileManager()->Load(Filename, false);
+ 
+ #ifdef fileload_measuring
+     wxStopWatch sw;
+@@ -1721,17 +1766,19 @@
+     m_pControl->EmptyUndoBuffer(mgr->ReadBool(_T("/margin/use_changebar"), true));
+     m_pControl->SetModEventMask(wxSCI_MODEVENTMASKALL);
+ 
+-    // mark the file read-only, if applicable
++    // mark the file read-only, if applicable (we would use original filename, were we should save file)
+     bool read_only = !wxFile::Access(m_Filename.c_str(), wxFile::write);
+     m_pControl->SetReadOnly(read_only);
+ 
+-    wxFileName fname(m_Filename);
++    wxFileName fname(Filename);
+     m_LastModified = fname.GetModificationTime();
+ 
+     SetModified(false);
+ 
+     NotifyPlugins(cbEVT_EDITOR_OPEN);
+ 
++    if (!SavedFilename.IsEmpty())    m_pData->m_IsAutosavedFile=true; // regular open, update project
++
+     if (m_pData->m_pFileLoader)
+     {
+         delete m_pData->m_pFileLoader;
+@@ -1748,7 +1795,10 @@
+     if ( !GetModified() )
+         return true;
+ 
+-    // remember current column (caret and anchor)
++    // File is no longer autosaved one
++    m_pData->m_IsAutosavedFile=false;
++
++     // remember current column (caret and anchor)
+     int columnC = m_pControl->GetColumn(m_pControl->GetCurrentPos());
+     int columnA = m_pControl->GetColumn(m_pControl->GetAnchor());
+ 
+Index: sdk/cbproject.cpp
+===================================================================
+--- sdk/cbproject.cpp	(revision 9454)
++++ sdk/cbproject.cpp	(working copy)
+@@ -58,6 +58,7 @@
+     m_Globs(),
+     m_FileArray(ProjectFile::CompareProjectFiles),
+     m_Loaded(false),
++    m_AutoSaved(false),
+     m_CurrentlyLoading(false),
+     m_PCHMode(pchSourceFile),
+     m_CurrentlyCompilingTarget(nullptr),
+@@ -176,8 +177,22 @@
+     return false;
+ }
+ 
++void cbProject::SetAutoSaved(bool AutoSaved)
++{
++    m_AutoSaved = AutoSaved;
++}
++
++bool cbProject::GetAutoSaved(void)
++{
++    return m_AutoSaved;
++}
++
+ void cbProject::SetModified(bool modified)
+ {
++    // If we have an autosaved file, we can't set it non modified
++    if (m_AutoSaved && !modified) return;
++    // If we set modified flag, file is no more autosaved
++    //if (modified) m_AutoSaved = false;
+     CompileOptionsBase::SetModified(modified);
+ 
+     // modify targets
+@@ -257,30 +272,37 @@
+     NotifyPlugins(cbEVT_BUILDTARGET_SELECTED);
+ }
+ 
+-void cbProject::Open()
++void cbProject::Open(wxString Filename)
+ {
++    bool extern_file = true;
++    if (Filename.IsEmpty())
++    {
++        Filename = m_Filename;
++        extern_file = false;
++    }
++
+     m_Loaded = false;
+     m_ProjectFilesMap.clear();
+     Delete(m_pExtensionsElement);
+ 
+-    if (!wxFileName::FileExists(m_Filename) && !wxFileName::DirExists(m_Filename))
++    if (!wxFileName::FileExists(Filename) && !wxFileName::DirExists(Filename))
+     {
+         wxString msg;
+-        msg.Printf(_("Project '%s' does not exist..."), m_Filename.c_str());
++        msg.Printf(_("Project '%s' does not exist..."), Filename.c_str());
+         cbMessageBox(msg, _("Error"), wxOK | wxCENTRE | wxICON_ERROR);
+         return;
+     }
+ 
+     bool fileUpgraded = false;
+     bool fileModified = false;
+-    wxFileName fname(m_Filename);
+-    FileType ft = FileTypeOf(m_Filename);
+-    if (ft == ftCodeBlocksProject)
++    wxFileName fname(Filename);
++    FileType ft = FileTypeOf(Filename);
++    if (extern_file || (ft == ftCodeBlocksProject))
+     {
+-        Manager::Get()->GetLogManager()->Log(_("Opening ") + m_Filename);
++        Manager::Get()->GetLogManager()->Log(_("Opening ") + Filename);
+         m_CurrentlyLoading = true;
+         ProjectLoader loader(this);
+-        m_Loaded = loader.Open(m_Filename, &m_pExtensionsElement);
++        m_Loaded = loader.Open(Filename, &m_pExtensionsElement);
+         fileUpgraded = loader.FileUpgraded();
+         fileModified = loader.FileModified();
+         m_CurrentlyLoading = false;
+@@ -491,6 +513,19 @@
+     return false;
+ }
+ 
++bool cbProject::SaveFullAuto(wxString &FileNamePrj,wxString &FileNameLayout)
++{
++    if (FileNamePrj.IsEmpty()) return false;
++    ProjectLoader loader_prj(this);
++    if (!loader_prj.Save(FileNamePrj, m_pExtensionsElement, false)) return false;
++    ProjectLayoutLoader loader_layout(this);
++    if (!loader_layout.Save(FileNameLayout)) return false;
++    // Here for 'iterim' auto save, should we inform plugin ?
++    // As I stated that plugin should not interfer directly with saved filed, they should not be called
++    //NotifyPlugins(cbEVT_PROJECT_SAVE);
++    return true;
++}
++
+ bool cbProject::SaveLayout()
+ {
+     if (m_Filename.IsEmpty())
+@@ -504,7 +539,19 @@
+ 
+ bool cbProject::LoadLayout()
+ {
+-   if (m_Filename.IsEmpty())
++    return LoadLayoutFile(_T(""));
++}
++
++bool cbProject::LoadLayoutFile(wxString Filename)
++{
++   bool Filename_set = true;
++   if (Filename.IsEmpty())
++   {
++        Filename = m_Filename;
++        Filename_set = false;
++   }
++
++   if (Filename.IsEmpty())
+         return false;
+     int openmode = Manager::Get()->GetConfigManager(_T("project_manager"))->ReadInt(_T("/open_files"), (long int)1);
+     bool result = false;
+@@ -526,8 +573,8 @@
+         }
+         else if (openmode == 1)// Open last open files
+         {
+-            wxFileName fname(m_Filename);
+-            fname.SetExt(_T("layout"));
++            wxFileName fname(Filename);
++            if (!Filename_set) fname.SetExt(_T("layout"));
+             ProjectLayoutLoader loader(this);
+             if (loader.Open(fname.GetFullPath()))
+             {
+Index: sdk/cbworkspace.cpp
+===================================================================
+--- sdk/cbworkspace.cpp	(revision 9454)
++++ sdk/cbworkspace.cpp	(working copy)
+@@ -59,9 +59,13 @@
+ {
+ }
+ 
+-void cbWorkspace::Load()
++void cbWorkspace::Load(wxString Filename)
+ {
+     wxString fname = m_Filename.GetFullPath();
++    if (!Filename.IsEmpty()){
++        wxFileName fic(Filename);
++        fname = fic.GetFullPath();
++    }
+     Manager::Get()->GetLogManager()->DebugLog(F(_T("Loading workspace \"%s\""), fname.wx_str()));
+ 
+     if (!m_Filename.FileExists())
+@@ -78,7 +82,7 @@
+         }
+     }
+ 
+-    if (FileTypeOf(fname) == ftCodeBlocksWorkspace)
++    if (!Filename.IsEmpty() || (FileTypeOf(fname) == ftCodeBlocksWorkspace))
+     {
+         IBaseWorkspaceLoader* pWsp = new WorkspaceLoader;
+ 
+@@ -92,10 +96,13 @@
+         delete pWsp;
+     }
+ 
+-    // load workspace layout file
+-    LoadLayout();
+ 
+-    m_Filename.SetExt(FileFilters::WORKSPACE_EXT);
++    if (Filename.IsEmpty())
++    {
++        // load workspace layout file
++        LoadLayout(Filename);
++        m_Filename.SetExt(FileFilters::WORKSPACE_EXT);
++    }
+     SetModified(false);
+ }
+ 
+@@ -187,12 +194,16 @@
+     return rc;
+ }
+ 
+-bool cbWorkspace::LoadLayout()
++bool cbWorkspace::LoadLayout(wxString Filename)
+ {
+     LogManager *log = Manager::Get()->GetLogManager();
+     WorkspaceLoader wsl;
+-    wxFileName fn(m_Filename);
+-    fn.SetExt( _T("workspace.layout") );
++    wxFileName fn(Filename);
++    if (Filename == _T(""))
++    {
++        fn = m_Filename;
++        fn.SetExt( _T("workspace.layout") );
++    }
+     bool rc = false;
+     if ( fn.FileExists() )
+     {
+Index: sdk/editorbase.cpp
+===================================================================
+--- sdk/editorbase.cpp	(revision 9454)
++++ sdk/editorbase.cpp	(working copy)
+@@ -181,6 +181,7 @@
+                     return false;
+                 break;
+             case wxID_NO:
++                SetAutoSaved(false);
+                 break;
+             case wxID_CANCEL:
+             default:
+Index: sdk/projectloader.cpp
+===================================================================
+--- sdk/projectloader.cpp	(revision 9454)
++++ sdk/projectloader.cpp	(working copy)
+@@ -1194,11 +1194,11 @@
+     return Save(filename, nullptr);
+ }
+ 
+-bool ProjectLoader::Save(const wxString& filename, TiXmlElement* pExtensions)
++bool ProjectLoader::Save(const wxString& filename, TiXmlElement* pExtensions,bool resetModifiedFlag)
+ {
+     if (ExportTargetAsProject(filename, wxEmptyString, pExtensions))
+     {
+-        m_pProject->SetModified(false);
++        if (resetModifiedFlag) m_pProject->SetModified(false);
+         return true;
+     }
+     return false;
+Index: sdk/projectmanager.cpp
+===================================================================
+--- sdk/projectmanager.cpp	(revision 9454)
++++ sdk/projectmanager.cpp	(working copy)
+@@ -523,8 +523,10 @@
+     return count == prjCount;
+ }
+ 
+-cbWorkspace* ProjectManager::GetWorkspace()
++cbWorkspace* ProjectManager::GetWorkspace(bool raw)
+ {
++    if (raw)
++        return m_pWorkspace;
+     if (!m_pWorkspace)
+     {
+         m_pWorkspace = new cbWorkspace(_T(""));
+@@ -579,7 +581,8 @@
+             m_IsClosingWorkspace = false;
+             return false;
+         }
+-        if (!CloseAllProjects(false))
++        // m_ui->QueryCloseWorkspace asked for saving workspace AND projects, no need to do again
++        if (!CloseAllProjects(true))
+         {
+             m_IsClosingWorkspace = false;
+             return false;
+@@ -593,6 +596,10 @@
+     }
+     else
+         result = CloseAllProjects(false);
++
++    CodeBlocksEvent event(cbEVT_WORKSPACE_CLOSED);
++    Manager::Get()->GetPluginManager()->NotifyPlugins(event);
++
+     m_IsClosingWorkspace = false;
+     WorkspaceChanged();
+     return result;
+@@ -1077,6 +1084,9 @@
+             // kicks in too early and the perceived loading time is long...
+             CodeBlocksEvent event(cbEVT_PROJECT_OPEN);
+             event.SetProject(project);
++            // Dirty hack to identify we are in workspace loading.
++            // m_IsLoadingWorkspace is already gone to false here ...
++            event.SetX(1);
+             Manager::Get()->GetPluginManager()->NotifyPlugins(event);
+ 
+             // since we 're iterating anyway, let's count the project notes that should be displayed
+Index: sdk/sdk_events.cpp
+===================================================================
+--- sdk/sdk_events.cpp	(revision 9454)
++++ sdk/sdk_events.cpp	(working copy)
+@@ -106,6 +106,7 @@
+ const wxEventType cbEVT_PROJECT_OPTIONS_CHANGED = wxNewEventType();
+ const wxEventType cbEVT_WORKSPACE_CHANGED = wxNewEventType();
+ const wxEventType cbEVT_WORKSPACE_LOADING_COMPLETE = wxNewEventType();
++const wxEventType cbEVT_WORKSPACE_CLOSED = wxNewEventType();
+ // build targets events
+ const wxEventType cbEVT_BUILDTARGET_ADDED = wxNewEventType();
+ const wxEventType cbEVT_BUILDTARGET_REMOVED = wxNewEventType();
+Index: src/projectmanagerui.cpp
+===================================================================
+--- src/projectmanagerui.cpp	(revision 9454)
++++ src/projectmanagerui.cpp	(working copy)
+@@ -430,6 +430,7 @@
+ void ProjectManagerUI::FinishLoadingWorkspace(cbProject *activeProject, const wxString &workspaceTitle)
+ {
+     RebuildTree();
++    m_pTree->CollapseAll();
+     if (activeProject)
+         m_pTree->Expand(activeProject->GetProjectNode());
+     m_pTree->Expand(m_TreeRoot); // make sure the root node is open

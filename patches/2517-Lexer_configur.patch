@@ -1,0 +1,1354 @@
+Index: lexer_ada.sample
+===================================================================
+--- lexer_ada.sample	(revision 0)
++++ lexer_ada.sample	(revision 0)
+@@ -0,0 +1,11 @@
++with ada.text_io;
++procedure HALLO_01 is
++	VOR : character;
++	NACH : character;
++begin
++	ada.text_io.put(item => "Bitte geben Sie Ihre Initialen (z.B. AB) ein: ");
++	ada.text_io.get(item => VOR);
++	ada.text_io.get(item => NACH);
++	ada.text_io.put(item => "Hallo " & VOR & NACH & ", wie geht es?");
++	ada.text_io.new_line;
++end HALLO_01;
+Index: lexer_ada.xml
+===================================================================
+--- lexer_ada.xml	(revision 0)
++++ lexer_ada.xml	(revision 0)
+@@ -0,0 +1,98 @@
++<?xml version="1.0"?>
++<!DOCTYPE CodeBlocks_lexer_properties>
++<CodeBlocks_lexer_properties>
++		<Lexer name="Ada"
++				index="20"
++				filemasks="*.ads,*.adb">
++				<!--#define wxSCI_ADA_DEFAULT 0-->
++                <Style name="Default"
++						index="0"
++						fg="0,0,0"
++						bg="255,255,255"
++						bold="0"
++						italics="0"
++						underlined="0"/>
++                <!--#define wxSCI_ADA_NUMBER 3-->
++                <Style name="Number"
++						index="3"
++						fg="255,128,00"/>
++						<!--fg="240,0,240"/-->
++				<!--#define wxSCI_ADA_COMMENTLINE 10-->
++				<Style name="Comment"
++						index="10"
++						fg="0,128,00"/>
++                <!--#define wxSCI_ADA_STRING 7
++                #define wxSCI_ADA_STRINGEOL 8-->
++                <Style name="String"
++						index="7,8"
++						fg="128,128,128"/>
++                <!--#define wxSCI_ADA_IDENTIFIER 2-->
++                <Style name="Identifier"
++                        index="2"
++                        fg="0,0,0"/>
++                <!--#define wxSCI_ADA_CHARACTER 5
++                #define wxSCI_ADA_CHARACTEREOL 6-->
++                <Style name="Character"
++						index="5,6"
++						fg="128,128,128"/>
++                <!--#define wxSCI_ADA_WORD 1 -->
++                <!--keywordClass="instre1" /> -->
++                <Style name="Instruction-Word"
++						index="1"
++						fg="0,0,255"
++						bold="1"/>
++                <!-- #define wxSCI_ADA_DELIMITER 4 -->
++                <Style name="Delimiter"
++                        index="4"
++                        fg="255,128,128"
++                        bold="1"/>
++                <!-- #define wxSCI_ADA_LABEL 9 -->
++                <Style name="Label"
++                        index="9"
++                        fg="128,64,0"/>
++                <!-- #define wxSCI_ADA_ILLEGAL 11 -->
++                <Style name="Illegal"
++                        index="11"
++                        fg="255,0,0"/>
++				<Style name="Selection"
++						index="-99"
++						bg="192,192,192"/>
++				<Style name="Active line"
++						index="-98"
++						bg="255,255,160"/>
++				<Style name="Breakpoint line"
++						index="-2"
++						bg="255,160,160"/>
++				<Style name="Debugger active line"
++						index="-3"
++						bg="160,160,255"/>
++				<Style name="Compiler error line"
++						index="-4"
++						bg="255,128,0"/>
++				<Style name="Matching brace highlight"
++						index="34"
++						bg="128,255,255"
++						bold="1"/>
++				<Style name="No matching brace highlight"
++						index="35"
++						fg="255,255,255"
++						bg="255,0,0"
++						bold="1"/>
++				<Keywords>
++                        <!-- Primary keywords and identifiers -->
++                        <Set index="0"
++                            value="abort abstract accept access aliased all and array
++                                at begin body case constant declare delay delta digits
++                                do else elsif end entry exception exit for function
++                                generic goto if in is limited loop new not null of
++                                others out or package pragma private procedure protected
++                                raise range record renames requeue return reverse select
++                                separate subtype tagged task terminate then type until
++                                use when while with"/>
++				</Keywords>
++				<SampleCode value="lexer_ada.sample"
++						breakpoint_line="32"
++						debug_line="35"
++						error_line="37"/>
++		</Lexer>
++</CodeBlocks_lexer_properties>
+Index: lexer_caml.sample
+===================================================================
+--- lexer_caml.sample	(revision 0)
++++ lexer_caml.sample	(revision 0)
+@@ -0,0 +1,31 @@
++type 'a t = { mutable c : 'a list }
++exception Empty
++let create () = { c = [] }
++let clear s = s.c <- []
++let copy s = { c = s.c }
++let push x s = s.c <- x :: s.c
++let pop s =
++  match s.c with
++    hd::tl -> s.c <- tl; hd
++  | []     -> raise Empty
++let top s =
++  match s.c with
++    hd::_ -> hd
++  | []     -> raise Empty
++let is_empty s = (s.c = [])
++let length s = List.length s.c
++let iter f s = List.iter f s.c
++
++And, here is the interface file, stack.mli:
++
++type 'a t
++exception Empty
++val create : unit -> 'a t
++val push : 'a -> 'a t -> unit
++val pop : 'a t -> 'a
++val top : 'a t -> 'a
++val clear : 'a t -> unit
++val copy : 'a t -> 'a t
++val is_empty : 'a t -> bool
++val length : 'a t -> int
++val iter : ('a -> unit) -> 'a t -> unit
+Index: lexer_caml.xml
+===================================================================
+--- lexer_caml.xml	(revision 0)
++++ lexer_caml.xml	(revision 0)
+@@ -0,0 +1,89 @@
++<?xml version="1.0"?>
++<!DOCTYPE CodeBlocks_lexer_properties>
++<CodeBlocks_lexer_properties>
++		<Lexer name="Caml"
++				index="65"
++				filemasks="*.ml,*.mli,*.sml,*.thy">
++				<Style name="Default"
++						index="0"
++						fg="0,0,0"
++						bg="255,255,255"
++						bold="0"
++						italics="0"
++						underlined="0"/>
++				<Style name="Operator"
++						index="7"
++						fg="255,0,0"/>
++                <Style name="Number"
++						index="8"
++						fg="240,0,240"/>
++				<Style name="Character"
++						index="9"
++						fg="224,160,0"/>
++				<Style name="Identifier"
++						index="1"
++						fg="0,0,0"/>
++				<Style name="Tag Name"
++						index="2"
++						fg="0,160,0"/>
++				<Style name="Instruction word"
++						index="3"
++						fg="0,0,160"
++						bold="1"/>
++				<Style name="Builting Function"
++						index="4"
++						fg="0,160,0"/>
++				<Style name="Type"
++						index="5"
++						fg="160,0,0"/>
++                <Style name="Line number"
++                        index="6"
++                        fg="0,0,0"/>
++                <Style name="String"
++						index="11"
++						fg="0,0,255"/>
++				<Style name="Comment"
++						index="12,13"
++						fg="160,160,160"/>
++				<Style name="Comment (documentation)"
++						index="14,15"
++						fg="128,128,255"
++						bold="1"/>
++				<Style name="Selection"
++						index="-99"
++						bg="192,192,192"/>
++				<Style name="Active line"
++						index="-98"
++						bg="255,255,160"/>
++				<Style name="Breakpoint line"
++						index="-2"
++						bg="255,160,160"/>
++				<Style name="Debugger active line"
++						index="-3"
++						bg="160,160,255"/>
++				<Style name="Compiler error line"
++						index="-4"
++						bg="255,128,0"/>
++				<Style name="Matching brace highlight"
++						index="34"
++						bg="128,255,255"
++						bold="1"/>
++				<Style name="No matching brace highlight"
++						index="35"
++						fg="255,255,255"
++						bg="255,0,0"
++						bold="1"/>
++				<Keywords>
++                        <Set index="0"
++                            value="and as assert asr begin class constraint do done downto else end exception external false for fun function functor if in include inherit initializer land lazy let lor lsl lsr lxor match method mod module mutable new object of open or private rec sig struct then to true try type val virtual when while with"/>
++                        <Set index="1"
++                            value="option Some None ignore ref lnot succ pred"/>
++                        <Set index="2"
++                            value="array bool char float int list string unit"/>
++				</Keywords>
++				<SampleCode value="lexer_caml.sample"
++						breakpoint_line="20"
++						debug_line="22"
++						error_line="23"/>
++		</Lexer>
++</CodeBlocks_lexer_properties>
+Index: lexer_haskell.sample
+===================================================================
+--- lexer_haskell.sample	(revision 0)
++++ lexer_haskell.sample	(revision 0)
+@@ -0,0 +1,27 @@
++import Data.List
++import Text.Regex
++import System.Random
++import Data.Ord
++
++type Point     = (Float,Float)
++type Color     = (Int,Int,Int)
++type Polygon   = [Point]
++type Person    = [Int]
++type Link      = [Point]
++type Placement = [(Point,Person)]
++
++type EnergyFunction a              = a -> Int
++type TemperatureFunction           = Int -> Int -> Float
++type TransitionProbabilityFunction = Int -> Int -> Float -> Float
++type MotionFunction a              = StdGen -> a -> (StdGen,a)
++
++main = do
++  putStr "Hello World! Let's have a picnic! \n"
++
++  people_text <- readFile "people.txt"
++
++  let people :: [Person]
++      people = read people_text
++
++  putStr "Number of people coming: "
++  print (length people)
+Index: lexer_haskell.xml
+===================================================================
+--- lexer_haskell.xml	(revision 0)
++++ lexer_haskell.xml	(revision 0)
+@@ -0,0 +1,98 @@
++<?xml version="1.0"?>
++<!DOCTYPE CodeBlocks_lexer_properties>
++<CodeBlocks_lexer_properties>
++		<Lexer name="Haskell"
++				index="68"
++				filemasks="*.hs,*.lhs,*.as,*.las">
++                <Style name="Default"
++						index="0"
++						fg="0,0,0"
++						bg="255,255,255"
++						bold="0"
++						italics="0"
++						underlined="0"/>
++                <Style name="Identifier"
++                        index="1"
++						fg="255,255,255"/>
++				<Style name="Keyword"
++						index="2"
++						fg="0,0,160"
++						bold="1"/>
++				<Style name="Number"
++						index="3"
++						fg="160,882,45"/>
++                <Style name="String"
++						index="4"
++						fg="0,0,255"/>
++                <Style name="Character"
++						index="5"
++						fg="224,160,0"/>
++                <Style name="Class"
++						index="6"
++						fg="0,0,0"/>
++				<Style name="Module"
++						index="7"
++						fg="0,160,0"/>
++				<Style name="Capital"
++						index="8"
++						fg="255,0,0"/>
++				<Style name="Data"
++						index="9"
++						fg="0,160,0"
++						bold="1"/>
++                <Style name="Import"
++                        index="10"
++                        fg="95,159,159"/>
++                <Style name="Operator"
++						index="11"
++						fg="0,0,128"
++						bold="1"/>
++                <Style name="Instance"
++                        index="12"
++                        fg="255,0,255"/>
++				<Style name="Comment"
++						index="13"
++						fg="160,160,160"/>
++				<Style name="Comment Block 1"
++						index="14"
++						fg="128,128,255"/>
++                <Style name="Comment Block 2"
++						index="15"
++						fg="128,128,255"/>
++				<Style name="Comment Block 3"
++						index="16"
++						fg="128,128,255"/>
++				<Style name="Active line"
++						index="-98"
++						bg="255,255,160"/>
++				<Style name="Breakpoint line"
++						index="-2"
++						bg="255,160,160"/>
++				<Style name="Debugger active line"
++						index="-3"
++						bg="160,160,255"/>
++				<Style name="Compiler error line"
++						index="-4"
++						bg="255,128,0"/>
++				<Style name="Matching brace highlight"
++						index="34"
++						bg="128,255,255"
++						bold="1"/>
++				<Style name="No matching brace highlight"
++						index="35"
++						fg="255,255,255"
++						bg="255,0,0"
++						bold="1"/>
++				<Keywords>
++                        <!-- Primary keywords and identifiers -->
++                        <Set index="0"
++                            value="as case class data default deriving do else hiding if
++                            import in infix infixl infixr instance let module newtype of
++                            proc qualified rec then type where _"/>
++				</Keywords>
++				<SampleCode value="lexer_haskell.sample"
++						breakpoint_line="32"
++						debug_line="35"
++						error_line="37"/>
++		</Lexer>
++</CodeBlocks_lexer_properties>
+Index: lexer_lisp.sample
+===================================================================
+--- lexer_lisp.sample	(revision 0)
++++ lexer_lisp.sample	(revision 0)
+@@ -0,0 +1,10 @@
++;;; This function, given a specific degree in Farhrenheit,
++;;;      presents the user with equivalent Celsius degree.
++
++(defun convert ()
++(format t "Enter Fahrenheit ")
++  (LET (fahr)
++    (SETQ fahr (read fahr))
++    (APPEND '(celsisus is) (*(- fahr 32)(/ 5 9)) )
++  )
++)
+Index: lexer_lisp.xml
+===================================================================
+--- lexer_lisp.xml	(revision 0)
++++ lexer_lisp.xml	(revision 0)
+@@ -0,0 +1,76 @@
++<?xml version="1.0"?>
++<!DOCTYPE CodeBlocks_lexer_properties>
++<CodeBlocks_lexer_properties>
++		<Lexer name="Lisp"
++				index="21"
++				filemasks="*.lsp">
++				<Style name="Default"
++						index="0"
++						fg="0,0,0"
++						bg="255,255,255"
++						bold="0"
++						italics="0"
++						underlined="0"/>
++                <Style name = "Comment"
++                        index="1,12"
++                        fg="0,128,0"/>
++                <Style name="Number"
++						index="2"
++						fg="240,0,240"/>
++                <Style name="Keyword"
++						index="3,4"
++						fg="0,0,160"
++						bold="1"/>
++				<Style name="Symbol"
++						index="5"
++						fg="0,160,0"
++						bold="1"/>
++				<Style name="String"
++						index="6,8"
++						fg="0,0,255"/>
++                <Style name ="Identifier"
++                        index = "9"
++                        fg = "0,0,0"/>
++                <Style name = "Operator"
++                        index="10"
++                        fg="255,0,0"
++                        bold="1"/>
++                <Style name = "Special"
++                        index = "11"
++                        fg="128,0,0"/>
++				<Style name="Selection"
++						index="-99"
++						bg="192,192,192"/>
++				<Style name="Active line"
++						index="-98"
++						bg="255,255,160"/>
++				<Style name="Breakpoint line"
++						index="-2"
++						bg="255,160,160"/>
++				<Style name="Debugger active line"
++						index="-3"
++						bg="160,160,255"/>
++				<Style name="Compiler error line"
++						index="-4"
++						bg="255,128,0"/>
++				<Style name="Matching brace highlight"
++						index="34"
++						bg="128,255,255"
++						bold="1"/>
++				<Style name="No matching brace highlight"
++						index="35"
++						fg="255,255,255"
++						bg="255,0,0"
++						bold="1"/>
++				<Keywords>
++                    <!-- Set index="0": Functions and special operators-->
++                    <!-- Set index="1": "Keywords"-->
++                        <Set index="1"
++                        value = "not defun + - * / = &lt; &gt; &lt;= &gt;= princ eval apply funcall quote identity function complement backquote lambda set setq setf defun defmacro gensym make symbol intern symbol name symbol value symbol plist get getf putprop remprop hash make array aref car cdr caar cadr cdar cddr caaar caadr cadar caddr cdaar cdadr cddar cdddr caaaar caaadr caadar caaddr cadaar cadadr caddar cadddr cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr cons list append reverse last nth nthcdr member assoc subst sublis nsubst  nsublis remove length list length mapc mapcar mapl maplist mapcan mapcon rplaca rplacd nconc delete atom symbolp numberp boundp null listp consp minusp zerop plusp evenp oddp eq eql equal cond case and or let l if prog prog1 prog2 progn go return do dolist dotimes catch throw error cerror break continue errset baktrace evalhook truncate float rem min max abs sin cos tan expt exp sqrt random logand logior logxor lognot bignums logeqv lognand lognor logorc2 logtest logbitp logcount integer length nil"/>
++				</Keywords>
++				<SampleCode value="lexer_lisp.sample"
++						breakpoint_line="3"
++						debug_line="6"
++						error_line="7"/>
++		</Lexer>
++</CodeBlocks_lexer_properties>
+Index: lexer_pascal.sample
+===================================================================
+--- lexer_pascal.sample	(revision 0)
++++ lexer_pascal.sample	(revision 0)
+@@ -0,0 +1,7 @@
++program FirstProg;
++
++  begin
++    { I always wanted to do this. }
++    Writeln('Hel-lo nurse... I mean, World!');
++    writel("Hello ");
++  end.
+Index: lexer_pascal.xml
+===================================================================
+--- lexer_pascal.xml	(revision 0)
++++ lexer_pascal.xml	(revision 0)
+@@ -0,0 +1,94 @@
++<?xml version="1.0"?>
++<!DOCTYPE CodeBlocks_lexer_properties>
++<CodeBlocks_lexer_properties>
++		<Lexer name="Pascal"
++				index="18"
++				filemasks="*.pas,*.inc">
++				<Style name="Default"
++						index="0"
++						fg="0,0,0"
++						bg="255,255,255"
++						bold="0"
++						italics="0"
++						underlined="0"/>
++                <Style name="Number"
++						index="3"
++						fg="240,0,240"/>
++                <Style mame="Preprocessor"
++                        index = "9"
++                        fg="0,160,0"/>
++                <Style name ="Identifier"
++                        index = "11"
++                        fg = "0,0,0"/>
++                <Style name = "Instruction word"
++                        index = "5"
++                        fg="0,0,160"
++                        bold="1"/>
++                <Style name = "Character"
++                        index="7"
++                        fg="0,0,255"/>
++                <Style name = "Operator"
++                        index="10"
++                        fg="255,0,0"
++                        bold="1"/>
++                <Style name = "Regex"
++                        index="14"
++                        fg="0,0,0"
++                        bold="1"/>
++                <Style name = "Comment (normal)"
++                        index="1,2"
++                        fg="0,128,0"/>
++                <Style name = "Comment (documentation)"
++                        index="3"
++                        fg="128,128,255"
++                        bold="1"/>
++                <Style name="Comment keyword (documentation)"
++						index="17"
++						fg="0,128,128"/>
++                <Style name="Comment keyword error (documentation)"
++						index="18"
++						fg="128,0,0"/>
++				<Style name="Selection"
++						index="-99"
++						bg="192,192,192"/>
++				<Style name="Active line"
++						index="-98"
++						bg="255,255,160"/>
++				<Style name="Breakpoint line"
++						index="-2"
++						bg="255,160,160"/>
++				<Style name="Debugger active line"
++						index="-3"
++						bg="160,160,255"/>
++				<Style name="Compiler error line"
++						index="-4"
++						bg="255,128,0"/>
++				<Style name="Matching brace highlight"
++						index="34"
++						bg="128,255,255"
++						bold="1"/>
++				<Style name="No matching brace highlight"
++						index="35"
++						fg="255,255,255"
++						bg="255,0,0"
++						bold="1"/>
++				<Keywords>
++                        <!-- Primary keywords and identifiers -->
++                        <Set index="0"
++                        value = "and array asm begin case cdecl class const constructor
++                                 default destructor div do downto else end end. except
++                                 exit exports external far file finalization finally for
++                                 function goto if implementation in index inherited
++                                 initialization inline interface label library message
++                                 mod near nil not object of on or out overload override
++                                 packed pascal private procedure program property protected
++                                 public published raise read record register repeat resourcestring
++                                 safecall set shl shr stdcall stored string then threadvar to
++                                 try type unit until uses var virtual while with write xor"/>
++				</Keywords>
++				<SampleCode value="lexer_pascal.sample"
++						breakpoint_line="3"
++						debug_line="6"
++						error_line="7"/>
++		</Lexer>
++</CodeBlocks_lexer_properties>
+Index: lexer_postscript.sample
+===================================================================
+--- lexer_postscript.sample	(revision 0)
++++ lexer_postscript.sample	(revision 0)
+@@ -0,0 +1,18 @@
++%Simple Postscript 
++%drawing a red sqare with a green filling
++newpath
++100 100 moveto
++0 100 rlineto
++100 0 rlineto
++0 -100 rlineto
++-100 0 rlineto
++closepath
++gsave
++0.5 1 0.5 setrgbcolor
++fill
++grestore
++1 0 0 setrgbcolor
++4 setlinewidth
++stroke
++
++Here is a missing percent (comment) sign
+Index: lexer_postscript.xml
+===================================================================
+--- lexer_postscript.xml	(revision 0)
++++ lexer_postscript.xml	(revision 0)
+@@ -0,0 +1,111 @@
++<?xml version="1.0"?>
++<!DOCTYPE CodeBlocks_lexer_properties>
++<CodeBlocks_lexer_properties>
++		<Lexer name="Postscript"
++				index="42"
++				filemasks="*.ps">
++				<Style name="Default"
++						index="0"
++						fg="0,0,0"
++						bg="255,255,255"
++						bold="0"
++						italics="0"
++						underlined="0"/>
++                <Style name="Comment"
++						index="1"
++						fg="160,160,160"/>
++				<Style name="DSC Comment"
++                        index="2"
++                        fg="16,16,16"/>
++                <Style name="DSC Value"
++                        index="3"
++                        fg="255,0,0"/>
++                <Style name="Number"
++						index="4"
++						fg="240,0,240"/>
++				<Style name="Name"
++						index="5"
++						fg="0,0,160"/>
++				<Style name="Instruction"
++						index="6"
++						fg="0,160,0"
++						bold="1"/>
++				<Style name="Literal"
++						index="7"
++						fg="224,160,0"
++						bold="1"/>
++				<Style name="Immeval"
++                        index="8"
++                        fg="0,0,128"
++						bold="1"/>
++                <Style name="Parent Array"
++                        index="9"
++                        fg="255,0,255"
++                        bold="1"/>
++                <Style name="Parrent Dict"
++                        index="10"
++                        fg="0,128,255"
++                        bold="1"/>
++                <Style name="Parrent Proc"
++                        index="11"
++                        fg="0,0,128"
++                        bold="1"/>
++				<Style name="Text"
++						index="12"
++						fg="0,0,255"/>
++				<Style name="Hex String"
++						index="13"
++						fg="128,128,128"/>
++				<Style name="Base85 string"
++						index="14"
++						fg="0,160,0"/>
++				<Style name="Bad string character"
++						index="15"
++						fg="128,64,0"/>
++				<Style name="Selection"
++						index="-99"
++						bg="192,192,192"/>
++				<Style name="Active line"
++						index="-98"
++						bg="255,255,160"/>
++				<Style name="Breakpoint line"
++						index="-2"
++						bg="255,160,160"/>
++				<Style name="Debugger active line"
++						index="-3"
++						bg="160,160,255"/>
++				<Style name="Compiler error line"
++						index="-4"
++						bg="255,128,0"/>
++				<Style name="Matching brace highlight"
++						index="34"
++						bg="128,255,255"
++						bold="1"/>
++				<Style name="No matching brace highlight"
++						index="35"
++						fg="255,255,255"
++						bg="255,0,0"
++						bold="1"/>
++				<Keywords>
++                        <!--"PS Level 1 operators"-->
++                        <Set index="0"
++                            value="$error = == FontDirectory StandardEncoding UserObjects abs add aload anchorsearch and arc arcn arcto array ashow astore atan awidthshow begin bind bitshift bytesavailable cachestatus ceiling charpath clear cleardictstack cleartomark clip clippath closefile closepath concat concatmatrix copy copypage cos count countdictstack countexecstack counttomark currentcmykcolor currentcolorspace currentdash currentdict currentfile currentflat currentfont currentgray currenthsbcolor currentlinecap currentlinejoin currentlinewidth currentmatrix currentmiterlimit currentpagedevice currentpoint currentrgbcolor currentscreen currenttransfer cvi cvlit cvn cvr cvrs cvs cvx def defaultmatrix definefont dict dictstack div dtransform dup echo end eoclip eofill eq erasepage errordict exch exec execstack executeonly executive exit exp false file fill findfont flattenpath floor flush flushfile for forall ge get getinterval grestore grestoreall gsave gt idetmatrix idiv idtransform if ifelse image imagemask index initclip initgraphics initmatrix inustroke invertmatrix itransform known kshow le length lineto ln load log loop lt makefont mark matrix maxlength mod moveto mul ne neg newpath noaccess nor not null nulldevice or pathbbox pathforall pop print prompt pstack put putinterval quit rand rcheck rcurveto read readhexstring readline readonly readstring rectstroke repeat resetfile restore reversepath rlineto rmoveto roll rotate round rrand run save scale scalefont search setblackgeneration setcachedevice setcachelimit setcharwidth setcolorscreen setcolortransfer setdash setflat setfont setgray sethsbcolor setlinecap setlinejoin setlinewidth setmatrix setmiterlimit setpagedevice setrgbcolor setscreen settransfer setvmthreshold show showpage sin sqrt srand stack start status statusdict stop stopped store string stringwidth stroke strokepath sub systemdict token token transform translate true truncate type ueofill undefineresource userdict usertime version vmstatus wcheck where widthshow write writehexstring writestring xcheck xor"/>
++                        <!--"PS Level 2 operators"-->
++                        <Set index="1"
++                            value="GlobalFontDirectory ISOLatin1Encoding SharedFontDirectory UserObject arct colorimage cshow currentblackgeneration currentcacheparams currentcmykcolor currentcolor currentcolorrendering currentcolorscreen currentcolorspace currentcolortransfer currentdevparams currentglobal currentgstate currenthalftone currentobjectformat currentoverprint currentpacking currentpagedevice currentshared currentstrokeadjust currentsystemparams currentundercolorremoval currentuserparams defineresource defineuserobject deletefile execform execuserobject filenameforall fileposition filter findencoding findresource gcheck globaldict glyphshow gstate ineofill infill instroke inueofill inufill inustroke languagelevel makepattern packedarray printobject product realtime rectclip rectfill rectstroke renamefile resourceforall resourcestatus revision rootfont scheck selectfont serialnumber setbbox setblackgeneration setcachedevice2 setcacheparams setcmykcolor setcolor setcolorrendering setcolorscreen setcolorspace setcolortranfer setdevparams setfileposition setglobal setgstate sethalftone setobjectformat setoverprint setpacking setpagedevice setpattern setshared setstrokeadjust setsystemparams setucacheparams setundercolorremoval setuserparams setvmthreshold shareddict startjob uappend ucache ucachestatus ueofill ufill undef undefinefont undefineresource undefineuserobject upath ustroke ustrokepath vmreclaim writeobject xshow xyshow yshow"/>
++						<!--"PS Level 3 operators"-->
++                        <Set index="2"
++                            value="cliprestore clipsave composefont currentsmoothness findcolorrendering setsmoothness shfill"/>
++                        <!--"RIP-specific operators"-->
++                        <Set index="3"
++                            value=".begintransparencygroup .begintransparencymask .bytestring .charboxpath .currentaccuratecurves .currentblendmode .currentcurvejoin .currentdashadapt .currentdotlength .currentfilladjust2 .currentlimitclamp .currentopacityalpha .currentoverprintmode .currentrasterop .currentshapealpha .currentsourcetransparent .currenttextknockout .currenttexturetransparent .dashpath .dicttomark .discardtransparencygroup .discardtransparencymask .endtransparencygroup .endtransparencymask .execn .filename .filename .fileposition .forceput .forceundef .forgetsave .getbitsrect .getdevice .inittransparencymask .knownget .locksafe .makeoperator .namestring .oserrno .oserrorstring .peekstring .rectappend .runandhide .setaccuratecurves .setblendmode .setcurvejoin .setdashadapt .setdebug .setdefaultmatrix .setdotlength .setfilladjust2 .setlimitclamp .setmaxlength .setopacityalpha .setoverprintmode .setrasterop .setsafe .setshapealpha .setsourcetransparent .settextknockout .settexturetransparent .stringbreak .stringmatch .tempfile .type1decrypt .type1encrypt .type1execchar .unread arccos arcsin copydevice copyscanlines currentdevice finddevice findlibfile findprotodevice flushpage getdeviceprops getenv makeimagedevice makewordimagedevice max min putdeviceprops setdevice"/>
++                        <!--"User-defined operators"-->
++                        <Set index="4"
++                            value=""/>
++				</Keywords>
++				<SampleCode value="lexer_postscript.sample"
++						breakpoint_line="12"
++						debug_line="14"
++						error_line="18"/>
++		</Lexer>
++</CodeBlocks_lexer_properties>
+Index: lexer_ruby.sample
+===================================================================
+--- lexer_ruby.sample	(revision 0)
++++ lexer_ruby.sample	(revision 0)
+@@ -0,0 +1,10 @@
++# a comment
++while line = file.readline
++  if !comment_line(line)
++    lines.add(line)
++  end
++end
++
++puts "Hello" +
++" World!";
++
+Index: lexer_ruby.xml
+===================================================================
+--- lexer_ruby.xml	(revision 0)
++++ lexer_ruby.xml	(revision 0)
+@@ -0,0 +1,138 @@
++<?xml version="1.0"?>
++<!DOCTYPE CodeBlocks_lexer_properties>
++<CodeBlocks_lexer_properties>
++		<Lexer name="Ruby"
++				index="22"
++				filemasks="*.rb,*.rbw">
++				<Style name="Default"
++						index="0"
++						fg="0,0,0"
++						bg="255,255,255"
++						bold="0"
++						italics="0"
++						underlined="0"/>
++				<Style name="Error"
++						index="1"
++						fg="0,0,0"/>
++				<Style name="Comment"
++						index="2"
++						fg="0,128,0"/>
++				<Style name="POD"
++						index="3"
++						fg="0,64,0"/>
++				<Style name="Number"
++						index="4"
++						fg="255,128,0"/>
++				<Style name="Instruction"
++						index="5"
++						fg="0,0,255"
++						bold="1"/>
++				<Style name="String"
++						index="6"
++						fg="128,128,128"/>
++				<Style name="Character"
++						index="7"
++						fg="128,128,0"/>
++                <Style name="Class name"
++						index="8"
++						fg="0,128,192"
++						bold="1"/>
++                <Style name="Def name"
++						index="9"
++						fg="128,128,255"
++						bold="1"/>
++                <Style name="Operator"
++						index="10"
++						fg="0,0,128"
++						bold="1"/>
++                <Style name="Identifier"
++						index="11"
++						fg="0,0,0"
++						bold="1"/>
++                <Style name="Regex"
++						index="12"
++						fg="0,128,255"/>
++                <Style name="Global"
++						index="13"
++						fg="0,0,128"
++						bold="1"/>
++                <Style name="Symbol"
++						index="14"
++						fg="0,0,0"/>
++                <Style name="Module name"
++						index="15"
++						fg="128,64,0"
++						bold="1"/>
++                <Style name="Instance var"
++						index="16"
++						fg="0,0,0"/>
++                <Style name="Class val"
++						index="17"
++						fg="0,0,0"/>
++                <Style name="Backticks"
++						index="18"
++						fg="255,255,0"
++						gb="160,128,128"/>
++                <Style name="Data section"
++						index="19"
++						fg="96,0,0"
++						bg="255,240,216"/>
++                <Style name="Here Q"
++						index="20,21,22,23"
++						fg="0,0,0"/>
++                <Style name="String Q"
++						index="24,25,26,27,28"
++						fg="128,128,128"/>
++                <Style name="Word demoted"
++						index="29"
++						fg="0,0,0"/>
++                <Style name="Stdin"
++						index="30"
++						fg="0,0,0"/>
++                <Style name="Stdout"
++						index="31"
++						fg="0,0,0"/>
++                <Style name="Stderr"
++						index="40"
++						fg="255,0,0"/>
++                <Style name="Upper Bound"
++						index="41"
++						fg="0,0,0"/>
++				<Style name="Selection"
++						index="-99"
++						bg="192,192,192"/>
++				<Style name="Active line"
++						index="-98"
++						bg="255,255,160"/>
++				<Style name="Breakpoint line"
++						index="-2"
++						bg="255,160,160"/>
++				<Style name="Debugger active line"
++						index="-3"
++						bg="160,160,255"/>
++				<Style name="Compiler error line"
++						index="-4"
++						bg="255,128,0"/>
++				<Style name="Matching brace highlight"
++						index="34"
++						bg="128,255,255"
++						bold="1"/>
++				<Style name="No matching brace highlight"
++						index="35"
++						fg="255,255,255"
++						bg="255,0,0"
++						bold="1"/>
++				<Keywords>
++                        <Set index="0"
++                            value=""/>
++                        <Set index="1"
++                            value=""/>
++						<Set index="2"
++                            value=""/>
++				</Keywords>
++				<SampleCode value="lexer_ruby.sample"
++						breakpoint_line="3"
++						debug_line="4"
++						error_line="9"/>
++		</Lexer>
++</CodeBlocks_lexer_properties>
+Index: lexer_smalltalk.sample
+===================================================================
+--- lexer_smalltalk.sample	(revision 0)
++++ lexer_smalltalk.sample	(revision 0)
+@@ -0,0 +1,23 @@
++
++"bubble sort"
++
++bubbleSort: cmpFun
++	"Implementing Bubble sort with Smalltalk"
++	| i j tmp funResult |
++	i := self size.
++	[i > 0]
++		whileTrue: [j := 1.
++			[j <= i]
++				whileTrue: [funResult := cmpFun
++								value: (self at: i)
++								value: (self at: j).
++					funResult
++						ifTrue: [tmp := self at: i.
++							self
++								at: i
++								put: (self at: j).
++							self at: j put: tmp].
++					j := j + 1].
++			i := i - 1]
++
++missing comment sign "
+Index: lexer_smalltalk.xml
+===================================================================
+--- lexer_smalltalk.xml	(revision 0)
++++ lexer_smalltalk.xml	(revision 0)
+@@ -0,0 +1,103 @@
++<?xml version="1.0"?>
++<!DOCTYPE CodeBlocks_lexer_properties>
++<CodeBlocks_lexer_properties>
++		<Lexer name="Smalltalk"
++				index="72"
++				filemasks="*.st">
++				<Style name="Default"
++						index="0"
++						fg="0,0,0"
++						bg="255,255,255"
++						bold="0"
++						italics="0"
++						underlined="0"/>
++				<Style name="String"
++						index="1"
++						fg="0,0,255"/>
++				<Style name="Number"
++						index="2"
++						fg="240,0,240"/>
++				<Style name="Comment (normal)"
++						index="3"
++						fg="160,160,160"/>
++				<Style name="Symbol"
++						index="4"
++						fg="0,0,160"
++						bold="1"/>
++                <Style name="Binary"
++                        index="5"
++                        fg="0,0,128"/>
++                <Style name="Bool"
++                        index="6"
++                        fg="128,0,255"/>
++                <Style name="Self"
++                        index="7"
++                        fg="128,128,255"
++                        bg="255,255,204"
++                        bold="1"/>
++                <Style name="Super"
++                        index="8"
++                        fg="0,128,255"
++                        bg="236,255,234"
++                        bold="1"/>
++                <Style name="Nil"
++                        index="9"
++                        fg="128,128,192"/>
++                <Style name="Global"
++                        index="10"
++                        fg="128,0,0"/>
++                <Style name="Return"
++                        index="11"
++                        fg="0,0,255"
++                        bold="1"/>
++                <Style name="Special"
++                        index="12"
++                        fg="128,128,0"/>
++                <Style name="Kws end"
++                        index="13"
++                        fg="0,128,255"/>
++                <Style name="Assign"
++                        index="14"
++                        fg="255,0,0"/>
++                <Style name="Character"
++						index="15"
++						fg="224,160,0"/>
++				<Style name="Special selector"
++                        index="16"
++                        fg="255,128,192"/>
++
++				<Style name="Selection"
++						index="-99"
++						bg="192,192,192"/>
++				<Style name="Active line"
++						index="-98"
++						bg="255,255,160"/>
++				<Style name="Breakpoint line"
++						index="-2"
++						bg="255,160,160"/>
++				<Style name="Debugger active line"
++						index="-3"
++						bg="160,160,255"/>
++				<Style name="Compiler error line"
++						index="-4"
++						bg="255,128,0"/>
++				<Style name="Matching brace highlight"
++						index="34"
++						bg="128,255,255"
++						bold="1"/>
++				<Style name="No matching brace highlight"
++						index="35"
++						fg="255,255,255"
++						bg="255,0,0"
++						bold="1"/>
++				<Keywords>
++                        <!-- "Special selectors" -->
++                        <Set index="0"
++                            value="ifTrue: ifFalse: whileTrue: whileFalse: ifNil: ifNotNil: whileTrue whileFalse repeat isNil notNil"/>
++				</Keywords>
++				<SampleCode value="lexer_smalltalk.sample"
++						breakpoint_line="12"
++						debug_line="17"
++						error_line="23"/>
++		</Lexer>
++</CodeBlocks_lexer_properties>
+Index: lexer_verilog.sample
+===================================================================
+--- lexer_verilog.sample	(revision 5116)
++++ lexer_verilog.sample	(working copy)
+@@ -12,17 +12,3 @@
+ end
+ 
+ endmodule
+-// D flip-flop
+-module d_ff ( d, clk, q, q_bar);
+-input d ,clk;
+-output q, q_bar;
+-wire d ,clk;
+-reg q, q_bar;
+-
+-always @ (posedge clk)
+-begin
+-    q <= d;
+-    q_bar <=  ! d;
+-end
+-
+-endmodule
+Index: lexer_verilog.xml
+===================================================================
+--- lexer_verilog.xml	(revision 5116)
++++ lexer_verilog.xml	(working copy)
+@@ -114,119 +114,3 @@
+ 						error_line="11"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+-<?xml version="1.0"?>
+-<!DOCTYPE CodeBlocks_lexer_properties>
+-<CodeBlocks_lexer_properties>
+-		<Lexer name="Verilog"
+-				index="56"
+-				filemasks="*.v,*.verilog">
+-                <!-- #define wxSCI_V_DEFAULT 0 -->
+-                <Style name="Default"
+-						index="0"
+-						fg="0,0,0"
+-						bg="255,255,255"
+-						bold="0"
+-						italics="0"
+-						underlined="0"/>
+-                <!--#define wxSCI_V_COMMENT 1
+-                #define wxSCI_V_COMMENTLINE 2
+-                #define wxSCI_V_COMMENTLINEBANG 3-->
+-				<Style name="Comment"
+-						index="1,2,3"
+-						fg="34,138,34"/>
+-                <!--#define wxSCI_V_NUMBER 4-->
+-				<Style name="Number"
+-						index="4"
+-						fg="160,882,45"/>
+-						<!--fg="240,0,240"/-->
+-                <!--#define wxSCI_V_STRING 6
+-                #define wxSCI_V_STRINGEOL 12-->
+-                <Style name="String"
+-						index="6,12"
+-						fg="0,0,255"/>
+-                <!--#define wxSCI_V_OPERATOR 10-->
+-                <Style name="Operator"
+-						index="10"
+-						fg="0,0,128"
+-						bold="1"/>
+-                <!-- #define wxSCI_V_PREPROCESSOR 9 -->
+-                <Style name="Preprocessor"
+-                        index="9"
+-                        fg="128,64,0"/>
+-                 <!--#define wxSCI_V_IDENTIFIER 11-->
+-                <Style name="Identifier"
+-                        index="11"
+-                        fg="0,0,0"/>
+-                <!-- #define wxSCI_V_WORD 5 -->
+-                <Style name="Instructions"
+-                        index="5"
+-                        fg="0,0,255"
+-                        bold="1"/>
+-                <!-- #define wxSCI_V_WORD2 7 -->
+-                <Style name="Keywords"
+-                        index="7"
+-                        fg="128,0,255"/>
+-                <!-- #define wxSCI_V_WORD3 8 -->
+-                <Style name="Tagname"
+-                        index="8"
+-                        fg="0,0,0"/>
+-                <!-- #define wxSCI_V_USER 19 -->
+-                <Style name="User"
+-                        index="19"
+-                        fg="0,0,0"/>
+-				<Style name="Selection"
+-						index="-99"
+-						bg="192,192,192"/>
+-				<Style name="Active line"
+-						index="-98"
+-						bg="255,255,160"/>
+-				<Style name="Breakpoint line"
+-						index="-2"
+-						bg="255,160,160"/>
+-				<Style name="Debugger active line"
+-						index="-3"
+-						bg="160,160,255"/>
+-				<Style name="Compiler error line"
+-						index="-4"
+-						bg="255,128,0"/>
+-				<Style name="Matching brace highlight"
+-						index="34"
+-						bg="128,255,255"
+-						bold="1"/>
+-				<Style name="No matching brace highlight"
+-						index="35"
+-						fg="255,255,255"
+-						bg="255,0,0"
+-						bold="1"/>
+-				<Keywords>
+-                        <!-- Primary keywords and identifiers -->
+-                        <Set index="0"
+-                            value="always and assign begin xbuf buf bufif0 bufif1 case casex casez cmos
+-                                default defparam else end endcase endfunction endmodule endprimitive endspecify
+-                                endtable endtask event for force forever fork function if initial inout input
+-                                integer join macromodule makefile module nand negedge nmos nor not notif0 notif1
+-                                or output parameter pmos posedge primitive pulldown pullup rcmos real realtime reg
+-                                repeat rnmos rpmos rtran rtranif0 rtranif1 signed specify specparam supply supply0 supply1 table
+-                                task time tran tranif0 tranif1 tri tri0 tri1 triand trior trireg vectored wait
+-                                wand while wire wor xnor xor"/>
+-                        <!-- Secondary keywords and identifiers -->
+-                        <Set index="1"
+-                            value=""/>
+-                        <!-- System Tasks -->
+-                        <Set index="2"
+-                            value="$readmemb $readmemh $sreadmemb $sreadmemh $display $write $strobe $monitor $fdisplay $fwrite $fstrobe
+-                                $fmonitor $fopen $fclose $time $stime $realtime $scale $printtimescale $timeformat $stop $finish $save
+-                                $incsave $restart $input $log $nolog $key $nokey $scope $showscopes $showscopes $showvars $showvars
+-                                $countdrivers $list $monitoron $monitoroff $dumpon $dumpoff $dumpfile $dumplimit $dumpflush $dumpvars
+-                                $dumpall $reset $reset $reset $reset $reset $random $getpattern $rtoi $itor $realtobits $bitstoreal
+-                                $setup $hold $setuphold $period $width $skew $recovery"/>
+-                        <!-- User defined tasks and identifiers -->
+-                        <Set index="3"
+-                            value=""/>
+-				</Keywords>
+-				<SampleCode value="lexer_verilog.sample"
+-						breakpoint_line="8"
+-						debug_line="10"
+-						error_line="11"/>
+-		</Lexer>
+-</CodeBlocks_lexer_properties>
+Index: lexer_vhdl.sample
+===================================================================
+--- lexer_vhdl.sample	(revision 5116)
++++ lexer_vhdl.sample	(working copy)
+@@ -40,45 +40,3 @@
+     end process;
+ 
+ end behavioral;
+---
+--- Sample preview code
+---
+-library ieee;
+-use ieee.std_logic_1164.all;
+-use ieee.numeric_std.all;
+-
+-entity shiftregister is
+-    generic
+-    (
+-        left          : boolean := false -- so shift right
+-    )
+-	port
+-	(
+-		clk           : in  std_logic;
+-		rst           : in  std_logic;
+-		en            : in  std_logic;
+-		d             : in  std_logic
+-		q             : out std_logic_vector
+-    );
+-end shiftregister;
+-
+-architecture behavioral of shiftregister is
+-	constant crcpoly   : std_logic_vector(7 downto 0) := x"8D";
+-
+-	type   utxstates   is (idle, data, parity, stop);
+-	signal utxstate    : utxstates;
+-begin
+-
+-    shift: process ( rst, clk ) begin
+-        if rst = '1' then
+-            q <= (others => '0');
+-        elsif clk'event and clk = '1' then
+-            if left then
+-                q <= q(q'left - 1 downto q'right) & d;
+-            else
+-                q <= d & q(q'left downto q'right + 1);
+-            end if;
+-        end if;
+-    end process;
+-
+-end behavioral;
+Index: lexer_vhdl.xml
+===================================================================
+--- lexer_vhdl.xml	(revision 5116)
++++ lexer_vhdl.xml	(working copy)
+@@ -124,129 +124,3 @@
+ 						error_line="37"/>
+ 		</Lexer>
+ </CodeBlocks_lexer_properties>
+-<?xml version="1.0"?>
+-<!DOCTYPE CodeBlocks_lexer_properties>
+-<CodeBlocks_lexer_properties>
+-		<Lexer name="VHDL"
+-				index="64"
+-				filemasks="*.vhd,*.vhdl">
+-                <!-- #define wxSCI_VHDL_DEFAULT 0 -->
+-                <Style name="Default"
+-						index="0"
+-						fg="0,0,0"
+-						bg="255,255,255"
+-						bold="0"
+-						italics="0"
+-						underlined="0"/>
+-                <!--#define wxSCI_VHDL_COMMENT 1
+-                #define wxSCI_VHDL_COMMENTLINEBANG 2-->
+-				<Style name="Comment"
+-						index="1,2"
+-						fg="34,138,34"/>
+-						<!--fg="160,160,160"-->
+-                <!--#define wxSCI_VHDL_NUMBER 3-->
+-				<Style name="Number"
+-						index="3"
+-						fg="160,882,45"/>
+-						<!--fg="240,0,240"/-->
+-                <!--#define wxSCI_VHDL_STRING 4
+-                #define wxSCI_VHDL_STRINGEOL 7-->
+-                <Style name="String"
+-						index="4,7"
+-						fg="0,0,255"/>
+-                <!--#define wxSCI_VHDL_OPERATOR 5
+-                #define wxSCI_VHDL_STDOPERATOR 9-->
+-                <Style name="Operator"
+-						index="5,9"
+-						fg="0,0,128"
+-						bold="1"/>
+-
+-                <!--#define wxSCI_VHDL_KEYWORD 8-->
+-				<Style name="Keyword"
+-						index="8"
+-						fg="0,0,160"
+-						bold="1"/>
+-                <!--#define wxSCI_VHDL_USERWORD 14-->
+-				<Style name="User keyword"
+-						index="14"
+-						fg="0,160,0"
+-						bold="1"/>
+-                <!--#define wxSCI_VHDL_ATTRIBUTE 10-->
+-                <Style name="Attribute"
+-                        index="10"
+-                        fg="95,159,159"/>
+-                <!--#define wxSCI_VHDL_STDPACKAGE 12-->
+-                <Style name="Std Package"
+-                        index="12"
+-                        fg="255,0,255"/>
+-                <!--#define wxSCI_VHDL_STDTYPE 13-->
+-                <Style name="Std Type"
+-                        index="13"
+-                        fg="159,159,95"/>
+-                <!--#define wxSCI_VHDL_IDENTIFIER 6-->
+-                <Style name="Identifier"
+-                        index="6"
+-                        fg="0,0,0"/>
+-                <!--#define wxSCI_VHDL_STDFUNCTION 11-->
+-                <Style name="Std Function"
+-                        index="11"
+-                        fg="0,0,255"/>
+-
+-				<Style name="Selection"
+-						index="-99"
+-						bg="192,192,192"/>
+-				<Style name="Active line"
+-						index="-98"
+-						bg="255,255,160"/>
+-				<Style name="Breakpoint line"
+-						index="-2"
+-						bg="255,160,160"/>
+-				<Style name="Debugger active line"
+-						index="-3"
+-						bg="160,160,255"/>
+-				<Style name="Compiler error line"
+-						index="-4"
+-						bg="255,128,0"/>
+-				<Style name="Matching brace highlight"
+-						index="34"
+-						bg="128,255,255"
+-						bold="1"/>
+-				<Style name="No matching brace highlight"
+-						index="35"
+-						fg="255,255,255"
+-						bg="255,0,0"
+-						bold="1"/>
+-				<Keywords>
+-                        <!-- Primary keywords and identifiers -->
+-                        <Set index="0"
+-                            value="access after alias all architecture array assert attribute begin block body buffer bus case component
+-                                configuration constant disconnect downto else elsif end entity exit file for function generate generic
+-                                group guarded if impure in inertial inout is label library linkage literal loop map new next null of
+-                                on open others out package port postponed procedure process pure range record register reject report
+-                                return select severity shared signal subtype then to transport type unaffected units until use variable
+-                                wait when while with"/>
+-                        <Set index="1"
+-                            value="abs and mod nand nor not or rem rol ror sla sll sra srl xnor xor"/>
+-                        <Set index="2"
+-                            value="left right low high ascending image value pos val succ pred leftof rightof base range reverse_range
+-                                length delayed stable quiet transaction event active last_event last_active last_value driving
+-                                driving_value simple_name path_name instance_name"/>
+-                        <Set index="3"
+-                            value="now readline read writeline write endfile resolved to_bit to_bitvector to_stdulogic to_stdlogicvector
+-                                to_stdulogicvector to_x01 to_x01z to_UX01 rising_edge falling_edge is_x shift_left shift_right rotate_left
+-                                rotate_right resize to_integer to_unsigned to_signed std_match to_01"/>
+-                        <Set index="4"
+-                            value="std ieee work standard textio std_logic_1164 std_logic_arith std_logic_misc std_logic_signed
+-                                std_logic_textio std_logic_unsigned numeric_bit numeric_std math_complex math_real vital_primitives
+-                                vital_timing"/>
+-                        <Set index="5"
+-                            value="boolean bit character severity_level integer real time delay_length natural positive string bit_vector
+-                                file_open_kind file_open_status line text side width std_ulogic std_ulogic_vector std_logic
+-                                std_logic_vector X01 X01Z UX01 UX01Z unsigned signed"/>
+-				</Keywords>
+-				<SampleCode value="lexer_vhdl.sample"
+-						breakpoint_line="32"
+-						debug_line="35"
+-						error_line="37"/>
+-		</Lexer>
+-</CodeBlocks_lexer_properties>

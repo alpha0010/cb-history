@@ -1,0 +1,39 @@
+Index: src/plugins/compilergcc/directcommands.cpp
+===================================================================
+--- src/plugins/compilergcc/directcommands.cpp	(revision 4640)
++++ src/plugins/compilergcc/directcommands.cpp	(working copy)
+@@ -194,7 +194,7 @@
+ 		{
+ 			AppendArray(GetCompileFileCommand(target, pf->generatedFiles[i]), retGenerated); // recurse
+ 		}
+-    	
++
+         pfCustomBuild& pcfb = pf->customBuild[compiler->GetID()];
+         compilerCmd = pcfb.useCustomBuildCommand
+                         ? pcfb.buildCommand
+@@ -454,7 +454,11 @@
+         wxArrayString tmp;
+         for (size_t i = 0; i < buildcmds.GetCount(); ++i)
+         {
+-            compiler->GenerateCommandLine(buildcmds[i], target, 0, wxEmptyString, wxEmptyString, wxEmptyString, wxEmptyString);
++            if(target)
++                compiler->GenerateCommandLine(buildcmds[i], target, 0, wxEmptyString, wxEmptyString, wxEmptyString, wxEmptyString);
++            else
++                compiler->GenerateCommandLine(buildcmds[i], m_pProject->GetCurrentlyCompilingTarget(), 0, wxEmptyString, wxEmptyString, wxEmptyString, wxEmptyString);
++
+             tmp.Add(wxString(COMPILER_WAIT)); // all commands should wait for queue to empty first
+             tmp.Add(wxString(COMPILER_SIMPLE_LOG) + buildcmds[i]);
+             tmp.Add(buildcmds[i]);
+@@ -480,7 +484,11 @@
+         wxArrayString tmp;
+         for (size_t i = 0; i < buildcmds.GetCount(); ++i)
+         {
+-            compiler->GenerateCommandLine(buildcmds[i], target, 0, wxEmptyString, wxEmptyString, wxEmptyString, wxEmptyString);
++            if(target)
++                compiler->GenerateCommandLine(buildcmds[i], target, 0, wxEmptyString, wxEmptyString, wxEmptyString, wxEmptyString);
++            else
++                compiler->GenerateCommandLine(buildcmds[i], m_pProject->GetCurrentlyCompilingTarget(), 0, wxEmptyString, wxEmptyString, wxEmptyString, wxEmptyString);
++
+             tmp.Add(wxString(COMPILER_WAIT)); // all commands should wait for queue to empty first
+             tmp.Add(wxString(COMPILER_SIMPLE_LOG) + buildcmds[i]);
+             tmp.Add(buildcmds[i]);

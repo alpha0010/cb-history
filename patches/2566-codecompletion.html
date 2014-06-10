@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 2566 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #2566 <small>2008-09-21 07:52:41</small></h3>
+          <h4>geister</h4>
+          codecompletion: Adding "union" (basic)
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="2566-codecompletion.patch">2566-codecompletion.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::FeatureAdd</dd>
+            <dt>Status</dt><dd>Accepted</dd>
+            <dt>Close date</dt><dd>2009-08-24 07:42:30</dd>
+            <dt>Assigned to</dt><dd>mortenmacfly</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">geister 2008-09-21 08:17:41</div>
+        <div class="panel-body">
+          <p>My first patch, so I'm not too sure about the format. Hope that works.</p>
+          <p>It modifies the codecompletion plugin to add basic "union" support.</p>
+          <p>It isn't perfect, as it adds "Unnamed-xxx-yyy" tokens to the code completion. Also, the following is not working properly.</p>
+          <p>union MyUnion {</p>
+          <p>short s;</p>
+          <p>char c[2];</p>
+          <p>};</p>
+          <p>union MyUnion xx;</p>
+          <p>"xx" is currently ignored by the parser, as it is presumed to be a forward declaration. Using a typedef for the union declaration will remove the requirement of having the union keyword when declaring xx, therefore taking it in consideration.</p>
+          <p>Actually, those problems are also present with classes and structures, as it uses the same code.</p>
+          <p>struct HiddenStruct {</p>
+          <p>int val;</p>
+          <p>};</p>
+          <p>struct HiddenStruct yy;</p>
+          <p>The same problem occurs. "struct HiddenStruct yy;" is considered to be a forward declaration, when in fact it is an instantiation.</p>
+          <p>typedef struct {</p>
+          <p>struct {</p>
+          <p>int val;</p>
+          <p>} aa;</p>
+          <p>} MyStruct;</p>
+          <p>MyStruct zz;</p>
+          <p>"aa" in that case is an instance of the unnamed structure, but is not recognized as such by the parser (haven't searched why yet, maybe because it is expecting a "typedef" before the structure or a "=" after the "aa"). It will however display the unnamed structure in the code completion, which is... useless code-wise.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">geister 2008-09-21 08:25:52</div>
+        <div class="panel-body">
+          <p>Okay, I made an error saying it is considered a forward declaration. But it still is ignored...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">geister 2008-09-21 08:59:13</div>
+        <div class="panel-body">
+          <p>It now adds the tokens as per the previous example ("yy" is now added and code completion works for it.)</p>
+          <p>I will try to see how to make it work for the "zz" example.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">geister 2008-09-21 10:18:04</div>
+        <div class="panel-body">
+          <p>Updated again. Now works with enumerations. Still not working properly with "zz.aa".</p>
+          <p>Test case:</p>
+          <p>typedef struct {</p>
+          <p>struct {</p>
+          <p>int value;</p>
+          <p>} aa;</p>
+          <p>} MyStruct;</p>
+          <p>MyStruct zz;</p>
+          <p>struct HiddenStruct {</p>
+          <p>int val;</p>
+          <p>};</p>
+          <p>struct HiddenStruct yy;</p>
+          <p>enum MyEnum { EnumElementA, EnumElementB = 2 };</p>
+          <p>enum MyEnum ee;</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">geister 2008-09-21 12:45:05</div>
+        <div class="panel-body">
+          <p>Okay, now I am facing language-specific code.</p>
+          <p>For more info, see: <a href="http://forums.codeblocks.org/index.php/topic,9225.msg65886.html">http://forums.codeblocks.org/index.php/topic,9225.msg65886.html</a></p>
+          <p>What does this patch do?</p>
+          <p>- adds unions to the symbols browser</p>
+          <p>- allows declaration of variables like "struct MyStruct myvar;"</p>
+          <p>- allows declarations of variables like "struct AStruct { int blah; } avar, anothervar;"</p>
+          <p>- probably more stuff I indirectly fixed</p>
+          <p>What does it not do?</p>
+          <p>- recursive expansion of variables in classes (coming another day)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">geister 2008-09-22 16:55:15</div>
+        <div class="panel-body">
+          <p>It doesn't crash anymore when parsing"struct AStruct { int blah; } avar, anothervar;"</p>
+          <p>Facing bigger problems, for more info see:</p>
+          <p><a href="http://forums.codeblocks.org/index.php/topic,9225.msg65937.html#msg65937">http://forums.codeblocks.org/index.php/topic,9225.msg65937.html#msg65937</a></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 3313 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #3313 <small>2012-08-07 15:33:56</small></h3>
+          <h4>alpha0010</h4>
+          Improve handling of inactive preprocessor code
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="3313-Improve_handli.patch">3313-Improve_handli.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Lexer</dd>
+            <dt>Status</dt><dd>Accepted</dd>
+            <dt>Close date</dt><dd>2012-08-13 05:23:41</dd>
+            <dt>Assigned to</dt><dd>mortenmacfly</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2012-08-07 16:03:15</div>
+        <div class="panel-body">
+          <p>Just one note:</p>
+          <p>(editormanager is screwed anyways... but...) Next time you add a method please keep the order in the implementation file the same as is the header. Not at the bottom.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">alpha0010 2012-08-07 18:05:14</div>
+        <div class="panel-body">
+          <p>OK; I think it is in the correct position now.  (I also added a bit more to define collection.)</p>
+          <p>From my testing, the modifications in this patch (when define collection is enabled) give correct highlighting almost all of the time.  Because of this and that greyed out code now remains syntax highlighted, I would recommend that both interpreting preprocessor code and define collection be enabled by default; what do you think?  (They are both currently disabled by default.)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2012-08-08 05:00:00</div>
+        <div class="panel-body">
+          <p>BTW what doesn't work for me w/ highlighting is the wxWidgets stuff. I wonder if you should add the __WXMSW__ stuff (and others), too...?!</p>
+          <p>Oh - and btw: What, if I cross-compile? In that case I don't want i.e. the Linux defines to be set automatically, so actually the platform should be an option, too. The same (eve harder) applies to the no. of bits: Most of the time I am compiling 32 bit apps on a 64 Windows, like C::B. :-)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">alpha0010 2012-08-08 12:04:14</div>
+        <div class="panel-body">
+          <p>From what I can tell, normally items like __WXMSW__ should be defined in the project file.  When loading completes, and each time a build target is switched, the compiler switches are re-scanned for defines (assuming define collection is enabled).  However, the current editor must be closed/reopened to refresh its define list (I could not yet find a workaround for this).  When I tested on, for example, CodeBlocks.cbp, all (simple to moderate complexity) wxWidgets and pch related defines worked correctly.</p>
+          <p>I could additionally add some of these defines with the platform specific ones.</p>
+          <p>I forgot about cross compiling... I will add a switch to control platform specific defines.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">alpha0010 2012-08-10 04:34:49</div>
+        <div class="panel-body">
+          <p>Platform defines now have a check-box.</p>
+          <p>I was unable to replicate your issue with wxWidgets projects, so there is nothing new here specifically targeting to fix that.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2012-08-11 10:14:17</div>
+        <div class="panel-body">
+          <p>Looks OK now. The reason with the wxWidgets was another one... not related to this patch. Let me do some testing and then I think I can commit...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2012-08-13 05:23:41</div>
+        <div class="panel-body">
+          <p>Works - Applied - Thanks! :-)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

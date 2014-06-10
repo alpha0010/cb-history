@@ -1,0 +1,30 @@
+Index: src/plugins/contrib/CppCheck/CppCheck.cpp
+===================================================================
+--- src/plugins/contrib/CppCheck/CppCheck.cpp	(revision 7609)
++++ src/plugins/contrib/CppCheck/CppCheck.cpp	(working copy)
+@@ -221,7 +221,15 @@
+     for (FilesList::iterator it = Project->GetFilesList().begin(); it != Project->GetFilesList().end(); ++it)
+     {
+         ProjectFile* pf = *it;
+-        Input.Write(pf->relativeFilename + _T("\n"));
++         // filter to avoid including non C/C++ files
++         if (pf->relativeFilename.Mid(2) == wxT(".c")   ||
++             pf->relativeFilename.Mid(4) == wxT(".cpp") ||
++             pf->relativeFilename.Mid(3) == wxT(".cc")  ||
++             pf->relativeFilename.Mid(4) == wxT(".cxx") ||
++             FileTypeOf(pf->relativeFilename) == ftHeader)
++         {
++             Input.Write(pf->relativeFilename + _T("\n"));
++         }
+     }
+     Input.Close();
+     // project include dirs
+@@ -248,7 +256,7 @@
+         }
+     }
+ 
+-    wxString CommandLine = m_CppCheckApp + _T(" --verbose --all --style --xml --file-list=") + InputFileName;
++    wxString CommandLine = m_CppCheckApp + _T(" --verbose --enable=all --enable=style --xml --file-list=") + InputFileName;
+     if(!IncludeList.IsEmpty())
+     {
+         CommandLine += _T(" ") + IncludeList.Trim();

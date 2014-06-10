@@ -1,0 +1,25 @@
+The following patch allows keybinder to preserve user shortcut keys assigned to the Tools menu.
+
+Index: src/sdk/toolsmanager.cpp
+===================================================================
+--- src/sdk/toolsmanager.cpp	(revision 4092)
++++ src/sdk/toolsmanager.cpp	(working copy)
+@@ -349,11 +349,18 @@
+ 
+ int ToolsManager::Configure()
+ {
++    CodeBlocksEvent event(cbEVT_MENUBAR_CREATE_BEGIN);
++    Manager::Get()->ProcessEvent(event);
++
+     ConfigureToolsDlg dlg(Manager::Get()->GetAppWindow());
+     PlaceWindow(&dlg);
+     dlg.ShowModal();
+     SaveTools();
+     BuildToolsMenu(m_Menu);
++
++    CodeBlocksEvent event2(cbEVT_MENUBAR_CREATE_END);
++    Manager::Get()->ProcessEvent(event2);
++
+     return 0;
+ } // end of Configure
+  

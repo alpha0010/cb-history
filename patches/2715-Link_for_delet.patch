@@ -1,0 +1,31 @@
+Index: main.cpp
+===================================================================
+--- main.cpp	(revision 5488)
++++ main.cpp	(working copy)
+@@ -1834,6 +1834,17 @@
+             }
+         }
+     }
++    else if(link.StartsWith(_T("CB_CMD_DELETE_HISTORY_FILE")))
++    {
++  //      wxFileHistory* hist = link.StartsWith(_T("CB_CMD_OPEN_HISTORY_PROJECT_")) ? m_pProjectsHistory : m_pFilesHistory;
++        unsigned long count;
++        link.AfterLast(_T('_')).ToULong(&count);
++        --count;
++        if(count < hist->GetCount())
++        {
++            AskToRemoveFileFromHistory(hist, count);
++        }
++    }
+ }
+ 
+ void MainFrame::AskToRemoveFileFromHistory(wxFileHistory* hist, int id)
+@@ -1885,7 +1896,7 @@
+         {
+             if (i >= (int)m_pFilesHistory->GetCount())
+                 break;
+-            links << wxString::Format(_T("<li><a href=\"CB_CMD_OPEN_HISTORY_FILE_%d\">%s</a></li>"),
++            links << wxString::Format(_T("<li><a href=\"CB_CMD_OPEN_HISTORY_FILE_%d\">%s</a><a href=\"CB_CMD_DELETE_HISTORY_FILE_%d\"> X</a></li>"),
+                                         i + 1, m_pFilesHistory->GetHistoryFile(i).c_str());
+         }
+         links << _T("</ul>");

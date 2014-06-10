@@ -1,0 +1,842 @@
+Index: debian/changelog
+===================================================================
+--- debian/changelog	(Revision 6203)
++++ debian/changelog	(Arbeitskopie)
+@@ -1,4 +1,4 @@
+-codeblocks (8.02svn5933) unstable; urgency=low
++codeblocks (8.02svn6198) unstable; urgency=low
+ 
+   * more fixes to debian build system, sources and packages are now
+     lintian-clean, except for some words guessed as spelling-errors.
+Index: src/sdk/resources/lexers/lexer_d.xml
+===================================================================
+--- src/sdk/resources/lexers/lexer_d.xml	(Revision 6203)
++++ src/sdk/resources/lexers/lexer_d.xml	(Arbeitskopie)
+@@ -3,53 +3,81 @@
+ <CodeBlocks_lexer_properties>
+ 		<Lexer name="D"
+ 				index="79"
+-				filemasks="*.d,*.dmd,*.di">
++				filemasks="*.d,*.dd,*.di">
+ 				<Style name="Default"
+ 						index="0"
+ 						fg="0,0,0"
+-						bg="255,255,255"
++						bg="249,249,249"
+ 						bold="0"
+ 						italics="0"
+ 						underlined="0"/>
+-				<Style name="Comment (normal)"
+-						index="1,2"
+-						fg="160,160,160"/>
++				<Style name="Comment"
++						index="1"
++						fg="0,128,0"/>
++				<Style name="Commentline"
++						index="2"
++						fg="0,128,0"/>
++				<Style name="Comment (doc)"
++						index="3"
++						fg="107,107,107"
++						italics="1"/>
+ 				<Style name="Comment (nested)"
+ 						index="4"
+-						fg="160,160,160"/>
+-				<Style name="Comment (documentation)"
+-						index="3,15"
+-						fg="128,128,255"
+-						bold="1"/>
+-				<Style name="Comment keyword (documentation)"
+-						index="16"
+-						fg="0,128,128"/>
+-				<Style name="Comment keyword error (documentation)"
+-						index="17"
+-						fg="128,0,0"/>
++						fg="107,107,107"
++						italics="1"/>
+ 				<Style name="Number"
+ 						index="5"
+-						fg="240,0,240"/>
+-				<Style name="Keyword"
+-						index="6,7"
+-						fg="0,0,160"
++						fg="0,100,100"/>
++				<Style name="Keyword 1"
++						index="6"
++						fg="0,0,255"/>
++				<Style name="Keyword 2"
++						index="7"
++						fg="42,130,210"
+ 						bold="1"/>
+-				<Style name="User keyword"
++				<Style name="Keyword 3"
+ 						index="8"
+-						fg="0,160,0"
+-						bold="1"/>
+-				<Style name="Typedef"
++						fg="0,0,255"/>
++				<Style name="Keyword 4"
+ 						index="9"
+-						fg="0,160,0"/>
++						fg="0,0,255"/>
+ 				<Style name="String"
+-						index="10,11"
+-						fg="0,0,255"/>
++						index="10,11,18"
++						fg="231,34,34"/>
++				<Style name="Rawstring"
++						index="19"
++						fg="219,0,14"/>
+ 				<Style name="Character"
+ 						index="12"
+-						fg="224,160,0"/>
++						fg="193,135,0"/>
+ 				<Style name="Operator"
+ 						index="13"
+-						fg="255,0,0"/>
++						fg="83,40,40"/>
++				<Style name="Identifier"
++						index="14"
++						fg="0,0,0"/>
++				<Style name="Commentline (doc)"
++						index="15"
++						fg="107,107,107"
++						italics="1"/>
++				<Style name="Comment keyword (doc)"
++						index="16"
++						fg="0,128,128"
++						italics="1"/>
++				<Style name="Comment keyword error (doc)"
++						index="17"
++						fg="128,0,0"
++						italics="1"
++						bold="1"/>
++				<Style name="Keyword 5"
++						index="20"
++						fg="0,113,240"/>
++				<Style name="Keyword 6"
++						index="21"
++						fg="0,0,102"/>
++				<Style name="Keyword 7"
++						index="22"
++						fg="153,0,112"/>
+ 				<Style name="Selection"
+ 						index="-99"
+ 						bg="192,192,192"/>
+@@ -68,35 +96,20 @@
+ 				<Style name="Matching brace highlight"
+ 						index="34"
+ 						fg="255,0,0"
+-						bold="1"
+-						underlined="1"/>
++						bold="1"/>
+ 				<Style name="No matching brace highlight"
+ 						index="35"
+ 						bg="255,0,0"/>
+ 				<Keywords>
+-						<Language index="0"
+-								value="abstract alias align asm assert auto 
+-								body bool break byte 
+-								case cast catch cdouble cent cfloat char 
+-								class const continue creal 
+-								dchar debug default delegate delete 
+-								deprecated do double 
+-								else enum export extern 
+-								false final finally float for foreach foreach_reverse function 
+-								goto 
+-								idouble if ifloat import in inout int interface invariant ireal is 
+-								lazy long 
+-								macro mixin module 
+-								new null out override 
+-								package pragma private protected public 
+-								real ref return
+-								scope short static struct super switch synchronized
+-								template this throw true try typedef typeid typeof 
+-								ubyte ucent uint ulong union unittest ushort 
+-								version void volatile 
+-								wchar while with"/>
+-						<User index="1"/>
+-						<Documentation index="2"
++						<Set index="0" value="void byte bool ubyte short ushort int uint long ulong cent ucent float double real ifloat
++								idouble ireal cfloat cdouble creal char wchar dchar body asm bool true false function delegate"/>
++						<Set index="1" value="public private protected with extern
++								final abstract override const debug version pragma public private deprecated protected volatile
++								class struct interface enum new this null delete invariant super union template
++								is import module alias typedef with cast package typeof typeid classinfo mixin
++								in out const static inout lazy ref extern export auto align scope pure
++								if for foreach while do assert return unittest try catch else throw switch case break continue default finally goto synchronized"/>
++						<Set index="2"
+ 								value="a addindex addtogroup anchor arg attention
+ 								author b brief bug c class code date def defgroup deprecated dontinclude
+ 								e em endcode endhtmlonly endif endlatexonly endlink endverbatim enum example exception
+Index: src/sdk/resources/lexers/lexer_d.sample
+===================================================================
+--- src/sdk/resources/lexers/lexer_d.sample	(Revision 6203)
++++ src/sdk/resources/lexers/lexer_d.sample	(Arbeitskopie)
+@@ -1,13 +1,12 @@
+-/*
+- * Sample preview code
+- * This is a block comment
++/**
++ * This is a Ddoc block comment
++ * Authors: Melvin D. Nerd, melvin@mailinator.com
++ * Bugs:    Doesn't work for negative values.
++ * Date:    March 14, 2003
+  */
+- 
+-/++
+-	A Super Block
+- ++/
+ 
+-import std.file;
++module hello;
++import std.stdio;
+ 
+ /**
+   * This is a documentation comment block
+@@ -15,19 +14,52 @@
+   * @authr some user (this is the documentation keyword error)
+   */
+ 
+-int main(char[] args)
++void main(string[] args)
+ {
+-	/// This is a documentation comment line
+-	int[20] numbers;
++    /*
++     * Sample preview code
++     * This is a block comment
++     */
++
++    /// Deprecated: superseded by function bar().
++    void foo() {  }
++
++    int numbers[20];
+ 	int average = 0;
+ 	char ch = '\n';
+-	for (int i = 0; i < 20; ++i) // a breakpoint is set
+-	{
+-		numbers[i] = i; // active line (during debugging)
+-		total += i; // error line
+-	}
+-	average = total / 20;
+-	printf("%d\n%d\n", numbers[0], numbers[19]);
+-	printf("total: %d average: %d\n", total, average);
++    int a =     /+ Nested Comment +/ 1;
++    int b = 2;  // Line Comment
++
++    writefln("Hello World, Reloaded");
++
++    // auto type inference and built-in foreach
++    foreach (argc, argv; args)
++    {
++        // Improved typesafe printf
++        writeln("argc: ", argc, " arg: ", argv);
++    }
++
++    // Nested structs and classes
++    struct specs
++    {
++        // all members automatically initialized
++        int count, allocated;
++    }
++
++    // Nested functions can refer to outer
++    // variables like args
++    specs argspecs()
++    {
++        specs* s = new specs;
++        // no need for '->'
++        s.count = args.length;		       // get length of array with .length
++        s.allocated = typeof(args).sizeof; // built-in native type properties
++        foreach (argv; args)
++            s.allocated += argv.length * typeof(argv[0]).sizeof;
++        return *s;
++    }
++
++    // built-in string and common string operations
++    writefln("argc = %d, " ~ "allocated = %d",
++	argspecs().count, argspecs().allocated);
+ }
+-
+Index: src/plugins/compilergcc/compilerDMD.h
+===================================================================
+--- src/plugins/compilergcc/compilerDMD.h	(Revision 6203)
++++ src/plugins/compilergcc/compilerDMD.h	(Arbeitskopie)
+@@ -3,27 +3,29 @@
+  * http://www.gnu.org/licenses/gpl-3.0.html
+  */
+ 
+-#if defined(_WIN32) || defined(__linux__)
+-// this compiler is valid only in windows and linux
++// this compiler is valid on windows,linux,OSX,freeBSD
+ 
+ #ifndef COMPILERDMD_H
+ #define COMPILERDMD_H
+ 
+-#include <compiler.h>
++#include "compilerD.h"
+ 
+-class CompilerDMD : public Compiler
++
++
++class CompilerDMD : public CompilerD
+ {
+     public:
+-        CompilerDMD();
++        CompilerDMD(DVersion version);
+         virtual ~CompilerDMD();
+         virtual void Reset();
+         virtual void LoadDefaultRegExArray();
+         virtual AutoDetectResult AutoDetectInstallationDir();
+     protected:
+         Compiler * CreateCopy();
+-    private:
++        DVersion m_CmpVersion;
++
+ };
+ 
++
+ #endif // COMPILERDMD_H
+ 
+-#endif // _WIN32 || linux
+Index: src/plugins/compilergcc/compilerD.h
+===================================================================
+--- src/plugins/compilergcc/compilerD.h	(Revision 0)
++++ src/plugins/compilergcc/compilerD.h	(Revision 0)
+@@ -0,0 +1,27 @@
++#ifndef COMPILERDGENERIC_H
++#define COMPILERDGENERIC_H
++
++#include "compiler.h"
++
++enum DVersion
++{
++    D1=1,
++    D2
++};
++
++
++class CompilerD : public Compiler
++{
++    public:
++        CompilerD(const wxString& name, const wxString& ID, const wxString& parentID = wxEmptyString) :
++            Compiler(name,ID,parentID) {}
++        virtual ~CompilerD() {}
++
++    protected:
++        wxString GetCmdOutput(const wxString cmd, const wxString pattern, int groupIndex) const;
++        wxString GetCmdOutput(const wxString cmd) const;
++        DVersion m_cmpVersion;
++};
++
++
++#endif // COMPILERDGENERIC
+Index: src/plugins/compilergcc/compilerGDC.h
+===================================================================
+--- src/plugins/compilergcc/compilerGDC.h	(Revision 6203)
++++ src/plugins/compilergcc/compilerGDC.h	(Arbeitskopie)
+@@ -6,12 +6,13 @@
+ #ifndef COMPILER_GDC_H
+ #define COMPILER_GDC_H
+ 
+-#include <compiler.h>
++#include "compilerD.h"
+ 
+-class CompilerGDC : public Compiler
++
++class CompilerGDC : public CompilerD
+ {
+     public:
+-        CompilerGDC();
++        CompilerGDC(DVersion version);
+         virtual ~CompilerGDC();
+         virtual void Reset();
+         virtual void LoadDefaultRegExArray();
+@@ -19,6 +20,7 @@
+     protected:
+         virtual Compiler* CreateCopy();
+     private:
++        DVersion m_CmpVersion;
+ };
+ 
+ #endif // COMPILER_MINGW_H
+Index: src/plugins/compilergcc/compilerDMD.cpp
+===================================================================
+--- src/plugins/compilergcc/compilerDMD.cpp	(Revision 6203)
++++ src/plugins/compilergcc/compilerDMD.cpp	(Arbeitskopie)
+@@ -7,8 +7,7 @@
+  * $HeadURL$
+  */
+ 
+-#if defined(_WIN32) || defined(__linux__)
+-// this compiler is valid only in windows and linux
++// this compiler is valid on windows,linux,OSX,freeBSD
+ 
+ #include <sdk.h>
+ #include <prep.h>
+@@ -17,10 +16,12 @@
+ #include <wx/config.h>
+ #include "compilerDMD.h"
+ 
+-CompilerDMD::CompilerDMD()
+-    : Compiler(_("Digital Mars D Compiler"), _T("dmd"))
++CompilerDMD::CompilerDMD(DVersion vers)
++    : CompilerD(vers==D1?_T("Digital Mars D1 compiler"):_T("Digital Mars D2 compiler"),
++               vers==D1?_T("dmd1"):_T("dmd2"))
+ {
+     Reset();
++    m_CmpVersion=vers;
+ }
+ 
+ CompilerDMD::~CompilerDMD()
+@@ -111,6 +112,7 @@
+     m_Options.AddOption(_("allow deprecated features"), _T("-d"), _("D Features"));
+     m_Options.AddOption(_("compile in debug code"), _T("-debug"), _("D Features"));
+     m_Options.AddOption(_("add symbolic debug info"), _T("-g"), _("D Features"));
++    m_Options.AddOption(_("add C-symbolic debug info"), _T("-gc"), _("Others"));
+     m_Options.AddOption(_("generate D interface file"), _T("-H"), _("Others"));
+     m_Options.AddOption(_("inline expand functions"), _T("-inline"), _("Optimize"));
+     m_Options.AddOption(_("optimize"), _T("-O"), _("D Features"));
+@@ -152,35 +154,60 @@
+ 
+     // NOTE (hd#1#): dmc uses sc.ini for compiler's master directories
+     // NOTE (mandrav#1#): which doesn't seem to exist if you don't have the CD version ;)
+-
+-    // just a guess; the default installation dir
+     wxString incPath;
+     wxString libPath;
+     wxString libName;
+-    if (platform::windows)
+-    {
+-        m_MasterPath = _T("C:\\dmd");
+-        incPath = m_MasterPath + sep + _T("src") + sep + _T("phobos");
+-        libPath = m_MasterPath + sep + _T("lib");
+-        libName = _T("phobos.lib");
+-        m_ExtraPaths.Add(_T("C:\\dm\\bin"));
+-    }
++    wxString versionFolder;
++    wxString baseDir;
++    if (m_CmpVersion==D1)
++        versionFolder=_T("dmd");
+     else
+-    {
+-      m_MasterPath = wxFileExists(_T("/usr/local/bin/dmd")) ? _T("/usr/local") : _T("/usr");
+-      incPath = m_MasterPath + sep + _T("lib") + sep + _T("phobos");
+-      libPath = m_MasterPath + sep + _T("lib");
+-      libName = _T("phobos");
+-    }
++        versionFolder=_T("dmd2");
+ 
++#ifdef __WXMSW__
++
++        wxRegKey tKey(_T("HKEY_LOCAL_MACHINE\\SOFTWARE\\D"));
++        if (tKey.Exists())
++        {
++            tKey.QueryValue(_T("Install_Dir"),baseDir);
++            if (baseDir.IsEmpty() || !wxDirExists(baseDir))
++                baseDir=_T("C:\\D");
++            tKey.Close();
++        }
++        else
++            baseDir = _T("C:\\D");
++
++        //
++        m_MasterPath = baseDir + sep + versionFolder + _T("\\windows");
++        m_ExtraPaths.Add(baseDir + _T("\\dm\\bin"));  // no version for dm (dmc-compiler!)
++        incPath = baseDir + sep + versionFolder + _T("\\src\\phobos");
++        libPath = m_MasterPath  + _T("\\lib");
++        libName = _T("phobos.lib");
++
++#else  // all other than win32
++
++        m_MasterPath = wxFileExists(_T("/usr/local/bin/dmd")) ? _T("/usr/local") : _T("/usr");
++        incPath = _T("/usr/include/d/dmd/phobos");
++        libPath = _T("/usr/lib");
++        if (m_CmpVersion==D1)
++            libName = _T("libphobos.a");
++        else
++            libName = _T("libphobos2.a");
++
++#endif
++
++    AddLinkLib(libName);
+     if (!m_MasterPath.IsEmpty())
+     {
+         AddIncludeDir(incPath);
+         AddLibDir(libPath);
+     }
+-    AddLinkLib(libName);
+-
+-    return wxFileExists(m_MasterPath + sep + _T("bin") + sep + m_Programs.C) ? adrDetected : adrGuessed;
++    else
++        return adrGuessed;
++    //
++    return (wxFileExists(m_MasterPath + sep + _T("bin") + sep + m_Programs.C) &&
++            wxFileExists(libPath + sep + libName)) ? adrDetected : adrGuessed;
+ }
+ 
+-#endif // _WIN32 || linux
++
++
+Index: src/plugins/compilergcc/compilerD.cpp
+===================================================================
+--- src/plugins/compilergcc/compilerD.cpp	(Revision 0)
++++ src/plugins/compilergcc/compilerD.cpp	(Revision 0)
+@@ -0,0 +1,34 @@
++# include "compilerD.h"
++
++#include <wx/regex.h>
++
++
++wxString CompilerD::GetCmdOutput(const wxString cmd, const wxString pattern, int groupIndex) const
++{
++    wxArrayString output;
++    int code = wxExecute(cmd,output);
++    size_t count = output.GetCount();
++    // Make sure, Array is not to long!
++    if (code==-1 || count<1 || count>100)
++        return wxEmptyString;
++
++    wxRegEx tPattern(pattern);
++    wxString tFoundText=output[0];
++    for ( size_t n = 0; n < count; n++ )
++    {
++        if (tPattern.Matches(output[n]))
++            return tPattern.GetMatch(output[n],groupIndex);
++    }
++    return wxEmptyString;
++}
++
++wxString CompilerD::GetCmdOutput(const wxString cmd) const
++{
++    wxArrayString output;
++    int code = wxExecute(cmd,output);
++    //
++    if (code !=-1 && output.GetCount()>0)
++        return output[0];
++    else
++        return wxEmptyString;
++}
+Index: src/plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- src/plugins/compilergcc/compilergcc.cpp	(Revision 6203)
++++ src/plugins/compilergcc/compilergcc.cpp	(Arbeitskopie)
+@@ -393,9 +393,11 @@
+     CompilerFactory::RegisterCompiler(new CompilerICC);
+     CompilerFactory::RegisterCompiler(new CompilerSDCC);
+     CompilerFactory::RegisterCompiler(new CompilerTcc);
+-    CompilerFactory::RegisterCompiler(new CompilerGDC);
++    CompilerFactory::RegisterCompiler(new CompilerGDC(D1));
++    CompilerFactory::RegisterCompiler(new CompilerGDC(D2));
++    CompilerFactory::RegisterCompiler(new CompilerDMD(D1));
++    CompilerFactory::RegisterCompiler(new CompilerDMD(D2));
+ #if defined(__WIN32__) || defined(__linux__)
+-    CompilerFactory::RegisterCompiler(new CompilerDMD);
+     CompilerFactory::RegisterCompiler(new CompilerGNUARM);
+     CompilerFactory::RegisterCompiler(new CompilerGNUAVR);
+     CompilerFactory::RegisterCompiler(new CompilerGNUPOWERPC);
+Index: src/plugins/compilergcc/compilerGDC.cpp
+===================================================================
+--- src/plugins/compilergcc/compilerGDC.cpp	(Revision 6203)
++++ src/plugins/compilergcc/compilerGDC.cpp	(Arbeitskopie)
+@@ -24,10 +24,14 @@
+     #include <wx/msw/registry.h>
+ #endif
+ 
+-CompilerGDC::CompilerGDC()
+-    : Compiler(_("GDC D Compiler"), _T("gdc"))
++enum DVersion;
++
++CompilerGDC::CompilerGDC(DVersion vers)
++    : CompilerD(vers==D1?_T("GDC D1 Compiler"):_T("GDC D2 Compiler"),
++               vers==D1?_T("gdc1"):_T("gdc2"))
+ {
+     Reset();
++    m_CmpVersion=vers;
+ }
+ 
+ CompilerGDC::~CompilerGDC()
+@@ -83,12 +87,12 @@
+ 
+     m_Options.ClearOptions();
+     m_Options.AddOption(_("Produce debugging symbols"),
+-                _T("-g"),
+-                _("Debugging"),
++                _T("-gc"),
++                _T("Debugging"),
+                 _T(""),
+                 true,
+                 _T("-O -O1 -O2 -O3 -Os"),
+-                _("You have optimizations enabled. This is Not A Good Thing(tm) when producing debugging symbols..."));
++                _T("You have optimizations enabled. This is Not A Good Thing(tm) when producing debugging symbols..."));
+     wxString gprof_link = _T("-pg");
+     if (platform::windows)
+         gprof_link = _T("-pg -lgmon");
+@@ -109,6 +113,7 @@
+     m_Options.AddOption(_("generate documentation"), _T("-fdoc"), category);
+     m_Options.AddOption(_("allow deprecated features"), _T("-fdeprecated"), category);
+     m_Options.AddOption(_("compile in debug code"), _T("-debug"), category);
++    m_Options.AddOption(_("add symbolic debug info"), _T("-g"), category);
+     m_Options.AddOption(_("inline expand functions"), _T("-finline-functions"), category);
+     m_Options.AddOption(_("compile release version, which means not generating code for contracts and asserts"), _T("-frelease"), category);
+     m_Options.AddOption(_("compile in unittest code, also turns on asserts"), _T("-funittest"), category);
+@@ -196,6 +201,11 @@
+ AutoDetectResult CompilerGDC::AutoDetectInstallationDir()
+ {
+     wxString sep = wxFileName::GetPathSeparator();
++    wxString versionFolder;
++    if (m_CmpVersion==D1)
++        versionFolder=_T("d");
++    else
++        versionFolder=_T("d2");
+     if (platform::windows)
+     {
+         // look first if MinGW was installed with Code::Blocks (new in beta6)
+@@ -246,13 +256,19 @@
+             m_Programs.MAKE = _T("make.exe"); // we distribute "make" not "mingw32-make"
+     }
+     else
+-        m_MasterPath = _T("/usr");
+-
+-    AutoDetectResult ret = wxFileExists(m_MasterPath + sep + _T("bin") + sep + m_Programs.C) ? adrDetected : adrGuessed;
+-    if (ret == adrDetected)
++        m_MasterPath = wxFileExists(_T("/opt/usr/local/bin/gdc")) ? _T("/opt/usr/local") : _T("/usr");
++    //
++    bool cmpDetected = wxFileExists(m_MasterPath + sep + _T("bin") + sep + m_Programs.C);
++    wxString versNumber;
++    if (cmpDetected)
+     {
+-        AddIncludeDir(m_MasterPath + sep + _T("include") + sep + _T("d"));
++        // Get the versionsnumber of gdc
++        versNumber=CompilerD::GetCmdOutput(m_MasterPath+sep+_T("bin")+sep+_T("gdc -dumpversion"));
++        wxString includePath = m_MasterPath + sep + _T("include") + sep + versionFolder + sep + versNumber;
++        AddIncludeDir(includePath);
+         AddLibDir(m_MasterPath + sep + _T("lib"));
++        // Make sure, found compiler is really this version
++        cmpDetected = wxFileExists(includePath + sep + _T("object.d"));
+     }
+-    return ret;
++    return cmpDetected ? adrDetected : adrGuessed;
+ }
+Index: src/plugins/scriptedwizard/resources/d/console/hello.d
+===================================================================
+--- src/plugins/scriptedwizard/resources/d/console/hello.d	(Revision 6203)
++++ src/plugins/scriptedwizard/resources/d/console/hello.d	(Arbeitskopie)
+@@ -1,10 +1,9 @@
+-version(Tango) extern (C) int printf(char *, ...);
++module main;
+ 
+-int main(char[][] args)
++import std.stdio;
++
++int main(string[] args)
+ {
+-    printf("hello world\n");
+-    printf("args.length = %d\n", args.length);
+-    for (int i = 0; i < args.length; i++)
+-	printf("args[%d] = '%s'\n", i, cast(char *)args[i]);
+-    return 0;
++    writefln("Hello World\n");
++	return 0;
+ }
+Index: src/plugins/scriptedwizard/resources/d/wizard.script
+===================================================================
+--- src/plugins/scriptedwizard/resources/d/wizard.script	(Revision 6203)
++++ src/plugins/scriptedwizard/resources/d/wizard.script	(Arbeitskopie)
+@@ -17,7 +17,7 @@
+     // add builtin pages
+     Wizard.AddInfoPage(_T("DIntro"), intro_msg); // intro
+     Wizard.AddProjectPathPage(); // select project name and path
+-    Wizard.AddCompilerPage(_T(""), _T("dmd;gdc"), true, true); // select compiler and configurations
++    Wizard.AddCompilerPage(_T(""), _T("dmd1;dmd2;gdc1;gdc2"), true, true); // select compiler and configurations
+     // nothing more needs to be done here
+ }
+ 
+@@ -28,9 +28,6 @@
+ 
+ function SetupProject(project)
+ {
+-    // enable compiler warnings (project-wide)
+-    if (Wizard.GetCompilerID().Matches(_T("gdc")))
+-        WarningsOn(project, Wizard.GetCompilerID());
+ 
+     // Debug build target
+     local target = project.GetBuildTarget(Wizard.GetDebugName());
+Index: src/plugins/scriptedwizard/resources/common_functions.script
+===================================================================
+--- src/plugins/scriptedwizard/resources/common_functions.script	(Revision 6203)
++++ src/plugins/scriptedwizard/resources/common_functions.script	(Arbeitskopie)
+@@ -24,14 +24,14 @@
+              || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("ppc*"))
+              || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("cygwin"))
+              || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gcc"))
+-             || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gdc"))
++             || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gdc*"))
+              || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("icc"))
+              || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("tcc")) )
+     {
+         base.AddCompilerOption(_T("-Wall"));
+     }
+     else if (   GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("bcc*"))
+-             || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("dmd")) )
++             || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("dmd*")) )
+     {
+         base.AddCompilerOption(_T("-w"));
+     }
+@@ -65,17 +65,29 @@
+              || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("ppc*"))
+              || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("cygwin"))
+              || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("dmc"))
+-             || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("dmd"))
+              || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gcc"))
+-             || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gdc"))
+              || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("tcc")) )
+-    {
++    {
+         base.AddCompilerOption(_T("-g"));
+-
+-        if  (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("dmd")))
+-        {
+-            base.AddCompilerOption(_T("-debug"));
+-        }
++    }
++    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("dmd*")))
++    {
++        if (PLATFORM==PLATFORM_MSW)
++        {
++            base.AddCompilerOption(_T("-g"));
++            base.AddLinkerOption(_T("-g"));
++        }
++        else
++        {
++            base.AddCompilerOption(_T("-gc"));
++            base.AddLinkerOption(_T("-gc"));
++        }
++
++    }
++    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gdc*")))
++    {
++        base.AddCompilerOption(_T("-g"));
++        base.AddLinkerOption(_T("-g"));
+     }
+     else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("bcc*")))
+     {
+@@ -115,13 +127,13 @@
+              || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gcc"))
+              || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("tricore*"))
+              || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("ppc*"))
+-             || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gdc")) )
++             || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gdc*")) )
+     {
+         base.AddCompilerOption(_T("-O2"));
+ 
+         if (   GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("arm*"))
+             || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gcc"))
+-            || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gdc")) )
++            || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("gdc*")) )
+         {
+             base.AddLinkerOption(_T("-s"));
+         }
+@@ -130,7 +142,7 @@
+     {
+         base.AddCompilerOption(_T("-Os"));
+     }
+-    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("dmd")))
++    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T("dmd*")))
+     {
+         base.AddCompilerOption(_T("-O"));
+     }
+Index: src/plugins/codecompletion/codecompletion.cpp
+===================================================================
+--- src/plugins/codecompletion/codecompletion.cpp	(Revision 6203)
++++ src/plugins/codecompletion/codecompletion.cpp	(Arbeitskopie)
+@@ -79,6 +79,36 @@
+ "  .......       ",
+ "                "};
+ 
++// bitmap for use as D keywords icon in code-completion list
++/* XPM */
++static const char *d_keyword_xpm[] = {
++/* width height num_colors chars_per_pixel */
++"    14    14      6            1",
++/* colors */
++"  c none",
++". c #fefefe",
++"# c #e43a3a",
++"a c #e40000",
++"b c #e48f8f",
++"c c #8f0000",
++/* pixels */
++"              ",
++"              ",
++"  .#aaaa#b.   ",
++"  baabb#aa#   ",
++"  ba#   baa#  ",
++"  ba#    bcab ",
++"  ba#     #a# ",
++"  ba#     bac ",
++"  ba#     ba# ",
++"  ba#     bc# ",
++"  ba#     #cb ",
++"  bcc    ac#  ",
++"  #aa###ac#   ",
++"  cccccc#b    "
++};
++
++
+ // bitmap for other-than-C++ keywords
+ // it's pretty nice actually :)
+ /* XPM */
+@@ -614,9 +644,16 @@
+                     wxString lastSearch = m_NativeParser.LastAIGlobalSearch().Lower();
+                     int iidx = ilist->GetImageCount();
+                     bool isC = ft == ftHeader || ft == ftSource;
+-                    ed->GetControl()->RegisterImage(iidx, wxBitmap(isC ? cpp_keyword_xpm : unknown_keyword_xpm));
+                     // theme keywords
+                     HighlightLanguage lang = theme->GetLanguageForFilename(_T(".")+wxFileName(ed->GetFilename()).GetExt());
++                    wxString strLang = theme->GetLanguageName(lang);
++                    // if its sourcecode/header file and a known fileformat, show the corresponding icon
++                    if (isC && strLang==_T("C/C++"))
++                        ed->GetControl()->RegisterImage(iidx, wxBitmap(cpp_keyword_xpm));
++                    else if (isC && strLang==_T("D"))
++                        ed->GetControl()->RegisterImage(iidx, wxBitmap(d_keyword_xpm));
++                    else
++                        ed->GetControl()->RegisterImage(iidx, wxBitmap(unknown_keyword_xpm));
+                     // the first two keyword sets are the primary and secondary keywords (for most lexers at least)
+                     // but this is now configurable in global settings
+                     for (int i = 0; i <= wxSCI_KEYWORDSET_MAX; ++i)
+Index: src/CodeBlocks-unix.cbp
+===================================================================
+--- src/CodeBlocks-unix.cbp	(Revision 6203)
++++ src/CodeBlocks-unix.cbp	(Arbeitskopie)
+@@ -1126,6 +1126,12 @@
+ 		<Unit filename="plugins/compilergcc/compilerCYGWIN.h">
+ 			<Option target="Compiler" />
+ 		</Unit>
++		<Unit filename="plugins/compilergcc/compilerD.cpp">
++			<Option target="Compiler" />
++		</Unit>
++		<Unit filename="plugins/compilergcc/compilerD.h">
++			<Option target="Compiler" />
++		</Unit>
+ 		<Unit filename="plugins/compilergcc/compilerDMC.cpp">
+ 			<Option target="Compiler" />
+ 		</Unit>
+Index: src/CodeBlocks.cbp
+===================================================================
+--- src/CodeBlocks.cbp	(Revision 6203)
++++ src/CodeBlocks.cbp	(Arbeitskopie)
+@@ -1226,6 +1226,12 @@
+ 		<Unit filename="plugins\compilergcc\compilerCYGWIN.h">
+ 			<Option target="Compiler" />
+ 		</Unit>
++		<Unit filename="plugins\compilergcc\compilerD.cpp">
++			<Option target="Compiler" />
++		</Unit>
++		<Unit filename="plugins\compilergcc\compilerD.h">
++			<Option target="Compiler" />
++		</Unit>
+ 		<Unit filename="plugins\compilergcc\compilerDMC.cpp">
+ 			<Option target="Compiler" />
+ 		</Unit>

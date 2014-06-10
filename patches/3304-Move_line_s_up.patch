@@ -1,0 +1,103 @@
+Index: src/src/main.h
+===================================================================
+--- src/src/main.h	(revision 8097)
++++ src/src/main.h	(working copy)
+@@ -165,6 +165,7 @@
+         void OnEditLineTranspose(wxCommandEvent& event);
+         void OnEditLineCopy(wxCommandEvent& event);
+         void OnEditLinePaste(wxCommandEvent& event);
++        void OnEditLineMove(wxCommandEvent& event);
+         void OnEditUpperCase(wxCommandEvent& event);
+         void OnEditLowerCase(wxCommandEvent& event);
+         void OnEditInsertNewLine(wxCommandEvent& event);
+Index: src/src/resources/main_menu.xrc
+===================================================================
+--- src/src/resources/main_menu.xrc	(revision 8097)
++++ src/src/resources/main_menu.xrc	(working copy)
+@@ -418,6 +418,16 @@
+             <label>Paste</label>
+             <help>Paste before current line</help>
+           </object>
++          <object class="wxMenuItem" name="idEditLineUp">
++            <label>Move up</label>
++            <accel>Alt-UP</accel>
++            <help>Transpose current line(s) up</help>
++          </object>
++          <object class="wxMenuItem" name="idEditLineDown">
++            <label>Move down</label>
++            <accel>Alt-DOWN</accel>
++            <help>Transpose current line(s) down</help>
++          </object>
+         </object>
+         <object class="wxMenu" name="idEditSpecialCommandsCase">
+           <label>Case</label>
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(revision 8097)
++++ src/src/main.cpp	(working copy)
+@@ -226,6 +226,8 @@
+ int idEditLineTranspose           = XRCID("idEditLineTranspose");
+ int idEditLineCopy                = XRCID("idEditLineCopy");
+ int idEditLinePaste               = XRCID("idEditLinePaste");
++int idEditLineUp                  = XRCID("idEditLineUp");
++int idEditLineDown                = XRCID("idEditLineDown");
+ int idEditSpecialCommandsCase     = XRCID("idEditSpecialCommandsCase");
+ int idEditUpperCase               = XRCID("idEditUpperCase");
+ int idEditLowerCase               = XRCID("idEditLowerCase");
+@@ -444,6 +446,8 @@
+     EVT_MENU(idEditLineTranspose,         MainFrame::OnEditLineTranspose)
+     EVT_MENU(idEditLineCopy,              MainFrame::OnEditLineCopy)
+     EVT_MENU(idEditLinePaste,             MainFrame::OnEditLinePaste)
++    EVT_MENU(idEditLineUp,                MainFrame::OnEditLineMove)
++    EVT_MENU(idEditLineDown,              MainFrame::OnEditLineMove)
+     EVT_MENU(idEditUpperCase,             MainFrame::OnEditUpperCase)
+     EVT_MENU(idEditLowerCase,             MainFrame::OnEditLowerCase)
+     EVT_MENU(idEditInsertNewLine,         MainFrame::OnEditInsertNewLine)
+@@ -3239,6 +3243,47 @@
+     }
+ }
+ 
++void MainFrame::OnEditLineMove(wxCommandEvent& event)
++{
++    cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();
++    if (ed)
++    {
++        cbStyledTextCtrl* ctrl = ed->GetControl();
++        if (ctrl->GetSelections() > 1)
++            return;
++        int startPos = ctrl->PositionFromLine(ctrl->LineFromPosition(ctrl->GetSelectionStart()));
++        int endPos = ctrl->PositionFromLine(ctrl->LineFromPosition(ctrl->GetSelectionEnd()) + 1) - 1;
++        if (event.GetId() == idEditLineUp)
++        {
++            if (startPos < 2)
++                return;
++            ctrl->BeginUndoAction();
++            wxString line = ctrl->GetTextRange(ctrl->PositionFromLine(ctrl->LineFromPosition(startPos) - 1),
++                                               startPos);
++            ctrl->InsertText(endPos + 1, line);
++            ctrl->DeleteRange(startPos - line.Length(), line.Length());
++            startPos -= line.Length();
++            endPos -= line.Length();
++            ctrl->EndUndoAction();
++        }
++        else
++        {
++            if (ctrl->LineFromPosition(ctrl->GetSelectionEnd()) == ctrl->GetLineCount())
++                return;
++            ctrl->BeginUndoAction();
++            wxString line = ctrl->GetTextRange(endPos + 1,
++                                               ctrl->PositionFromLine(ctrl->LineFromPosition(endPos + 1) + 1));
++            ctrl->DeleteRange(endPos + 1, line.Length());
++            ctrl->InsertText(startPos, line);
++            startPos += line.Length();
++            endPos += line.Length();
++            ctrl->EndUndoAction();
++        }
++        ctrl->SetSelectionStart(startPos);
++        ctrl->SetSelectionEnd(endPos);
++    }
++}
++
+ void MainFrame::OnEditUpperCase(wxCommandEvent& /*event*/)
+ {
+     cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinActiveEditor();

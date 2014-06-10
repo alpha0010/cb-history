@@ -1,0 +1,1000 @@
+Index: src/plugins/scriptedwizard/wizpage.cpp
+===================================================================
+--- src/plugins/scriptedwizard/wizpage.cpp	(revision 5987)
++++ src/plugins/scriptedwizard/wizpage.cpp	(working copy)
+@@ -273,7 +273,7 @@
+ 
+         if (m_Filename.IsEmpty() || !wxDirExists(wxPathOnly(m_Filename)))
+         {
+-            cbMessageBox(_("Please select a filename with full path for your new file..."), _("Error"), wxICON_ERROR);
++            cbMessageBox(_("Please select a filename with full path for your new file..."), _("Error"), wxICON_ERROR, GetParent());
+             event.Veto();
+             return;
+         }
+@@ -347,19 +347,19 @@
+         wxString title = m_pProjectPathPanel->GetTitle();
+ //        if (!wxDirExists(dir))
+ //        {
+-//            cbMessageBox(_("Please select a valid path to create your project..."), _("Error"), wxICON_ERROR);
++//            cbMessageBox(_("Please select a valid path to create your project..."), _("Error"), wxICON_ERROR, GetParent());
+ //            event.Veto();
+ //            return;
+ //        }
+         if (title.IsEmpty())
+         {
+-            cbMessageBox(_("Please select a title for your project..."), _("Error"), wxICON_ERROR);
++            cbMessageBox(_("Please select a title for your project..."), _("Error"), wxICON_ERROR, GetParent());
+             event.Veto();
+             return;
+         }
+         if (name.IsEmpty())
+         {
+-            cbMessageBox(_("Please select a name for your project..."), _("Error"), wxICON_ERROR);
++            cbMessageBox(_("Please select a name for your project..."), _("Error"), wxICON_ERROR, GetParent());
+             event.Veto();
+             return;
+         }
+@@ -368,10 +368,10 @@
+             if (cbMessageBox(_("A project with the same name already exists in the project folder.\n"
+                         "Are you sure you want to use this directory (files may be OVERWRITTEN)?"),
+                         _("Confirmation"),
+-                        wxICON_QUESTION | wxYES_NO) != wxID_YES)
++                        wxICON_QUESTION | wxYES_NO, GetParent()) != wxID_YES)
+             {
+ //                cbMessageBox(_("A project with the same name already exists in the project folder.\n"
+-//                            "Please select a different project name..."), _("Warning"), wxICON_WARNING);
++//                            "Please select a different project name..."), _("Warning"), wxICON_WARNING, GetParent());
+                 event.Veto();
+                 return;
+             }
+@@ -436,7 +436,7 @@
+         wxString dir = Manager::Get()->GetMacrosManager()->ReplaceMacros(m_pGenericSelectPath->txtFolder->GetValue());
+         if (!wxDirExists(dir))
+         {
+-            cbMessageBox(_("Please select a valid location..."), _("Error"), wxICON_ERROR);
++            cbMessageBox(_("Please select a valid location..."), _("Error"), wxICON_ERROR, GetParent());
+             event.Veto();
+             return;
+         }
+@@ -458,7 +458,7 @@
+     : WizPageBase(_T("CompilerPage"), parent, bitmap),
+     m_AllowConfigChange(allowConfigChange)
+ {
+-    m_pCompilerPanel = new CompilerPanel(this);
++    m_pCompilerPanel = new CompilerPanel(this, GetParent());
+ 
+     wxArrayString valids = GetArrayFromString(validCompilerIDs, _T(";"), true);
+     wxString def = compilerID;
+@@ -568,13 +568,13 @@
+     {
+         if (GetCompilerID().IsEmpty())
+         {
+-            wxMessageBox(_("You must select a compiler for your project..."), _("Error"), wxICON_ERROR);
++            cbMessageBox(_("You must select a compiler for your project..."), _("Error"), wxICON_ERROR, GetParent());
+             event.Veto();
+             return;
+         }
+         if (m_AllowConfigChange && !GetWantDebug() && !GetWantRelease())
+         {
+-            wxMessageBox(_("You must select at least one configuration..."), _("Error"), wxICON_ERROR);
++            cbMessageBox(_("You must select at least one configuration..."), _("Error"), wxICON_ERROR, GetParent());
+             event.Veto();
+             return;
+         }
+@@ -688,7 +688,7 @@
+     {
+         if (m_pBuildTargetPanel->GetCompilerCombo()->IsShown() && GetCompilerID().IsEmpty())
+         {
+-            wxMessageBox(_("You must select a compiler for your build target..."), _("Error"), wxICON_ERROR);
++            cbMessageBox(_("You must select a compiler for your build target..."), _("Error"), wxICON_ERROR, GetParent());
+             event.Veto();
+             return;
+         }
+@@ -696,7 +696,7 @@
+         cbProject* theproject = Manager::Get()->GetProjectManager()->GetActiveProject(); // can't fail; if no project, the wizard didn't even run
+         if (theproject->GetBuildTarget(m_pBuildTargetPanel->GetTargetName()))
+         {
+-            wxMessageBox(_("A build target with that name already exists in the active project..."), _("Error"), wxICON_ERROR);
++            cbMessageBox(_("A build target with that name already exists in the active project..."), _("Error"), wxICON_ERROR, GetParent());
+             event.Veto();
+             return;
+         }
+Index: src/sdk/virtualbuildtargetsdlg.cpp
+===================================================================
+--- src/sdk/virtualbuildtargetsdlg.cpp	(revision 5987)
++++ src/sdk/virtualbuildtargetsdlg.cpp	(working copy)
+@@ -85,7 +85,7 @@
+     {
+         if (!m_pProject->DefineVirtualBuildTarget(targetName, checked))
+             cbMessageBox(_("Failed to setup this virtual build target.\n"
+-                            "Check the debug log for more info..."), _("Error"), wxICON_ERROR);
++                            "Check the debug log for more info..."), _("Error"), wxICON_ERROR, this);
+     }
+ }
+ 
+@@ -119,7 +119,7 @@
+     {
+         cbMessageBox(_("A virtual build target with this name already exists in this project!"),
+                         _("Error"),
+-                        wxOK | wxCENTRE | wxICON_ERROR);
++                        wxOK | wxCENTRE | wxICON_ERROR, this);
+         return;
+     }
+ 
+@@ -127,7 +127,7 @@
+     {
+         cbMessageBox(_("A real build target with this name already exists in this project!"),
+                         _("Error"),
+-                        wxOK | wxCENTRE | wxICON_ERROR);
++                        wxOK | wxCENTRE | wxICON_ERROR, this);
+         return;
+     }
+ 
+@@ -151,7 +151,7 @@
+     {
+         cbMessageBox(_("A virtual build target with this name already exists in this project!"),
+                         _("Error"),
+-                        wxOK | wxCENTRE | wxICON_ERROR);
++                        wxOK | wxCENTRE | wxICON_ERROR, this);
+         return;
+     }
+ 
+@@ -159,7 +159,7 @@
+     {
+         cbMessageBox(_("A real build target with this name already exists in this project!"),
+                         _("Error"),
+-                        wxOK | wxCENTRE | wxICON_ERROR);
++                        wxOK | wxCENTRE | wxICON_ERROR, this);
+         return;
+     }
+ 
+@@ -170,7 +170,7 @@
+ 
+ void VirtualBuildTargetsDlg::OnRemoveClick(wxCommandEvent& event)
+ {
+-    if (cbMessageBox(_("Are you sure you want to remove this virtual build target?"), _("Confirmation"), wxYES_NO | wxICON_QUESTION) == wxID_NO)
++    if (cbMessageBox(_("Are you sure you want to remove this virtual build target?"), _("Confirmation"), wxYES_NO | wxICON_QUESTION, this) == wxID_NO)
+         return;
+     m_pProject->RemoveVirtualBuildTarget(lstAliases->GetStringSelection());
+     lstAliases->Delete(lstAliases->GetSelection());
+Index: src/src/scriptingsettingsdlg.cpp
+===================================================================
+--- src/src/scriptingsettingsdlg.cpp	(revision 5987)
++++ src/src/scriptingsettingsdlg.cpp	(working copy)
+@@ -366,5 +366,5 @@
+     }
+ 
+     if (check)
+-        cbMessageBox(_("All script trusts are valid!"), _("Information"), wxICON_INFORMATION);
++        cbMessageBox(_("All script trusts are valid!"), _("Information"), wxICON_INFORMATION, this);
+ }
+Index: src/sdk/projectsfilemasksdlg.cpp
+===================================================================
+--- src/sdk/projectsfilemasksdlg.cpp	(revision 5987)
++++ src/sdk/projectsfilemasksdlg.cpp	(working copy)
+@@ -118,12 +118,7 @@
+     wxString name = pList->GetStringSelection();
+     wxString caption;
+     caption.Printf(_("Are you sure you want to delete the group \"%s\"?"), name.c_str());
+-    wxMessageDialog dlg(this,
+-                        caption,
+-                        _("Confirmation"),
+-                        wxYES_NO | wxNO_DEFAULT | wxCENTRE | wxICON_QUESTION);
+-    PlaceWindow(&dlg);
+-    if (dlg.ShowModal() == wxID_NO)
++    if (cbMessageBox(caption, _("Confirmation"), wxYES_NO | wxNO_DEFAULT | wxICON_QUESTION, this) == wxID_NO)
+         return;
+     m_FileGroups.DeleteGroup(pList->GetSelection());
+     RebuildList();
+Index: src/sdk/projectoptionsdlg.cpp
+===================================================================
+--- src/sdk/projectoptionsdlg.cpp	(revision 5987)
++++ src/sdk/projectoptionsdlg.cpp	(working copy)
+@@ -176,6 +176,7 @@
+     for (size_t i = 0; i < m_PluginPanels.GetCount(); ++i)
+     {
+         cbConfigurationPanel* panel = m_PluginPanels[i];
++        panel->SetParentDialog(this);
+         nb->AddPage(panel, panel->GetTitle());
+     }
+ }
+@@ -534,9 +535,10 @@
+     ProjectBuildTarget* target = m_Project->AddBuildTarget(targetName);
+     if (!target)
+     {
+-        wxMessageDialog(this, _("The new target could not be added..."),
+-                                _("Error"),
+-                                wxOK | wxCENTRE | wxICON_ERROR);
++        cbMessageBox(_("The new target could not be added..."),
++                     _("Error"),
++                     wxOK | wxICON_ERROR, 
++                     this);
+         return;
+     }
+ 
+@@ -559,9 +561,10 @@
+     ProjectBuildTarget* target = m_Project->GetBuildTarget(targetIdx);
+     if (!target)
+     {
+-        wxMessageDialog(this, _("Could not locate target..."),
+-                                _("Error"),
+-                                wxOK | wxCENTRE | wxICON_ERROR);
++        cbMessageBox(_("Could not locate target..."),
++                     _("Error"),
++                     wxOK | wxICON_ERROR, 
++                     this);
+         return;
+     }
+ 
+@@ -589,9 +592,10 @@
+     ProjectBuildTarget* target = m_Project->GetBuildTarget(targetIdx);
+     if (!target)
+     {
+-        wxMessageDialog(this, _("Could not locate target..."),
+-                                _("Error"),
+-                                wxOK | wxCENTRE | wxICON_ERROR);
++        cbMessageBox(_("Could not locate target..."),
++                     _("Error"),
++                     wxOK | wxICON_ERROR, 
++                     this);
+         return;
+     }
+ 
+@@ -602,7 +606,7 @@
+         return;
+     if (!m_Project->DuplicateBuildTarget(targetIdx, newTargetName))
+     {
+-        cbMessageBox(_("Failed to duplicate this build target..."), _("Error"), wxICON_ERROR);
++        cbMessageBox(_("Failed to duplicate this build target..."), _("Error"), wxICON_ERROR, this);
+         return;
+     }
+ 
+@@ -623,12 +627,7 @@
+ 
+     wxString caption;
+     caption.Printf(_("Are you sure you want to delete build target \"%s\"?"), lstTargets->GetStringSelection().c_str());
+-    wxMessageDialog dlg(this,
+-                        caption,
+-                        _("Confirmation"),
+-                        wxYES_NO | wxNO_DEFAULT | wxCENTRE | wxICON_QUESTION);
+-    PlaceWindow(&dlg);
+-    if (dlg.ShowModal() == wxID_NO)
++    if (cbMessageBox(caption, _("Confirmation"), wxYES_NO | wxNO_DEFAULT | wxICON_QUESTION, this) == wxID_NO)
+         return;
+ 
+     lstTargets->Delete(targetIdx);
+@@ -678,7 +677,7 @@
+     if (dlg.ShowModal() == wxID_YES)
+     {
+         if (m_Project->ExportTargetAsProject(target->GetTitle()))
+-            cbMessageBox(_("New project created succesfully!"), _("Information"), wxICON_INFORMATION);
++            cbMessageBox(_("New project created succesfully!"), _("Information"), wxICON_INFORMATION, this);
+     }
+ }
+ 
+@@ -797,7 +796,7 @@
+     {
+         cbMessageBox(_("A target with this name already exists in this project!"),
+                         _("Error"),
+-                        wxOK | wxCENTRE | wxICON_ERROR);
++                        wxOK | wxICON_ERROR, this);
+         return false;
+     }
+ 
+@@ -805,7 +804,7 @@
+     {
+         cbMessageBox(_("A virtual target with this name already exists in this project!"),
+                         _("Error"),
+-                        wxOK | wxCENTRE | wxICON_ERROR);
++                        wxOK | wxICON_ERROR, this);
+         return false;
+     }
+ 
+@@ -814,7 +813,7 @@
+     {
+         cbMessageBox(_("The name contains at least one invalid character:\n\n") + forbidden,
+                         _("Error"),
+-                        wxOK | wxCENTRE | wxICON_ERROR);
++                        wxOK | wxICON_ERROR, this);
+         return false;
+     }
+ 
+@@ -832,7 +831,7 @@
+             wxString msg;
+             msg << _("Invalid build script: ") + scripts[i] << _T('\n');
+             msg << _("First seen in: ") + base->GetTitle() << _T('\n');
+-            cbMessageBox(msg, _("Error"), wxICON_ERROR);
++            cbMessageBox(msg, _("Error"), wxICON_ERROR, this);
+             return false;
+         }
+     }
+@@ -850,7 +849,7 @@
+             return;
+     }
+ 
+-    cbMessageBox(_("All scripts seem to be valid!"), _("Information"), wxICON_INFORMATION);
++    cbMessageBox(_("All scripts seem to be valid!"), _("Information"), wxICON_INFORMATION, this);
+ }
+ 
+ void ProjectOptionsDlg::OnAddScript(wxCommandEvent& event)
+@@ -1048,7 +1047,7 @@
+     if (XRCCTRL(*this, "txtProjectName", wxTextCtrl)->GetValue().Trim().IsEmpty())
+     {
+         cbMessageBox(_("The project title (name) cannot be empty."), _("Error"),
+-                     wxOK | wxCENTRE | wxICON_ERROR);
++                     wxOK | wxICON_ERROR, this);
+         return; // Stop propagating the event
+     }
+     event.Skip();
+Index: src/sdk/projectdepsdlg.cpp
+===================================================================
+--- src/sdk/projectdepsdlg.cpp	(revision 5987)
++++ src/sdk/projectdepsdlg.cpp	(working copy)
+@@ -94,7 +94,7 @@
+             cbMessageBox(wxString::Format(_("Cannot add project '%s' as a dependency to '%s' because this "
+                                             "would cause a circular dependency error..."),
+                                             thisprj->GetTitle().c_str(), prj->GetTitle().c_str()),
+-                        _("Error"), wxICON_ERROR);
++                        _("Error"), wxICON_ERROR, this);
+             return false;
+         }
+     }
+Index: src/sdk/pluginsconfigurationdlg.cpp
+===================================================================
+--- src/sdk/pluginsconfigurationdlg.cpp	(revision 5987)
++++ src/sdk/pluginsconfigurationdlg.cpp	(working copy)
+@@ -246,7 +246,7 @@
+ 
+     FillList();
+     if (!failure.IsEmpty())
+-        cbMessageBox(_("One or more plugins were not installed succesfully:\n\n") + failure, _("Warning"), wxICON_WARNING);
++        cbMessageBox(_("One or more plugins were not installed succesfully:\n\n") + failure, _("Warning"), wxICON_WARNING, this);
+ }
+ 
+ void PluginsConfigurationDlg::OnUninstall(wxCommandEvent& event)
+@@ -275,7 +275,7 @@
+ 
+     FillList();
+     if (!failure.IsEmpty())
+-        cbMessageBox(_("One or more plugins were not uninstalled succesfully:\n\n") + failure, _("Warning"), wxICON_WARNING);
++        cbMessageBox(_("One or more plugins were not uninstalled succesfully:\n\n") + failure, _("Warning"), wxICON_WARNING, this);
+ }
+ 
+ void PluginsConfigurationDlg::OnExport(wxCommandEvent& event)
+@@ -377,7 +377,7 @@
+     }
+ 
+     if (!failure.IsEmpty())
+-        cbMessageBox(_("Failed exporting one or more plugins:\n\n") + failure, _("Warning"), wxICON_WARNING);
++        cbMessageBox(_("Failed exporting one or more plugins:\n\n") + failure, _("Warning"), wxICON_WARNING, this);
+ }
+ 
+ void PluginsConfigurationDlg::OnSelect(wxListEvent& event)
+Index: src/sdk/newfromtemplatedlg.cpp
+===================================================================
+--- src/sdk/newfromtemplatedlg.cpp	(revision 5987)
++++ src/sdk/newfromtemplatedlg.cpp	(working copy)
+@@ -362,7 +362,7 @@
+         EndModal(wxID_CANCEL);
+         return;
+     }
+-    cbMessageBox(_("Couldn't open script:\n") + script, _("Error"), wxICON_ERROR);
++    cbMessageBox(_("Couldn't open script:\n") + script, _("Error"), wxICON_ERROR, this);
+ }
+ 
+ void NewFromTemplateDlg::ChangeView()
+@@ -450,7 +450,7 @@
+ 	if (wxFileExists(script))
+ 	{
+ 		if (cbMessageBox(_("Are you sure you want to discard all local modifications to this script?"),
+-						_("Confirmation"), wxICON_QUESTION | wxYES_NO) == wxID_YES)
++						_("Confirmation"), wxICON_QUESTION | wxYES_NO, this) == wxID_YES)
+ 		{
+ 			if (wxRemoveFile(script))
+ 				list->SetItemTextColour(index, wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+@@ -462,7 +462,7 @@
+ {
+     cbMessageBox(_("Any changes you make to the global wizard registration script will "
+                     "take effect after you restart Code::Blocks."),
+-                    _("Information"), wxICON_INFORMATION);
++                    _("Information"), wxICON_INFORMATION, this);
+     EditScript(_T("config.script"));
+ }
+ 
+@@ -486,7 +486,7 @@
+                     "On this computer, the customized scripts are located under:\n") +
+                     ConfigManager::GetFolder(sdDataUser) + _T("/templates/wizard/"),
+                     _("Help"),
+-                    wxICON_INFORMATION);
++                    wxICON_INFORMATION, this);
+ }
+ 
+ void NewFromTemplateDlg::OnUpdateUI(wxUpdateUIEvent& event)
+Index: src/sdk/multiselectdlg.cpp
+===================================================================
+--- src/sdk/multiselectdlg.cpp	(revision 5987)
++++ src/sdk/multiselectdlg.cpp	(working copy)
+@@ -152,7 +152,7 @@
+ 
+     bool clear = cbMessageBox(_("Do you want to clear the previous selections?"),
+                             _("Question"),
+-                            wxICON_QUESTION | wxYES_NO) == wxID_YES;
++                            wxICON_QUESTION | wxYES_NO, this) == wxID_YES;
+     SelectWildCard(wild, true, clear);
+ } // end of OnWildcard
+ 
+Index: src/include/globals.h
+===================================================================
+--- src/include/globals.h	(revision 5987)
++++ src/include/globals.h	(working copy)
+@@ -251,35 +251,8 @@
+   * @note The return value for wxOK would be wxID_OK and so on for other buttons.
+   * So, read wxMessageDialog 's documentation, *not* wxMessageBox 's...
+   */
+-inline int cbMessageBox(const wxString& message, const wxString& caption = wxEmptyString, int style = wxOK, wxWindow *parent = NULL, int x = -1, int y = -1)
+-{
+-    // Cannot create a wxMessageDialog with a NULL as parent
+-    if (!parent)
+-    {
+-      // wxMessage*Box* returns any of: wxYES, wxNO, wxCANCEL, wxOK.
+-      int answer = wxMessageBox(message, caption, style, parent, x, y);
+-      switch (answer)
+-      {
+-        // map answer to the one of wxMessage*Dialog* to ensure compatibility
+-        case (wxOK):
+-          return wxID_OK;
+-        case (wxCANCEL):
+-          return wxID_CANCEL;
+-        case (wxYES):
+-          return wxID_YES;
+-        case (wxNO):
+-          return wxID_NO;
+-        default:
+-          return -1; // NOTE: Cannot happen unless wxWidgets API changes
+-      }
+-    }
++extern DLLIMPORT int cbMessageBox(const wxString& message, const wxString& caption = wxEmptyString, int style = wxOK, wxWindow *parent = NULL, int x = -1, int y = -1);
+ 
+-    wxMessageDialog dlg(parent, message, caption, style, wxPoint(x,y));
+-    PlaceWindow(&dlg);
+-    // wxMessage*Dialog* returns any of wxID_OK, wxID_CANCEL, wxID_YES, wxID_NO
+-    return dlg.ShowModal();
+-};
+-
+ inline void NotifyMissingFile(const wxString &name)
+ {
+     wxString msg;
+Index: src/sdk/globals.cpp
+===================================================================
+--- src/sdk/globals.cpp	(revision 5987)
++++ src/sdk/globals.cpp	(working copy)
+@@ -1055,3 +1055,37 @@
+ 	return cbC2U(ret.c_str());
+ #endif
+ }
++
++int cbMessageBox(const wxString& message, const wxString& caption, int style, wxWindow *parent, int x, int y)
++{
++    if (!parent)
++    {
++        parent = Manager::Get()->GetAppWindow();
++    }
++
++    // Cannot create a wxMessageDialog with a NULL as parent
++    if (!parent)
++    {
++      // wxMessage*Box* returns any of: wxYES, wxNO, wxCANCEL, wxOK.
++      int answer = wxMessageBox(message, caption, style, parent, x, y);
++      switch (answer)
++      {
++        // map answer to the one of wxMessage*Dialog* to ensure compatibility
++        case (wxOK):
++          return wxID_OK;
++        case (wxCANCEL):
++          return wxID_CANCEL;
++        case (wxYES):
++          return wxID_YES;
++        case (wxNO):
++          return wxID_NO;
++        default:
++          return -1; // NOTE: Cannot happen unless wxWidgets API changes
++      }
++    }
++
++    wxMessageDialog dlg(parent, message, caption, style, wxPoint(x,y));
++    PlaceWindow(&dlg);
++    // wxMessage*Dialog* returns any of wxID_OK, wxID_CANCEL, wxID_YES, wxID_NO
++    return dlg.ShowModal();
++}
+Index: src/sdk/externaldepsdlg.cpp
+===================================================================
+--- src/sdk/externaldepsdlg.cpp	(revision 5987)
++++ src/sdk/externaldepsdlg.cpp	(working copy)
+@@ -132,7 +132,7 @@
+ 	int sel = lst->GetSelection();                          \
+ 	if (sel == -1)                                          \
+         return;                                             \
+-    if (cbMessageBox(_("Are you sure you want to remove this file?"), _("Remove file"), wxYES_NO | wxNO_DEFAULT) == wxID_NO)   \
++    if (cbMessageBox(_("Are you sure you want to remove this file?"), _("Remove file"), wxYES_NO | wxNO_DEFAULT, this) == wxID_NO)   \
+         return;                                             \
+     lst->Delete(sel);                                       \
+ }
+Index: src/src/environmentsettingsdlg.cpp
+===================================================================
+--- src/src/environmentsettingsdlg.cpp	(revision 5987)
++++ src/src/environmentsettingsdlg.cpp	(working copy)
+@@ -225,6 +225,7 @@
+     for (size_t i = 0; i < m_PluginPanels.GetCount(); ++i)
+     {
+         cbConfigurationPanel* panel = m_PluginPanels[i];
++        panel->SetParentDialog(this);
+         lb->AddPage(panel, panel->GetTitle());
+ 
+         wxString onFile = ConfigManager::LocateDataFile(base + panel->GetBitmapBaseName() + _T(".png"), sdDataGlobal | sdDataUser);
+@@ -298,7 +299,7 @@
+ {
+ #ifdef __WXMSW__
+     Associations::SetCore();
+-    //cbMessageBox(_("Code::Blocks associated with C/C++ files."), _("Information"), wxICON_INFORMATION);
++    //cbMessageBox(_("Code::Blocks associated with C/C++ files."), _("Information"), wxICON_INFORMATION, this);
+ #endif
+ }
+ 
+Index: src/sdk/editpathdlg.cpp
+===================================================================
+--- src/sdk/editpathdlg.cpp	(revision 5987)
++++ src/sdk/editpathdlg.cpp	(working copy)
+@@ -133,7 +133,7 @@
+         // ask the user if he wants it to be kept as relative
+         if (cbMessageBox(_("Keep this as a relative path?"),
+                         _("Question"),
+-                        wxICON_QUESTION | wxYES_NO) == wxID_YES)
++                        wxICON_QUESTION | wxYES_NO, this) == wxID_YES)
+         {
+             if (m_AllowMultiSel)
+             {
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 5987)
++++ src/sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -296,6 +296,7 @@
+     for (size_t i = 0; i < m_PluginPanels.GetCount(); ++i)
+     {
+         cbConfigurationPanel* panel = m_PluginPanels[i];
++        panel->SetParentDialog(this);
+         lb->AddPage(panel, panel->GetTitle());
+ 
+         wxString onFile = ConfigManager::LocateDataFile(base + panel->GetBitmapBaseName() + _T(".png"), sdDataGlobal | sdDataUser);
+@@ -554,7 +555,7 @@
+     {
+         wxString msg;
+         msg.Printf(_("The colour theme \"%s\" is modified.\nDo you want to save the changes?"), m_Theme->GetName().c_str());
+-        int ret = cbMessageBox(msg, _("Save"), wxYES_NO | wxCANCEL);
++        int ret = cbMessageBox(msg, _("Save"), wxYES_NO | wxCANCEL, this);
+         switch (ret)
+         {
+             case wxID_YES: m_Theme->Save(); break;
+@@ -648,7 +649,7 @@
+ 
+ void EditorConfigurationDlg::OnDeleteColourTheme(wxCommandEvent& event)
+ {
+-    if (cbMessageBox(_("Are you sure you want to delete this theme?"), _("Confirmation"), wxYES_NO) == wxID_YES)
++    if (cbMessageBox(_("Are you sure you want to delete this theme?"), _("Confirmation"), wxYES_NO, this) == wxID_YES)
+     {
+         Manager::Get()->GetConfigManager(_T("editor"))->DeleteSubPath(_T("/colour_sets/") + m_Theme->GetName());
+         wxComboBox* cmbThemes = XRCCTRL(*this, "cmbThemes", wxComboBox);
+@@ -712,7 +713,7 @@
+         wxString tmp;
+         tmp.Printf(_("Are you sure you want to reset all settings to defaults for \"%s\"?"),
+                     m_Theme->GetLanguageName(m_Lang).c_str());
+-        if (cbMessageBox(tmp, _("Confirmation"), wxICON_QUESTION | wxYES_NO) == wxID_YES)
++        if (cbMessageBox(tmp, _("Confirmation"), wxICON_QUESTION | wxYES_NO, this) == wxID_YES)
+         {
+             m_Theme->Reset(m_Lang);
+             ApplyColours();
+@@ -797,7 +798,7 @@
+         AutoCompleteMap::iterator it = m_AutoCompMap.find(key);
+         if (it != m_AutoCompMap.end())
+         {
+-            cbMessageBox(_("This keyword already exists!"), _("Error"), wxICON_ERROR);
++            cbMessageBox(_("This keyword already exists!"), _("Error"), wxICON_ERROR, this);
+             return;
+         }
+         m_AutoCompMap[key] = _T("");
+@@ -816,7 +817,7 @@
+     if (lstKeyword->GetSelection() == -1)
+         return;
+ 
+-    if (cbMessageBox(_("Are you sure you want to delete this keyword?"), _("Confirmation"), wxICON_QUESTION | wxYES_NO) == wxID_NO)
++    if (cbMessageBox(_("Are you sure you want to delete this keyword?"), _("Confirmation"), wxICON_QUESTION | wxYES_NO, this) == wxID_NO)
+         return;
+ 
+     int sel = lstKeyword->GetSelection();
+Index: src/sdk/editarrayfiledlg.cpp
+===================================================================
+--- src/sdk/editarrayfiledlg.cpp	(revision 5987)
++++ src/sdk/editarrayfiledlg.cpp	(working copy)
+@@ -113,7 +113,7 @@
+ 
+ void EditArrayFileDlg::OnDelete(wxCommandEvent& event)
+ {
+-	if (cbMessageBox(_("Delete this item?"), _("Confirm"), wxYES_NO) == wxID_YES)
++	if (cbMessageBox(_("Delete this item?"), _("Confirm"), wxYES_NO, this) == wxID_YES)
+ 	{
+ 		wxListBox* list = XRCCTRL(*this, "lstItems", wxListBox);
+ 		list->Delete(list->GetSelection());
+Index: src/sdk/configuretoolsdlg.cpp
+===================================================================
+--- src/sdk/configuretoolsdlg.cpp	(revision 5987)
++++ src/sdk/configuretoolsdlg.cpp	(working copy)
+@@ -113,7 +113,7 @@
+ 	if (Manager::Get()->GetToolsManager()->GetToolByIndex(sel)->GetName() == CB_TOOLS_SEPARATOR
+ 	    || cbMessageBox(_("Are you sure you want to remove this tool?"),
+ 					   _("Remove tool?"),
+-					   wxYES_NO | wxNO_DEFAULT | wxICON_QUESTION) == wxID_YES)
++					   wxYES_NO | wxNO_DEFAULT | wxICON_QUESTION, this) == wxID_YES)
+ 	{
+ 		Manager::Get()->GetToolsManager()->RemoveToolByIndex(sel);
+ 		DoFillList();
+Index: src/include/configurationpanel.h
+===================================================================
+--- src/include/configurationpanel.h	(revision 5987)
++++ src/include/configurationpanel.h	(working copy)
+@@ -7,6 +7,7 @@
+ #define CONFIGURATIONPANEL_H
+ 
+ #include "settings.h"
++#include "globals.h"
+ #include <wx/dialog.h>
+ #include <wx/panel.h>
+ #include <wx/string.h>
+@@ -18,7 +19,7 @@
+ class DLLIMPORT cbConfigurationPanel : public wxPanel
+ {
+     public:
+-        cbConfigurationPanel(){}
++        cbConfigurationPanel() : m_parentDialog(0){}
+         virtual ~cbConfigurationPanel(){}
+ 
+         /// @return the panel's title.
+@@ -28,7 +29,29 @@
+         /// Called when the user chooses to apply the configuration.
+         virtual void OnApply() = 0;
+         /// Called when the user chooses to cancel the configuration.
+-        virtual void OnCancel() = 0;
++        virtual void OnCancel() = 0;
++        
++        /// Sets the panel's parent dialog
++        void SetParentDialog(wxWindow* dialog)
++        {
++            m_parentDialog = dialog;
++        }
++        /// Gets the panel's parent dialog
++        wxWindow* SetParentDialog()
++        {
++            return m_parentDialog;
++        }
++        /** Call global cbMessageBox with m_parentDialog as parent window when
++            no parent window specified */
++        int cbMessageBox(const wxString& message, const wxString& caption = wxEmptyString, int style = wxOK, wxWindow *parent = NULL, int x = -1, int y = -1)
++        {
++            if (parent)
++                return ::cbMessageBox(message, caption, style, parent, x, y);
++            else    
++                return ::cbMessageBox(message, caption, style, m_parentDialog, x, y);
++        }
++    private:
++        wxWindow* m_parentDialog;
+ };
+ 
+ /// @brief A simple dialog that wraps a cbConfigurationPanel.
+Index: src/src/compilersettingsdlg.cpp
+===================================================================
+--- src/src/compilersettingsdlg.cpp	(revision 5987)
++++ src/src/compilersettingsdlg.cpp	(working copy)
+@@ -130,7 +130,8 @@
+     Manager::Get()->GetPluginManager()->GetConfigurationPanels(cgCompiler, lb, local);
+     for (size_t i = 0; i < local.GetCount(); ++i)
+     {
+-        cbConfigurationPanel* panel = local[i];
++        cbConfigurationPanel* panel = local[i];
++        panel->SetParentDialog(this);
+         lb->AddPage(panel, panel->GetTitle());
+ 
+         wxString onFile = ConfigManager::LocateDataFile(base + panel->GetBitmapBaseName() + _T(".png"), sdDataGlobal | sdDataUser);
+@@ -166,6 +167,7 @@
+     for (size_t i = 0; i < local.GetCount(); ++i)
+     {
+         cbConfigurationPanel* panel = local[i];
++        panel->SetParentDialog(this);
+         lb->AddPage(panel, panel->GetTitle());
+ 
+         wxString onFile = ConfigManager::LocateDataFile(base + panel->GetBitmapBaseName() + _T(".png"), sdDataGlobal | sdDataUser);
+@@ -263,7 +265,7 @@
+             bbplugins.Add(compiler);
+             cbMessageBox(_("The compiler plugin must always be loaded for batch builds!\n"
+                         "Automatically re-enabled."),
+-                        _("Warning"), wxICON_WARNING);
++                        _("Warning"), wxICON_WARNING, this);
+         }
+         bbcfg->Write(_T("/batch_build_plugins"), bbplugins);
+ #endif
+Index: src/plugins/scriptedwizard/compilerpanel.h
+===================================================================
+--- src/plugins/scriptedwizard/compilerpanel.h	(revision 5987)
++++ src/plugins/scriptedwizard/compilerpanel.h	(working copy)
+@@ -21,7 +21,7 @@
+ {
+ 	public:
+ 
+-		CompilerPanel(wxWindow* parent,wxWindowID id = -1);
++		CompilerPanel(wxWindow* parent, wxWindow* parentDialog);
+ 		virtual ~CompilerPanel();
+ 
+         wxComboBox* GetCompilerCombo(){ return cmbCompiler; }
+@@ -85,7 +85,9 @@
+ 		wxStaticBoxSizer* StaticBoxSizer2;
+ 		wxTextCtrl* txtRelOut;
+ 		wxTextCtrl* txtRelObjOut;
+-		//*)
++		//*)
++		
++        wxWindow* m_parentDialog;		
+ 
+ 		DECLARE_EVENT_TABLE()
+ };
+Index: src/plugins/scriptedwizard/compilerpanel.cpp
+===================================================================
+--- src/plugins/scriptedwizard/compilerpanel.cpp	(revision 5987)
++++ src/plugins/scriptedwizard/compilerpanel.cpp	(working copy)
+@@ -38,7 +38,8 @@
+ 	//*)
+ END_EVENT_TABLE()
+ 
+-CompilerPanel::CompilerPanel(wxWindow* parent,wxWindowID id)
++CompilerPanel::CompilerPanel(wxWindow* parent, wxWindow* parentDialog) :
++    m_parentDialog(parentDialog)
+ {
+ 	//(*Initialize(CompilerPanel)
+ 	wxBoxSizer* BoxSizer1;
+@@ -52,7 +53,7 @@
+ 	wxStaticText* StaticText7;
+ 	wxStaticText* StaticText8;
+ 	
+-	Create(parent,id,wxDefaultPosition,wxDefaultSize,wxTAB_TRAVERSAL,_T("wxPanel"));
++	Create(parent,-1,wxDefaultPosition,wxDefaultSize,wxTAB_TRAVERSAL,_T("wxPanel"));
+ 	BoxSizer1 = new wxBoxSizer(wxVERTICAL);
+ 	StaticText1 = new wxStaticText(this,ID_STATICTEXT1,_("Please select the compiler to use and which configurations\nyou want enabled in your project."),wxDefaultPosition,wxDefaultSize,0,_T("ID_STATICTEXT1"));
+ 	BoxSizer1->Add(StaticText1,0,wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP,8);
+@@ -123,7 +124,7 @@
+ {
+     if (!event.IsChecked() && !chkConfRelease->IsChecked())
+     {
+-        cbMessageBox(_("At least one configuration must be set..."), _("Notice"), wxICON_WARNING);
++        cbMessageBox(_("At least one configuration must be set..."), _("Notice"), wxICON_WARNING, m_parentDialog);
+         chkConfDebug->SetValue(true);
+         return;
+     }
+@@ -136,7 +137,7 @@
+ {
+     if (!event.IsChecked() && !chkConfDebug->IsChecked())
+     {
+-        cbMessageBox(_("At least one configuration must be set..."), _("Notice"), wxICON_WARNING);
++        cbMessageBox(_("At least one configuration must be set..."), _("Notice"), wxICON_WARNING, m_parentDialog);
+         chkConfRelease->SetValue(true);
+         return;
+     }
+Index: src/plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- src/plugins/compilergcc/compilergcc.cpp	(revision 5987)
++++ src/plugins/compilergcc/compilergcc.cpp	(working copy)
+@@ -523,6 +523,7 @@
+ {
+     cbConfigurationDialog dlg(Manager::Get()->GetAppWindow(), wxID_ANY, _("Project build options"));
+     cbConfigurationPanel* panel = new CompilerOptionsDlg(&dlg, this, project, target);
++    panel->SetParentDialog(&dlg);
+     dlg.AttachConfigurationPanel(panel);
+     PlaceWindow(&dlg);
+     if(dlg.ShowModal() == wxID_OK)
+Index: src/plugins/classwizard/classwizarddlg.cpp
+===================================================================
+--- src/plugins/classwizard/classwizarddlg.cpp	(revision 5987)
++++ src/plugins/classwizard/classwizarddlg.cpp	(working copy)
+@@ -164,14 +164,14 @@
+     if (memtyp.IsEmpty())
+     {
+         cbMessageBox(_T("Please specify a valid variable type to continue."),
+-                     _T("Error"), wxOK | wxICON_ERROR);
++                     _T("Error"), wxOK | wxICON_ERROR, this);
+         return;
+     }
+ 
+     if (memvar.IsEmpty())
+     {
+         cbMessageBox(_T("Please specify a valid variable name to continue."),
+-                     _T("Error"), wxOK | wxICON_ERROR);
++                     _T("Error"), wxOK | wxICON_ERROR, this);
+         return;
+     }
+ 
+@@ -181,7 +181,7 @@
+         if (DoMemVarRepr((*it).Typ, (*it).Var) == DoMemVarRepr(memtyp, memvar))
+         {
+             cbMessageBox(_T("This variable does already exist."),
+-                         _T("Error"), wxOK | wxICON_ERROR);
++                         _T("Error"), wxOK | wxICON_ERROR, this);
+             return;
+         }
+         it++;
+@@ -207,7 +207,7 @@
+     if (selection.IsEmpty())
+     {
+         cbMessageBox(_T("Please select a variable to remove."),
+-                     _T("Error"), wxOK | wxICON_ERROR);
++                     _T("Error"), wxOK | wxICON_ERROR, this);
+         return;
+     }
+ 
+@@ -289,7 +289,7 @@
+     if (m_Name.IsEmpty())
+     {
+         cbMessageBox(_T("Please specify a class name to continue."),
+-                     _T("Error"), wxOK | wxICON_ERROR);
++                     _T("Error"), wxOK | wxICON_ERROR, this);
+         return;
+     }
+     // Extract namespaces from class name
+@@ -402,7 +402,7 @@
+         cbMessageBox(_T("Class wizard can't continue.\n"
+                         "Possibly the header file name is invalid.\n"
+                         "Please check the entered file name."),
+-                     _T("Error"), wxICON_ERROR);
++                     _T("Error"), wxICON_ERROR, this);
+         return false;
+     }
+ 
+@@ -574,7 +574,7 @@
+     {
+         wxString msg;
+         msg.Printf(_("Could not save header file %s.\nAborting..."), headerFname.GetFullPath().c_str());
+-        cbMessageBox(msg, _("Error"), wxICON_ERROR);
++        cbMessageBox(msg, _("Error"), wxICON_ERROR, this);
+         return false;
+     }
+ 
+@@ -597,7 +597,7 @@
+         cbMessageBox(_T("Class wizard can't continue.\n"
+                         "Possibly the implementation file name is invalid.\n"
+                         "Please check the entered file name."),
+-                     _T("Error"), wxICON_ERROR);
++                     _T("Error"), wxICON_ERROR, this);
+         return false;
+     }
+ 
+@@ -665,7 +665,7 @@
+     {
+         wxString msg;
+         msg.Printf(_("Could not save implementation file %s.\nAborting..."), implementationFname.GetFullPath().c_str());
+-        cbMessageBox(msg, _("Error"), wxICON_ERROR);
++        cbMessageBox(msg, _("Error"), wxICON_ERROR, this);
+         return false;
+     }
+ 
+Index: src/src/batchbuild.h
+===================================================================
+--- src/src/batchbuild.h	(revision 5987)
++++ src/src/batchbuild.h	(working copy)
+@@ -35,7 +35,7 @@
+                 {
+                     if (cbMessageBox(_("The build is in progress. Are you sure you want to abort it?"),
+                                     _("Abort build?"),
+-                                    wxICON_QUESTION | wxYES_NO) == wxID_YES)
++                                    wxICON_QUESTION | wxYES_NO, this) == wxID_YES)
+                     {
+                         compiler->KillProcess();
+                         while (compiler->IsRunning())
+Index: src/src/app.cpp
+===================================================================
+--- src/src/app.cpp	(revision 5987)
++++ src/src/app.cpp	(working copy)
+@@ -607,8 +607,8 @@
+             {
+ 
+                 /* NOTE: Due to a recent change in logging code, this visual warning got disabled.
+-                   So the wxLogError() has been changed to a wxMessageBox(). */
+-                wxMessageBox(_("Another program instance is already running.\nCode::Blocks is currently configured to only allow one running instance.\n\nYou can access this Setting under the menu item 'Environment'."),
++                   So the wxLogError() has been changed to a cbMessageBox(). */
++                cbMessageBox(_("Another program instance is already running.\nCode::Blocks is currently configured to only allow one running instance.\n\nYou can access this Setting under the menu item 'Environment'."),
+                             _T("Code::Blocks"), wxOK | wxICON_ERROR);
+                 return false;
+             }
+@@ -621,7 +621,8 @@
+ 
+         Manager::SetBatchBuild(m_Batch || !m_Script.IsEmpty());
+         Manager::Get()->GetScriptingManager();
+-        MainFrame* frame = 0; frame = InitFrame();
++        MainFrame* frame = 0; 
++        frame = InitFrame();
+         m_Frame = frame;
+ 
+         if (m_SafeMode) wxLog::EnableLogging(true); // re-enable logging in safe-mode
+Index: src/plugins/compilergcc/advancedcompileroptionsdlg.cpp
+===================================================================
+--- src/plugins/compilergcc/advancedcompileroptionsdlg.cpp	(revision 5987)
++++ src/plugins/compilergcc/advancedcompileroptionsdlg.cpp	(working copy)
+@@ -325,7 +325,7 @@
+ 
+ void AdvancedCompilerOptionsDlg::OnDelExt(wxCommandEvent& WXUNUSED(event))
+ {
+-	if (cbMessageBox(_("Are you sure you want to remove this extension set from the list?"), _T("Confirmation"), wxYES_NO) == wxID_YES)
++	if (cbMessageBox(_("Are you sure you want to remove this extension set from the list?"), _T("Confirmation"), wxYES_NO, this) == wxID_YES)
+ 	{
+ 		int nr = XRCCTRL(*this, "lstCommands", wxChoice)->GetSelection();
+ 		wxChoice* cmb = XRCCTRL(*this, "lstExt", wxChoice);
+@@ -340,7 +340,7 @@
+ 			DisplayCommand(nr,0);
+ 		}
+ 		else
+-			cbMessageBox(_("Can't remove default commands!"), _("Error"));
++			cbMessageBox(_("Can't remove default commands!"), _("Error"), wxICON_ERROR, this);
+ 	}
+ }
+ 
+@@ -365,7 +365,7 @@
+ 
+ void AdvancedCompilerOptionsDlg::OnRegexDelete(wxCommandEvent& WXUNUSED(event))
+ {
+-    if (cbMessageBox(_("Are you sure you want to delete this regular expression?"), _("Confirmation"), wxICON_QUESTION | wxYES_NO | wxNO_DEFAULT) == wxID_YES)
++    if (cbMessageBox(_("Are you sure you want to delete this regular expression?"), _("Confirmation"), wxICON_QUESTION | wxYES_NO | wxNO_DEFAULT, this) == wxID_YES)
+     {
+         m_Regexes.RemoveAt(m_SelectedRegex);
+         if (m_SelectedRegex >= (int)m_Regexes.Count())
+@@ -380,7 +380,7 @@
+                     "for this compiler?\n"
+                     "ALL regular expressions will be erased and replaced with their default "
+                     "counterparts!\n\n"
+-                    "Are you REALLY sure?"), _("Confirmation"), wxICON_QUESTION | wxYES_NO | wxNO_DEFAULT) == wxID_YES)
++                    "Are you REALLY sure?"), _("Confirmation"), wxICON_QUESTION | wxYES_NO | wxNO_DEFAULT, this) == wxID_YES)
+     {
+         Compiler* compiler = CompilerFactory::GetCompiler(m_CompilerId);
+         compiler->LoadDefaultRegExArray();
+@@ -422,7 +422,7 @@
+     wxString text = XRCCTRL(*this, "txtRegexTest", wxTextCtrl)->GetValue();
+     if (text.IsEmpty())
+     {
+-        cbMessageBox(_("Please enter a compiler line in the \"Compiler output\" text box..."), _("Error"), wxICON_ERROR);
++        cbMessageBox(_("Please enter a compiler line in the \"Compiler output\" text box..."), _("Error"), wxICON_ERROR, this);
+         return;
+     }
+ 
+@@ -458,7 +458,7 @@
+             #endif
+                 );
+ 
+-    cbMessageBox(msg, _("Test results"), wxICON_INFORMATION);
++    cbMessageBox(msg, _("Test results"), wxICON_INFORMATION, this);
+ }
+ 
+ void AdvancedCompilerOptionsDlg::EndModal(int retCode)
+Index: src/plugins/todo/addtododlg.cpp
+===================================================================
+--- src/plugins/todo/addtododlg.cpp	(revision 5987)
++++ src/plugins/todo/addtododlg.cpp	(working copy)
+@@ -198,7 +198,7 @@
+         return;
+ 
+     wxString msg; msg.Printf(_T("Are you sure you want to delete the user '%s'?"), cmb->GetString(sel).c_str());
+-    if (cbMessageBox(msg, _T("Confirmation"), wxICON_QUESTION | wxYES_NO) == wxID_NO)
++    if (cbMessageBox(msg, _T("Confirmation"), wxICON_QUESTION | wxYES_NO, this) == wxID_NO)
+        return;
+ 
+     cmb->Delete(sel);
+@@ -227,7 +227,7 @@
+         return;
+ 
+     wxString msg; msg.Printf(_T("Are you sure you want to delete the type '%s'?"), cmb->GetString(sel).c_str());
+-    if (cbMessageBox(msg, _T("Confirmation"), wxICON_QUESTION | wxYES_NO) == wxID_NO)
++    if (cbMessageBox(msg, _T("Confirmation"), wxICON_QUESTION | wxYES_NO, this) == wxID_NO)
+        return;
+ 
+     cmb->Delete(sel);

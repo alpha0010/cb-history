@@ -1,0 +1,2453 @@
+Index: src/plugins/codecompletion/codecompletion.cpp
+===================================================================
+--- src/plugins/codecompletion/codecompletion.cpp	(revision 3196)
++++ src/plugins/codecompletion/codecompletion.cpp	(working copy)
+@@ -203,7 +203,7 @@
+         m_EditMenu->Append(idMenuShowCallTip, _("Show call tip\tCtrl-Shift-Space"));
+     }
+     else
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Could not find Edit menu!"));
++        Manager::Get()->GetMessageManager()->DebugLog(_("Could not find Edit menu!"));
+     pos = menuBar->FindMenu(_("Sea&rch"));
+     if (pos != wxNOT_FOUND)
+     {
+@@ -211,7 +211,7 @@
+         m_SearchMenu->Append(idMenuGotoFunction, _("Goto function...\tCtrl-Alt-G"));
+     }
+     else
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Could not find Search menu!"));
++        Manager::Get()->GetMessageManager()->DebugLog(_("Could not find Search menu!"));
+ 
+     // add the classbrowser window in the "View" menu
+     int idx = menuBar->FindMenu(_("View"));
+@@ -294,13 +294,13 @@
+                         subMenu->Append(idUnimplementedClassMethods, _("All class methods without implementation..."));
+                     }
+                     else
+-                        Manager::Get()->GetMessageManager()->DebugLog(_T("Could not find Insert menu 3!"));
++                        Manager::Get()->GetMessageManager()->DebugLog(_("Could not find Insert menu 3!"));
+                 }
+                 else
+-                    Manager::Get()->GetMessageManager()->DebugLog(_T("Could not find Insert menu 2!"));
++                    Manager::Get()->GetMessageManager()->DebugLog(_("Could not find Insert menu 2!"));
+             }
+             else
+-                Manager::Get()->GetMessageManager()->DebugLog(_T("Could not find Insert menu!"));
++                Manager::Get()->GetMessageManager()->DebugLog(_("Could not find Insert menu!"));
+         }
+     }
+ }
+@@ -411,7 +411,7 @@
+     Parser* parser = m_NativeParsers.FindParserFromEditor(ed);
+     if (!parser)
+     {
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Active editor has no associated parser ?!?"));
++        Manager::Get()->GetMessageManager()->DebugLog(_("Active editor has no associated parser ?!?"));
+         return -4;
+     }
+ 
+@@ -423,14 +423,14 @@
+     {
+ #ifdef DEBUG_CC_AI
+         if (s_DebugSmartSense)
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("%d results"), result.size());
++            Manager::Get()->GetMessageManager()->DebugLog(_("%d results"), result.size());
+ #endif
+         size_t max_match = cfg->ReadInt(_T("/max/matches"), 16384);
+         if (result.size() <= max_match)
+         {
+ #ifdef DEBUG_CC_AI
+             if (s_DebugSmartSense)
+-                Manager::Get()->GetMessageManager()->DebugLog(_T("Generating tokens list"));
++                Manager::Get()->GetMessageManager()->DebugLog(_("Generating tokens list"));
+ #endif
+             wxImageList* ilist = parser->GetImageList();
+             ed->GetControl()->ClearRegisteredImages();
+@@ -489,7 +489,7 @@
+ 
+ #ifdef DEBUG_CC_AI
+             if (s_DebugSmartSense)
+-                Manager::Get()->GetMessageManager()->DebugLog(_T("0 results"));
++                Manager::Get()->GetMessageManager()->DebugLog(_("0 results"));
+ #endif
+             if (items.GetCount() == 0)
+                 return -2;
+@@ -500,7 +500,7 @@
+                 items.Sort(SortCCList);
+ #ifdef DEBUG_CC_AI
+             if (s_DebugSmartSense)
+-                Manager::Get()->GetMessageManager()->DebugLog(_T("Done generating tokens list"));
++                Manager::Get()->GetMessageManager()->DebugLog(_("Done generating tokens list"));
+ #endif
+             ed->GetControl()->AutoCompSetIgnoreCase(!caseSens);
+             ed->GetControl()->AutoCompSetCancelAtStart(true);
+@@ -525,7 +525,7 @@
+     {
+ #ifdef DEBUG_CC_AI
+         if (s_DebugSmartSense)
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("0 results"));
++            Manager::Get()->GetMessageManager()->DebugLog(_("0 results"));
+ #endif
+         if (!parser->Done())
+         {
+@@ -680,7 +680,7 @@
+     }
+     if (!definition.IsEmpty())
+         ed->GetControl()->CallTipShow(pos, definition);
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("start=%d, end=%d"), start, end);
++//    Manager::Get()->GetMessageManager()->DebugLog(_("start=%d, end=%d"), start, end);
+     // only highlight current argument if only one calltip (scintilla doesn't support multiple highlighting ranges in calltips)
+     ed->GetControl()->CallTipSetHighlight(count == 1 ? start : 0, count == 1 ? end : 0);
+ }
+@@ -704,7 +704,7 @@
+     Parser* parser = m_NativeParsers.FindParserFromActiveEditor();
+     if (!parser)
+     {
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Active editor has no associated parser ?!?"));
++        Manager::Get()->GetMessageManager()->DebugLog(_("Active editor has no associated parser ?!?"));
+         return -4;
+     }
+ 
+@@ -753,7 +753,7 @@
+     Parser* parser = m_NativeParsers.FindParserFromActiveEditor();
+     if (!parser)
+     {
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Active editor has no associated parser ?!?"));
++        Manager::Get()->GetMessageManager()->DebugLog(_("Active editor has no associated parser ?!?"));
+         return -4;
+     }
+ 
+@@ -846,8 +846,8 @@
+         return;
+ 
+     int style = ed->GetControl()->GetStyleAt(ed->GetControl()->GetCurrentPos());
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("Style at %d is %d"), ed->GetControl()->GetCurrentPos(), style);
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("wxSCI_C_PREPROCESSOR is %d"), wxSCI_C_PREPROCESSOR);
++//    Manager::Get()->GetMessageManager()->DebugLog(_("Style at %d is %d"), ed->GetControl()->GetCurrentPos(), style);
++//    Manager::Get()->GetMessageManager()->DebugLog(_("wxSCI_C_PREPROCESSOR is %d"), wxSCI_C_PREPROCESSOR);
+     if (style == wxSCI_C_PREPROCESSOR)
+     {
+         CodeCompleteIncludes();
+@@ -1072,7 +1072,7 @@
+             Ns.EndLine = token->m_ImplLineEnd - 1;
+             Ns.Name = token->m_Name;
+             m_NameSpaces.push_back(Ns);
+-//        Manager::Get()->GetMessageManager()->DebugLog(_T("namespace ") + token->m_Name);
++//        Manager::Get()->GetMessageManager()->DebugLog(_("namespace ") + token->m_Name);
+ //       wxString Log;
+ //        Log.Printf(_("start %d and end %d"), token->m_ImplLine, token->m_ImplLineEnd);
+ //        Manager::Get()->GetMessageManager()->DebugLog(Log);
+@@ -1189,7 +1189,7 @@
+ //
+ //        if (!token_str.IsEmpty())
+ //        {
+-//            Manager::Get()->GetMessageManager()->DebugLog(_T("CodeCompletion::OnValueTooltip for %s"), token_str.c_str());
++//            Manager::Get()->GetMessageManager()->DebugLog(_("CodeCompletion::OnValueTooltip for %s"), token_str.c_str());
+ //            Parser* parser = m_NativeParsers.FindParserFromEditor(ed);
+ //            if (parser)
+ //            {
+@@ -1301,7 +1301,7 @@
+         Token* token = tmpsearch.GetItem(sel);
+         if(token)
+         {
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Token found at line %d"), token->m_Line);
++            Manager::Get()->GetMessageManager()->DebugLog(_("Token found at line %d"), token->m_Line);
+             ed->GotoLine(token->m_Line - 1);
+         }
+     }
+@@ -1324,7 +1324,7 @@
+ //           return;
+ 
+     wxString txt = m_LastKeyword;
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("Go to decl for '%s'"), txt.c_str());
++//    Manager::Get()->GetMessageManager()->DebugLog(_("Go to decl for '%s'"), txt.c_str());
+ 
+     Parser* parser = m_NativeParsers.FindParserFromActiveEditor();
+     if (!parser)
+@@ -1461,13 +1461,13 @@
+     cbStyledTextCtrl* control = editor->GetControl();
+ 
+ //    if (event.GetEventType() == wxEVT_SCI_CHARADDED)
+-//        Manager::Get()->GetMessageManager()->DebugLog(_T("wxEVT_SCI_CHARADDED"));
++//        Manager::Get()->GetMessageManager()->DebugLog(_("wxEVT_SCI_CHARADDED"));
+ //    else if (event.GetEventType() == wxEVT_SCI_CHANGE)
+-//        Manager::Get()->GetMessageManager()->DebugLog(_T("wxEVT_SCI_CHANGE"));
++//        Manager::Get()->GetMessageManager()->DebugLog(_("wxEVT_SCI_CHANGE"));
+ //    else if (event.GetEventType() == wxEVT_SCI_KEY)
+-//        Manager::Get()->GetMessageManager()->DebugLog(_T("wxEVT_SCI_KEY"));
++//        Manager::Get()->GetMessageManager()->DebugLog(_("wxEVT_SCI_KEY"));
+ //    else if (event.GetEventType() == wxEVT_SCI_MODIFIED)
+-//        Manager::Get()->GetMessageManager()->DebugLog(_T("wxEVT_SCI_MODIFIED"));
++//        Manager::Get()->GetMessageManager()->DebugLog(_("wxEVT_SCI_MODIFIED"));
+ 
+     if (event.GetEventType() == wxEVT_SCI_CHARADDED &&
+         !control->AutoCompActive()) // not already active autocompletion
+@@ -1516,7 +1516,7 @@
+             ((ch == _T(':')) && (control->GetCharAt(pos - 2) == _T(':'))))
+         {
+             int style = control->GetStyleAt(pos);
+-            //Manager::Get()->GetMessageManager()->DebugLog(_T("Style at %d is %d (char '%c')"), pos, style, ch);
++            //Manager::Get()->GetMessageManager()->DebugLog(_("Style at %d is %d (char '%c')"), pos, style, ch);
+             if (ch == _T('"') || ch == _T('<'))
+             {
+                 if (style != wxSCI_C_PREPROCESSOR)
+Index: src/plugins/codecompletion/nativeparser.cpp
+===================================================================
+--- src/plugins/codecompletion/nativeparser.cpp	(revision 3196)
++++ src/plugins/codecompletion/nativeparser.cpp	(working copy)
+@@ -134,13 +134,13 @@
+ {
+     if (m_Parser.Done() && !Manager::isappShuttingDown())
+     {
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Updating class browser..."));
++        Manager::Get()->GetMessageManager()->DebugLog(_("Updating class browser..."));
+         if (m_pClassBrowser)
+         {
+             m_pClassBrowser->SetParser(&m_Parser);
+             m_pClassBrowser->UpdateView();
+         }
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Class browser updated."));
++        Manager::Get()->GetMessageManager()->DebugLog(_("Class browser updated."));
+     }
+ }
+ 
+@@ -240,10 +240,10 @@
+         if(NormalizePath(dir,base))
+         {
+             parser->AddIncludeDir(dir.GetFullPath());
+-//            Manager::Get()->GetMessageManager()->DebugLog(_T("Parser prj dir: ") + dir.GetFullPath());
++//            Manager::Get()->GetMessageManager()->DebugLog(_("Parser prj dir: ") + dir.GetFullPath());
+         }
+         else
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Error normalizing path: '%s' from '%s'"),out.c_str(),base.c_str());
++            Manager::Get()->GetMessageManager()->DebugLog(_("Error normalizing path: '%s' from '%s'"),out.c_str(),base.c_str());
+ 
+     }
+ 
+@@ -270,10 +270,10 @@
+                 if(NormalizePath(dir,base))
+                 {
+                     parser->AddIncludeDir(dir.GetFullPath());
+-//                    Manager::Get()->GetMessageManager()->DebugLog(_T("Parser tgt dir: ") + dir.GetFullPath());
++//                    Manager::Get()->GetMessageManager()->DebugLog(_("Parser tgt dir: ") + dir.GetFullPath());
+                 }
+                 else
+-                    Manager::Get()->GetMessageManager()->DebugLog(_T("Error normalizing path: '%s' from '%s'"),out.c_str(),base.c_str());
++                    Manager::Get()->GetMessageManager()->DebugLog(_("Error normalizing path: '%s' from '%s'"),out.c_str(),base.c_str());
+             }
+             // get the compiler
+             wxString CompilerIndex = target->GetCompilerID();
+@@ -306,10 +306,10 @@
+             if (NormalizePath(dir,base))
+             {
+                 parser->AddIncludeDir(dir.GetFullPath());
+-//                Manager::Get()->GetMessageManager()->DebugLog(_T("Parser cmp dir: ") + dir.GetFullPath());
++//                Manager::Get()->GetMessageManager()->DebugLog(_("Parser cmp dir: ") + dir.GetFullPath());
+             }
+             else
+-                Manager::Get()->GetMessageManager()->DebugLog(_T("Error normalizing path: '%s' from '%s'"),out.c_str(),base.c_str());
++                Manager::Get()->GetMessageManager()->DebugLog(_("Error normalizing path: '%s' from '%s'"),out.c_str(),base.c_str());
+         }
+         // find out which compiler, if gnu, do the special trick
+         // to find it's internal include paths
+@@ -317,7 +317,7 @@
+         if(CompilerID == _T("gcc"))
+         { // for starters , only do this for gnu compiler
+             wxLogNull ln; // spare us the error messages; we 'll deal with them on our own
+-//            Manager::Get()->GetMessageManager()->DebugLog(_T("CompilerID ") + CompilerID);
++//            Manager::Get()->GetMessageManager()->DebugLog(_("CompilerID ") + CompilerID);
+             //    wxString Command("mingw32-g++ -v -E -x c++ - < nul");
+             // specifying "< nul", does not seem to work
+             // workaround : create a dummy file (let's hope it does not exist)
+@@ -363,10 +363,10 @@
+                                 if (NormalizePath(dir,base))
+                                 {
+                                     parser->AddIncludeDir(dir.GetFullPath());
+-//                                    Manager::Get()->GetMessageManager()->DebugLog(_T("Parser internal cmp dir: ") + dir.GetFullPath());
++//                                    Manager::Get()->GetMessageManager()->DebugLog(_("Parser internal cmp dir: ") + dir.GetFullPath());
+                                 }
+                                 else
+-                                    Manager::Get()->GetMessageManager()->DebugLog(_T("Error normalizing path: '%s' from '%s'"),out.c_str(),base.c_str());
++                                    Manager::Get()->GetMessageManager()->DebugLog(_("Error normalizing path: '%s' from '%s'"),out.c_str(),base.c_str());
+                             }
+                         }
+                     }
+@@ -378,7 +378,7 @@
+     } // end of while loop over the found compilers
+     if(!nCompilers)
+     {
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("No compilers found!"));
++        Manager::Get()->GetMessageManager()->DebugLog(_("No compilers found!"));
+     }
+     delete [] Compilers;
+ } // end of AddCompilerDirs
+@@ -388,7 +388,7 @@
+     if (!project)
+         return;
+ 
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Add project %s in parsing queue"), project->GetTitle().c_str());
++    Manager::Get()->GetMessageManager()->DebugLog(_("Add project %s in parsing queue"), project->GetTitle().c_str());
+     Parser* parser = &m_Parser;//new Parser(this);
+     AddCompilerDirs(parser, project);
+ 
+@@ -416,7 +416,7 @@
+     }
+     if (!files.IsEmpty())
+     {
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Passing list of files to parse"));
++        Manager::Get()->GetMessageManager()->DebugLog(_("Passing list of files to parse"));
+         parser->BatchParse(files);
+     }
+ }
+@@ -431,7 +431,7 @@
+     }
+     if (!project)
+         return;
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Removing project %s from parsed projects"), project->GetTitle().c_str());
++    Manager::Get()->GetMessageManager()->DebugLog(_("Removing project %s from parsed projects"), project->GetTitle().c_str());
+     for (int i = 0; i < project->GetFilesCount(); ++i)
+     {
+         ProjectFile* pf = project->GetFile(i);
+@@ -495,7 +495,7 @@
+         return false;
+ 
+     // read cache file
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Using parser's existing cache: %s"), projectCache.GetFullPath().c_str());
++    Manager::Get()->GetMessageManager()->DebugLog(_("Using parser's existing cache: %s"), projectCache.GetFullPath().c_str());
+     bool ret = false;
+     try
+     {
+@@ -516,7 +516,7 @@
+         ret = false;
+     }
+     if(!ret)
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Error reading Cache! Re-parsing from scratch."));
++        Manager::Get()->GetMessageManager()->DebugLog(_("Error reading Cache! Re-parsing from scratch."));
+ //    else
+ //        DisplayStatus(parser, project);
+     return ret;
+@@ -536,11 +536,11 @@
+     wxFile f(projectCache.GetFullPath(), wxFile::write);
+     if (!f.IsOpened())
+     {
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Failed updating parser's cache: %s"), projectCache.GetFullPath().c_str());
++        Manager::Get()->GetMessageManager()->DebugLog(_("Failed updating parser's cache: %s"), projectCache.GetFullPath().c_str());
+         return false;
+     }
+ 
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Updating parser's cache: %s"), projectCache.GetFullPath().c_str());
++    Manager::Get()->GetMessageManager()->DebugLog(_("Updating parser's cache: %s"), projectCache.GetFullPath().c_str());
+ 
+     // write cache file
+     wxFileOutputStream fs(f);
+@@ -556,7 +556,7 @@
+     if (!parser)
+         return;
+     long int tim = parser->LastParseTime();
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Parsing stage done (%d total parsed files, %d tokens in %d minute(s), %d.%d seconds)."),
++    Manager::Get()->GetMessageManager()->DebugLog(_("Parsing stage done (%d total parsed files, %d tokens in %d minute(s), %d.%d seconds)."),
+                     parser->GetFilesCount(),
+                     parser->GetTokens()->realsize(),
+                     (tim / 60000),
+@@ -578,7 +578,7 @@
+ 
+ #ifdef DEBUG_CC_AI
+     if (s_DebugSmartSense)
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Parse function arguments"));
++        Manager::Get()->GetMessageManager()->DebugLog(_("Parse function arguments"));
+ #endif
+ 
+     TokenIdxSet proc_result;
+@@ -605,13 +605,13 @@
+                 buffer.Trim();
+ #ifdef DEBUG_CC_AI
+                 if (s_DebugSmartSense)
+-                    Manager::Get()->GetMessageManager()->DebugLog(_T("Parsing arguments: \"%s\""), buffer.c_str());
++                    Manager::Get()->GetMessageManager()->DebugLog(_("Parsing arguments: \"%s\""), buffer.c_str());
+ #endif
+                 if (!buffer.IsEmpty() && !parser->ParseBuffer(buffer, false, false, true))
+                 {
+ #ifdef DEBUG_CC_AI
+                     if (s_DebugSmartSense)
+-                        Manager::Get()->GetMessageManager()->DebugLog(_T("ERROR parsing arguments:\n%s"), buffer.c_str());
++                        Manager::Get()->GetMessageManager()->DebugLog(_("ERROR parsing arguments:\n%s"), buffer.c_str());
+ #endif
+                 }
+             }
+@@ -622,7 +622,7 @@
+     {
+ #ifdef DEBUG_CC_AI
+         if (s_DebugSmartSense)
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Could not determine current function's namespace..."));
++            Manager::Get()->GetMessageManager()->DebugLog(_("Could not determine current function's namespace..."));
+ #endif
+     }
+     return false;
+@@ -642,7 +642,7 @@
+ 
+ #ifdef DEBUG_CC_AI
+     if (s_DebugSmartSense)
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Parse local block"));
++        Manager::Get()->GetMessageManager()->DebugLog(_("Parse local block"));
+ #endif
+ 
+     int blockStart = FindCurrentFunctionStart(ed);
+@@ -660,7 +660,7 @@
+         {
+ #ifdef DEBUG_CC_AI
+             if (s_DebugSmartSense)
+-                Manager::Get()->GetMessageManager()->DebugLog(_T("ERROR parsing block:\n%s"), buffer.c_str());
++                Manager::Get()->GetMessageManager()->DebugLog(_("ERROR parsing block:\n%s"), buffer.c_str());
+ #endif
+         }
+         else
+@@ -685,7 +685,7 @@
+     {
+ #ifdef DEBUG_CC_AI
+         if (s_DebugSmartSense)
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Could not determine current block start..."));
++            Manager::Get()->GetMessageManager()->DebugLog(_("Could not determine current block start..."));
+ #endif
+     }
+     return false;
+@@ -703,7 +703,7 @@
+ 
+ #ifdef DEBUG_CC_AI
+     if (s_DebugSmartSense)
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Parse file scope for \"using namespace\""));
++        Manager::Get()->GetMessageManager()->DebugLog(_("Parse file scope for \"using namespace\""));
+ #endif
+ 
+     wxArrayString ns;
+@@ -733,7 +733,7 @@
+         if (s_DebugSmartSense && parentIdx != -1)
+         {
+             Token* token = tree->at(parentIdx);
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Found %s%s"), token->GetNamespace().c_str(), token->m_Name.c_str());
++            Manager::Get()->GetMessageManager()->DebugLog(_("Found %s%s"), token->GetNamespace().c_str(), token->m_Name.c_str());
+         }
+ #endif
+         search_scope.insert(parentIdx);
+@@ -755,7 +755,7 @@
+         return 0;
+ 
+     if (!parser->Done())
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("C++ Parser is still parsing files..."));
++        Manager::Get()->GetMessageManager()->DebugLog(_("C++ Parser is still parsing files..."));
+     else
+     {
+         // remove old temporaries
+@@ -916,7 +916,7 @@
+         if (!end)
+             break;
+         lineText.Remove(end);
+-//        Manager::Get()->GetMessageManager()->DebugLog(_T("Sending \"%s\" for call-tip"), lineText.c_str());
++//        Manager::Get()->GetMessageManager()->DebugLog(_("Sending \"%s\" for call-tip"), lineText.c_str());
+ 
+         TokensTree* tokens = parser->GetTokens();
+         TokenIdxSet result;
+@@ -951,7 +951,7 @@
+         delete lock;
+     m_GettingCalltips = false;
+     m_CallTipCommas = commas;
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("m_CallTipCommas=%d"), m_CallTipCommas);
++//    Manager::Get()->GetMessageManager()->DebugLog(_("m_CallTipCommas=%d"), m_CallTipCommas);
+     return m_CallTips;
+ }
+ 
+@@ -1073,7 +1073,7 @@
+         }
+     }
+ 
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("at %d (%c): res=%s"), startAt, line.GetChar(startAt), res.c_str());
++//    Manager::Get()->GetMessageManager()->DebugLog(_("at %d (%c): res=%s"), startAt, line.GetChar(startAt), res.c_str());
+     while (startAt < line.Length() && (isalnum(line.GetChar(startAt)) || line.GetChar(startAt) == '_'))
+     {
+         res << line.GetChar(startAt);
+@@ -1137,8 +1137,8 @@
+     bool is_function = false;
+     unsigned int x = FindCCTokenStart(line);
+     wxString res = GetNextCCToken(line, x, is_function);
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("FindCCTokenStart returned %d \"%s\""), x, line.c_str());
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("GetNextCCToken returned %d \"%s\""), x, res.c_str());
++//    Manager::Get()->GetMessageManager()->DebugLog(_("FindCCTokenStart returned %d \"%s\""), x, line.c_str());
++//    Manager::Get()->GetMessageManager()->DebugLog(_("GetNextCCToken returned %d \"%s\""), x, res.c_str());
+ 
+     if (x == line.Length())
+         line.Clear();
+@@ -1165,7 +1165,7 @@
+         else
+             line.Clear();
+     }
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("Left \"%s\""), line.c_str());
++//    Manager::Get()->GetMessageManager()->DebugLog(_("Left \"%s\""), line.c_str());
+ 
+     if (is_function)
+         tokenType = pttFunction;
+@@ -1232,7 +1232,7 @@
+     {
+ #ifdef DEBUG_CC_AI
+         if (s_DebugSmartSense)
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Aborting search: last attempt returned 0 results"));
++            Manager::Get()->GetMessageManager()->DebugLog(_("Aborting search: last attempt returned 0 results"));
+ #endif
+         // but set m_LastAISearchWasGlobal correctly so C++ keywords can be shown
+         std::queue<ParserComponent> components;
+@@ -1246,8 +1246,8 @@
+ #ifdef DEBUG_CC_AI
+     if (s_DebugSmartSense)
+     {
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("========================================================="));
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Doing AI for '%s':"), actual.c_str());
++        Manager::Get()->GetMessageManager()->DebugLog(_("========================================================="));
++        Manager::Get()->GetMessageManager()->DebugLog(_("Doing AI for '%s':"), actual.c_str());
+     }
+ #endif
+ 
+@@ -1267,7 +1267,7 @@
+             if (s_DebugSmartSense)
+             {
+                 Token* parent = parser->GetTokens()->at(token->m_ParentIndex);
+-                Manager::Get()->GetMessageManager()->DebugLog(_T("Adding search namespace: '%s'"), parent ? parent->m_Name.c_str() : _T("Global namespace"));
++                Manager::Get()->GetMessageManager()->DebugLog(_("Adding search namespace: '%s'"), parent ? parent->m_Name.c_str() : _T("Global namespace"));
+             }
+ #endif
+         }
+@@ -1316,7 +1316,7 @@
+         if (s_DebugSmartSense)
+         {
+             Token* scopeToken = tree->at(*it);
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Parent scope: '%s' (%d)"), scopeToken ? scopeToken->m_Name.c_str() : _T("Global namespace"), *it);
++            Manager::Get()->GetMessageManager()->DebugLog(_("Parent scope: '%s' (%d)"), scopeToken ? scopeToken->m_Name.c_str() : _T("Global namespace"), *it);
+         }
+ #endif
+         FindAIMatches(parser, components, result, *it, noPartialMatch, caseSensitive, true, 0xffff, search_scope);
+@@ -1385,7 +1385,7 @@
+ 
+ #ifdef DEBUG_CC_AI
+     if (s_DebugSmartSense)
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("FindAIMatches - enter"));
++        Manager::Get()->GetMessageManager()->DebugLog(_("FindAIMatches - enter"));
+ #endif
+     TokensTree* tree = parser->GetTokens();
+ 
+@@ -1407,7 +1407,7 @@
+     wxString searchtext = parser_component.component;
+ #ifdef DEBUG_CC_AI
+     if (s_DebugSmartSense)
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Search for '%s'"), searchtext.c_str());
++        Manager::Get()->GetMessageManager()->DebugLog(_("Search for '%s'"), searchtext.c_str());
+ #endif
+ 
+     // get a set of matches for the current token
+@@ -1416,7 +1416,7 @@
+ //    tree->FindMatches(searchtext, local_result, caseSensitive || !is_last, is_last && !noPartialMatch);
+ #ifdef DEBUG_CC_AI
+     if (s_DebugSmartSense)
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Looping %d results"), local_result.size());
++        Manager::Get()->GetMessageManager()->DebugLog(_("Looping %d results"), local_result.size());
+ #endif
+ 
+     // loop all matches, and recurse
+@@ -1444,7 +1444,7 @@
+ 
+ #ifdef DEBUG_CC_AI
+         if (s_DebugSmartSense)
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Match: '%s' (%d) : '%s'"), token->m_Name.c_str(), id, token->m_ActualType.c_str());
++            Manager::Get()->GetMessageManager()->DebugLog(_("Match: '%s' (%d) : '%s'"), token->m_Name.c_str(), id, token->m_ActualType.c_str());
+ #endif
+ 
+         // is the token a function or variable (i.e. is not a type)
+@@ -1465,7 +1465,7 @@
+             // until we find a result, or reach -1...
+ #ifdef DEBUG_CC_AI
+             if (s_DebugSmartSense)
+-                Manager::Get()->GetMessageManager()->DebugLog(_T("Looking for type: '%s' (%d components)"), actual.c_str(), type_components.size());
++                Manager::Get()->GetMessageManager()->DebugLog(_("Looking for type: '%s' (%d components)"), actual.c_str(), type_components.size());
+ #endif
+             // search under all search-scope namespaces too
+             TokenIdxSet::iterator itsearch;
+@@ -1476,7 +1476,7 @@
+                 Token* parent = tree->at(search_scope ? *itsearch : parentTokenIdx);
+ #ifdef DEBUG_CC_AI
+                 if (s_DebugSmartSense)
+-                    Manager::Get()->GetMessageManager()->DebugLog(_T(" : looking under '%s'"), parent ? parent->m_Name.c_str() : _T("Global namespace"));
++                    Manager::Get()->GetMessageManager()->DebugLog(_(" : looking under '%s'"), parent ? parent->m_Name.c_str() : _T("Global namespace"));
+ #endif
+                 do
+                 {
+@@ -1511,9 +1511,9 @@
+ #ifdef DEBUG_CC_AI
+                 if (s_DebugSmartSense)
+                 {
+-                    Manager::Get()->GetMessageManager()->DebugLog(_T("Type: '%s' (%d)"), tree->at(id)->m_Name.c_str(), id);
++                    Manager::Get()->GetMessageManager()->DebugLog(_("Type: '%s' (%d)"), tree->at(id)->m_Name.c_str(), id);
+                     if (type_result.size() > 1)
+-                        Manager::Get()->GetMessageManager()->DebugLog(_T("Multiple types matched for '%s': %d results"), token->m_ActualType.c_str(), type_result.size());
++                        Manager::Get()->GetMessageManager()->DebugLog(_("Multiple types matched for '%s': %d results"), token->m_ActualType.c_str(), type_result.size());
+                 }
+ #endif
+             }
+@@ -1528,7 +1528,7 @@
+     }
+ #ifdef DEBUG_CC_AI
+     if (s_DebugSmartSense)
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("FindAIMatches - leave"));
++        Manager::Get()->GetMessageManager()->DebugLog(_("FindAIMatches - leave"));
+ #endif
+     return result.size();
+ }
+@@ -1564,7 +1564,7 @@
+     Token* parent = tree->at(parentIdx);
+ #ifdef DEBUG_CC_AI
+     if (s_DebugSmartSense)
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("GenerateResultSet: search '%s', parent='%s'"), search.c_str(), parent ? parent->m_Name.c_str() : _T("Global namespace"));
++        Manager::Get()->GetMessageManager()->DebugLog(_("GenerateResultSet: search '%s', parent='%s'"), search.c_str(), parent ? parent->m_Name.c_str() : _T("Global namespace"));
+ #endif
+     if (parent)
+     {
+@@ -1716,7 +1716,7 @@
+                 // got it :)
+ #ifdef DEBUG_CC_AI
+                 if (s_DebugSmartSense)
+-                    Manager::Get()->GetMessageManager()->DebugLog(_T("Current function: %s"), token->DisplayName().c_str());
++                    Manager::Get()->GetMessageManager()->DebugLog(_("Current function: %s"), token->DisplayName().c_str());
+ #endif
+                 s_LastNS = token->GetNamespace();
+                 s_LastPROC = token->m_Name;
+Index: src/plugins/codecompletion/parser/parser.cpp
+===================================================================
+--- src/plugins/codecompletion/parser/parser.cpp	(revision 3196)
++++ src/plugins/codecompletion/parser/parser.cpp	(working copy)
+@@ -473,7 +473,7 @@
+                 break;
+         }
+ 
+-//        Manager::Get()->GetMessageManager()->DebugLog(_T("Creating task for: %s"), buffOrFile.c_str());
++//        Manager::Get()->GetMessageManager()->DebugLog(_("Creating task for: %s"), buffOrFile.c_str());
+         ParserThread* thread = new ParserThread(this,
+                                                 buffOrFile,
+                                                 isLocal,
+@@ -494,7 +494,7 @@
+             m_IsBatch = true;
+             m_Pool.BatchBegin();
+         }
+-//        Manager::Get()->GetMessageManager()->DebugLog(_T("parsing %s"),buffOrFile.c_str());
++//        Manager::Get()->GetMessageManager()->DebugLog(_("parsing %s"),buffOrFile.c_str());
+         if(m_IgnoreThreadEvents)
+             m_IgnoreThreadEvents = false;
+         #ifdef CODECOMPLETION_PROFILING
+@@ -586,12 +586,12 @@
+     DisconnectEvents();
+ //    if(m_ShuttingDown)
+ //    {
+-//        Manager::Get()->GetMessageManager()->DebugLog(_T("Terminating threads..."));
++//        Manager::Get()->GetMessageManager()->DebugLog(_("Terminating threads..."));
+ //    }
+     TerminateAllThreads(); //
+ //    if(m_ShuttingDown)
+ //    {
+-//        Manager::Get()->GetMessageManager()->DebugLog(_T("Done."));
++//        Manager::Get()->GetMessageManager()->DebugLog(_("Done."));
+ //    }
+ 
+     Manager::ProcessPendingEvents();
+@@ -741,7 +741,7 @@
+ 
+     for (i = 0; i < tcount; ++i)
+     {
+-        // Manager::Get()->GetMessageManager()->DebugLog(_T("Token #%d, offset %d"),i,f->TellO());
++        // Manager::Get()->GetMessageManager()->DebugLog(_("Token #%d, offset %d"),i,f->TellO());
+         Token* token = m_pTokens->at(i);
+         SaveIntToFile(f,(token!=0) ? 1 : 0);
+         if(token)
+@@ -771,7 +771,7 @@
+ 
+     if(m_IncludeDirs.Index(base) == wxNOT_FOUND)
+     {
+-//        Manager::Get()->GetMessageManager()->DebugLog(_T("Adding %s"), base.c_str());
++//        Manager::Get()->GetMessageManager()->DebugLog(_("Adding %s"), base.c_str());
+         m_IncludeDirs.Add(base);
+     }
+ } // end of AddIncludeDir
+@@ -807,8 +807,8 @@
+                 break;
+         }
+     } // end for : idx : idxSearch
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("Searching %s"), file.c_str());
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("Found %d"), FoundSet.GetCount());
++//    Manager::Get()->GetMessageManager()->DebugLog(_("Searching %s"), file.c_str());
++//    Manager::Get()->GetMessageManager()->DebugLog(_("Found %d"), FoundSet.GetCount());
+     return FoundSet;
+ } // end of FindFileInIncludeDirs
+ 
+@@ -912,7 +912,7 @@
+ void Parser::OnBatchTimer(wxTimerEvent& event)
+ {
+ #ifndef CODECOMPLETION_PROFILING
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Starting batch parsing"));
++    Manager::Get()->GetMessageManager()->DebugLog(_("Starting batch parsing"));
+     if(m_IsBatch)
+     {
+         m_IsBatch = false;
+@@ -934,7 +934,7 @@
+ {
+     if(!m_NeedsReparse || !m_Pool.Done())
+         return false;
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Reparsing saved files..."));
++    Manager::Get()->GetMessageManager()->DebugLog(_("Reparsing saved files..."));
+     m_NeedsReparse = false;
+     std::queue<wxString> files_list;
+     {
+Index: src/plugins/codecompletion/parser/parserthread.cpp
+===================================================================
+--- src/plugins/codecompletion/parser/parserthread.cpp	(revision 3196)
++++ src/plugins/codecompletion/parser/parserthread.cpp	(working copy)
+@@ -313,7 +313,7 @@
+ 
+ bool ParserThread::Parse()
+ {
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("> parsing %s"),m_Filename.c_str());
++//    Manager::Get()->GetMessageManager()->DebugLog(_("> parsing %s"),m_Filename.c_str());
+     if (!InitTokenizer())
+         return false;
+     bool result = false;
+@@ -1314,7 +1314,7 @@
+ 	wxString typ;
+ 	std::queue<wxString> components;
+ 	// get everything on the same line
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("Typedef start"));
++//    Manager::Get()->GetMessageManager()->DebugLog(_("Typedef start"));
+     wxString args;
+     wxString token;
+     wxString peek;
+@@ -1393,9 +1393,9 @@
+             continue;
+         }
+ 
+-//        Manager::Get()->GetMessageManager()->DebugLog(_T(" + '%s'"), token.c_str());
++//        Manager::Get()->GetMessageManager()->DebugLog(_(" + '%s'"), token.c_str());
+ 	}
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("Typedef done"));
++//    Manager::Get()->GetMessageManager()->DebugLog(_("Typedef done"));
+ 
+     if (components.empty())
+         return; // invalid typedef
+@@ -1419,7 +1419,7 @@
+     // no return type
+     m_Str.Clear();
+ 
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("Adding typedef: name '%s', ancestor: '%s'"), components.front().c_str(), ancestor.c_str());
++//    Manager::Get()->GetMessageManager()->DebugLog(_("Adding typedef: name '%s', ancestor: '%s'"), components.front().c_str(), ancestor.c_str());
+     Token* tdef = DoAddToken(tkTypedef, components.front(), lineNr, 0, 0, args);
+     if (tdef)
+     {
+Index: src/plugins/codecompletion/parser/token.cpp
+===================================================================
+--- src/plugins/codecompletion/parser/token.cpp	(revision 3196)
++++ src/plugins/codecompletion/parser/token.cpp	(working copy)
+@@ -755,7 +755,7 @@
+ 
+ void TokensTree::RecalcData()
+ {
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("Calculating full inheritance tree"));
++//    Manager::Get()->GetMessageManager()->DebugLog(_("Calculating full inheritance tree"));
+ 
+     // first loop to convert ancestors string to token indices for each token
+     for (size_t i = 0; i < size(); ++i)
+@@ -774,7 +774,7 @@
+ 
+         token->m_DirectAncestors.clear();
+         token->m_Ancestors.clear();
+-//        Manager::Get()->GetMessageManager()->DebugLog(_T(" : '%s'"), token->m_Name.c_str());
++//        Manager::Get()->GetMessageManager()->DebugLog(_(" : '%s'"), token->m_Name.c_str());
+ 
+         //Manager::Get()->GetMessageManager()->DebugLog("Token %s, Ancestors %s", token->m_Name.c_str(), token->m_AncestorsString.c_str());
+         wxStringTokenizer tkz(token->m_AncestorsString, _T(","));
+@@ -783,7 +783,7 @@
+             wxString ancestor = tkz.GetNextToken();
+             if (ancestor.IsEmpty() || ancestor == token->m_Name)
+                 continue;
+-//            Manager::Get()->GetMessageManager()->DebugLog(_T("Ancestor %s"), ancestor.c_str());
++//            Manager::Get()->GetMessageManager()->DebugLog(_("Ancestor %s"), ancestor.c_str());
+             // ancestors might contain namespaces, e.g. NS::Ancestor
+             if (ancestor.Find(_T("::")) != wxNOT_FOUND)
+             {
+@@ -803,13 +803,13 @@
+                 }
+                 if (ancestorToken && ancestorToken != token && ancestorToken->m_TokenKind == tkClass)// && !ancestorToken->m_IsTypedef)
+                 {
+-//                    Manager::Get()->GetMessageManager()->DebugLog(_T("Resolved to %s"), ancestorToken->m_Name.c_str());
++//                    Manager::Get()->GetMessageManager()->DebugLog(_("Resolved to %s"), ancestorToken->m_Name.c_str());
+                     token->m_Ancestors.insert(ancestorToken->GetSelf());
+                     ancestorToken->m_Descendants.insert(i);
+-//                    Manager::Get()->GetMessageManager()->DebugLog(_T("   + '%s'"), ancestorToken->m_Name.c_str());
++//                    Manager::Get()->GetMessageManager()->DebugLog(_("   + '%s'"), ancestorToken->m_Name.c_str());
+                 }
+ //                else
+-//                    Manager::Get()->GetMessageManager()->DebugLog(_T("   ! '%s' (unresolved)"), ancestor.c_str());
++//                    Manager::Get()->GetMessageManager()->DebugLog(_("   ! '%s' (unresolved)"), ancestor.c_str());
+             }
+             else // no namespaces in ancestor
+             {
+@@ -824,11 +824,11 @@
+                     {
+                         token->m_Ancestors.insert(*it);
+                         ancestorToken->m_Descendants.insert(i);
+-//                        Manager::Get()->GetMessageManager()->DebugLog(_T("   + '%s'"), ancestorToken->m_Name.c_str());
++//                        Manager::Get()->GetMessageManager()->DebugLog(_("   + '%s'"), ancestorToken->m_Name.c_str());
+                     }
+                 }
+ //                if (result.empty())
+-//                    Manager::Get()->GetMessageManager()->DebugLog(_T("   ! '%s' (unresolved)"), ancestor.c_str());
++//                    Manager::Get()->GetMessageManager()->DebugLog(_("   ! '%s' (unresolved)"), ancestor.c_str());
+             }
+         }
+ 
+@@ -868,11 +868,11 @@
+         }
+ 
+ //        // debug loop
+-//        Manager::Get()->GetMessageManager()->DebugLog(_T("Ancestors for %s:"),token->m_Name.c_str());
++//        Manager::Get()->GetMessageManager()->DebugLog(_("Ancestors for %s:"),token->m_Name.c_str());
+ //        for (TokenIdxSet::iterator it = token->m_Ancestors.begin(); it != token->m_Ancestors.end(); it++)
+-//            Manager::Get()->GetMessageManager()->DebugLog(_T(" + %s"), at(*it)->m_Name.c_str());
++//            Manager::Get()->GetMessageManager()->DebugLog(_(" + %s"), at(*it)->m_Name.c_str());
+     }
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("Full inheritance calculated."));
++//    Manager::Get()->GetMessageManager()->DebugLog(_("Full inheritance calculated."));
+ }
+ 
+ // caches the inheritance info for each token (recursive function)
+@@ -890,7 +890,7 @@
+     // only classes take part in inheritance
+     if (!(ancestor->m_TokenKind & (tkClass | tkTypedef)))
+         return;
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("Anc: '%s'"), ancestor->m_Name.c_str());
++//    Manager::Get()->GetMessageManager()->DebugLog(_("Anc: '%s'"), ancestor->m_Name.c_str());
+ 
+     // for all its ancestors
+     for (TokenIdxSet::iterator it = ancestor->m_Ancestors.begin(); it != ancestor->m_Ancestors.end(); it++)
+Index: src/plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- src/plugins/compilergcc/compilergcc.cpp	(revision 3196)
++++ src/plugins/compilergcc/compilergcc.cpp	(working copy)
+@@ -619,7 +619,7 @@
+     m_EnvironmentMsg.Clear();
+ 
+     wxString path;
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("Setting up compiler environment..."));
++//    Manager::Get()->GetMessageManager()->DebugLog(_("Setting up compiler environment..."));
+ 
+     // reset PATH to original value
+     if (!m_OriginalPath.IsEmpty())
+@@ -692,7 +692,7 @@
+     if (binPath.IsEmpty() || !pathList.Member(wxPathOnly(binPath)))
+     {
+         m_EnvironmentMsg << _("Can't find compiler executable in your search path for ") << compiler->GetName() << _T('\n');
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Can't find compiler executable in your search path (%s)..."), compiler->GetName().c_str());
++        Manager::Get()->GetMessageManager()->DebugLog(_("Can't find compiler executable in your search path (%s)..."), compiler->GetName().c_str());
+     }
+     else
+     {
+Index: src/plugins/compilergcc/compilerGDC.cpp
+===================================================================
+--- src/plugins/compilergcc/compilerGDC.cpp	(revision 3196)
++++ src/plugins/compilergcc/compilerGDC.cpp	(working copy)
+@@ -227,7 +227,7 @@
+                 if (ok) {
+                 	name = key.GetName() + _T("\\") + name;
+                     key.SetName(name);
+-                    Manager::Get()->GetMessageManager()->DebugLog(_T("name: %s"), name.c_str());
++                    Manager::Get()->GetMessageManager()->DebugLog(_("name: %s"), name.c_str());
+                     if (key.Exists()) key.QueryValue(_T("InstallLocation"), m_MasterPath);
+                 }
+             }
+Index: src/plugins/compilergcc/compilerMINGW.cpp
+===================================================================
+--- src/plugins/compilergcc/compilerMINGW.cpp	(revision 3196)
++++ src/plugins/compilergcc/compilerMINGW.cpp	(working copy)
+@@ -227,7 +227,7 @@
+                 if (ok) {
+                 	name = key.GetName() + _T("\\") + name;
+                     key.SetName(name);
+-                    Manager::Get()->GetMessageManager()->DebugLog(_T("name: %s"), name.c_str());
++                    Manager::Get()->GetMessageManager()->DebugLog(_("name: %s"), name.c_str());
+                     if (key.Exists()) key.QueryValue(_T("InstallLocation"), m_MasterPath);
+                 }
+             }
+Index: src/plugins/contrib/codesnippets/codesnippetstreectrl.cpp
+===================================================================
+--- src/plugins/contrib/codesnippets/codesnippetstreectrl.cpp	(revision 3196)
++++ src/plugins/contrib/codesnippets/codesnippetstreectrl.cpp	(working copy)
+@@ -174,14 +174,14 @@
+ 		const char* name = node->Attribute("name");
+ 		if (!name)
+ 		{
+-			Manager::Get()->GetMessageManager()->DebugLog(_T("CodeSnippets: Error loading XML file; attribute \"name\" cannot be found."));
++			Manager::Get()->GetMessageManager()->DebugLog(_("CodeSnippets: Error loading XML file; attribute \"name\" cannot be found."));
+ 			return;
+ 		}
+ 
+ 		const char* type = node->Attribute("type");
+ 		if (!type)
+ 		{
+-			Manager::Get()->GetMessageManager()->DebugLog(_T("CodeSnippets: Error loading XML file; attribute \"type\" cannot be found."));
++			Manager::Get()->GetMessageManager()->DebugLog(_("CodeSnippets: Error loading XML file; attribute \"type\" cannot be found."));
+ 			return;
+ 		}
+ 
+@@ -220,13 +220,13 @@
+ 			}
+ 			else
+ 			{
+-				Manager::Get()->GetMessageManager()->DebugLog(_T("CodeSnippets: Error loading XML file; element \"snippet\" cannot be found."));
++				Manager::Get()->GetMessageManager()->DebugLog(_("CodeSnippets: Error loading XML file; element \"snippet\" cannot be found."));
+ 			}
+ 		}
+ 		else
+ 		{
+ 			// Unknown
+-			Manager::Get()->GetMessageManager()->DebugLog(_T("CodeSnippets: Error loading XML file; attribute \"type\" returned \"") + itemType + _T("\" which is invalid item type."));
++			Manager::Get()->GetMessageManager()->DebugLog(_("CodeSnippets: Error loading XML file; attribute \"type\" returned \"") + itemType + _T("\" which is invalid item type."));
+ 			return;
+ 		}
+ 	} // end for
+Index: src/plugins/contrib/codestat/codestatexec.cpp
+===================================================================
+--- src/plugins/contrib/codestat/codestatexec.cpp	(revision 3196)
++++ src/plugins/contrib/codestat/codestatexec.cpp	(working copy)
+@@ -71,7 +71,7 @@
+ 		if (!filename.FileExists())
+ 		{
+ 			++nb_files_not_found;
+-			//Manager::Get()->GetMessageManager()->DebugLog(_T("Code Statistics: Ignoring file '%s' (file not found)"), filename.GetName());
++			//Manager::Get()->GetMessageManager()->DebugLog(_("Code Statistics: Ignoring file '%s' (file not found)"), filename.GetName());
+ 		}
+ 		else
+ 		{
+Index: src/plugins/contrib/envvars/envvars.cpp
+===================================================================
+--- src/plugins/contrib/envvars/envvars.cpp	(revision 3196)
++++ src/plugins/contrib/envvars/envvars.cpp	(working copy)
+@@ -66,7 +66,7 @@
+ {
+ #if TRACE_ENVVARS
+ 	if (Manager::Get() && Manager::Get()->GetMessageManager());
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("OnAttach"));
++    Manager::Get()->GetMessageManager()->DebugLog(_("OnAttach"));
+ #endif
+ 
+   if(!Manager::LoadResource(_T("envvars.zip")))
+@@ -124,7 +124,7 @@
+ {
+ #if TRACE_ENVVARS
+ 	if (Manager::Get() && Manager::Get()->GetMessageManager());
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Configure"));
++    Manager::Get()->GetMessageManager()->DebugLog(_("Configure"));
+ #endif
+ 
+   // Nothing to do (so far...) -> just return success
+@@ -146,7 +146,7 @@
+ {
+ #if TRACE_ENVVARS
+ 	if (Manager::Get() && Manager::Get()->GetMessageManager());
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("LoadSettings"));
++    Manager::Get()->GetMessageManager()->DebugLog(_("LoadSettings"));
+ #endif
+ 
+   wxCheckListBox* lstEnvVars = XRCCTRL(*this, "lstEnvVars", wxCheckListBox);
+@@ -193,7 +193,7 @@
+ {
+ #if TRACE_ENVVARS
+ 	if (Manager::Get() && Manager::Get()->GetMessageManager());
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("SaveSettings"));
++    Manager::Get()->GetMessageManager()->DebugLog(_("SaveSettings"));
+ #endif
+ 
+   ConfigManager *cfg = Manager::Get()->GetConfigManager(_T("envvars"));
+@@ -229,7 +229,7 @@
+ void EnvVarsConfigDlg::OnAddEnvVarClick(wxCommandEvent& WXUNUSED(event))
+ {
+ #if TRACE_ENVVARS
+-	Manager::Get()->GetMessageManager()->DebugLog(_T("OnAddEnvVarClick"));
++	Manager::Get()->GetMessageManager()->DebugLog(_("OnAddEnvVarClick"));
+ #endif
+ 
+   wxCheckListBox* lstEnvVars = XRCCTRL(*this, "lstEnvVars", wxCheckListBox);
+@@ -263,7 +263,7 @@
+ void EnvVarsConfigDlg::OnEditEnvVarClick(wxCommandEvent& WXUNUSED(event))
+ {
+ #if TRACE_ENVVARS
+-	Manager::Get()->GetMessageManager()->DebugLog(_T("OnEditEnvVarClick"));
++	Manager::Get()->GetMessageManager()->DebugLog(_("OnEditEnvVarClick"));
+ #endif
+ 
+   wxCheckListBox* lstEnvVars = XRCCTRL(*this, "lstEnvVars", wxCheckListBox);
+@@ -326,7 +326,7 @@
+ void EnvVarsConfigDlg::OnToggleEnvVarClick(wxCommandEvent& event)
+ {
+ #if TRACE_ENVVARS
+-	Manager::Get()->GetMessageManager()->DebugLog(_T("OnToggleEnvVarClick"));
++	Manager::Get()->GetMessageManager()->DebugLog(_("OnToggleEnvVarClick"));
+ #endif
+ 
+   wxCheckListBox* lstEnvVars = XRCCTRL(*this, "lstEnvVars", wxCheckListBox);
+@@ -363,7 +363,7 @@
+ void EnvVarsConfigDlg::OnDeleteEnvVarClick(wxCommandEvent& WXUNUSED(event))
+ {
+ #if TRACE_ENVVARS
+-	Manager::Get()->GetMessageManager()->DebugLog(_T("OnDeleteEnvVarClick"));
++	Manager::Get()->GetMessageManager()->DebugLog(_("OnDeleteEnvVarClick"));
+ #endif
+ 
+   wxCheckListBox* lstEnvVars = XRCCTRL(*this, "lstEnvVars", wxCheckListBox);
+@@ -393,7 +393,7 @@
+ void EnvVarsConfigDlg::OnClearEnvVarsClick(wxCommandEvent& WXUNUSED(event))
+ {
+ #if TRACE_ENVVARS
+-	Manager::Get()->GetMessageManager()->DebugLog(_T("OnClearEnvVarsClick"));
++	Manager::Get()->GetMessageManager()->DebugLog(_("OnClearEnvVarsClick"));
+ #endif
+ 
+   wxCheckListBox* lstEnvVars = XRCCTRL(*this, "lstEnvVars", wxCheckListBox);
+@@ -443,7 +443,7 @@
+ void EnvVarsConfigDlg::OnSetEnvVarsClick(wxCommandEvent& WXUNUSED(event))
+ {
+ #if TRACE_ENVVARS
+-	Manager::Get()->GetMessageManager()->DebugLog(_T("OnSetEnvVarsClick"));
++	Manager::Get()->GetMessageManager()->DebugLog(_("OnSetEnvVarsClick"));
+ #endif
+ 
+   wxCheckListBox* lstEnvVars = XRCCTRL(*this, "lstEnvVars", wxCheckListBox);
+@@ -491,7 +491,7 @@
+ {
+ #if TRACE_ENVVARS
+ 	if (Manager::Get() && Manager::Get()->GetMessageManager());
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("OnUpdateUI"));
++    Manager::Get()->GetMessageManager()->DebugLog(_("OnUpdateUI"));
+ #endif
+ 
+   wxCheckListBox* lstEnvVars = XRCCTRL(*this, "lstEnvVars", wxCheckListBox);
+Index: src/plugins/contrib/help_plugin/help_plugin.cpp
+===================================================================
+--- src/plugins/contrib/help_plugin/help_plugin.cpp	(revision 3196)
++++ src/plugins/contrib/help_plugin/help_plugin.cpp	(working copy)
+@@ -373,14 +373,14 @@
+   {
+     wxString the_url = helpfile;
+     the_url.Replace(_T("$(keyword)"), keyword);
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Launching %s"), the_url.c_str());
++    Manager::Get()->GetMessageManager()->DebugLog(_("Launching %s"), the_url.c_str());
+ 
+     wxLaunchDefaultBrowser(the_url);
+     return;
+   }
+ 
+   wxFileName the_helpfile = wxFileName(helpfile);
+-  Manager::Get()->GetMessageManager()->DebugLog(_T("Help File is %s"), helpfile.c_str());
++  Manager::Get()->GetMessageManager()->DebugLog(_("Help File is %s"), helpfile.c_str());
+ 
+   if (!(the_helpfile.FileExists()))
+   {
+Index: src/plugins/debuggergdb/cdb_commands.h
+===================================================================
+--- src/plugins/debuggergdb/cdb_commands.h	(revision 3196)
++++ src/plugins/debuggergdb/cdb_commands.h	(working copy)
+@@ -281,7 +281,7 @@
+             m_pWatch(watch)
+         {
+             if (m_pWatch->format != Undefined)
+-                m_pDriver->DebugLog(_T("Watch formats are not supported by this driver"));
++                m_pDriver->DebugLog(_("Watch formats are not supported by this driver"));
+             m_Cmd << _T("?? ") << m_pWatch->keyword;
+         }
+         void ParseOutput(const wxString& output)
+Index: src/plugins/debuggergdb/debuggergdb.cpp
+===================================================================
+--- src/plugins/debuggergdb/debuggergdb.cpp	(revision 3196)
++++ src/plugins/debuggergdb/debuggergdb.cpp	(working copy)
+@@ -558,7 +558,7 @@
+     wxString layout = cfg->Read(config_key, wxEmptyString);
+     if (!layout.IsEmpty())
+     {
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Switching layout to \"%s\""), layout.c_str());
++        Manager::Get()->GetMessageManager()->DebugLog(_("Switching layout to \"%s\""), layout.c_str());
+         CodeBlocksLayoutEvent evt(cbEVT_SWITCH_VIEW_LAYOUT, layout);
+         Manager::Get()->GetAppWindow()->ProcessEvent(evt);
+     }
+@@ -933,8 +933,8 @@
+ 
+     // start the gdb process
+     wxString wdir = project ? project->GetBasePath() : _T(".");
+-    DebugLog(_T("Command-line: ") + cmdline);
+-    DebugLog(_T("Working dir : ") + wdir);
++    DebugLog(_("Command-line: ") + cmdline);
++    DebugLog(_("Working dir : ") + wdir);
+     int ret = LaunchProcess(cmdline, wdir);
+     if (ret != 0)
+         return ret;
+Index: src/plugins/debuggergdb/debuggerstate.cpp
+===================================================================
+--- src/plugins/debuggergdb/debuggerstate.cpp	(revision 3196)
++++ src/plugins/debuggergdb/debuggerstate.cpp	(working copy)
+@@ -140,7 +140,7 @@
+     if (idx != -1)
+         RemoveBreakpoint(idx, true);
+     // create new bp
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("add bp: file=%s, bpfile=%s"), file.c_str(), bpfile.c_str());
++//    Manager::Get()->GetMessageManager()->DebugLog(_("add bp: file=%s, bpfile=%s"), file.c_str(), bpfile.c_str());
+     DebuggerBreakpoint* bp = new DebuggerBreakpoint;
+     bp->filename = bpfile;
+     bp->filenameAsPassed = file;
+Index: src/plugins/debuggergdb/debuggertree.cpp
+===================================================================
+--- src/plugins/debuggergdb/debuggertree.cpp	(revision 3196)
++++ src/plugins/debuggergdb/debuggertree.cpp	(working copy)
+@@ -647,7 +647,7 @@
+         {
+             if (!cmd.IsEmpty()) // Skip empty lines
+             {
+-//                Manager::Get()->GetMessageManager()->DebugLog(_T("Adding watch \"%s\" to debugger:"), keyword);
++//                Manager::Get()->GetMessageManager()->DebugLog(_("Adding watch \"%s\" to debugger:"), keyword);
+                 AddWatch(cmd, Undefined, false); // do not notify about new watch (we 'll do it when done)
+             }
+             if (tf.Eof()) break;
+@@ -659,7 +659,7 @@
+         NotifyForChangedWatches();
+     }
+     else
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Error opening debugger watch file: %s"), fname.c_str());
++        Manager::Get()->GetMessageManager()->DebugLog(_("Error opening debugger watch file: %s"), fname.c_str());
+ }
+ 
+ void DebuggerTree::OnSaveWatchFile(wxCommandEvent& event)
+@@ -710,7 +710,7 @@
+         tf.Close(); // release file handle
+     }
+     else
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Error opening debugger watch file: %s"), fname.c_str());
++        Manager::Get()->GetMessageManager()->DebugLog(_("Error opening debugger watch file: %s"), fname.c_str());
+ }
+ 
+ void DebuggerTree::OnEditWatch(wxCommandEvent& event)
+Index: src/plugins/debuggergdb/gdb_commands.h
+===================================================================
+--- src/plugins/debuggergdb/gdb_commands.h	(revision 3196)
++++ src/plugins/debuggergdb/gdb_commands.h	(working copy)
+@@ -724,7 +724,7 @@
+                 catch (SquirrelError e)
+                 {
+                     m_Cmd = cbC2U(e.desc);
+-                    m_pDriver->DebugLog(_T("Script exception: ") + m_Cmd);
++                    m_pDriver->DebugLog(_("Script exception: ") + m_Cmd);
+                 }
+             }
+         }
+@@ -748,7 +748,7 @@
+                     catch (SquirrelError e)
+                     {
+                         contents << cbC2U(e.desc);
+-                        m_pDriver->DebugLog(_T("Script exception: ") + contents);
++                        m_pDriver->DebugLog(_("Script exception: ") + contents);
+                     }
+                 }
+                 else
+@@ -877,7 +877,7 @@
+                 // #0  main (argc=1, argv=0x3e2440) at my main.cpp:15
+                 if (reBTX.Matches(lines[i]))
+                 {
+-//                    m_pDriver->DebugLog(_T("MATCH!"));
++//                    m_pDriver->DebugLog(_("MATCH!"));
+                     reBTX.GetMatch(lines[i], 1).ToLong(&sf.number);
+                     reBTX.GetMatch(lines[i], 2).ToULong(&sf.address, 16);
+                     sf.function = reBTX.GetMatch(lines[i], 3) + reBTX.GetMatch(lines[i], 4);
+@@ -885,7 +885,7 @@
+                 }
+                 else if (reBT1.Matches(lines[i]))
+                 {
+-//                    m_pDriver->DebugLog(_T("MATCH!"));
++//                    m_pDriver->DebugLog(_("MATCH!"));
+                     reBT1.GetMatch(lines[i], 1).ToLong(&sf.number);
+                     reBT1.GetMatch(lines[i], 2).ToULong(&sf.address, 16);
+                     sf.function = reBT1.GetMatch(lines[i], 3) + reBT1.GetMatch(lines[i], 4);
+Index: src/plugins/debuggergdb/threadsdlg.cpp
+===================================================================
+--- src/plugins/debuggergdb/threadsdlg.cpp	(revision 3196)
++++ src/plugins/debuggergdb/threadsdlg.cpp	(working copy)
+@@ -47,7 +47,7 @@
+ 
+ void ThreadsDlg::AddThread(const wxString& active_mark, const wxString& thread_num, const wxString& thread_info)
+ {
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("Add: mark=%s, num=%s, info=%s"), active_mark.c_str(), thread_num.c_str(), thread_info.c_str());
++//    Manager::Get()->GetMessageManager()->DebugLog(_("Add: mark=%s, num=%s, info=%s"), active_mark.c_str(), thread_num.c_str(), thread_info.c_str());
+     wxListCtrl* lst = XRCCTRL(*this, "lstThreads", wxListCtrl);
+     lst->Freeze();
+     lst->InsertItem(lst->GetItemCount(), active_mark);
+Index: src/plugins/xpmanifest/windowsxplooknfeel.cpp
+===================================================================
+--- src/plugins/xpmanifest/windowsxplooknfeel.cpp	(revision 3196)
++++ src/plugins/xpmanifest/windowsxplooknfeel.cpp	(working copy)
+@@ -95,7 +95,7 @@
+ 		{
+ 			if (tgt->GetTargetType() != ttExecutable)
+ 			{
+-				Manager::Get()->GetMessageManager()->DebugLog(_T("WindowsXPLookNFeel: Ignoring target '%s'"), tgt->GetTitle().c_str());
++				Manager::Get()->GetMessageManager()->DebugLog(_("WindowsXPLookNFeel: Ignoring target '%s'"), tgt->GetTitle().c_str());
+ 				continue;
+ 			}
+ 			targetNames.Add(tgt->GetTitle());
+@@ -106,7 +106,7 @@
+ 	if (!target)
+ 	{
+ 		// not even one executable target...
+-		Manager::Get()->GetMessageManager()->DebugLog(_T("WindowsXPLookNFeel: No executable targets in project"));
++		Manager::Get()->GetMessageManager()->DebugLog(_("WindowsXPLookNFeel: No executable targets in project"));
+ 		return -1;
+ 	}
+ 	else if (targetNames.GetCount() > 1)
+@@ -130,7 +130,7 @@
+ 		wxFileName fname(filename);
+ 		fname.Normalize(wxPATH_NORM_ALL & ~wxPATH_NORM_CASE, project->GetBasePath());
+ 		filename = fname.GetFullPath();
+-		Manager::Get()->GetMessageManager()->DebugLog(_T("WindowsXPLookNFeel: Creating Manifest '%s'"), filename.c_str());
++		Manager::Get()->GetMessageManager()->DebugLog(_("WindowsXPLookNFeel: Creating Manifest '%s'"), filename.c_str());
+ 
+ 		wxString buffer;
+ 		buffer << _T("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>") << _T('\n');
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 3196)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -463,7 +463,7 @@
+ 
+         InitFilename(f);
+     }
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("ctor: Filename=%s\nShort=%s"), m_Filename.c_str(), m_Shortname.c_str());
++//    Manager::Get()->GetMessageManager()->DebugLog(_("ctor: Filename=%s\nShort=%s"), m_Filename.c_str(), m_Shortname.c_str());
+ 
+     // initialize left control (unsplit state)
+     Freeze();
+@@ -1281,7 +1281,7 @@
+     int wordStartPos = control->WordStartPosition(curPos, true);
+     wxString keyword = control->GetTextRange(wordStartPos, curPos);
+     wxString lineIndent = GetLineIndentString(control->GetCurrentLine());
+-    msgMan->DebugLog(_T("Auto-complete keyword: %s"), keyword.c_str());
++    msgMan->DebugLog(_("Auto-complete keyword: %s"), keyword.c_str());
+ 
+     AutoCompleteMap::iterator it;
+     for (it = map.begin(); it != map.end(); ++it)
+@@ -1289,7 +1289,7 @@
+         if (keyword == it->first)
+         {
+             // found; auto-complete it
+-            msgMan->DebugLog(_T("Match found"));
++            msgMan->DebugLog(_("Match found"));
+             control->BeginUndoAction();
+ 
+             // indent code accordingly
+@@ -1309,7 +1309,7 @@
+                     break; // no ending parenthesis
+ 
+                 wxString macroName = code.SubString(macroPos + 2, macroPosEnd - 1);
+-                msgMan->DebugLog(_T("Found macro: %s"), macroName.c_str());
++                msgMan->DebugLog(_("Found macro: %s"), macroName.c_str());
+                 wxString macro = wxGetTextFromUser(_("Please enter the text for \"") + macroName + _T("\":"), _("Macro substitution"));
+                 code.Replace(_T("$(") + macroName + _T(")"), macro);
+                 macroPos = code.Find(_T("$("));
+@@ -2086,7 +2086,7 @@
+         RemoveBreakpoint(m_pData->m_LastMarginMenuLine);
+     else
+         event.Skip();
+-    //Manager::Get()->GetMessageManager()->DebugLog(_T("Leaving OnContextMenuEntry"));
++    //Manager::Get()->GetMessageManager()->DebugLog(_("Leaving OnContextMenuEntry"));
+ }
+ 
+ void cbEditor::OnMarginClick(wxScintillaEvent& event)
+Index: src/sdk/cbeditorprintout.cpp
+===================================================================
+--- src/sdk/cbeditorprintout.cpp	(revision 3196)
++++ src/sdk/cbeditorprintout.cpp	(working copy)
+@@ -57,11 +57,11 @@
+             m_printed = (*m_pPageSelStart)[page-1];
+         else
+         {
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("OnPrintPage ERROR: page = %d , maxpage = %d"), page, maxpage);
++            Manager::Get()->GetMessageManager()->DebugLog(_("OnPrintPage ERROR: page = %d , maxpage = %d"), page, maxpage);
+             return false;
+         }
+ 
+-        //Manager::Get()->GetMessageManager()->DebugLog(_T("OnPrintPage: page %d , m_printed %d"), page, m_printed);
++        //Manager::Get()->GetMessageManager()->DebugLog(_("OnPrintPage: page %d , m_printed %d"), page, m_printed);
+         m_printed = m_TextControl->FormatRange (1, m_printed, m_SelEnd,
+                                                 dc, dc, m_printRect, m_pageRect);
+         return true;
+@@ -137,7 +137,7 @@
+         m_printed = m_SelStart;
+         while (HasPage(*maxPage))
+         {
+-            //Manager::Get()->GetMessageManager()->DebugLog(_T("CountPages: PageCount %d , m_printed %d"), m_pPageSelStart->GetCount(), m_printed);
++            //Manager::Get()->GetMessageManager()->DebugLog(_("CountPages: PageCount %d , m_printed %d"), m_pPageSelStart->GetCount(), m_printed);
+             m_printed = m_TextControl->FormatRange (0, m_printed, m_SelEnd,
+                                              dc, dc, m_printRect, m_pageRect);
+             m_pPageSelStart->Add(m_printed);
+@@ -163,7 +163,7 @@
+     int maxpage = m_pPageSelStart->GetCount();
+     if( startPage > maxpage || endPage > maxpage )
+     {
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("OnBeginDocument ERROR: startPage %d , endPage %d , maxpage %d "), startPage, endPage, maxpage);
++        Manager::Get()->GetMessageManager()->DebugLog(_("OnBeginDocument ERROR: startPage %d , endPage %d , maxpage %d "), startPage, endPage, maxpage);
+         return false;
+     }
+     return result;
+Index: src/sdk/cbplugin.cpp
+===================================================================
+--- src/sdk/cbplugin.cpp	(revision 3196)
++++ src/sdk/cbplugin.cpp	(working copy)
+@@ -101,7 +101,7 @@
+ 
+ void cbPlugin::NotImplemented(const wxString& log) const
+ {
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("%s : not implemented"), log.c_str());
++    Manager::Get()->GetMessageManager()->DebugLog(_("%s : not implemented"), log.c_str());
+ }
+ 
+ /////
+Index: src/sdk/cbproject.cpp
+===================================================================
+--- src/sdk/cbproject.cpp	(revision 3196)
++++ src/sdk/cbproject.cpp	(working copy)
+@@ -362,7 +362,7 @@
+     // in their paths
+     wxString sep = wxFileName::GetPathSeparator();
+     wxFileName base = GetBasePath() + sep;
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Project's base path: %s"), base.GetFullPath().c_str());
++    Manager::Get()->GetMessageManager()->DebugLog(_("Project's base path: %s"), base.GetFullPath().c_str());
+     for (FilesList::Node* node = m_Files.GetFirst(); node; node = node->GetNext())
+     {
+         ProjectFile* f = node->GetData();
+@@ -392,7 +392,7 @@
+         f->SetObjName(f->relativeToCommonTopLevelPath);
+     }
+     m_CommonTopLevelPath = base.GetFullPath();
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Project's common toplevel path: %s"), m_CommonTopLevelPath.c_str());
++    Manager::Get()->GetMessageManager()->DebugLog(_("Project's common toplevel path: %s"), m_CommonTopLevelPath.c_str());
+ }
+ 
+ wxString cbProject::GetCommonTopLevelPath()
+@@ -527,7 +527,7 @@
+                 ProjectFile* f = loader.GetTopProjectFile();
+                 if (f)
+                 {
+-                    Manager::Get()->GetMessageManager()->DebugLog(_T("Top Editor: %s"),f->file.GetFullPath().c_str());
++                    Manager::Get()->GetMessageManager()->DebugLog(_("Top Editor: %s"),f->file.GetFullPath().c_str());
+                     EditorBase* eb = Manager::Get()->GetEditorManager()->Open(f->file.GetFullPath());
+                     if(eb)
+                         eb->Activate();
+@@ -700,7 +700,7 @@
+     FilesList::Node* node = m_Files.Find(pf);
+     if (!node)
+     {
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Can't locate node for ProjectFile* !"));
++        Manager::Get()->GetMessageManager()->DebugLog(_("Can't locate node for ProjectFile* !"));
+     }
+     else
+     {
+@@ -1621,7 +1621,7 @@
+     MessageManager* msgMan = Manager::Get()->GetMessageManager();
+     if (nameOrder.GetCount() != m_Targets.GetCount())
+     {
+-        msgMan->DebugLog(_T("cbProject::ReOrderTargets() : Count does not match (%d sent, %d had)..."), nameOrder.GetCount(), m_Targets.GetCount());
++        msgMan->DebugLog(_("cbProject::ReOrderTargets() : Count does not match (%d sent, %d had)..."), nameOrder.GetCount(), m_Targets.GetCount());
+         return;
+     }
+ 
+@@ -1630,7 +1630,7 @@
+         ProjectBuildTarget* target = GetBuildTarget(nameOrder[i]);
+         if (!target)
+         {
+-            msgMan->DebugLog(_T("cbProject::ReOrderTargets() : Target \"%s\" not found..."), nameOrder[i].c_str());
++            msgMan->DebugLog(_("cbProject::ReOrderTargets() : Target \"%s\" not found..."), nameOrder[i].c_str());
+             break;
+         }
+ 
+Index: src/sdk/cbthreadpool.cpp
+===================================================================
+--- src/sdk/cbthreadpool.cpp	(revision 3196)
++++ src/sdk/cbthreadpool.cpp	(working copy)
+@@ -64,7 +64,7 @@
+       m_threads.back()->Run();
+     }
+ 
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("Concurrent threads for pool set to %d"), m_concurrentThreads);
++//    Manager::Get()->GetMessageManager()->DebugLog(_("Concurrent threads for pool set to %d"), m_concurrentThreads);
+   }
+   else
+   {
+Index: src/sdk/cbworkspace.cpp
+===================================================================
+--- src/sdk/cbworkspace.cpp	(revision 3196)
++++ src/sdk/cbworkspace.cpp	(working copy)
+@@ -75,11 +75,11 @@
+     wxString fname = m_Filename.GetFullPath();
+     if (fname.IsEmpty())
+         return;
+-	Manager::Get()->GetMessageManager()->DebugLog(_T("Loading workspace \"%s\""), fname.c_str());
++	Manager::Get()->GetMessageManager()->DebugLog(_("Loading workspace \"%s\""), fname.c_str());
+ 
+ 	if (!m_Filename.FileExists())
+ 	{
+-		Manager::Get()->GetMessageManager()->DebugLog(_T("File does not exist."));
++		Manager::Get()->GetMessageManager()->DebugLog(_("File does not exist."));
+ 		if (!m_IsDefault)
+ 		{
+             wxString msg;
+@@ -121,7 +121,7 @@
+     if (!force && !m_Modified)
+         return true;
+ 
+-	Manager::Get()->GetMessageManager()->DebugLog(_T("Saving workspace \"%s\""), m_Filename.GetFullPath().c_str());
++	Manager::Get()->GetMessageManager()->DebugLog(_("Saving workspace \"%s\""), m_Filename.GetFullPath().c_str());
+ 	WorkspaceLoader wsp;
+ 	bool ret = wsp.Save(m_Title, m_Filename.GetFullPath());
+     SetModified(!ret);
+Index: src/sdk/compiler.cpp
+===================================================================
+--- src/sdk/compiler.cpp	(revision 3196)
++++ src/sdk/compiler.cpp	(working copy)
+@@ -56,7 +56,7 @@
+ 
+     m_Switches.supportsPCH = false;
+ 
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Added compiler \"%s\""), m_Name.c_str());
++    Manager::Get()->GetMessageManager()->DebugLog(_("Added compiler \"%s\""), m_Name.c_str());
+ }
+ 
+ Compiler::Compiler(const Compiler& other)
+Index: src/sdk/compilerfactory.cpp
+===================================================================
+--- src/sdk/compilerfactory.cpp	(revision 3196)
++++ src/sdk/compilerfactory.cpp	(working copy)
+@@ -112,7 +112,7 @@
+         Compiler* newcompiler = GetCompiler(id);
+         if (compiler == newcompiler)
+         {
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Compiler circular dependency detected?!?!?"));
++            Manager::Get()->GetMessageManager()->DebugLog(_("Compiler circular dependency detected?!?!?"));
+             break;
+         }
+         compiler = newcompiler;
+@@ -171,7 +171,7 @@
+     }
+     RegisterCompiler(newC);
+     newC->LoadSettings(_T("/user_sets"));
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Added compiler \"%s\""), newC->GetName().c_str());
++    Manager::Get()->GetMessageManager()->DebugLog(_("Added compiler \"%s\""), newC->GetName().c_str());
+     return newC; // return the index for the new compiler
+ }
+ 
+@@ -182,7 +182,7 @@
+     Manager::Get()->GetConfigManager(_T("compiler"))->DeleteSubPath(_T("/user_sets/") + compiler->GetID());
+ 
+     Compilers.Remove(compiler);
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Compiler \"%s\" removed"), compiler->GetName().c_str());
++    Manager::Get()->GetMessageManager()->DebugLog(_("Compiler \"%s\" removed"), compiler->GetName().c_str());
+ 
+     Compiler::m_CompilerIDs.Remove(compiler->GetID());
+     delete compiler;
+Index: src/sdk/configmanager.cpp
+===================================================================
+--- src/sdk/configmanager.cpp	(revision 3196)
++++ src/sdk/configmanager.cpp	(working copy)
+@@ -217,7 +217,7 @@
+             }
+             if(Manager::Get()->GetMessageManager())
+             {
+-                Manager::Get()->GetMessageManager()->DebugLog(_T("##### Error loading or parsing remote config file"));
++                Manager::Get()->GetMessageManager()->DebugLog(_("##### Error loading or parsing remote config file"));
+                 Manager::Get()->GetMessageManager()->DebugLog(cbC2U(doc->ErrorDesc()));
+                 doc->ClearError();
+             }
+Index: src/sdk/editormanager.cpp
+===================================================================
+--- src/sdk/editormanager.cpp	(revision 3196)
++++ src/sdk/editormanager.cpp	(working copy)
+@@ -217,9 +217,9 @@
+     ShowOpenFilesTree(Manager::Get()->GetConfigManager(_T("editor"))->ReadBool(_T("/show_opened_files_tree"), true));
+ #endif
+ 
+-Manager::Get()->GetMessageManager()->DebugLog(_T("Initialize EditColourSet ....."));
++Manager::Get()->GetMessageManager()->DebugLog(_("Initialize EditColourSet ....."));
+     m_Theme = new EditorColourSet(Manager::Get()->GetConfigManager(_T("editor"))->Read(_T("/colour_sets/active_colour_set"), COLORSET_DEFAULT));
+-Manager::Get()->GetMessageManager()->DebugLog(_T("Initialize EditColourSet: done."));
++Manager::Get()->GetMessageManager()->DebugLog(_("Initialize EditColourSet: done."));
+ 
+     Manager::Get()->GetAppWindow()->PushEventHandler(this);
+ 
+@@ -533,7 +533,7 @@
+         // as a parameter
+         if(data)
+         {
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("project data set for %s"), data->file.GetFullPath().c_str());
++            Manager::Get()->GetMessageManager()->DebugLog(_("project data set for %s"), data->file.GetFullPath().c_str());
+         }
+         else
+         {
+@@ -544,7 +544,7 @@
+                 ProjectFile* pf = prj->GetFileByFilename(ed->GetFilename(), false);
+                 if (pf)
+                 {
+-                    Manager::Get()->GetMessageManager()->DebugLog(_T("found %s"), pf->file.GetFullPath().c_str());
++                    Manager::Get()->GetMessageManager()->DebugLog(_("found %s"), pf->file.GetFullPath().c_str());
+                     data = pf;
+                     break;
+                 }
+Index: src/sdk/macrosmanager.cpp
+===================================================================
+--- src/sdk/macrosmanager.cpp	(revision 3196)
++++ src/sdk/macrosmanager.cpp	(working copy)
+@@ -93,7 +93,7 @@
+ 
+ void MacrosManager::Reset()
+ {
+-//	Manager::Get()->GetMessageManager()->DebugLog(_T("reset"));
++//	Manager::Get()->GetMessageManager()->DebugLog(_("reset"));
+     m_lastProject = 0;
+     m_lastTarget = 0;
+     m_lastEditor = 0;
+@@ -109,7 +109,7 @@
+ 
+ void MacrosManager::ClearProjectKeys()
+ {
+-//	Manager::Get()->GetMessageManager()->DebugLog(_T("clear"));
++//	Manager::Get()->GetMessageManager()->DebugLog(_("clear"));
+     macros.clear();
+ 
+     macros[_T("AMP")]   = _T("&");
+Index: src/sdk/msvc7loader.cpp
+===================================================================
+--- src/sdk/msvc7loader.cpp	(revision 3196)
++++ src/sdk/msvc7loader.cpp	(working copy)
+@@ -73,24 +73,24 @@
+     m_ConvertSwitches = m_pProject->GetCompilerID().IsSameAs(_T("gcc"));
+     m_ProjectName = wxFileName(filename).GetName();
+ 
+-    pMsg->DebugLog(_T("Importing MSVC 7.xx project: %s"), filename.c_str());
++    pMsg->DebugLog(_("Importing MSVC 7.xx project: %s"), filename.c_str());
+ 
+     TiXmlDocument doc(filename.mb_str());
+     if (!doc.LoadFile())
+         return false;
+ 
+-    pMsg->DebugLog(_T("Parsing project file..."));
++    pMsg->DebugLog(_("Parsing project file..."));
+     TiXmlElement* root;
+ 
+     root = doc.FirstChildElement("VisualStudioProject");
+     if (!root)
+     {
+-        pMsg->DebugLog(_T("Not a valid MS Visual Studio project file..."));
++        pMsg->DebugLog(_("Not a valid MS Visual Studio project file..."));
+         return false;
+     }
+     if (strcmp(root->Attribute("ProjectType"), "Visual C++") != 0)
+     {
+-        pMsg->DebugLog(_T("Project is not Visual C++..."));
++        pMsg->DebugLog(_("Project is not Visual C++..."));
+         return false;
+     }
+ 
+@@ -100,7 +100,7 @@
+     if ((m_Version!=70) && (m_Version!=71))
+     {
+         // seems to work with visual 8 too ;)
+-        pMsg->DebugLog(_T("Project version is '%s'. Although this loader was designed for version 7.xx, will try to import..."), ver.c_str());
++        pMsg->DebugLog(_("Project version is '%s'. Although this loader was designed for version 7.xx, will try to import..."), ver.c_str());
+     }
+ 
+     m_pProject->ClearAllProperties();
+@@ -125,14 +125,14 @@
+     TiXmlElement* config = root->FirstChildElement("Configurations");
+     if (!config)
+     {
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("No 'Configurations' node..."));
++        Manager::Get()->GetMessageManager()->DebugLog(_("No 'Configurations' node..."));
+         return false;
+     }
+ 
+     TiXmlElement* confs = config->FirstChildElement("Configuration");
+     if (!confs)
+     {
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("No 'Configuration' node..."));
++        Manager::Get()->GetMessageManager()->DebugLog(_("No 'Configuration' node..."));
+         return false;
+     }
+ 
+@@ -158,7 +158,7 @@
+         PlaceWindow(&dlg);
+         if (dlg.ShowModal() == wxID_CANCEL)
+         {
+-	            Manager::Get()->GetMessageManager()->DebugLog(_T("Canceled..."));
++	            Manager::Get()->GetMessageManager()->DebugLog(_("Canceled..."));
+             return false;
+         }
+         selected_indices = dlg.GetSelectedIndices();
+@@ -174,12 +174,12 @@
+             confs = confs->NextSiblingElement();
+         if (!confs)
+         {
+-	            Manager::Get()->GetMessageManager()->DebugLog(_T("Cannot find configuration nr %d..."), selected_indices[i]);
++	            Manager::Get()->GetMessageManager()->DebugLog(_("Cannot find configuration nr %d..."), selected_indices[i]);
+             success = false;
+             break;
+         }
+ 
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Importing configuration: %s"), configurations[selected_indices[i]].c_str());
++        Manager::Get()->GetMessageManager()->DebugLog(_("Importing configuration: %s"), configurations[selected_indices[i]].c_str());
+ 
+         // prepare the configuration name
+         m_ConfigurationName = configurations[selected_indices[i]];
+@@ -224,13 +224,13 @@
+         bt->SetTargetType(ttCommandsOnly);
+     else { // typeUnknown 0
+         bt->SetTargetType(ttCommandsOnly);
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("unrecognized project type"));
++        Manager::Get()->GetMessageManager()->DebugLog(_("unrecognized project type"));
+     }
+ 
+     TiXmlElement* tool = conf->FirstChildElement("Tool");
+     if (!tool)
+     {
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("No 'Tool' node..."));
++        Manager::Get()->GetMessageManager()->DebugLog(_("No 'Tool' node..."));
+         return false;
+     }
+ 
+Index: src/sdk/msvc7workspaceloader.cpp
+===================================================================
+--- src/sdk/msvc7workspaceloader.cpp	(revision 3196)
++++ src/sdk/msvc7workspaceloader.cpp	(working copy)
+@@ -101,7 +101,7 @@
+         line.Trim(false);
+         if (line != _T("Microsoft Visual Studio Solution File"))
+         {
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Unsupported format."));
++            Manager::Get()->GetMessageManager()->DebugLog(_("Unsupported format."));
+             return false;
+         }
+         line = comps.GetCount() > 1 ? comps[1] : wxString(wxEmptyString);
+@@ -109,7 +109,7 @@
+         line.Trim(false);
+         wxString _version = line.AfterLast(' '); // want the version number
+         if ((_version != _T("7.00")) && (_version != _T("8.00")))
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Version not recognized. Will try to parse though..."));
++            Manager::Get()->GetMessageManager()->DebugLog(_("Version not recognized. Will try to parse though..."));
+     }
+ 
+     ImportersGlobals::UseDefaultCompiler = !askForCompiler;
+@@ -126,7 +126,7 @@
+     bool global = false;  // global section or project section?
+     wxFileName wfname = filename;
+     wfname.Normalize();
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Workspace dir: %s"), wfname.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR).c_str());
++    Manager::Get()->GetMessageManager()->DebugLog(_("Workspace dir: %s"), wfname.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR).c_str());
+     while (!file.Eof())
+     {
+         wxString line = input.ReadLine();
+@@ -174,7 +174,7 @@
+             ++count;
+             wxFileName fname(UnixFilename(prjFile));
+             fname.Normalize(wxPATH_NORM_ALL, wfname.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR), wxPATH_NATIVE);
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Found project '%s' in '%s'"), prjTitle.c_str(), fname.GetFullPath().c_str());
++            Manager::Get()->GetMessageManager()->DebugLog(_("Found project '%s' in '%s'"), prjTitle.c_str(), fname.GetFullPath().c_str());
+             project = Manager::Get()->GetProjectManager()->LoadProject(fname.GetFullPath(), false);
+             if (!firstproject) firstproject = project;
+             if (project) registerProject(uuid, project);
+Index: src/sdk/msvcloader.cpp
+===================================================================
+--- src/sdk/msvcloader.cpp	(revision 3196)
++++ src/sdk/msvcloader.cpp	(working copy)
+@@ -61,7 +61,7 @@
+         return false;
+ 
+     // the file is read, now process it
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Importing MSVC project: %s"), filename.c_str());
++    Manager::Get()->GetMessageManager()->DebugLog(_("Importing MSVC project: %s"), filename.c_str());
+ 
+     // delete all targets of the project (we 'll create new ones from the imported configurations)
+     while (m_pProject->GetBuildTargetsCount())
+@@ -81,7 +81,7 @@
+         PlaceWindow(&dlg);
+         if (dlg.ShowModal() == wxID_CANCEL)
+         {
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Canceled..."));
++            Manager::Get()->GetMessageManager()->DebugLog(_("Canceled..."));
+             return false;
+         }
+         selected_indices = dlg.GetSelectedIndices();
+@@ -141,10 +141,10 @@
+                 else if (projcode.Matches(_T("010a"))) type = ttCommandsOnly;
+                 else {
+                   type = ttCommandsOnly;
+-                  Manager::Get()->GetMessageManager()->DebugLog(_T("unrecognized target type"));
++                  Manager::Get()->GetMessageManager()->DebugLog(_("unrecognized target type"));
+                 }
+ 
+-                //Manager::Get()->GetMessageManager()->DebugLog(_T("TargType '%s' is %d"), targtype.c_str(), type);
++                //Manager::Get()->GetMessageManager()->DebugLog(_("TargType '%s' is %d"), targtype.c_str(), type);
+                 m_TargType[targtype] = type;
+             }
+             continue;
+@@ -158,7 +158,7 @@
+             wxArrayString projectTarget = GetArrayFromString(line.Left(pos), _T("-"));
+             wxString target = projectTarget[1];
+             if (projectTarget.GetCount() != 2) {
+-                Manager::Get()->GetMessageManager()->DebugLog(_T("ERROR: bad target format"));
++                Manager::Get()->GetMessageManager()->DebugLog(_("ERROR: bad target format"));
+                 return false;
+             }
+             line.Remove(0, pos+1);
+@@ -170,11 +170,11 @@
+             HashTargetType::iterator it = m_TargType.find(basedon);
+             if (it != m_TargType.end()) type = it->second;
+             else {
+-                Manager::Get()->GetMessageManager()->DebugLog(_T("ERROR: target type not found"));
++                Manager::Get()->GetMessageManager()->DebugLog(_("ERROR: target type not found"));
+                 return false;
+             }
+             m_TargetBasedOn[target] = type;
+-            //Manager::Get()->GetMessageManager()->DebugLog(_T("Target '%s' type %d"), target.c_str(), type);
++            //Manager::Get()->GetMessageManager()->DebugLog(_("Target '%s' type %d"), target.c_str(), type);
+         }
+         else if (line.StartsWith(_T("!IF  \"$(CFG)\" ==")))
+             size = 16;
+@@ -203,7 +203,7 @@
+             {
+                 m_Configurations.Add(tmp);
+                 m_ConfigurationsLineIndex.Add(currentLine);
+-                Manager::Get()->GetMessageManager()->DebugLog(_T("Detected configuration '%s' at line %d"), tmp.c_str(), currentLine);
++                Manager::Get()->GetMessageManager()->DebugLog(_("Detected configuration '%s' at line %d"), tmp.c_str(), currentLine);
+             }
+         }
+     }
+@@ -224,7 +224,7 @@
+     m_Type = ttCommandsOnly;
+     HashTargetType::iterator it = m_TargetBasedOn.find(m_Configurations[index]);
+     if (it != m_TargetBasedOn.end()) m_Type = it->second;
+-    else Manager::Get()->GetMessageManager()->DebugLog(_T("ERROR: could not find the target type of %s"), m_Configurations[index].c_str());
++    else Manager::Get()->GetMessageManager()->DebugLog(_("ERROR: could not find the target type of %s"), m_Configurations[index].c_str());
+     bt->SetTargetType(m_Type);
+     bt->SetOutputFilename(bt->SuggestOutputFilename());
+ 
+@@ -438,7 +438,7 @@
+             else if (opt.Matches(_T("/U")))
+                 target->AddCompilerOption(_T("/U") + RemoveQuotes(array[++i]));
+             else if (opt.StartsWith(_T("/Yu")))
+-                Manager::Get()->GetMessageManager()->DebugLog(_T("Ignoring precompiled headers option (/Yu)"));
++                Manager::Get()->GetMessageManager()->DebugLog(_("Ignoring precompiled headers option (/Yu)"));
+             else if (opt.Matches(_T("/c")) || opt.Matches(_T("/nologo"))) {} // do nothing
+             else
+                 target->AddCompilerOption(opt);
+@@ -487,7 +487,7 @@
+                 // do nothing; it is handled below, in common options
+             }
+             else
+-                Manager::Get()->GetMessageManager()->DebugLog(_T("Unknown linker option: " + opt));
++                Manager::Get()->GetMessageManager()->DebugLog(_("Unknown linker option: " + opt));
+         }
+         else // !m_ConvertSwitches
+         {
+Index: src/sdk/msvcworkspacebase.cpp
+===================================================================
+--- src/sdk/msvcworkspacebase.cpp	(revision 3196)
++++ src/sdk/msvcworkspacebase.cpp	(working copy)
+@@ -44,7 +44,7 @@
+             it->second._dependencyList.Add(dependencyID.Lower());
+     }
+     else {
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("ERROR: project id not found: %s"), projectID.c_str());
++        Manager::Get()->GetMessageManager()->DebugLog(_("ERROR: project id not found: %s"), projectID.c_str());
+     }
+ }
+ 
+@@ -53,12 +53,12 @@
+ }
+ 
+ void MSVCWorkspaceBase::addConfigurationMatching(const wxString& projectID, const wxString& workspConfig, const wxString& projConfig) {
+-    //Manager::Get()->GetMessageManager()->DebugLog(_T("adding conf match: '%s' - '%s'"), workspConfig.c_str(), projConfig.c_str());
++    //Manager::Get()->GetMessageManager()->DebugLog(_("adding conf match: '%s' - '%s'"), workspConfig.c_str(), projConfig.c_str());
+     HashProjects::iterator it = _projects.find(projectID);
+     if (it != _projects.end()) {
+         it->second._configurations[workspConfig] = projConfig;
+     }
+-    else Manager::Get()->GetMessageManager()->DebugLog(_T("ERROR: project id not found: %s"), projectID.c_str());
++    else Manager::Get()->GetMessageManager()->DebugLog(_("ERROR: project id not found: %s"), projectID.c_str());
+ }
+ 
+ void MSVCWorkspaceBase::updateProjects() {
+@@ -72,7 +72,7 @@
+     unsigned int j;
+     int k;
+ 
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Update projects"));
++    Manager::Get()->GetMessageManager()->DebugLog(_("Update projects"));
+ 
+     // no per-workspace config for msvc6, so build a fake one ;)
+     if (_workspaceConfigurations.IsEmpty()) {
+@@ -83,7 +83,7 @@
+                 wxString s = proj._project->GetBuildTarget(k)->GetTitle();
+                 if (_workspaceConfigurations.Index(s) == wxNOT_FOUND) {
+                     _workspaceConfigurations.Add(s);
+-                    Manager::Get()->GetMessageManager()->DebugLog(_T("workspace config: '%s'"), s.c_str());
++                    Manager::Get()->GetMessageManager()->DebugLog(_("workspace config: '%s'"), s.c_str());
+                 }
+             }
+         }
+@@ -91,7 +91,7 @@
+ 
+     for (projIt = _projects.begin(); projIt != _projects.end(); ++projIt) {
+         proj = projIt->second;
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Project %s, %d dependencies"), proj._project->GetTitle().c_str(), proj._dependencyList.GetCount());
++        Manager::Get()->GetMessageManager()->DebugLog(_("Project %s, %d dependencies"), proj._project->GetTitle().c_str(), proj._dependencyList.GetCount());
+         for (i=0; i<proj._dependencyList.GetCount(); ++i) {
+             depIt = _projects.find(proj._dependencyList[i]);
+             if ( depIt != _projects.end()) { // dependency found
+@@ -114,7 +114,7 @@
+                             // look for a project config which is a substring of the workspace config
+                             for (int k=0; k<proj._project->GetBuildTargetsCount(); ++k) {
+                                 pconfig = proj._project->GetBuildTarget(k)->GetTitle();
+-                                //Manager::Get()->GetMessageManager()->DebugLog(_T("Test: %s <-> %s"), wconfig.c_str(), pconfig.c_str());
++                                //Manager::Get()->GetMessageManager()->DebugLog(_("Test: %s <-> %s"), wconfig.c_str(), pconfig.c_str());
+                                 if (wconfig.StartsWith(pconfig) || pconfig.StartsWith(wconfig))
+                                     targetProj = proj._project->GetBuildTarget(k);
+                             }
+@@ -134,7 +134,7 @@
+                             // look for a project config which is a substring of the workspace config
+                             for (int k=0; k<dep._project->GetBuildTargetsCount(); ++k) {
+                                 pconfig = dep._project->GetBuildTarget(k)->GetTitle();
+-                                //Manager::Get()->GetMessageManager()->DebugLog(_T("Test: %s <-> %s"), wconfig.c_str(), pconfig.c_str());
++                                //Manager::Get()->GetMessageManager()->DebugLog(_("Test: %s <-> %s"), wconfig.c_str(), pconfig.c_str());
+                                 if (wconfig.StartsWith(pconfig) || pconfig.StartsWith(wconfig))
+                                     targetDep = dep._project->GetBuildTarget(k);
+                             }
+@@ -148,11 +148,11 @@
+                     }
+ 
+                     if ((targetDep==0) || (targetProj==0)) {
+-                        Manager::Get()->GetMessageManager()->DebugLog(_T("ERROR: could not find targets"));
++                        Manager::Get()->GetMessageManager()->DebugLog(_("ERROR: could not find targets"));
+                         continue;
+                     }
+ 
+-                    Manager::Get()->GetMessageManager()->DebugLog(_T("Match '%s' to '%s'"), targetProj->GetFullTitle().c_str(), targetDep->GetFullTitle().c_str());
++                    Manager::Get()->GetMessageManager()->DebugLog(_("Match '%s' to '%s'"), targetProj->GetFullTitle().c_str(), targetDep->GetFullTitle().c_str());
+ 
+                     // now, update dependencies
+                     TargetType type = targetDep->GetTargetType();
+@@ -177,7 +177,7 @@
+                }
+             }
+             else {
+-                Manager::Get()->GetMessageManager()->DebugLog(_T("ERROR: dependency not found %s"), proj._dependencyList[i].c_str());
++                Manager::Get()->GetMessageManager()->DebugLog(_("ERROR: dependency not found %s"), proj._dependencyList[i].c_str());
+             }
+         }
+     }
+Index: src/sdk/msvcworkspaceloader.cpp
+===================================================================
+--- src/sdk/msvcworkspaceloader.cpp	(revision 3196)
++++ src/sdk/msvcworkspaceloader.cpp	(working copy)
+@@ -79,7 +79,7 @@
+         wxString line = input.ReadLine();
+         if (line.IsEmpty())
+         {
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Unsupported format."));
++            Manager::Get()->GetMessageManager()->DebugLog(_("Unsupported format."));
+             return false;
+         }
+         comps = GetArrayFromString(line, _T(","));
+@@ -88,14 +88,14 @@
+         line.Trim(false);
+         if (line != _T("Microsoft Developer Studio Workspace File"))
+         {
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Unsupported format."));
++            Manager::Get()->GetMessageManager()->DebugLog(_("Unsupported format."));
+             return false;
+         }
+         line = comps.GetCount() > 1 ? comps[1] : wxString(wxEmptyString);
+         line.Trim(true);
+         line.Trim(false);
+         if (line != _T("Format Version 6.00"))
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Format not recognized. Will try to parse though..."));
++            Manager::Get()->GetMessageManager()->DebugLog(_("Format not recognized. Will try to parse though..."));
+     }
+ 
+     ImportersGlobals::UseDefaultCompiler = !askForCompiler;
+@@ -106,7 +106,7 @@
+     cbProject* firstproject = 0;
+     wxFileName wfname = filename;
+     wfname.Normalize();
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Workspace dir: %s"), wfname.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR).c_str());
++    Manager::Get()->GetMessageManager()->DebugLog(_("Workspace dir: %s"), wfname.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR).c_str());
+     while (!file.Eof())
+     {
+         wxString line = input.ReadLine();
+@@ -155,7 +155,7 @@
+           ++count;
+           wxFileName fname(UnixFilename(prjFile));
+           fname.Normalize(wxPATH_NORM_ALL, wfname.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR), wxPATH_NATIVE);
+-          Manager::Get()->GetMessageManager()->DebugLog(_T("Found project '%s' in '%s'"), prjTitle.c_str(), fname.GetFullPath().c_str());
++          Manager::Get()->GetMessageManager()->DebugLog(_("Found project '%s' in '%s'"), prjTitle.c_str(), fname.GetFullPath().c_str());
+           project = Manager::Get()->GetProjectManager()->LoadProject(fname.GetFullPath(), false);
+           if (!firstproject) firstproject = project;
+           if (project) registerProject(project->GetTitle(), project);
+Index: src/sdk/pluginmanager.cpp
+===================================================================
+--- src/sdk/pluginmanager.cpp	(revision 3196)
++++ src/sdk/pluginmanager.cpp	(working copy)
+@@ -573,7 +573,7 @@
+     if (!ReadManifestFile(m_CurrentlyLoadingFilename, name, &info) ||
+         info.name.IsEmpty())
+     {
+-        LOG_ERROR(_T("Invalid manifest file for: ") + name);
++        LOG_ERROR(_("Invalid manifest file for: ") + name);
+         return;
+     }
+ 
+@@ -631,7 +631,7 @@
+         actual = ConfigManager::LocateDataFile(actual, sdPluginsUser | sdDataUser | sdPluginsGlobal | sdDataGlobal);
+         if (actual.IsEmpty())
+         {
+-            LOG_ERROR(_T("Plugin resource not found: %s"), fname.GetFullName().c_str());
++            LOG_ERROR(_("Plugin resource not found: %s"), fname.GetFullName().c_str());
+             return false; // not found
+         }
+ 
+@@ -653,7 +653,7 @@
+         }
+         else
+         {
+-            LOG_ERROR(_T("No plugin manifest file in resource: %s"), actual.c_str());
++            LOG_ERROR(_("No plugin manifest file in resource: %s"), actual.c_str());
+             delete fs;
+             return false;
+         }
+@@ -841,7 +841,7 @@
+     m_pCurrentlyLoadingLib = LibLoader::LoadLibrary(pluginName);
+     if (!m_pCurrentlyLoadingLib->IsLoaded())
+     {
+-        LOG_ERROR(_T("%s: not loaded (missing symbols?)"), pluginName.c_str());
++        LOG_ERROR(_("%s: not loaded (missing symbols?)"), pluginName.c_str());
+         LibLoader::RemoveLibrary(m_pCurrentlyLoadingLib);
+         m_pCurrentlyLoadingLib = 0;
+         m_CurrentlyLoadingFilename.Clear();
+@@ -879,7 +879,7 @@
+ 
+         SetupLocaleDomain(pr.name);
+ 
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("%s: loaded"), pr.name.c_str());
++        Manager::Get()->GetMessageManager()->DebugLog(_("%s: loaded"), pr.name.c_str());
+     }
+ 
+     if (m_RegisteredPlugins.empty())
+@@ -1071,7 +1071,7 @@
+     {
+         if (plug->GetType() != ptTool)
+         {
+-            LOG_ERROR(_T("Plugin %s is not a tool to have Execute() method!"), elem->info.name.c_str());
++            LOG_ERROR(_("Plugin %s is not a tool to have Execute() method!"), elem->info.name.c_str());
+         }
+         else
+         {
+Index: src/sdk/projectlayoutloader.cpp
+===================================================================
+--- src/sdk/projectlayoutloader.cpp	(revision 3196)
++++ src/sdk/projectlayoutloader.cpp	(working copy)
+@@ -66,7 +66,7 @@
+         root = doc.FirstChildElement("Code::Blocks_layout_file");
+         if (!root)
+         {
+-            pMsg->DebugLog(_T("Not a valid Code::Blocks layout file..."));
++            pMsg->DebugLog(_("Not a valid Code::Blocks layout file..."));
+             return false;
+         }
+     }
+@@ -81,7 +81,7 @@
+     elem = root->FirstChildElement("File");
+     if (!elem)
+     {
+-        //pMsg->DebugLog(_T("No 'File' element in file..."));
++        //pMsg->DebugLog(_("No 'File' element in file..."));
+         return false;
+     }
+ 
+@@ -91,7 +91,7 @@
+         fname = cbC2U(elem->Attribute("name"));
+         if (fname.IsEmpty())
+         {
+-            //pMsg->DebugLog(_T("'File' node exists, but no filename?!?"));
++            //pMsg->DebugLog(_("'File' node exists, but no filename?!?"));
+             pf = 0L;
+         }
+         else
+Index: src/sdk/projectloader.cpp
+===================================================================
+--- src/sdk/projectloader.cpp	(revision 3196)
++++ src/sdk/projectloader.cpp	(working copy)
+@@ -54,12 +54,12 @@
+         return false;
+ 
+     wxStopWatch sw;
+-    pMsg->DebugLog(_T("Loading project file..."));
++    pMsg->DebugLog(_("Loading project file..."));
+     TiXmlDocument doc(filename.mb_str());
+     if (!doc.LoadFile())
+         return false;
+ 
+-    pMsg->DebugLog(_T("Parsing project file..."));
++    pMsg->DebugLog(_("Parsing project file..."));
+     TiXmlElement* root;
+     TiXmlElement* proj;
+ 
+@@ -70,14 +70,14 @@
+         root = doc.FirstChildElement("Code::Blocks_project_file");
+         if (!root)
+         {
+-            pMsg->DebugLog(_T("Not a valid Code::Blocks project file..."));
++            pMsg->DebugLog(_("Not a valid Code::Blocks project file..."));
+             return false;
+         }
+     }
+     proj = root->FirstChildElement("Project");
+     if (!proj)
+     {
+-        pMsg->DebugLog(_T("No 'Project' element in file..."));
++        pMsg->DebugLog(_("No 'Project' element in file..."));
+         return false;
+     }
+ 
+@@ -94,12 +94,12 @@
+             (major == 1 && minor < 2))
+         {
+             // pre-1.2
+-            pMsg->DebugLog(_T("Project version is %d.%d. Defaults have changed since then..."), major, minor);
++            pMsg->DebugLog(_("Project version is %d.%d. Defaults have changed since then..."), major, minor);
+             m_IsPre_1_2 = true;
+         }
+         else if (major >= PROJECT_FILE_VERSION_MAJOR && minor > PROJECT_FILE_VERSION_MINOR)
+         {
+-            pMsg->DebugLog(_T("Project version is > %d.%d. Trying to load..."), PROJECT_FILE_VERSION_MAJOR, PROJECT_FILE_VERSION_MINOR);
++            pMsg->DebugLog(_("Project version is > %d.%d. Trying to load..."), PROJECT_FILE_VERSION_MAJOR, PROJECT_FILE_VERSION_MINOR);
+             AnnoyingDialog dlg(_("Project file format is newer/unknown"),
+                                 _("This project file was saved with a newer version of Code::Blocks.\n"
+                                 "Will try to load, but you should make sure all the settings were loaded correctly..."),
+@@ -415,7 +415,7 @@
+ 
+         if (target)
+         {
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Loading target %s"), title.c_str());
++            Manager::Get()->GetMessageManager()->DebugLog(_("Loading target %s"), title.c_str());
+             DoBuildTargetOptions(node, target);
+             DoCompilerOptions(node, target);
+             DoResourceCompilerOptions(node, target);
+@@ -767,7 +767,7 @@
+ 
+ void ProjectLoader::DoUnits(TiXmlElement* parentNode)
+ {
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Loading project files..."));
++    Manager::Get()->GetMessageManager()->DebugLog(_("Loading project files..."));
+     int count = 0;
+     TiXmlElement* unit = parentNode->FirstChildElement("Unit");
+     while (unit)
+@@ -777,7 +777,7 @@
+         {
+             ProjectFile* file = m_pProject->AddFile(-1, UnixFilename(filename));
+             if (!file)
+-                Manager::Get()->GetMessageManager()->DebugLog(_T("Can't load file '%s'"), filename.c_str());
++                Manager::Get()->GetMessageManager()->DebugLog(_("Can't load file '%s'"), filename.c_str());
+             else
+             {
+                 ++count;
+@@ -787,7 +787,7 @@
+ 
+         unit = unit->NextSiblingElement("Unit");
+     }
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("%d files loaded"), count);
++    Manager::Get()->GetMessageManager()->DebugLog(_("%d files loaded"), count);
+ }
+ 
+ void ProjectLoader::DoUnitOptions(TiXmlElement* parentNode, ProjectFile* file)
+Index: src/sdk/projectmanager.cpp
+===================================================================
+--- src/sdk/projectmanager.cpp	(revision 3196)
++++ src/sdk/projectmanager.cpp	(working copy)
+@@ -1454,7 +1454,7 @@
+         arr->Add(dependsOn);
+         if (m_pWorkspace)
+             m_pWorkspace->SetModified(true);
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("%s now depends on %s (%d deps)"), base->GetTitle().c_str(), dependsOn->GetTitle().c_str(), arr->GetCount());
++        Manager::Get()->GetMessageManager()->DebugLog(_("%s now depends on %s (%d deps)"), base->GetTitle().c_str(), dependsOn->GetTitle().c_str(), arr->GetCount());
+     }
+     return true;
+ }
+@@ -1471,7 +1471,7 @@
+     ProjectsArray* arr = it->second;
+     arr->Remove(doesNotDependOn);
+ 
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("%s now does not depend on %s (%d deps)"), base->GetTitle().c_str(), doesNotDependOn->GetTitle().c_str(), arr->GetCount());
++    Manager::Get()->GetMessageManager()->DebugLog(_("%s now does not depend on %s (%d deps)"), base->GetTitle().c_str(), doesNotDependOn->GetTitle().c_str(), arr->GetCount());
+     // if it was the last dependency, delete the array
+     if (!arr->GetCount())
+     {
+@@ -1495,7 +1495,7 @@
+     if (m_pWorkspace)
+         m_pWorkspace->SetModified(true);
+ 
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Removed all deps from %s"), base->GetTitle().c_str());
++    Manager::Get()->GetMessageManager()->DebugLog(_("Removed all deps from %s"), base->GetTitle().c_str());
+ }
+ 
+ void ProjectManager::RemoveProjectFromAllDependencies(cbProject* base)
+@@ -1533,7 +1533,7 @@
+         else
+             ++it;
+     }
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Removed %s from all deps"), base->GetTitle().c_str());
++    Manager::Get()->GetMessageManager()->DebugLog(_("Removed %s from all deps"), base->GetTitle().c_str());
+ }
+ 
+ const ProjectsArray* ProjectManager::GetDependenciesForProject(cbProject* base)
+@@ -1916,11 +1916,11 @@
+                 ProjectFile* pf = prj->GetFile(indices[i]);
+                 if (!pf)
+                 {
+-                    Manager::Get()->GetMessageManager()->DebugLog(_T("Invalid project file: Index %d"), indices[i]);
++                    Manager::Get()->GetMessageManager()->DebugLog(_("Invalid project file: Index %d"), indices[i]);
+                     continue;
+                 }
+                 wxString filename = pf->file.GetFullPath();
+-                Manager::Get()->GetMessageManager()->DebugLog(_T("Removing index %d, %s"), indices[i], filename.c_str());
++                Manager::Get()->GetMessageManager()->DebugLog(_("Removing index %d, %s"), indices[i], filename.c_str());
+                 prj->RemoveFile(indices[i]);
+                 CodeBlocksEvent evt(cbEVT_PROJECT_FILE_REMOVED);
+                 evt.SetProject(prj);
+@@ -2119,7 +2119,7 @@
+ {
+     if (!m_pActiveProject)
+     {
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("No active project!"));
++        Manager::Get()->GetMessageManager()->DebugLog(_("No active project!"));
+         return;
+     }
+ 
+Index: src/sdk/projecttemplateloader.cpp
+===================================================================
+--- src/sdk/projecttemplateloader.cpp	(revision 3196)
++++ src/sdk/projecttemplateloader.cpp	(working copy)
+@@ -41,7 +41,7 @@
+     if (!pMsg)
+         return false;
+ 
+-//    pMsg->DebugLog(_T("Reading template file %s"), filename.c_str());
++//    pMsg->DebugLog(_("Reading template file %s"), filename.c_str());
+ 
+     TiXmlDocument doc(filename.mb_str());
+     if (!doc.LoadFile())
+@@ -56,7 +56,7 @@
+         root = doc.FirstChildElement("Code::Blocks_template_file");
+         if (!root)
+         {
+-            pMsg->DebugLog(_T("Not a valid Code::Blocks template file..."));
++            pMsg->DebugLog(_("Not a valid Code::Blocks template file..."));
+             return false;
+         }
+     }
+Index: src/sdk/scriptingmanager.cpp
+===================================================================
+--- src/sdk/scriptingmanager.cpp	(revision 3196)
++++ src/sdk/scriptingmanager.cpp	(working copy)
+@@ -70,7 +70,7 @@
+         f.Open(fname);
+         if(!f.IsOpened())
+         {
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Can't open script %s"), filename.c_str());
++            Manager::Get()->GetMessageManager()->DebugLog(_("Can't open script %s"), filename.c_str());
+             return false;
+         }
+     }
+Index: src/sdk/templatemanager.cpp
+===================================================================
+--- src/sdk/templatemanager.cpp	(revision 3196)
++++ src/sdk/templatemanager.cpp	(working copy)
+@@ -97,7 +97,7 @@
+         ok = dir.GetNext(&filename);
+     }
+ 
+-	Manager::Get()->GetMessageManager()->DebugLog(_T("%d user templates loaded"), m_UserTemplates.GetCount());
++	Manager::Get()->GetMessageManager()->DebugLog(_("%d user templates loaded"), m_UserTemplates.GetCount());
+ }
+ 
+ cbProject* TemplateManager::New(TemplateOutputType initial, wxString* pFilename)
+@@ -139,7 +139,7 @@
+     cbProject* prj = NULL;
+     if (!dlg.SelectedUserTemplate())
+     {
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("TemplateManager::NewProjectFromUserTemplate() called when no user template was selected ?!?"));
++        Manager::Get()->GetMessageManager()->DebugLog(_("TemplateManager::NewProjectFromUserTemplate() called when no user template was selected ?!?"));
+         return NULL;
+     }
+ 
+@@ -163,7 +163,7 @@
+     templ << sep << dlg.GetSelectedUserTemplate();
+     if (!wxDirExists(templ))
+     {
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Cannot open user-template source path '%s'!"), templ.c_str());
++        Manager::Get()->GetMessageManager()->DebugLog(_("Cannot open user-template source path '%s'!"), templ.c_str());
+         return NULL;
+     }
+ 
+@@ -181,7 +181,7 @@
+         wxString dst = path + sep + dstname.GetFullPath();
+ //        Manager::Get()->GetMessageManager()->DebugLog("dst=%s, dstname=%s", dst.c_str(), dstname.GetFullPath().c_str());
+         if (!CreateDirRecursively(dst))
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Failed creating directory for %s"), dst.c_str());
++            Manager::Get()->GetMessageManager()->DebugLog(_("Failed creating directory for %s"), dst.c_str());
+         if (wxCopyFile(src, dst, true))
+         {
+             if (FileTypeOf(dst) == ftCodeBlocksProject)
+@@ -189,7 +189,7 @@
+             ++count;
+         }
+         else
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Failed copying %s to %s"), src.c_str(), dst.c_str());
++            Manager::Get()->GetMessageManager()->DebugLog(_("Failed copying %s to %s"), src.c_str(), dst.c_str());
+     }
+     if (count != total_count)
+         cbMessageBox(_("Some files could not be loaded with the template..."), _("Error"), wxICON_ERROR);
+@@ -278,13 +278,13 @@
+     {
+         wxString src = prj->GetFile(i)->file.GetFullPath();
+         wxString dst = templ + prj->GetFile(i)->relativeToCommonTopLevelPath;
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Copying %s to %s"), src.c_str(), dst.c_str());
++        Manager::Get()->GetMessageManager()->DebugLog(_("Copying %s to %s"), src.c_str(), dst.c_str());
+         if (!CreateDirRecursively(dst))
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Failed creating directory for %s"), dst.c_str());
++            Manager::Get()->GetMessageManager()->DebugLog(_("Failed creating directory for %s"), dst.c_str());
+         if (wxCopyFile(src, dst, true))
+             ++count;
+         else
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Failed copying %s to %s"), src.c_str(), dst.c_str());
++            Manager::Get()->GetMessageManager()->DebugLog(_("Failed copying %s to %s"), src.c_str(), dst.c_str());
+     }
+ 
+     // cbProject doesn't have a GetRelativeToCommonTopLevelPath() function, so we simulate it here
+@@ -302,7 +302,7 @@
+     {
+         if (!wxCopyFile(prj->GetFilename(), fname.GetFullPath()))
+         {
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("Failed to copy the project file: %s"), fname.GetFullPath().c_str());
++            Manager::Get()->GetMessageManager()->DebugLog(_("Failed to copy the project file: %s"), fname.GetFullPath().c_str());
+             cbMessageBox(_("Failed to copy the project file!"), _("Error"), wxICON_ERROR);
+             ++count;
+         }
+Index: src/sdk/workspaceloader.cpp
+===================================================================
+--- src/sdk/workspaceloader.cpp	(revision 3196)
++++ src/sdk/workspaceloader.cpp	(working copy)
+@@ -71,14 +71,14 @@
+         root = doc.FirstChildElement("Code::Blocks_workspace_file");
+         if (!root)
+         {
+-            GetpMsg()->DebugLog(_T("Not a valid Code::Blocks workspace file..."));
++            GetpMsg()->DebugLog(_("Not a valid Code::Blocks workspace file..."));
+             return false;
+         }
+     }
+     TiXmlElement* wksp = root->FirstChildElement("Workspace");
+     if (!wksp)
+     {
+-        GetpMsg()->DebugLog(_T("No 'Workspace' element in file..."));
++        GetpMsg()->DebugLog(_("No 'Workspace' element in file..."));
+         return false;
+     }
+ 
+@@ -87,7 +87,7 @@
+     TiXmlElement* proj = wksp->FirstChildElement("Project");
+     if (!proj)
+     {
+-        GetpMsg()->DebugLog(_T("Workspace file contains no projects..."));
++        GetpMsg()->DebugLog(_("Workspace file contains no projects..."));
+         return false;
+     }
+ 
+@@ -99,7 +99,7 @@
+         wxString projectFilename = UnixFilename(cbC2U(proj->Attribute("filename")));
+         if (projectFilename.IsEmpty())
+         {
+-            GetpMsg()->DebugLog(_T("'Project' node exists, but no filename?!?"));
++            GetpMsg()->DebugLog(_("'Project' node exists, but no filename?!?"));
+         }
+         else
+         {
+@@ -122,8 +122,8 @@
+ 					}
+                     break;
+                 case TIXML_WRONG_TYPE:
+-                    GetpMsg()->DebugLog(_T("Error %s: %s"), doc.Value(), doc.ErrorDesc());
+-                    GetpMsg()->DebugLog(_T("Wrong attribute type (expected 'int')"));
++                    GetpMsg()->DebugLog(_("Error %s: %s"), doc.Value(), doc.ErrorDesc());
++                    GetpMsg()->DebugLog(_("Wrong attribute type (expected 'int')"));
+                     break;
+                 default:
+ 					cbProject* pProject = GetpMan()->LoadProject(fname.GetFullPath(), false); // don't activate it
+@@ -146,7 +146,7 @@
+         wxString projectFilename = UnixFilename(cbC2U(proj->Attribute("filename")));
+         if (projectFilename.IsEmpty())
+         {
+-            GetpMsg()->DebugLog(_T("'Project' node exists, but no filename?!?"));
++            GetpMsg()->DebugLog(_("'Project' node exists, but no filename?!?"));
+             thisprj = 0;
+         }
+         else
+Index: src/src/app.cpp
+===================================================================
+--- src/src/app.cpp	(revision 3196)
++++ src/src/app.cpp	(working copy)
+@@ -498,7 +498,7 @@
+         }
+ 
+         CheckVersion();
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("Initializing plugins..."));
++        Manager::Get()->GetMessageManager()->DebugLog(_("Initializing plugins..."));
+ 
+         CodeBlocksEvent event(cbEVT_APP_STARTUP_DONE);
+         Manager::Get()->ProcessEvent(event);
+Index: src/src/main.cpp
+===================================================================
+--- src/src/main.cpp	(revision 3196)
++++ src/src/main.cpp	(working copy)
+@@ -819,7 +819,7 @@
+     if(m_SmallToolBar) // Insert logic here
+         xrcToolbarName += _T("_16x16");
+     myres->Load(resPath + _T("/resources.zip#zip:*.xrc"));
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Loading toolbar..."));
++    Manager::Get()->GetMessageManager()->DebugLog(_("Loading toolbar..."));
+ 
+     wxSize size = m_SmallToolBar ? wxSize(16, 16) : wxSize(22, 22);
+     m_pToolbar = new wxToolBar(this, -1, wxDefaultPosition, size, wxTB_FLAT | wxTB_NODIVIDER);
+@@ -1207,7 +1207,7 @@
+ 
+ void MainFrame::DoAddPlugin(cbPlugin* plugin)
+ {
+-    //Manager::Get()->GetMessageManager()->DebugLog(_T("Adding plugin: %s"), plugin->GetInfo()->name.c_str());
++    //Manager::Get()->GetMessageManager()->DebugLog(_("Adding plugin: %s"), plugin->GetInfo()->name.c_str());
+     AddPluginInSettingsMenu(plugin);
+     AddPluginInHelpPluginsMenu(plugin);
+     if (plugin->GetType() == ptTool)
+@@ -1236,8 +1236,8 @@
+     wxFileName fn(filename);
+     fn.Normalize(); // really important so that two same files with different names are not loaded twice
+     wxString name = fn.GetFullPath();
+-    //Manager::Get()->GetMessageManager()->DebugLog(_T("Opening file '%s'"), sname.c_str());
+-    Manager::Get()->GetMessageManager()->DebugLog(_T("Opening file %s"), name.c_str());
++    //Manager::Get()->GetMessageManager()->DebugLog(_("Opening file '%s'"), sname.c_str());
++    Manager::Get()->GetMessageManager()->DebugLog(_("Opening file %s"), name.c_str());
+     bool ret = OpenGeneric(name, addToHistory);
+     return ret;
+ }
+@@ -1330,7 +1330,7 @@
+ 
+ bool MainFrame::DoOpenProject(const wxString& filename, bool addToHistory)
+ {
+-//    Manager::Get()->GetMessageManager()->DebugLog(_T("Opening project '%s'"), filename.c_str());
++//    Manager::Get()->GetMessageManager()->DebugLog(_("Opening project '%s'"), filename.c_str());
+     if (!wxFileExists(filename))
+     {
+         cbMessageBox(_("The project file does not exist..."), _("Error"), wxICON_ERROR);
+@@ -1916,7 +1916,7 @@
+     if (!pluginName.IsEmpty())
+         Manager::Get()->GetPluginManager()->ExecutePlugin(pluginName);
+     else
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("No plugin found for ID %d"), event.GetId());
++        Manager::Get()->GetMessageManager()->DebugLog(_("No plugin found for ID %d"), event.GetId());
+ }
+ 
+ void MainFrame::OnPluginSettingsMenu(wxCommandEvent& event)
+@@ -1925,7 +1925,7 @@
+     if (!pluginName.IsEmpty())
+         Manager::Get()->GetPluginManager()->ConfigurePlugin(pluginName);
+     else
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("No plugin found for ID %d"), event.GetId());
++        Manager::Get()->GetMessageManager()->DebugLog(_("No plugin found for ID %d"), event.GetId());
+ }
+ 
+ void MainFrame::OnHelpPluginMenu(wxCommandEvent& event)
+@@ -1936,7 +1936,7 @@
+         const PluginInfo* pi = Manager::Get()->GetPluginManager()->GetPluginInfo(pluginName);
+         if (!pi)
+         {
+-            Manager::Get()->GetMessageManager()->DebugLog(_T("No plugin info for %s!"), pluginName.c_str());
++            Manager::Get()->GetMessageManager()->DebugLog(_("No plugin info for %s!"), pluginName.c_str());
+             return;
+         }
+         dlgAboutPlugin dlg(this, pi);
+@@ -1944,7 +1944,7 @@
+         dlg.ShowModal();
+     }
+     else
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("No plugin found for ID %d"), event.GetId());
++        Manager::Get()->GetMessageManager()->DebugLog(_("No plugin found for ID %d"), event.GetId());
+ }
+ 
+ void MainFrame::OnFileNewWhat(wxCommandEvent& event)
+@@ -3392,7 +3392,7 @@
+         DoAddPlugin(plug);
+         const PluginInfo* info = Manager::Get()->GetPluginManager()->GetPluginInfo(plug);
+         wxString msg = info ? info->title : wxString(_("<Unknown plugin>"));
+-        Manager::Get()->GetMessageManager()->DebugLog(_T("%s plugin loaded"), msg.c_str());
++        Manager::Get()->GetMessageManager()->DebugLog(_("%s plugin loaded"), msg.c_str());
+     }
+ }
+ 
+Index: src/update.bat
+===================================================================
+--- src/update.bat	(revision 3196)
++++ src/update.bat	(working copy)
+@@ -31,8 +32,13 @@
+ if not exist devel\share\CodeBlocks\scripts md devel\share\CodeBlocks\scripts\
+ 
+ set ZIPCMD=zip
++set TZ=MET-1MEST
+ set RESDIR=devel\share\CodeBlocks
+ 
++set LOCALEDIR=output\share\codeblocks\locale
++
++
++
+ echo Packing core UI resources
+ %ZIPCMD% -j9 %RESDIR%\resources.zip src\resources\*.xrc > nul
+ %ZIPCMD% -j9 %RESDIR%\manager_resources.zip sdk\resources\*.xrc sdk\resources\images\*.png > nul
+@@ -41,10 +47,12 @@
+ %ZIPCMD% -j9 %RESDIR%\astyle.zip plugins\astyle\resources\manifest.xml plugins\astyle\resources\*.xrc > nul
+ %ZIPCMD% -j9 %RESDIR%\autosave.zip plugins\autosave\manifest.xml plugins\autosave\*.xrc > nul
+ %ZIPCMD% -j9 %RESDIR%\classwizard.zip plugins\classwizard\resources\manifest.xml plugins\classwizard\resources\*.xrc > nul
+-%ZIPCMD% -j9 %RESDIR%\codecompletion.zip plugins\codecompletion\resources\manifest.xml plugins\codecompletion\resources\*.xrc > nul
++%ZIPCMD% -j9 %RESDIR%\codecompletion.zip plugins\codecompletion\resources\manifest.xml > nul
++%ZIPCMD% -uj9 %RESDIR%\codecompletion.zip plugins\codecompletion\resources\*.xrc > nul
+ %ZIPCMD% -j9 %RESDIR%\compiler.zip plugins\compilergcc\resources\manifest.xml plugins\compilergcc\resources\*.xrc > nul
+ %ZIPCMD% -j9 %RESDIR%\debugger.zip plugins\debuggergdb\resources\manifest.xml plugins\debuggergdb\resources\*.xrc > nul
+-%ZIPCMD% -j9 %RESDIR%\defaultmimehandler.zip plugins\defaultmimehandler\resources\manifest.xml plugins\defaultmimehandler\resources\*.xrc > nul
++%ZIPCMD% -j9 %RESDIR%\defaultmimehandler.zip plugins\defaultmimehandler\resources\manifest.xml  > nul
++%ZIPCMD% -uj9 %RESDIR%\defaultmimehandler.zip plugins\defaultmimehandler\resources\*.xrc > nul
+ %ZIPCMD% -j9 %RESDIR%\scriptedwizard.zip plugins\scriptedwizard\resources\manifest.xml > nul
+ %ZIPCMD% -j9 %RESDIR%\todo.zip plugins\todo\resources\manifest.xml plugins\todo\resources\*.xrc > nul
+ %ZIPCMD% -j9 %RESDIR%\xpmanifest.zip plugins\xpmanifest\manifest.xml > nul
+@@ -97,3 +105,8 @@
+ strip output\*.exe
+ strip output\*.dll
+ strip output\share\CodeBlocks\plugins\*.dll
++
++set ZIPCMD=
++set RESDIR=
++set LOCALEDIR=
++pause

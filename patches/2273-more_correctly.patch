@@ -1,0 +1,40 @@
+Index: gdb_driver.cpp
+===================================================================
+--- gdb_driver.cpp	(revision 4703)
++++ gdb_driver.cpp	(working copy)
+@@ -396,22 +396,23 @@
+ void GDB_driver::CorrectCygwinPath(wxString& path)
+ {
+     unsigned int i=0, escCount=0;
+-    // prepare to convert to a valid path if Cygwin is being used
+-    if(path.Contains(m_CygdrivePrefix))
++    
++    // preserve any escape characters at start of path - this is true for
++    // breakpoints - value is 2, but made dynamic for safety as we
++    // are only checking for the CDprefix not any furthur correctness
++    if(path.GetChar(0)== g_EscapeChars)
+     {
+-        // preserve any escape characters at start of path - this is true for
+-        // breakpoints - value is 2, but made dynamic for safety as we
+-        // are only checking for the CDprefix not any furthur correctness
+-        if(path.GetChar(0)== g_EscapeChars)
++        while(i<path.Len()& (path.GetChar(i)==g_EscapeChars))
+         {
+-            while(i<path.Len()& (path.GetChar(i)==g_EscapeChars))
+-            {
+-                // get character
+-                escCount+=1;
+-                i+=1;
+-            }
++            // get character
++            escCount+=1;
++            i+=1;
+         }
++    }
+ 
++    // prepare to convert to a valid path if Cygwin is being used
++    if(path.substr(escCount, m_CygdrivePrefix.Len()) == m_CygdrivePrefix)
++    {
+         // step over the escape characters and remove cygwin prefix
+         path.Remove(escCount, (m_CygdrivePrefix.Len())+1);
+         // insert ':' after drive label by reading and removing drive the label

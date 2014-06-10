@@ -1,0 +1,675 @@
+Index: templates/win32/directx_main.cpp
+===================================================================
+--- templates/win32/directx_main.cpp	(revision 0)
++++ templates/win32/directx_main.cpp	(revision 0)
+@@ -0,0 +1,162 @@
++#include <d3d8.h>
++
++LPDIRECT3D8       g_pD3D       = NULL;
++LPDIRECT3DDEVICE8 g_pD3DDevice = NULL;
++
++HRESULT InitialiseD3D(HWND hWnd)
++{
++  // First of all, create the main D3D object. If it is created successfully
++  // we should get a pointer to an IDirect3D8 interface.
++  g_pD3D = Direct3DCreate8(D3D_SDK_VERSION);
++
++  if(g_pD3D == NULL)
++  {
++    return E_FAIL;
++  }
++
++  //Get the current display mode
++  D3DDISPLAYMODE d3ddm;
++  if(FAILED(g_pD3D->GetAdapterDisplayMode(D3DADAPTER_DEFAULT, &d3ddm)))
++  {
++    return E_FAIL;
++  }
++
++  // Create a structure to hold the settings for our device
++  D3DPRESENT_PARAMETERS d3dpp;
++  ZeroMemory(&d3dpp, sizeof(d3dpp));
++
++  // Fill the structure: Program shall be windowed,
++  // back buffer format matches current display mode
++  d3dpp.Windowed         = TRUE;
++  d3dpp.SwapEffect       = D3DSWAPEFFECT_COPY_VSYNC;
++  d3dpp.BackBufferFormat = d3ddm.Format;
++
++  //Create a Direct3D device.
++  if(FAILED(g_pD3D->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hWnd,
++            D3DCREATE_SOFTWARE_VERTEXPROCESSING, &d3dpp, &g_pD3DDevice)))
++  {
++    return E_FAIL;
++  }
++
++  return S_OK;
++}
++
++void Render()
++{
++  if(g_pD3DDevice == NULL)
++  {
++    return;
++  }
++
++  // Clear the backbuffer to blue
++  g_pD3DDevice->Clear(0, NULL, D3DCLEAR_TARGET,
++                      D3DCOLOR_XRGB(0, 0, 255), 1.0f, 0);
++
++  // Begin the scene
++  g_pD3DDevice->BeginScene();
++
++  // Fill in here the rendering of other objects
++
++  // End the scene
++  g_pD3DDevice->EndScene();
++
++  // Fill back and front buffers so that back buffer will be visible on screen
++  g_pD3DDevice->Present(NULL, NULL, NULL, NULL);
++}
++
++void CleanUp()
++{
++  if(g_pD3DDevice != NULL)
++  {
++    g_pD3DDevice->Release();
++    g_pD3DDevice = NULL;
++  }
++
++  if(g_pD3D != NULL)
++  {
++    g_pD3D->Release();
++    g_pD3D = NULL;
++  }
++}
++
++void MainLoop()
++{
++  // Enter the main loop
++  MSG  msg;
++  BOOL bMessage;
++
++  PeekMessage(&msg, NULL, 0U, 0U, PM_NOREMOVE);
++
++  while(msg.message != WM_QUIT)
++  {
++    bMessage = PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE);
++
++    if(bMessage)
++    {
++      // Process message
++      TranslateMessage(&msg);
++      DispatchMessage(&msg);
++    }
++    else
++    {
++      Render(); // No message to process -> render the scene
++    }
++  }// while
++}
++
++// The windows message handler
++LRESULT WINAPI WinProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
++{
++  switch(msg)
++  {
++    case WM_DESTROY:
++      PostQuitMessage(0);
++      return 0;
++      break;
++
++    case WM_KEYUP:
++      switch (wParam)
++      {
++        case VK_ESCAPE:
++          // Escape key pressed -> exit
++          DestroyWindow(hWnd);
++          return 0;
++          break;
++      }
++      break;
++  }// switch
++
++  return DefWindowProc(hWnd, msg, wParam, lParam);
++}
++
++// Application main entry point
++INT WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, INT)
++{
++  //Register the window class
++  WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WinProc, 0L, 0L,
++                    GetModuleHandle(NULL), NULL, NULL, NULL, NULL,
++                    "DirectX Project", NULL };
++  RegisterClassEx(&wc);
++
++  // Create the application's main window
++  HWND hWnd = CreateWindow("DirectX Project", "Code::Blocks Template",
++                           WS_OVERLAPPEDWINDOW, 50, 50, 500, 500,
++                           GetDesktopWindow(), NULL, wc.hInstance, NULL);
++
++  // Initialize Direct3D
++  if(SUCCEEDED(InitialiseD3D(hWnd)))
++  {
++    // Show window
++    ShowWindow(hWnd, SW_SHOWDEFAULT);
++    UpdateWindow(hWnd);
++
++    //Start game running: Enter the game loop
++    MainLoop();
++  }
++
++  CleanUp();
++
++  UnregisterClass("DirectX Project", wc.hInstance);
++
++  return 0;
++}
+
+Property changes on: templates\win32\directx_main.cpp
+___________________________________________________________________
+Name: svn:eol-style
+   + native
+
+Index: templates/win32/directx_vctk.cbp
+===================================================================
+--- templates/win32/directx_vctk.cbp	(revision 0)
++++ templates/win32/directx_vctk.cbp	(revision 0)
+@@ -0,0 +1,46 @@
++<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
++<CodeBlocks_project_file>
++	<FileVersion major="1" minor="3" />
++	<Project>
++		<Option title="DirectX Project" />
++		<Option compiler="msvctk" />
++		<Build>
++			<Target title="default">
++				<Option output="DirectX.exe" />
++				<Option object_output="." />
++				<Option type="0" />
++				<Option compiler="msvctk" />
++				<Option includeInTargetAll="1" />
++			</Target>
++		</Build>
++		<Compiler>
++			<Add option="-DWIN32" />
++			<Add option="-DNDEBUG" />
++			<Add option="-D_WINDOWS" />
++			<Add option="-D_MBCS" />
++			<Add directory="$(#dx.include)" />
++			<Add directory="$(#psdk.include)" />
++		</Compiler>
++		<ResourceCompiler>
++			<Add directory="$(#dx.include)" />
++			<Add directory="$(#psdk.include)" />
++		</ResourceCompiler>
++		<Linker>
++			<Add library="kernel32" />
++			<Add library="user32" />
++			<Add library="gdi32" />
++			<Add library="winspool.lib" />
++			<Add library="comdlg32" />
++			<Add library="advapi32" />
++			<Add library="shell32" />
++			<Add library="ole32" />
++			<Add library="oleaut32" />
++			<Add library="uuid.lib" />
++			<Add library="odbc32" />
++			<Add library="odbccp32" />
++			<Add library="d3d8" />
++			<Add directory="$(#dx.lib)\X86" />
++			<Add directory="$(#psdk.lib)" />
++		</Linker>
++	</Project>
++</CodeBlocks_project_file>
+
+Property changes on: templates\win32\directx_vctk.cbp
+___________________________________________________________________
+Name: svn:eol-style
+   + native
+
+Index: templates/win32/directx_gcc.cbp
+===================================================================
+--- templates/win32/directx_gcc.cbp	(revision 0)
++++ templates/win32/directx_gcc.cbp	(revision 0)
+@@ -0,0 +1,43 @@
++<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
++<CodeBlocks_project_file>
++	<FileVersion major="1" minor="3" />
++	<Project>
++		<Option title="DirectX Project" />
++		<Option compiler="gcc" />
++		<Build>
++			<Target title="default">
++				<Option output="DirectX.exe" />
++				<Option object_output="." />
++				<Option type="0" />
++				<Option compiler="gcc" />
++				<Option includeInTargetAll="1" />
++			</Target>
++		</Build>
++		<Compiler>
++			<Add option="-DWIN32" />
++			<Add option="-DNDEBUG" />
++			<Add option="-D_WINDOWS" />
++			<Add option="-D_MBCS" />
++			<Add directory="$(#dx.include)" />
++		</Compiler>
++		<ResourceCompiler>
++			<Add directory="$(#dx.include)" />
++		</ResourceCompiler>
++		<Linker>
++			<Add library="kernel32" />
++			<Add library="user32" />
++			<Add library="gdi32" />
++			<Add library="winspool" />
++			<Add library="comdlg32" />
++			<Add library="advapi32" />
++			<Add library="shell32" />
++			<Add library="ole32" />
++			<Add library="oleaut32" />
++			<Add library="uuid" />
++			<Add library="odbc32" />
++			<Add library="odbccp32" />
++			<Add library="d3d8" />
++			<Add directory="$(#dx.lib)" />
++		</Linker>
++	</Project>
++</CodeBlocks_project_file>
+\ No newline at end of file
+
+Property changes on: templates\win32\directx_gcc.cbp
+___________________________________________________________________
+Name: svn:eol-style
+   + native
+
+Index: templates/win32/directx.png
+===================================================================
+Cannot display: file marked as a binary type.
+svn:mime-type = application/octet-stream
+
+Property changes on: templates\win32\directx.png
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Index: templates/win32/directx.template
+===================================================================
+--- templates/win32/directx.template	(revision 0)
++++ templates/win32/directx.template	(revision 0)
+@@ -0,0 +1,26 @@
++<?xml version="1.0"?>
++<!DOCTYPE CodeBlocks_template_file>
++<CodeBlocks_template_file>
++	<Template name="DirectX" title="DirectX Project" category="2D/3D Graphics" bitmap="directx.png">
++		<Notice value="This template expects the global variable &quot;dx&quot; to point
++		               to the appropriate DirectX SDK.
++                   This is the MS DirectX SDK for the Visual C++ Toolkit 2003 project
++                   and e.g. the DevPack folder for the GCC project.
++
++                   In addition for the Visual C++ Toolkit 2003 the global variable
++                   &quot;psdk&quot; must point to the directory of the MS platform SDK.
++
++                   You will be asked to setup the variables accordingly. If this is
++                   not the case, verify &quot;Settings->Global variables&quot;"
++				isWarning="1"/>
++		<FileSet name="s" title="Default">
++			<File source="directx_main.cpp" destination="main.cpp"/>
++		</FileSet>
++		<Option name="Free VisualC++ Toolkit 2003 project">
++			<Project file="directx_vctk.cbp" useDefaultCompiler="0"/>
++		</Option>
++		<Option name="GCC project">
++			<Project file="directx_gcc.cbp" useDefaultCompiler="0"/>
++		</Option>
++	</Template>
++</CodeBlocks_template_file>
+
+Property changes on: templates\win32\directx.template
+___________________________________________________________________
+Name: svn:eol-style
+   + native
+
+Index: directx.patch
+===================================================================
+--- directx.patch	(revision 0)
++++ directx.patch	(revision 0)
+@@ -0,0 +1,332 @@
++Index: templates/win32/directx_main.cpp
++===================================================================
++--- templates/win32/directx_main.cpp	(revision 0)
+++++ templates/win32/directx_main.cpp	(revision 0)
++@@ -0,0 +1,162 @@
+++#include <d3d8.h>
+++
+++LPDIRECT3D8       g_pD3D       = NULL;
+++LPDIRECT3DDEVICE8 g_pD3DDevice = NULL;
+++
+++HRESULT InitialiseD3D(HWND hWnd)
+++{
+++  // First of all, create the main D3D object. If it is created successfully
+++  // we should get a pointer to an IDirect3D8 interface.
+++  g_pD3D = Direct3DCreate8(D3D_SDK_VERSION);
+++
+++  if(g_pD3D == NULL)
+++  {
+++    return E_FAIL;
+++  }
+++
+++  //Get the current display mode
+++  D3DDISPLAYMODE d3ddm;
+++  if(FAILED(g_pD3D->GetAdapterDisplayMode(D3DADAPTER_DEFAULT, &d3ddm)))
+++  {
+++    return E_FAIL;
+++  }
+++
+++  // Create a structure to hold the settings for our device
+++  D3DPRESENT_PARAMETERS d3dpp;
+++  ZeroMemory(&d3dpp, sizeof(d3dpp));
+++
+++  // Fill the structure: Program shall be windowed,
+++  // back buffer format matches current display mode
+++  d3dpp.Windowed         = TRUE;
+++  d3dpp.SwapEffect       = D3DSWAPEFFECT_COPY_VSYNC;
+++  d3dpp.BackBufferFormat = d3ddm.Format;
+++
+++  //Create a Direct3D device.
+++  if(FAILED(g_pD3D->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hWnd,
+++            D3DCREATE_SOFTWARE_VERTEXPROCESSING, &d3dpp, &g_pD3DDevice)))
+++  {
+++    return E_FAIL;
+++  }
+++
+++  return S_OK;
+++}
+++
+++void Render()
+++{
+++  if(g_pD3DDevice == NULL)
+++  {
+++    return;
+++  }
+++
+++  // Clear the backbuffer to blue
+++  g_pD3DDevice->Clear(0, NULL, D3DCLEAR_TARGET,
+++                      D3DCOLOR_XRGB(0, 0, 255), 1.0f, 0);
+++
+++  // Begin the scene
+++  g_pD3DDevice->BeginScene();
+++
+++  // Fill in here the rendering of other objects
+++
+++  // End the scene
+++  g_pD3DDevice->EndScene();
+++
+++  // Fill back and front buffers so that back buffer will be visible on screen
+++  g_pD3DDevice->Present(NULL, NULL, NULL, NULL);
+++}
+++
+++void CleanUp()
+++{
+++  if(g_pD3DDevice != NULL)
+++  {
+++    g_pD3DDevice->Release();
+++    g_pD3DDevice = NULL;
+++  }
+++
+++  if(g_pD3D != NULL)
+++  {
+++    g_pD3D->Release();
+++    g_pD3D = NULL;
+++  }
+++}
+++
+++void MainLoop()
+++{
+++  // Enter the main loop
+++  MSG  msg;
+++  BOOL bMessage;
+++
+++  PeekMessage(&msg, NULL, 0U, 0U, PM_NOREMOVE);
+++
+++  while(msg.message != WM_QUIT)
+++  {
+++    bMessage = PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE);
+++
+++    if(bMessage)
+++    {
+++      // Process message
+++      TranslateMessage(&msg);
+++      DispatchMessage(&msg);
+++    }
+++    else
+++    {
+++      Render(); // No message to process -> render the scene
+++    }
+++  }// while
+++}
+++
+++// The windows message handler
+++LRESULT WINAPI WinProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+++{
+++  switch(msg)
+++  {
+++    case WM_DESTROY:
+++      PostQuitMessage(0);
+++      return 0;
+++      break;
+++
+++    case WM_KEYUP:
+++      switch (wParam)
+++      {
+++        case VK_ESCAPE:
+++          // Escape key pressed -> exit
+++          DestroyWindow(hWnd);
+++          return 0;
+++          break;
+++      }
+++      break;
+++  }// switch
+++
+++  return DefWindowProc(hWnd, msg, wParam, lParam);
+++}
+++
+++// Application main entry point
+++INT WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, INT)
+++{
+++  //Register the window class
+++  WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WinProc, 0L, 0L,
+++                    GetModuleHandle(NULL), NULL, NULL, NULL, NULL,
+++                    "DirectX Project", NULL };
+++  RegisterClassEx(&wc);
+++
+++  // Create the application's main window
+++  HWND hWnd = CreateWindow("DirectX Project", "Code::Blocks Template",
+++                           WS_OVERLAPPEDWINDOW, 50, 50, 500, 500,
+++                           GetDesktopWindow(), NULL, wc.hInstance, NULL);
+++
+++  // Initialize Direct3D
+++  if(SUCCEEDED(InitialiseD3D(hWnd)))
+++  {
+++    // Show window
+++    ShowWindow(hWnd, SW_SHOWDEFAULT);
+++    UpdateWindow(hWnd);
+++
+++    //Start game running: Enter the game loop
+++    MainLoop();
+++  }
+++
+++  CleanUp();
+++
+++  UnregisterClass("DirectX Project", wc.hInstance);
+++
+++  return 0;
+++}
++
++Property changes on: templates\win32\directx_main.cpp
++___________________________________________________________________
++Name: svn:eol-style
++   + native
++
++Index: templates/win32/directx_vctk.cbp
++===================================================================
++--- templates/win32/directx_vctk.cbp	(revision 0)
+++++ templates/win32/directx_vctk.cbp	(revision 0)
++@@ -0,0 +1,46 @@
+++<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+++<CodeBlocks_project_file>
+++	<FileVersion major="1" minor="3" />
+++	<Project>
+++		<Option title="DirectX Project" />
+++		<Option compiler="msvctk" />
+++		<Build>
+++			<Target title="default">
+++				<Option output="DirectX.exe" />
+++				<Option object_output="." />
+++				<Option type="0" />
+++				<Option compiler="msvctk" />
+++				<Option includeInTargetAll="1" />
+++			</Target>
+++		</Build>
+++		<Compiler>
+++			<Add option="-DWIN32" />
+++			<Add option="-DNDEBUG" />
+++			<Add option="-D_WINDOWS" />
+++			<Add option="-D_MBCS" />
+++			<Add directory="$(#dx.include)" />
+++			<Add directory="$(#psdk.include)" />
+++		</Compiler>
+++		<ResourceCompiler>
+++			<Add directory="$(#dx.include)" />
+++			<Add directory="$(#psdk.include)" />
+++		</ResourceCompiler>
+++		<Linker>
+++			<Add library="kernel32" />
+++			<Add library="user32" />
+++			<Add library="gdi32" />
+++			<Add library="winspool.lib" />
+++			<Add library="comdlg32" />
+++			<Add library="advapi32" />
+++			<Add library="shell32" />
+++			<Add library="ole32" />
+++			<Add library="oleaut32" />
+++			<Add library="uuid.lib" />
+++			<Add library="odbc32" />
+++			<Add library="odbccp32" />
+++			<Add library="d3d8" />
+++			<Add directory="$(#dx.lib)\X86" />
+++			<Add directory="$(#psdk.lib)" />
+++		</Linker>
+++	</Project>
+++</CodeBlocks_project_file>
++
++Property changes on: templates\win32\directx_vctk.cbp
++___________________________________________________________________
++Name: svn:eol-style
++   + native
++
++Index: templates/win32/directx_gcc.cbp
++===================================================================
++--- templates/win32/directx_gcc.cbp	(revision 0)
+++++ templates/win32/directx_gcc.cbp	(revision 0)
++@@ -0,0 +1,43 @@
+++<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+++<CodeBlocks_project_file>
+++	<FileVersion major="1" minor="3" />
+++	<Project>
+++		<Option title="DirectX Project" />
+++		<Option compiler="gcc" />
+++		<Build>
+++			<Target title="default">
+++				<Option output="DirectX.exe" />
+++				<Option object_output="." />
+++				<Option type="0" />
+++				<Option compiler="gcc" />
+++				<Option includeInTargetAll="1" />
+++			</Target>
+++		</Build>
+++		<Compiler>
+++			<Add option="-DWIN32" />
+++			<Add option="-DNDEBUG" />
+++			<Add option="-D_WINDOWS" />
+++			<Add option="-D_MBCS" />
+++			<Add directory="$(#dx.include)" />
+++		</Compiler>
+++		<ResourceCompiler>
+++			<Add directory="$(#dx.include)" />
+++		</ResourceCompiler>
+++		<Linker>
+++			<Add library="kernel32" />
+++			<Add library="user32" />
+++			<Add library="gdi32" />
+++			<Add library="winspool" />
+++			<Add library="comdlg32" />
+++			<Add library="advapi32" />
+++			<Add library="shell32" />
+++			<Add library="ole32" />
+++			<Add library="oleaut32" />
+++			<Add library="uuid" />
+++			<Add library="odbc32" />
+++			<Add library="odbccp32" />
+++			<Add library="d3d8" />
+++			<Add directory="$(#dx.lib)" />
+++		</Linker>
+++	</Project>
+++</CodeBlocks_project_file>
++\ No newline at end of file
++
++Property changes on: templates\win32\directx_gcc.cbp
++___________________________________________________________________
++Name: svn:eol-style
++   + native
++
++Index: templates/win32/directx.png
++===================================================================
++Cannot display: file marked as a binary type.
++svn:mime-type = application/octet-stream
++
++Property changes on: templates\win32\directx.png
++___________________________________________________________________
++Name: svn:mime-type
++   + application/octet-stream
++
++Index: templates/win32/directx.template
++===================================================================
++--- templates/win32/directx.template	(revision 0)
+++++ templates/win32/directx.template	(revision 0)
++@@ -0,0 +1,26 @@
+++<?xml version="1.0"?>
+++<!DOCTYPE CodeBlocks_template_file>
+++<CodeBlocks_template_file>
+++	<Template name="DirectX" title="DirectX Project" category="2D/3D Graphics" bitmap="directx.png">
+++		<Notice value="This template expects the global variable &quot;dx&quot; to point
+++		               to the appropriate DirectX SDK.
+++                   This is the MS DirectX SDK for the Visual C++ Toolkit 2003 project
+++                   and e.g. the DevPack folder for the GCC project.
+++
+++                   In addition for the Visual C++ Toolkit 2003 the global variable
+++                   &quot;psdk&quot; must point to the directory of the MS platform SDK.
+++
+++                   You will be asked to setup the variables accordingly. If this is
+++                   not the case, verify &quot;Settings->Global variables&quot;"
+++				isWarning="1"/>
+++		<FileSet name="s" title="Default">
+++			<File source="directx_main.cpp" destination="main.cpp"/>
+++		</FileSet>
+++		<Option name="Free VisualC++ Toolkit 2003 project">
+++			<Project file="directx_vctk.cbp" useDefaultCompiler="0"/>
+++		</Option>
+++		<Option name="GCC project">
+++			<Project file="directx_gcc.cbp" useDefaultCompiler="0"/>
+++		</Option>
+++	</Template>
+++</CodeBlocks_template_file>
++
++Property changes on: templates\win32\directx.template
++___________________________________________________________________
++Name: svn:eol-style
++   + native
++
+
+Property changes on: directx.patch
+___________________________________________________________________
+Name: svn:eol-style
+   + native
+

@@ -1,0 +1,101 @@
+Index: src/sdk/cbplugin.cpp
+===================================================================
+--- src/sdk/cbplugin.cpp	(wersja 8330)
++++ src/sdk/cbplugin.cpp	(kopia robocza)
+@@ -219,19 +219,88 @@
+             return selected_text;
+     }
+ 
++    int pos = control->GetCurrentPos();
+     if (mousePosition)
+     {
+-        int pos = control->PositionFromPoint(*mousePosition);
+-        int start = control->WordStartPosition(pos, true);
+-        int end = control->WordEndPosition(pos, true);
+-        selected_text = control->GetTextRange(start, end);
++        pos = control->PositionFromPoint(*mousePosition);
+     }
+-    else
++    
++    //if you want to disable evaluation of whole expression under cursor
++    //simply set callChain and/or evaluateCall to false.
++    const wxString& whitespace = control->GetWhitespaceChars();
++    int start = control->WordStartPosition(pos, true);
++    int end = control->WordEndPosition(pos, true);
++    bool callChain = true;
++    bool isChained = false;
++    while( callChain )
+     {
+-        int start = control->WordStartPosition(control->GetCurrentPos(), true);
+-        int end = control->WordEndPosition(control->GetCurrentPos(), true);
+-        selected_text = control->GetTextRange(start, end);
++        int prevPos = start-1;
++        char prevChar = control->GetCharAt(prevPos);
++
++        if ( whitespace.find_first_of(prevChar) != wxString::npos )
++        {//whitespace found
++            start -= 1;
++        }
++        else if( prevChar == '.' )
++        {
++            isChained = true;
++            start -= 1;
++        }
++        else if( (prevChar == '>' && control->GetCharAt(start-2) == '-')
++                   || (prevChar == ':' && control->GetCharAt(start-2) == ':') )
++        {// :: or ->
++            isChained = true;
++            start -= 2;
++            //start = control->WordStartPosition(start-2,true);
++        }
++        else if( prevChar == ')' || prevChar == ']' || prevChar == '>' )
++        {
++            int bracePos = control->BraceMatch(prevPos);
++            if( bracePos != -1 ){
++                start = bracePos;
++            }
++            else{
++                callChain = false;    //probably syntax error
++            }
++        }
++        else if ( isChained )
++        {    
++            isChained = false;
++            start = control->WordStartPosition(prevPos,true);;
++        }
++        else
++            callChain = false;
+     }
++
++    //append right side of pointed expression
++    bool evaluateCall = true;
++    while( evaluateCall )
++    {
++        char nextChar = control->GetCharAt(end);
++        if( whitespace.find_first_of(nextChar) != wxString::npos )
++        {//whitespace at end
++            end = control->WordEndPosition(end+1,true); //skip it
++        }
++        else if ( nextChar == '[' || nextChar == '(' || nextChar == '<' )
++        {
++            int bracePos = control->BraceMatch(end);
++            if( bracePos != -1 ){
++                end = bracePos+1;
++            }
++            else{
++                evaluateCall = false;
++            }
++        }
++        else{
++            evaluateCall = false;
++        }
++        
++    }
++    
++    selected_text = control->GetTextRange(start, end);
++    selected_text.Trim(true);
++    selected_text.Trim(false);
++
+     return selected_text;
+ }
+ 

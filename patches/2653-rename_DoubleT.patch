@@ -1,0 +1,43 @@
+From bf9bccd67b9f25eba56317fd5b32fe5283666532 Mon Sep 17 00:00:00 2001
+From: Dan Horak <dan@danny.cz>
+Date: Mon, 19 Jan 2009 14:04:05 +0100
+Subject: [PATCH] rename DoubleToString to avoid conflict with wxWidgets' internal function
+
+---
+ .../wxwidgets/properties/wxsfontproperty.cpp       |    6 +++---
+ 1 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/plugins/contrib/wxSmith/wxwidgets/properties/wxsfontproperty.cpp b/src/plugins/contrib/wxSmith/wxwidgets/properties/wxsfontproperty.cpp
+index d71525a..eb1e2c7 100644
+--- a/src/plugins/contrib/wxSmith/wxwidgets/properties/wxsfontproperty.cpp
++++ b/src/plugins/contrib/wxSmith/wxwidgets/properties/wxsfontproperty.cpp
+@@ -34,7 +34,7 @@ using namespace wxsFlags;
+ 
+ namespace
+ {
+-    wxString DoubleToString( double value )
++    wxString wxsDoubleToString( double value )
+     {
+         // Because GCC uses locale settings to determine
+         // whether to use dot or comma as floating point separator
+@@ -232,7 +232,7 @@ wxString wxsFontData::BuildFontCode(const wxString& FontName,wxsCoderContext* Co
+                          << _T(".SetPointSize((int)(")
+                          << FontName
+                          << _T(".GetPointSize() * ")
+-                         << DoubleToString(RelativeSize)
++                         << wxsDoubleToString(RelativeSize)
+                          << _T("));\n");
+                 }
+                 if ( HasStyle )
+@@ -447,7 +447,7 @@ bool wxsFontProperty::XmlWrite(wxsPropertyContainer* Object,TiXmlElement* Elemen
+ 
+     if ( VALUE.HasRelativeSize )
+     {
+-        XmlSetString(Element,DoubleToString(VALUE.RelativeSize),_T("relativesize"));
++        XmlSetString(Element,wxsDoubleToString(VALUE.RelativeSize),_T("relativesize"));
+     }
+ 
+     return true;
+-- 
+1.6.0.6
+

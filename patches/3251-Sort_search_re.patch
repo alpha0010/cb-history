@@ -1,0 +1,128 @@
+Index: editormanager.cpp
+===================================================================
+--- editormanager.cpp	(Revision 7784)
++++ editormanager.cpp	(Arbeitskopie)
+@@ -74,6 +74,7 @@
+     bool initialreplacing;
+     bool findInFiles;
+     bool delOldSearches;
++    bool sortSearchResult;
+     bool matchWord;
+     bool startWord;
+     bool startFile; //!< To be implemented.
+@@ -1404,6 +1405,7 @@
+             m_LastFindReplaceData->findUsesSelectedText = dlg->GetFindUsesSelectedText();
+     }
+     m_LastFindReplaceData->delOldSearches = dlg->GetDeleteOldSearches();
++    m_LastFindReplaceData->sortSearchResult = dlg->GetSortSearchResult();
+     m_LastFindReplaceData->matchWord = dlg->GetMatchWord();
+     m_LastFindReplaceData->startWord = dlg->GetStartWord();
+     m_LastFindReplaceData->matchCase = dlg->GetMatchCase();
+@@ -2509,6 +2511,12 @@
+         return 0;
+     }
+ 
++    //sort search results alphabetically if option is on
++    if (m_LastFindReplaceData->sortSearchResult)
++    {
++        filesList.Sort();
++    }
++
+     // now that list is filled, we'll search
+     // but first we'll create a hidden cbStyledTextCtrl to do the search for us ;)
+     cbStyledTextCtrl* control = new cbStyledTextCtrl(m_pNotebook, -1, wxDefaultPosition, wxSize(0, 0));
+
+Index: find_dialog.xrc
+===================================================================
+--- find_dialog.xrc	(Revision 7784)
++++ find_dialog.xrc	(Arbeitskopie)
+@@ -210,6 +210,14 @@
+                                                         <checked>0</checked>
+                                                     </object>
+                                                 </object>
++                                                <object class="sizeritem">
++                                                    <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxBOTTOM</flag>
++                                                    <border>4</border>
++                                                    <object class="wxCheckBox" name="chkSortSearchResult2">
++                                                        <label>&amp;Sort search results alphabetically</label>
++                                                        <checked>1</checked>
++                                                    </object>
++                                                </object>
+                                             </object>
+                                         </object>
+                                         <object class="sizeritem">
+
+Index: finddlg.cpp
+===================================================================
+--- finddlg.cpp	(Revision 7784)
++++ finddlg.cpp	(Arbeitskopie)
+@@ -81,6 +81,7 @@
+     XRCCTRL(*this, "chkMatchCase2", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/match_case2"), false));
+     XRCCTRL(*this, "chkRegEx2", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/regex2"), false));
+     XRCCTRL(*this, "chkDelOldSearchRes2", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/delete_old_searches2"), true));
++    XRCCTRL(*this, "chkSortSearchResult2", wxCheckBox)->SetValue(cfg->ReadBool(CONF_GROUP _T("/sort_search_results2"), true));
+     XRCCTRL(*this, "rbScope2", wxRadioBox)->SetSelection(cfg->ReadInt(CONF_GROUP _T("/scope2"), 0));
+     UpdateUI();
+ 
+@@ -160,6 +161,7 @@
+     cfg->Write(CONF_GROUP _T("/match_case2"), XRCCTRL(*this, "chkMatchCase2", wxCheckBox)->GetValue());
+     cfg->Write(CONF_GROUP _T("/regex2"), XRCCTRL(*this, "chkRegEx2", wxCheckBox)->GetValue());
+     cfg->Write(CONF_GROUP _T("/delete_old_searches2"), XRCCTRL(*this, "chkDelOldSearchRes2", wxCheckBox)->GetValue());
++    cfg->Write(CONF_GROUP _T("/sort_search_results2"), XRCCTRL(*this, "chkSortSearchResult2", wxCheckBox)->GetValue());
+     cfg->Write(CONF_GROUP _T("/scope2"), XRCCTRL(*this, "rbScope2", wxRadioBox)->GetSelection());
+ }
+ 
+@@ -184,6 +186,14 @@
+         return true;  // checkbox doesn't exist in Find dialog
+ }
+ 
++bool FindDlg::GetSortSearchResult() const
++{
++    if (IsFindInFiles())
++        return XRCCTRL(*this, "chkSortSearchResult2", wxCheckBox)->GetValue();
++    else
++        return true;  // checkbox doesn't exist in Find dialog
++}
++
+ bool FindDlg::GetMatchWord() const
+ {
+     if (IsFindInFiles())
+
+Index: finddlg.h
+===================================================================
+--- finddlg.h	(Revision 7784)
++++ finddlg.h	(Arbeitskopie)
+@@ -21,6 +21,7 @@
+         wxString GetReplaceString() const{ return wxEmptyString; }
+         bool IsFindInFiles() const;
+         bool GetDeleteOldSearches() const;
++        bool GetSortSearchResult() const;
+         bool GetMatchWord() const;
+         bool GetStartWord() const;
+         bool GetMatchCase() const;
+
+Index: findreplacebase.h
+===================================================================
+--- findreplacebase.h	(Revision 7784)
++++ findreplacebase.h	(Arbeitskopie)
+@@ -20,6 +20,7 @@
+ 		virtual wxString GetReplaceString() const = 0;
+ 		virtual bool IsFindInFiles() const = 0;
+ 		virtual bool GetDeleteOldSearches() const = 0;
++		virtual bool GetSortSearchResult() const = 0;
+ 		virtual bool GetMatchWord() const = 0;
+ 		virtual bool GetStartWord() const = 0;
+ 		virtual bool GetStartFile() const = 0;
+
+Index: replacedlg.h
+===================================================================
+--- replacedlg.h	(Revision 7784)
++++ replacedlg.h	(Arbeitskopie)
+@@ -21,6 +21,7 @@
+ 		bool IsFindInFiles() const;
+ 		bool IsMultiLine() const;
+ 		bool GetDeleteOldSearches() const;
++		bool GetSortSearchResult() const {return true;};   //replace has no sort search result option
+ 		bool GetMatchWord() const;
+ 		bool GetStartWord() const;
+ 		bool GetMatchCase() const;

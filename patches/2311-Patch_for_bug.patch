@@ -1,0 +1,50 @@
+--- codeblocks-1.0svn.orig/src/src/main.h	2007-12-07 20:03:08.000000000 +0100
++++ codeblocks-1.0svn.work/src/src/main.h	2008-01-01 13:25:02.000000000 +0100
+@@ -33,6 +33,7 @@
+     private:
+         wxAuiManager m_LayoutManager;
+         LayoutViewsMap m_LayoutViews;
++        bool AreDifferentLayouts(const wxString& layout1,const wxString& layout2,const wxString& delimiter=_("|"));
+     public:
+         wxAcceleratorTable* m_pAccel;
+         MainFrame(wxWindow* parent = (wxWindow*)NULL);
+--- codeblocks-1.0svn.orig/src/src/main.cpp	2008-01-01 03:14:00.000000000 +0100
++++ codeblocks-1.0svn.work/src/src/main.cpp	2008-01-01 13:50:56.000000000 +0100
+@@ -33,6 +33,7 @@
+ #include <cbworkspace.h>
+ #include <globals.h>
+ #include <filefilters.h>
++#include <wx/tokenzr.h>
+ 
+ #if defined(_MSC_VER) && defined( _DEBUG )
+     #define _CRTDBG_MAP_ALLOC
+@@ -1224,11 +1225,28 @@
+     }
+ } // end of SaveViewLayout
+ 
++bool MainFrame::AreDifferentLayouts(const wxString& layout1,const wxString& layout2,const wxString& delimiter)
++{
++	wxArrayString* arLayout1 = new wxArrayString();
++	wxArrayString* arLayout2 = new wxArrayString();
++    wxStringTokenizer* strTok = new wxStringTokenizer(layout1,delimiter);
++     while(strTok->CountTokens() > 0){
++         arLayout1->Add(strTok->GetNextToken());
++    }
++    strTok->SetString(layout2,delimiter);
++    while(strTok->CountTokens() > 0){
++         arLayout2->Add(strTok->GetNextToken());
++    }
++	arLayout1->Sort();
++	arLayout2->Sort();
++    return *arLayout1 != *arLayout2;
++} // end of AreDifferentLayouts
++
+ bool MainFrame::DoCheckCurrentLayoutForChanges(bool canCancel)
+ {
+     DoFixToolbarsLayout();
+     wxString lastlayout = m_LayoutManager.SavePerspective();
+-    if (!m_LastLayoutName.IsEmpty() && lastlayout != m_LastLayoutData)
++    if (!m_LastLayoutName.IsEmpty() && AreDifferentLayouts(lastlayout, m_LastLayoutData))
+     {
+         AnnoyingDialog dlg(_("Layout changed"),
+                             wxString::Format(_("The layout '%s' has changed. Do you want to save it?"), m_LastLayoutName.c_str()),

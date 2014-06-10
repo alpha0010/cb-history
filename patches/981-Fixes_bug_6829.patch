@@ -1,0 +1,26 @@
+This patch seems to have fixed the Splash loop on my XP
+system with SVN 2290
+
+
+Index: src/src/splashscreen.cpp
+===================================================================
+--- src/src/splashscreen.cpp	(revision 2290)
++++ src/src/splashscreen.cpp	(working copy)
+@@ -22,12 +22,16 @@
+ 
+ void cbSplashScreen::OnPaint(wxPaintEvent &)
+ {
++    // an obscure statement in the wxWidgets book says to
++    // allocate the DC even if you don't paint to avoid
++    // a paint loop.    //pecan 2006/04/3
++  wxPaintDC paint_dc(this); //pecan 2006/04/3
+   if (m_painted)
+   {
+     return;
+   }
+ 
+-  wxPaintDC paint_dc(this);
++  //-wxPaintDC paint_dc(this);
+   DoPaint(paint_dc);
+   m_painted = true; // paint once
+ }

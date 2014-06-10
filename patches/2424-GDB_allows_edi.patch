@@ -1,0 +1,120 @@
+Index: src/plugins/debuggergdb/debuggergdb.cpp
+===================================================================
+--- src/plugins/debuggergdb/debuggergdb.cpp	(revision 4978)
++++ src/plugins/debuggergdb/debuggergdb.cpp	(working copy)
+@@ -1602,51 +1602,67 @@
+
+ bool DebuggerGDB::AddBreakpoint(const wxString& file, int line)
+ {
+-    if (!IsStopped())
+-        return false;
++    bool debuggerIsRunning = !IsStopped();
++    if (debuggerIsRunning)
++        Break();
+     m_State.AddBreakpoint(file, line, false);
+     if (m_pBreakpointsWindow)
+         m_pBreakpointsWindow->Refresh();
++    if (debuggerIsRunning)
++        Continue();
+     return true;
+ }
+
+ bool DebuggerGDB::AddBreakpoint(const wxString& functionSignature)
+ {
+-    if (!IsStopped())
+-        return false;
++    bool debuggerIsRunning = !IsStopped();
++    if (debuggerIsRunning)
++        Break();
+     m_State.AddBreakpoint(wxEmptyString, -1, false, functionSignature);
+     if (m_pBreakpointsWindow)
+         m_pBreakpointsWindow->Refresh();
++    if (debuggerIsRunning)
++        Continue();
+     return true;
+ }
+
+ bool DebuggerGDB::RemoveBreakpoint(const wxString& file, int line)
+ {
+-    if (!IsStopped())
+-        return false;
++    bool debuggerIsRunning = !IsStopped();
++    if (debuggerIsRunning)
++        Break();
+     m_State.RemoveBreakpoint(file, line);
+     if (m_pBreakpointsWindow)
+         m_pBreakpointsWindow->Refresh();
++    if (debuggerIsRunning)
++        Continue();
+     return true;
+ }
+
+ bool DebuggerGDB::RemoveBreakpoint(const wxString& functionSignature)
+ {
+-//    if (!IsStopped())
+-        return false;
++//	bool debuggerIsRunning = !IsStopped();
++//    if (debuggerIsRunning)
++//        Break();
++    return false;
+ //    m_State.RemoveBreakpoint(wxEmptyString, event.GetInt());
+ //    if (m_pBreakpointsWindow)
+ //        m_pBreakpointsWindow->Refresh();
+-//    return true;
++//  if (debuggerIsRunning)
++//	    Continue();
++//  return true;
+ }
+
+ bool DebuggerGDB::RemoveAllBreakpoints(const wxString& file)
+ {
+-    if (!IsStopped())
+-        return false;
++    bool debuggerIsRunning = !IsStopped();
++    if (debuggerIsRunning)
++        Break();
+     m_State.RemoveAllBreakpoints(file);
+     if (m_pBreakpointsWindow)
+         m_pBreakpointsWindow->Refresh();
++    if (debuggerIsRunning)
++        Continue();
+     return true;
+ }
+
+@@ -1977,8 +1993,8 @@
+         mbar->Enable(idMenuStep, en && stopped);
+         mbar->Enable(idMenuStepOut, m_pProcess && en && stopped);
+         mbar->Enable(idMenuRunToCursor, en && ed && stopped);
+-        mbar->Enable(idMenuToggleBreakpoint, en && ed && stopped);
+-        mbar->Enable(idMenuRemoveAllBreakpoints, en && ed && stopped);
++        mbar->Enable(idMenuToggleBreakpoint, en && ed);
++        mbar->Enable(idMenuRemoveAllBreakpoints, en && ed);
+         mbar->Enable(idMenuSendCommandToGDB, m_pProcess && stopped);
+         mbar->Enable(idMenuAddSymbolFile, m_pProcess && stopped);
+         mbar->Enable(idMenuStop, m_pProcess && en);
+Index: src/plugins/debuggergdb/breakpointsdlg.cpp
+===================================================================
+--- src/plugins/debuggergdb/breakpointsdlg.cpp	(revision 4978)
++++ src/plugins/debuggergdb/breakpointsdlg.cpp	(working copy)
+@@ -120,8 +120,8 @@
+ void BreakpointsDlg::RemoveBreakpoint(int sel)
+ {
+     // if debugger is running and is not paused, return
+-    if (m_State.HasDriver() && !m_State.GetDriver()->IsStopped())
+-        return;
++//    if (m_State.HasDriver() && !m_State.GetDriver()->IsStopped())
++//        return;
+     // if index is out of range, return
+     if (sel < 0 || sel >= (int)m_State.GetBreakpoints().GetCount())
+         return;
+@@ -153,8 +153,8 @@
+ void BreakpointsDlg::OnRemoveAll(wxCommandEvent& event)
+ {
+     // if debugger is running and is not paused, return
+-    if (m_State.HasDriver() && !m_State.GetDriver()->IsStopped())
+-        return;
++//    if (m_State.HasDriver() && !m_State.GetDriver()->IsStopped())
++//        return;
+     while (m_State.GetBreakpoints().GetCount())
+     {
+         // if not valid breakpoint, continue with the next one

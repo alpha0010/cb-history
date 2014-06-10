@@ -1,0 +1,231 @@
+Index: src/sdk/editorconfigurationdlg.cpp
+===================================================================
+--- src/sdk/editorconfigurationdlg.cpp	(revision 4764)
++++ src/sdk/editorconfigurationdlg.cpp	(working copy)
+@@ -160,6 +160,8 @@
+    	XRCCTRL(*this, "chkFoldPreprocessor", wxCheckBox)->SetValue(cfg->ReadBool(_T("/folding/fold_preprocessor"), false));
+    	XRCCTRL(*this, "chkFoldComments", wxCheckBox)->SetValue(cfg->ReadBool(_T("/folding/fold_comments"), true));
+    	XRCCTRL(*this, "chkFoldXml", wxCheckBox)->SetValue(cfg->ReadBool(_T("/folding/fold_xml"), true));
++   	XRCCTRL(*this, "chkUnderlineFoldedLine", wxCheckBox)->SetValue(cfg->ReadBool(_T("/folding/underline_folded_line"), true));
++    XRCCTRL(*this, "lstIndicators", wxChoice)->SetSelection(cfg->ReadInt(_T("/folding/indicator"), 2));
+ 
+ 	//gutter
+     wxColour gutterColour = cfg->ReadColour(_T("/gutter/colour"), *wxLIGHT_GREY);
+@@ -898,6 +900,8 @@
+         cfg->Write(_T("/folding/fold_preprocessor"), 	XRCCTRL(*this, "chkFoldPreprocessor", wxCheckBox)->GetValue());
+         cfg->Write(_T("/folding/fold_comments"), 		XRCCTRL(*this, "chkFoldComments", wxCheckBox)->GetValue());
+         cfg->Write(_T("/folding/fold_xml"), 		    XRCCTRL(*this, "chkFoldXml", wxCheckBox)->GetValue());
++        cfg->Write(_T("/folding/underline_folded_line"), XRCCTRL(*this, "chkUnderlineFoldedLine", wxCheckBox)->GetValue());
++        cfg->Write(_T("/folding/indicator"), 		    XRCCTRL(*this, "lstIndicators", wxChoice)->GetSelection());
+ 
+         //eol
+         cfg->Write(_T("/show_eol"), 			        XRCCTRL(*this, "chkShowEOL", wxCheckBox)->GetValue());
+Index: src/sdk/cbeditor.cpp
+===================================================================
+--- src/sdk/cbeditor.cpp	(revision 4764)
++++ src/sdk/cbeditor.cpp	(working copy)
+@@ -631,6 +631,21 @@
+     }
+ }
+ 
++void cbEditor::SetMarkerStyle(int marker, int markerType, wxColor fore, wxColor back)
++{
++    cbStyledTextCtrl* ctrl = GetControl();
++
++    ctrl->MarkerDefine(marker, markerType);
++	ctrl->MarkerSetForeground(marker, fore);
++	ctrl->MarkerSetBackground(marker, back);
++}
++
++void cbEditor::UnderlineFoldedLines(bool underline)
++{
++    cbStyledTextCtrl* ctrl = GetControl();
++    ctrl->SetFoldFlags(underline? 16 : 0);
++}
++
+ cbStyledTextCtrl* cbEditor::CreateEditor()
+ {
+     m_ID = wxNewId();
+@@ -845,6 +860,10 @@
+     m_pData->m_ensure_consistent_line_ends = mgr->ReadBool(_T("/eol/ensure_consistent_line_ends"), false);
+ 
+     InternalSetEditorStyleBeforeFileOpen(m_pControl);
++
++    SetFoldingIndicator(mgr->ReadInt(_T("/folding/indicator")));
++    UnderlineFoldedLines(mgr->ReadBool(_T("/folding/underline_folded_line")));
++
+     if (m_pControl2)
+         InternalSetEditorStyleBeforeFileOpen(m_pControl2);
+ 
+@@ -982,6 +1001,7 @@
+         control->SetMarginMask(2, wxSCI_MASK_FOLDERS);
+         control->SetMarginSensitive(2, 1);
+ 
++        /*Default behaviour
+         control->MarkerDefine(wxSCI_MARKNUM_FOLDEROPEN, wxSCI_MARK_BOXMINUS);
+         control->MarkerSetForeground(wxSCI_MARKNUM_FOLDEROPEN, wxColour(0xff, 0xff, 0xff));
+         control->MarkerSetBackground(wxSCI_MARKNUM_FOLDEROPEN, wxColour(0x80, 0x80, 0x80));
+@@ -1003,6 +1023,7 @@
+         control->MarkerDefine(wxSCI_MARKNUM_FOLDERMIDTAIL, wxSCI_MARK_TCORNER);
+         control->MarkerSetForeground(wxSCI_MARKNUM_FOLDERMIDTAIL, wxColour(0xff, 0xff, 0xff));
+         control->MarkerSetBackground(wxSCI_MARKNUM_FOLDERMIDTAIL, wxColour(0x80, 0x80, 0x80));
++        */
+     }
+     else
+         control->SetMarginWidth(2, 0);
+@@ -1558,6 +1579,57 @@
+     DoFoldAll(2);
+ }
+ 
++void cbEditor::SetFoldingIndicator(int id)
++{
++    //Arrow
++    if(id == 0)
++    {
++        SetMarkerStyle(wxSCI_MARKNUM_FOLDEROPEN, wxSCI_MARK_ARROWDOWN, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDER, wxSCI_MARK_ARROW, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDERSUB, wxSCI_MARK_BACKGROUND, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDERTAIL, wxSCI_MARK_BACKGROUND, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDEREND, wxSCI_MARK_ARROW, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDEROPENMID, wxSCI_MARK_ARROWDOWN, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDERMIDTAIL, wxSCI_MARK_BACKGROUND, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++    }
++
++    //Circle
++    else if(id == 1)
++    {
++        SetMarkerStyle(wxSCI_MARKNUM_FOLDEROPEN, wxSCI_MARK_CIRCLEMINUS, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDER, wxSCI_MARK_CIRCLEPLUS, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDERSUB, wxSCI_MARK_VLINE, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDERTAIL, wxSCI_MARK_LCORNERCURVE, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDEREND, wxSCI_MARK_CIRCLEPLUSCONNECTED, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDEROPENMID, wxSCI_MARK_CIRCLEMINUSCONNECTED, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDERMIDTAIL, wxSCI_MARK_TCORNER, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++    }
++
++    //Square
++    else if(id == 2)
++    {
++        SetMarkerStyle(wxSCI_MARKNUM_FOLDEROPEN, wxSCI_MARK_BOXMINUS, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDER, wxSCI_MARK_BOXPLUS, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDERSUB, wxSCI_MARK_VLINE, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDERTAIL, wxSCI_MARK_LCORNER, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDEREND, wxSCI_MARK_BOXPLUSCONNECTED, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDEROPENMID, wxSCI_MARK_BOXMINUSCONNECTED, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDERMIDTAIL, wxSCI_MARK_TCORNER, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++    }
++
++    //Simple
++    else if(id == 3)
++    {
++        SetMarkerStyle(wxSCI_MARKNUM_FOLDEROPEN, wxSCI_MARK_MINUS, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDER, wxSCI_MARK_PLUS, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDERSUB, wxSCI_MARK_BACKGROUND, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDERTAIL, wxSCI_MARK_BACKGROUND, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDEREND, wxSCI_MARK_PLUS, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDEROPENMID, wxSCI_MARK_MINUS, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++		SetMarkerStyle(wxSCI_MARKNUM_FOLDERMIDTAIL, wxSCI_MARK_BACKGROUND, wxColor(0xff, 0xff, 0xff), wxColor(0x80, 0x80, 0x80));
++    }
++}
++
+ void cbEditor::FoldBlockFromLine(int line)
+ {
+     if (line == -1)
+Index: src/sdk/resources/editor_configuration.xrc
+===================================================================
+--- src/sdk/resources/editor_configuration.xrc	(revision 4764)
++++ src/sdk/resources/editor_configuration.xrc	(working copy)
+@@ -9,7 +9,6 @@
+ 			<object class="sizeritem">
+ 				<object class="wxStaticText" name="lblBigTitle">
+ 					<label>General settings</label>
+-					<style>wxST_NO_AUTORESIZE|wxALIGN_CENTRE</style>
+ 					<fg>#FFFFFF</fg>
+ 					<bg>#004080</bg>
+ 					<font>
+@@ -17,6 +16,7 @@
+ 						<weight>bold</weight>
+ 						<family>swiss</family>
+ 					</font>
++					<style>wxST_NO_AUTORESIZE|wxALIGN_CENTRE</style>
+ 				</object>
+ 				<flag>wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+ 			</object>
+@@ -265,8 +265,8 @@
+ 																			<item>Always</item>
+ 																			<item>Only after indent</item>
+ 																		</content>
++																		<size>95,24</size>
+ 																		<style>wxCB_READONLY</style>
+-																		<size>95,24</size>
+ 																	</object>
+ 																	<flag>wxLEFT|wxALIGN_LEFT|wxALIGN_TOP</flag>
+ 																	<border>16</border>
+@@ -407,6 +407,44 @@
+ 									<flag>wxTOP|wxLEFT|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
+ 									<border>4</border>
+ 								</object>
++								<object class="sizeritem">
++									<object class="wxStaticBoxSizer">
++										<label>Folding Style</label>
++										<orient>wxVERTICAL</orient>
++										<object class="sizeritem">
++											<object class="wxStaticText" name="lblIndicator">
++												<label>Indicator:</label>
++											</object>
++											<flag>wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++											<border>4</border>
++										</object>
++										<object class="sizeritem">
++											<object class="wxChoice" name="lstIndicators">
++												<content>
++													<item>Arrow</item>
++													<item>Flaten Tree Circular Headers</item>
++													<item>Flaten Tree Square Headers</item>
++													<item>Simple</item>
++												</content>
++												<default>2</default>
++											</object>
++											<flag>wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++											<border>4</border>
++											<option>1</option>
++										</object>
++										<object class="sizeritem">
++											<object class="wxCheckBox" name="chkUnderlineFoldedLine">
++												<label>Underline Folded Line</label>
++												<checked>1</checked>
++											</object>
++											<flag>wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL</flag>
++											<border>4</border>
++											<option>1</option>
++										</object>
++									</object>
++									<flag>wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP</flag>
++									<border>5</border>
++								</object>
+ 							</object>
+ 						</object>
+ 						<label>Folding</label>
+Index: src/include/cbeditor.h
+===================================================================
+--- src/include/cbeditor.h	(revision 4764)
++++ src/include/cbeditor.h	(working copy)
+@@ -151,6 +151,9 @@
+         /** Toggle all editor folds (inverts the show/hide state of blocks of code). */
+         void ToggleAllFolds();
+ 
++        /** Sets the type of folding indicator where id is one of the following: 0->Arrow, 1->Circle, 2->Square, 3->simple */
++        void SetFoldingIndicator(int id);
++
+         /** Folds the block containing \c line. If \c line is -1, folds the block containing the caret. */
+         void FoldBlockFromLine(int line = -1);
+ 
+@@ -300,6 +303,8 @@
+         void DoFoldAll(int fold); // 0=unfold, 1=fold, 2=toggle
+         void DoFoldBlockFromLine(int line, int fold); // 0=unfold, 1=fold, 2=toggle
+         bool DoFoldLine(int line, int fold); // 0=unfold, 1=fold, 2=toggle
++        void SetMarkerStyle(int marker, int markerType, wxColor fore, wxColor back);
++        void UnderlineFoldedLines(bool underline);
+         cbStyledTextCtrl* CreateEditor();
+         void SetEditorStyle();
+         void SetEditorStyleBeforeFileOpen();

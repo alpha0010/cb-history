@@ -1,0 +1,123 @@
+Index: src/sdk/globals.cpp
+===================================================================
+--- src/sdk/globals.cpp	(revision 3483)
++++ src/sdk/globals.cpp	(working copy)
+@@ -624,10 +624,6 @@
+
+ void PlaceWindow(wxWindow *w, cbPlaceDialogMode mode, bool enforce)
+ {
+-    HMONITOR hMonitor;
+-    MONITORINFO mi;
+-    RECT        r;
+-
+     int the_mode;
+
+     if(!w)
+@@ -649,30 +645,46 @@
+     else
+         the_mode = (int) mode;
+
++    wxRect* monitorRect;
++#if (WINVER >= 0x0410)
++    if ( wxGetWinVersion() >= wxWinVersion_98 )
++    {
++        RECT        r;
++        HMONITOR    hMonitor;
++        MONITORINFO mi;
++        hMonitor = MonitorFromWindow((HWND) referenceWindow->GetHandle(), MONITOR_DEFAULTTONEAREST);
+
+-    hMonitor = MonitorFromWindow((HWND) referenceWindow->GetHandle(), MONITOR_DEFAULTTONEAREST);
++        mi.cbSize = sizeof(mi);
++        GetMonitorInfo(hMonitor, &mi);
++        r = mi.rcWork;
+
+-    mi.cbSize = sizeof(mi);
+-    GetMonitorInfo(hMonitor, &mi);
+-    r = mi.rcWork;
++        wxRect monitorRectA = wxRect(wxPoint(r.left, r.top), wxPoint(r.right, r.bottom));
++        monitorRect = &monitorRectA;
++    }
++    else
++#else
++// use stub code under Windows 95 and NT 4.0 for GetMonitorInfo
++#define COMPILE_MULTIMON_STUBS
++#endif
++    {
++        wxRect monitorRectB = wxGetClientDisplayRect();
++        monitorRect = &monitorRectB;
++    }
+
+-    int monitorWidth  = r.right - r.left;
+-    int monitorHeight = r.bottom - r. top;
+-
+     switch(the_mode)
+     {
+         case pdlCentre:
+         {
+-            windowRect.x = r.left + (monitorWidth  - windowRect.width)/2;
+-            windowRect.y = r.top  + (monitorHeight - windowRect.height)/2;
++            windowRect.x = monitorRect->GetLeft() + (monitorRect->GetWidth()  - windowRect.width)/2;
++            windowRect.y = monitorRect->GetTop()  + (monitorRect->GetHeight() - windowRect.height)/2;
+         }
+         break;
+
+
+         case pdlHead:
+         {
+-            windowRect.x = r.left + (monitorWidth  - windowRect.width)/2;
+-            windowRect.y = r.top  + (monitorHeight - windowRect.height)/3;
++            windowRect.x = monitorRect->GetLeft() + (monitorRect->GetWidth()  - windowRect.width)/2;
++            windowRect.y = monitorRect->GetTop()  + (monitorRect->GetHeight() - windowRect.height)/3;
+         }
+         break;
+
+@@ -684,26 +696,26 @@
+             int y1 = windowRect.y;
+             int y2 = windowRect.y + windowRect.height;
+
+-            if(windowRect.width > monitorWidth) // cannot place without clipping, so centre it
++            if(windowRect.width > monitorRect->GetWidth()) // cannot place without clipping, so centre it
+             {
+-                x1 = r.left + (monitorWidth  - windowRect.width)/2;
++                x1 = monitorRect->GetLeft() + (monitorRect->GetWidth()  - windowRect.width)/2;
+                 x2 = x1 + windowRect.width;
+             }
+             else
+             {
+-                x2 = std::min((int) r.right, windowRect.GetRight());
+-                x1 = std::max(x2 - windowRect.width, (int) r.left);
++                x2 = std::min((int) monitorRect->GetRight(), windowRect.GetRight());
++                x1 = std::max(x2 - windowRect.width, (int) monitorRect->GetLeft());
+                 x2 = x1 + windowRect.width;
+             }
+-            if(windowRect.height > monitorHeight) // cannot place without clipping, so centre it
++            if(windowRect.height > monitorRect->GetHeight()) // cannot place without clipping, so centre it
+             {
+-                y1 = r.top + (monitorHeight  - windowRect.height)/2;
++                y1 = monitorRect->GetTop() + (monitorRect->GetHeight()  - windowRect.height)/2;
+                 y2 = y1 + windowRect.height;
+             }
+             else
+             {
+-                y2 = std::min((int) r.bottom, windowRect.GetBottom());
+-                y1 = std::max(y2 - windowRect.height, (int) r.top);
++                y2 = std::min((int) monitorRect->GetBottom(), windowRect.GetBottom());
++                y1 = std::max(y2 - windowRect.height, (int) monitorRect->GetTop());
+                 y2 = y1 + windowRect.height;
+             }
+             windowRect = wxRect(x1, y1, x2-x1, y2-y1);
+@@ -718,10 +730,10 @@
+             int y1 = windowRect.y;
+             int y2 = windowRect.y + windowRect.height;
+
+-            x1 = std::max(x1, (int) r.left);
+-            x2 = std::min(x2, (int) r.right);
+-            y1 = std::max(y1, (int) r.top);
+-            y2 = std::min(y2, (int) r.bottom);
++            x1 = std::max(x1, (int) monitorRect->GetLeft());
++            x2 = std::min(x2, (int) monitorRect->GetRight());
++            y1 = std::max(y1, (int) monitorRect->GetTop());
++            y2 = std::min(y2, (int) monitorRect->GetBottom());
+
+             windowRect = wxRect(x1, y1, x2-x1, y2-y1);
+         }

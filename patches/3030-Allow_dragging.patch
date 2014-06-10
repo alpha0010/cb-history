@@ -1,0 +1,555 @@
+Index: src/include/cbproject.h
+===================================================================
+--- src/include/cbproject.h	(revision 6472)
++++ src/include/cbproject.h	(working copy)
+@@ -558,12 +558,12 @@
+           */
+         bool CanDragNode(wxTreeCtrl* tree, wxTreeItemId node);
+ 
+-        /** Notify that a specific tree node has been dragged.
++        /** Notify that an array of tree nodes has been dragged.
+           *
+           * @note Called by ProjectManager.
+           * @return True if succeeded, false if not.
+           */
+-        bool NodeDragged(wxTreeCtrl* tree, wxTreeItemId from, wxTreeItemId to);
++        bool NodeDragged(wxTreeCtrl* tree, wxArrayTreeItemIds& fromArray, wxTreeItemId to);
+ 
+         /** Notify that a virtual folder has been added.
+           * @return True if it is allowed, false if not. */
+Index: src/include/projectmanager.h
+===================================================================
+--- src/include/projectmanager.h	(revision 6472)
++++ src/include/projectmanager.h	(working copy)
+@@ -370,6 +370,17 @@
+           * @return A pointer to a wxTreeCtrl window.
+           */
+         wxTreeCtrl* GetTree(){ return m_pTree; }
++        /** Get the selection of the project manager's tree (GUI).
++          * This must be used instead of tree->GetSelection() because the tree
++          * has the wxTR_MULTIPLE style.
++          * This usually returns the first item in the selection list, but
++          * if there is a right-click popup menu then the user may have
++          * selected several items and right-clicked on one, so return the
++          * right-click item instead.
++          * of the first
++          * @return A wxTreeItemId of the selected tree item.
++          */
++        wxTreeItemId GetTreeSelection();
+         /** Retrieve a pointer to the project manager's panel (GUI). This panel
+           * is the parent of the project manager's tree obtained through GetTree().
+           * @return A pointer to a wxPanel window.
+@@ -507,7 +518,8 @@
+         bool m_IsClosingProject;
+         bool m_IsClosingWorkspace;
+         wxString m_InitialDir;
+-        wxTreeItemId m_DraggingItem;
++        wxArrayTreeItemIds m_DraggingSelection;
++        wxTreeItemId m_RightClickItem;
+         bool m_isCheckingForExternallyModifiedProjects;
+         bool m_CanSendWorkspaceChanged;
+ 
+Index: src/plugins/astyle/astyleplugin.cpp
+===================================================================
+--- src/plugins/astyle/astyleplugin.cpp	(revision 6472)
++++ src/plugins/astyle/astyleplugin.cpp	(working copy)
+@@ -131,12 +131,13 @@
+ 
+ void AStylePlugin::OnFormatProject( wxCommandEvent& /*event*/ )
+ {
+-	wxTreeCtrl *tree = Manager::Get()->GetProjectManager()->GetTree();
++	ProjectManager* manager = Manager::Get()->GetProjectManager();
++	wxTreeCtrl *tree = manager->GetTree();
+ 
+ 	if ( !tree )
+ 		return;
+ 
+-	wxTreeItemId treeItem =  tree->GetSelection();
++	wxTreeItemId treeItem =  manager->GetTreeSelection();
+ 
+ 	if ( !treeItem.IsOk() )
+ 		return;
+Index: src/plugins/compilergcc/compilergcc.cpp
+===================================================================
+--- src/plugins/compilergcc/compilergcc.cpp	(revision 6472)
++++ src/plugins/compilergcc/compilergcc.cpp	(working copy)
+@@ -982,8 +982,9 @@
+ 
+ FileTreeData* CompilerGCC::DoSwitchProjectTemporarily()
+ {
+-    wxTreeCtrl* tree = Manager::Get()->GetProjectManager()->GetTree();
+-    wxTreeItemId sel = tree->GetSelection();
++	ProjectManager* manager = Manager::Get()->GetProjectManager();
++    wxTreeCtrl* tree = manager->GetTree();
++    wxTreeItemId sel = manager->GetTreeSelection();
+     FileTreeData* ftd = sel.IsOk() ? (FileTreeData*)tree->GetItemData(sel) : 0;
+     if (!ftd)
+         return 0L;
+@@ -3200,8 +3201,9 @@
+ 
+ void CompilerGCC::OnProjectCompilerOptions(wxCommandEvent& /*event*/)
+ {
+-    wxTreeCtrl* tree = Manager::Get()->GetProjectManager()->GetTree();
+-    wxTreeItemId sel = tree->GetSelection();
++	ProjectManager* manager = Manager::Get()->GetProjectManager();
++    wxTreeCtrl* tree = manager->GetTree();
++    wxTreeItemId sel = manager->GetTreeSelection();
+     FileTreeData* ftd = sel.IsOk() ? (FileTreeData*)tree->GetItemData(sel) : 0;
+     if (ftd)
+     {
+Index: src/sdk/cbproject.cpp
+===================================================================
+--- src/sdk/cbproject.cpp	(revision 6472)
++++ src/sdk/cbproject.cpp	(working copy)
+@@ -1170,60 +1170,88 @@
+     return ftd->GetKind() == FileTreeData::ftdkFile || ftd->GetKind() == FileTreeData::ftdkVirtualFolder;
+ }
+ 
+-bool cbProject::NodeDragged(wxTreeCtrl* tree, wxTreeItemId from, wxTreeItemId to)
++bool cbProject::NodeDragged(wxTreeCtrl* tree, wxArrayTreeItemIds& fromArray, wxTreeItemId to)
+ {
+     // what items did we drag?
+-    if (!from.IsOk() || !to.IsOk())
++    if (!to.IsOk())
+         return false;
+ 
+-    // if no data associated with it, disallow
+-    FileTreeData* ftd1 = (FileTreeData*)tree->GetItemData(from);
+-    FileTreeData* ftd2 = (FileTreeData*)tree->GetItemData(to);
+-    if (!ftd1 || !ftd2)
++	// if no data associated with it, disallow
++    FileTreeData* ftdTo = (FileTreeData*)tree->GetItemData(to);
++    if (!ftdTo)
+         return false;
+ 
+-    // if not ours, disallow
+-    if (ftd1->GetProject() != this || ftd2->GetProject() != this)
++	// if not ours, disallow
++    if (ftdTo->GetProject() != this)
+         return false;
+ 
+-    // allow only if a file or vfolder was dragged on a file, another vfolder or the project itself
+-    if ((ftd1->GetKind() != FileTreeData::ftdkFile &&
+-        ftd1->GetKind() != FileTreeData::ftdkVirtualFolder) ||
+-        (ftd2->GetKind() != FileTreeData::ftdkFile &&
+-         ftd2->GetKind() != FileTreeData::ftdkVirtualFolder &&
+-         ftd2->GetKind() != FileTreeData::ftdkProject))
+-    {
+-        return false;
+-    }
++	// allow only if a file or vfolder was dragged on a file, another vfolder or the project itself
++	if (ftdTo->GetKind() != FileTreeData::ftdkFile &&
++		 ftdTo->GetKind() != FileTreeData::ftdkVirtualFolder &&
++		 ftdTo->GetKind() != FileTreeData::ftdkProject)
++	{
++		return false;
++	}
+ 
+-    // don't drag under the same parent
+-    wxTreeItemId parent1 = ftd1->GetKind() == FileTreeData::ftdkFile ? tree->GetItemParent(from) : from;
+-    wxTreeItemId parent2 = ftd2->GetKind() == FileTreeData::ftdkFile ? tree->GetItemParent(to) : to;
+-    if (parent1 == parent2)
+-        return false;
++	wxTreeItemId parentTo = ftdTo->GetKind() == FileTreeData::ftdkFile ? tree->GetItemParent(to) : to;
+ 
+-    // A special check for virtual folders.
+-    if (ftd1->GetKind() == FileTreeData::ftdkVirtualFolder || ftd2->GetKind() == FileTreeData::ftdkVirtualFolder)
+-    {
+-        wxTreeItemId root = tree->GetRootItem();
+-        wxTreeItemId toParent = tree->GetItemParent(to);
+-        while (toParent != root)
+-        {
+-            if (toParent == from)
+-                return false;
+-            toParent = tree->GetItemParent(toParent);
+-        }
+-        if (!VirtualFolderDragged(tree, from, to))
+-        {
+-            return false;
+-        }
+-    }
++	//Do all the checking for all selected items first
++    size_t count = fromArray.Count();
++	for(size_t i = 0; i < count; i++)
++	{
++		wxTreeItemId from = fromArray[i];
++		if (!from.IsOk())
++			return false;
+ 
+-    // finally; make the move
+-    CopyTreeNodeRecursively(tree, from, parent2);
+-    // remove old node
+-    tree->Delete(from);
++		// if no data associated with it, disallow
++		FileTreeData* ftdFrom = (FileTreeData*)tree->GetItemData(from);
++		if (!ftdFrom)
++			return false;
+ 
++		// if not ours, disallow
++		if (ftdFrom->GetProject() != this)
++			return false;
++
++		// allow only if a file or vfolder was dragged on a file, another vfolder or the project itself
++		if (ftdFrom->GetKind() != FileTreeData::ftdkFile &&
++			 ftdFrom->GetKind() != FileTreeData::ftdkVirtualFolder)
++			return false;
++
++		// don't drag under the same parent
++		wxTreeItemId parentFrom = ftdFrom->GetKind() == FileTreeData::ftdkFile ? tree->GetItemParent(from) : from;
++		if (parentFrom == parentTo)
++			return false;
++
++		// A special check for virtual folders.
++		if (ftdFrom->GetKind() == FileTreeData::ftdkVirtualFolder || ftdTo->GetKind() == FileTreeData::ftdkVirtualFolder)
++		{
++			wxTreeItemId root = tree->GetRootItem();
++			wxTreeItemId toParent = tree->GetItemParent(to);
++			while (toParent != root)
++			{
++				if (toParent == from)
++					return false;
++				toParent = tree->GetItemParent(toParent);
++			}
++			if (!VirtualFolderDragged(tree, from, to))
++			{
++				return false;
++			}
++		}
++	}//for(size_t i = 0; i < count; i++)
++
++	//Now that we have successfully done the checking, do the moving
++	for(size_t i = 0; i < count; i++)
++	{
++		wxTreeItemId from = fromArray[i];
++
++		// finally; make the move
++		CopyTreeNodeRecursively(tree, from, parentTo);
++		// remove old node
++		tree->Delete(from);
++
++	}//for(size_t i = 0; i < count; i++)
++
+     SetModified(true);
+ 
+     Manager::Get()->GetProjectManager()->RebuildTree();
+Index: src/sdk/projectmanager.cpp
+===================================================================
+--- src/sdk/projectmanager.cpp	(revision 6472)
++++ src/sdk/projectmanager.cpp	(working copy)
+@@ -318,7 +318,7 @@
+     #ifndef __WXMSW__
+         m_pTree = new PrjTree(m_pNotebook, ID_ProjectManager);
+     #else
+-        m_pTree = new wxTreeCtrl(m_pNotebook, ID_ProjectManager, wxDefaultPosition, wxDefaultSize, wxTR_EDIT_LABELS | wxTR_DEFAULT_STYLE | wxNO_BORDER);
++        m_pTree = new wxTreeCtrl(m_pNotebook, ID_ProjectManager, wxDefaultPosition, wxDefaultSize, wxTR_EDIT_LABELS | wxTR_DEFAULT_STYLE | wxNO_BORDER | wxTR_MULTIPLE);
+     #endif
+ 
+     static const wxString imgs[] = {
+@@ -1485,7 +1485,7 @@
+ 
+ void ProjectManager::DoOpenSelectedFile()
+ {
+-    wxTreeItemId sel = m_pTree->GetSelection();
++    wxTreeItemId sel = GetTreeSelection();
+     FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(sel);
+ 
+     if (ftd)
+@@ -1683,61 +1683,75 @@
+ 
+ void ProjectManager::OnTreeBeginDrag(wxTreeEvent& event)
+ {
+-//    wxString text = m_pTree->GetItemText(event.GetItem());
+-//    Manager::Get()->GetLogManager()->DebugLog(F(_T("BeginDrag: %s"), text.c_str()));
++    size_t count = m_pTree->GetSelections(m_DraggingSelection);
++	for(size_t i = 0; i < count; i++)
++	{
++		//what item do we start dragging?
++		wxTreeItemId id = m_DraggingSelection[i];
+ 
+-    // what item do we start dragging?
+-    wxTreeItemId id = event.GetItem();
+-    if (!id.IsOk())
+-        return;
++		if (!id.IsOk())
++			return;
+ 
+-    // if no data associated with it, disallow
+-    FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(id);
+-    if (!ftd)
+-        return;
++		// if no data associated with it, disallow
++		FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(id);
++		if (!ftd)
++			return;
+ 
+-    // if no project, disallow
+-    cbProject* prj = ftd->GetProject();
+-    if (!prj)
+-        return;
++		// if no project, disallow
++		cbProject* prj = ftd->GetProject();
++		if (!prj)
++			return;
+ 
+-    // allow only if the project approves
+-    if (!prj->CanDragNode(m_pTree, id))
+-        return;
++		// allow only if the project approves
++		if (!prj->CanDragNode(m_pTree, id))
++			return;
+ 
++	}
++
+     // allowed
+-    m_DraggingItem = id;
+     event.Allow();
+ }
+ 
+ void ProjectManager::OnTreeEndDrag(wxTreeEvent& event)
+ {
+-//    wxString text = m_pTree->GetItemText(event.GetItem());
+-//    wxString oldtext = m_pTree->GetItemText(m_DraggingItem);
+-//    Manager::Get()->GetLogManager()->DebugLog(F(_T("EndDrag: %s to %s"), oldtext.c_str(), text.c_str()));
+-
+-    wxTreeItemId from = m_DraggingItem;
+     wxTreeItemId to = event.GetItem();
+-    m_DraggingItem.Unset();
+ 
+-    // are both items valid?
+-    if (!from.IsOk() || !to.IsOk())
+-        return;
++    // is the drag target valid?
++	if (!to.IsOk())
++		return;
+ 
+-    // if no data associated with any of them, disallow
+-    FileTreeData* ftd1 = (FileTreeData*)m_pTree->GetItemData(from);
+-    FileTreeData* ftd2 = (FileTreeData*)m_pTree->GetItemData(to);
+-    if (!ftd1 || !ftd2)
+-        return;
++	// if no data associated with any of them, disallow
++	FileTreeData* ftdTo = (FileTreeData*)m_pTree->GetItemData(to);
++	if (!ftdTo)
++		return;
+ 
+-    // if no project or different projects, disallow
+-    cbProject* prj1 = ftd1->GetProject();
+-    cbProject* prj2 = ftd2->GetProject();
+-    if (!prj1 || prj1 != prj2)
++	// if no project or different projects, disallow
++    cbProject* prjTo = ftdTo->GetProject();
++    if (!prjTo)
+         return;
+ 
++	size_t count = m_DraggingSelection.Count();
++	for(size_t i = 0; i < count; i++)
++	{
++		wxTreeItemId from = m_DraggingSelection[i];
++
++		// is the item valid?
++		if (!from.IsOk())
++			return;
++
++		// if no data associated with any of them, disallow
++		FileTreeData* ftdFrom = (FileTreeData*)m_pTree->GetItemData(from);
++		if (!ftdFrom)
++			return;
++
++		// if no project or different projects, disallow
++		cbProject* prjFrom = ftdTo->GetProject();
++		if (prjFrom != prjTo)
++			return;
++	}
++
+     // allow only if the project approves
+-    if (!prj1->NodeDragged(m_pTree, from, to))
++    if (!prjTo->NodeDragged(m_pTree, m_DraggingSelection, to))
+         return;
+ 
+     event.Allow();
+@@ -1819,10 +1833,33 @@
+     }
+ 
+     //Manager::Get()->GetLogManager()->DebugLog("OnTreeItemRightClick");
++
++	//We have a popup menu, so we will use the right-click item instead of the first tree selection.
++	m_RightClickItem = event.GetItem();
++
+     m_pTree->SelectItem(event.GetItem());
+     ShowMenu(event.GetItem(), event.GetPoint());
++
++	//Unset it so that we go back to using the first tree selection again.
++	m_RightClickItem.Unset();
+ }
+ 
++wxTreeItemId ProjectManager::GetTreeSelection()
++{
++	if(m_RightClickItem.IsOk())
++	{
++		//User may have selected several items and right-clicked on one,
++        //so return the right-click item instead.
++		return m_RightClickItem;
++	}
++
++	wxArrayTreeItemIds selections;
++	m_pTree->GetSelections(selections);
++
++	//Usually return the first item in the selection list.
++	return selections[0];
++};
++
+ void ProjectManager::OnRenameWorkspace(wxCommandEvent& /*event*/)
+ {
+     if (m_pWorkspace)
+@@ -1864,7 +1901,7 @@
+ {
+     if (event.GetId() == idMenuSetActiveProject)
+     {
+-        wxTreeItemId sel = m_pTree->GetSelection();
++        wxTreeItemId sel = GetTreeSelection();
+         FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(sel);
+         if (!ftd)
+             return;
+@@ -1893,14 +1930,14 @@
+     }
+     else if (event.GetId() == idMenuProjectUp)
+     {
+-        wxTreeItemId sel = m_pTree->GetSelection();
++        wxTreeItemId sel = GetTreeSelection();
+         FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(sel);
+         if (ftd)
+             MoveProjectUp(ftd->GetProject());
+     }
+     else if (event.GetId() == idMenuProjectDown)
+     {
+-        wxTreeItemId sel = m_pTree->GetSelection();
++        wxTreeItemId sel = GetTreeSelection();
+         FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(sel);
+         if (ftd)
+             MoveProjectDown(ftd->GetProject());
+@@ -1920,7 +1957,7 @@
+     }
+     else
+     {
+-        wxTreeItemId sel = m_pTree->GetSelection();
++        wxTreeItemId sel = GetTreeSelection();
+         FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(sel);
+         if (ftd)
+         {
+@@ -2005,7 +2042,7 @@
+     }
+     else
+     {
+-        wxTreeItemId sel = m_pTree->GetSelection();
++        wxTreeItemId sel = GetTreeSelection();
+         FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(sel);
+         if (ftd)
+         {
+@@ -2046,7 +2083,7 @@
+ 
+ void ProjectManager::OnRemoveFileFromProject(wxCommandEvent& event)
+ {
+-    wxTreeItemId sel = m_pTree->GetSelection();
++    wxTreeItemId sel = GetTreeSelection();
+     FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(sel);
+     if (!ftd)
+         return;
+@@ -2141,7 +2178,7 @@
+ 
+ void ProjectManager::OnSaveProject(wxCommandEvent& WXUNUSED(event))
+ {
+-    wxTreeItemId sel = m_pTree->GetSelection();
++    wxTreeItemId sel = GetTreeSelection();
+     if(FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(sel))
+     {
+         if(cbProject* Project = ftd->GetProject())
+@@ -2161,7 +2198,7 @@
+ 
+ void ProjectManager::OnCloseProject(wxCommandEvent& WXUNUSED(event))
+ {
+-    wxTreeItemId sel = m_pTree->GetSelection();
++    wxTreeItemId sel = GetTreeSelection();
+     FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(sel);
+     cbProject *proj = 0;
+     if (ftd)
+@@ -2182,7 +2219,7 @@
+ 
+ void ProjectManager::OnSaveFile(wxCommandEvent& WXUNUSED(event))
+ {
+-    wxTreeItemId sel = m_pTree->GetSelection();
++    wxTreeItemId sel = GetTreeSelection();
+     if(FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(sel))
+     {
+         if(cbProject* Project = ftd->GetProject())
+@@ -2197,7 +2234,7 @@
+ 
+ void ProjectManager::OnCloseFile(wxCommandEvent& WXUNUSED(event))
+ {
+-    wxTreeItemId sel = m_pTree->GetSelection();
++    wxTreeItemId sel = GetTreeSelection();
+     if (FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(sel))
+     {
+         if(cbProject* Project = ftd->GetProject())
+@@ -2217,7 +2254,7 @@
+ 
+ void ProjectManager::OnOpenWith(wxCommandEvent& event)
+ {
+-    wxTreeItemId sel = m_pTree->GetSelection();
++    wxTreeItemId sel = GetTreeSelection();
+     FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(sel);
+ 
+     if (ftd)
+@@ -2274,7 +2311,7 @@
+     }
+     else if (event.GetId() == idMenuTreeProjectProperties)
+     {
+-        wxTreeItemId sel = m_pTree->GetSelection();
++        wxTreeItemId sel = GetTreeSelection();
+         FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(sel);
+ 
+         cbProject* project = ftd ? ftd->GetProject() : m_pActiveProject;
+@@ -2289,7 +2326,7 @@
+     }
+     else if (event.GetId() == idMenuTreeFileProperties)
+     {
+-        wxTreeItemId sel = m_pTree->GetSelection();
++        wxTreeItemId sel = GetTreeSelection();
+         FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(sel);
+ 
+         cbProject* project = ftd ? ftd->GetProject() : m_pActiveProject;
+@@ -2403,7 +2440,7 @@
+     wxString text = wxGetTextFromUser(_("Please enter the name of the file you are searching:"), _("Find file..."));
+     if( !text.IsEmpty() )
+     {
+-        wxTreeItemId sel = m_pTree->GetSelection();
++        wxTreeItemId sel = GetTreeSelection();
+ 
+         wxTreeItemId found = FindItem( sel, text );
+ 
+@@ -2425,7 +2462,7 @@
+     if (fld.IsEmpty())
+         return;
+ 
+-    wxTreeItemId sel = m_pTree->GetSelection();
++    wxTreeItemId sel = GetTreeSelection();
+     FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(sel);
+     if (!ftd)
+         return;
+@@ -2439,7 +2476,7 @@
+ 
+ void ProjectManager::OnDeleteVirtualFolder(wxCommandEvent& /*event*/)
+ {
+-    wxTreeItemId sel = m_pTree->GetSelection();
++    wxTreeItemId sel = GetTreeSelection();
+     FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(sel);
+     if (!ftd)
+         return;
+@@ -2515,7 +2552,7 @@
+ 
+ void ProjectManager::OnRenameFile(wxCommandEvent& /*event*/)
+ {
+-    wxTreeItemId sel = m_pTree->GetSelection();
++    wxTreeItemId sel = GetTreeSelection();
+     FileTreeData* ftd = (FileTreeData*)m_pTree->GetItemData(sel);
+     if (!ftd)
+         return;

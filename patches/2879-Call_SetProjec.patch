@@ -1,0 +1,50 @@
+Index: src/sdk/projectmanager.cpp
+===================================================================
+--- src/sdk/projectmanager.cpp	(revision 5986)
++++ src/sdk/projectmanager.cpp	(working copy)
+@@ -856,7 +856,19 @@
+ 
+     EndLoadingProject(result);
+     if (activateIt)
+-        SetProject(result, !m_IsLoadingWorkspace);
++    {
++        if (m_IsLoadingWorkspace)
++        {
++            // postpone call of SetProject() until EndLoadingWorkspace() is called
++            // (we must call RebuildTree() before SetProject() is called)
++            m_pActiveProject = result;
++        }
++        else
++        {
++            SetProject(result, true);            
++        }
++    }
++    
+     return result;
+ }
+ 
+@@ -1684,7 +1696,12 @@
+             continue;
+         }
+ 
+-        arr->Remove(base);
++        int index = arr->Index(base);
++        if (index != wxNOT_FOUND)
++        {
++            arr->RemoveAt(index);
++        }
++        
+         if (m_pWorkspace)
+             m_pWorkspace->SetModified(true);
+ 
+@@ -2865,7 +2882,10 @@
+     {
+         RebuildTree();
+         if (m_pActiveProject)
++        {
++            SetProject(m_pActiveProject, true);
+             m_pTree->Expand(m_pActiveProject->GetProjectNode());
++        }
+         m_pTree->Expand(m_TreeRoot); // make sure the root node is open
+         m_pTree->SetItemText(m_TreeRoot, m_pWorkspace->GetTitle());
+ 
