@@ -184,7 +184,7 @@ for ticket in docTree.getroot():
 
         elif prop.tag == "assigned_to":
             if prop.attrib["name"] == "none":
-                ticketOut["$$ASSIGNED$$"] = ""
+                ticketOut["$$ASSIGNED$$"] = "&nbsp;"
             else:
                 ticketOut["$$ASSIGNED$$"] = cgi.escape(prop.attrib["name"])
 
@@ -211,7 +211,7 @@ for ticket in docTree.getroot():
                 ticketOut["$$CLOSE_DATE$$"] = DT.datetime.utcfromtimestamp(int(prop.text)).isoformat(" ")
             else:
                 ticketOut["$$STATUS$$"] = "Open"
-                ticketOut["$$CLOSE_DATE$$"] = ""
+                ticketOut["$$CLOSE_DATE$$"] = "&nbsp;"
             if int(ticket.attrib["id"]) in statusDb:
                 ticketOut["$$STATUS$$"] = statusDb[int(ticket.attrib["id"])]["status"]
                 ticketOut["$$CATEGORY$$"] = statusDb[int(ticket.attrib["id"])]["category"]
