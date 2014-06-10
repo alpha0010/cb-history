@@ -158,7 +158,23 @@ urlRe = re.compile(ur'(((ht|f)tp(s?)\:\/\/)|(www\.))(([a-zA-Z0-9\-\._]+(\.[a-zA-
 fHandle = open("old_dump/berlios.json", "r")
 lookupDb = json.load(fHandle)
 fHandle.close()
-statusDb = {}
+# hardcode a few (known) values that are not in the older dump by Jens with ForgePlucker
+statusDb = { 3524: {"status": "Open", "category": "Application::Refinement"},
+             3529: {"status": "Open", "category": "Application::FeatureAdd"},
+             3552: {"status": "Open", "category": "Plugin::Refinement"},
+             3553: {"status": "Open", "category": "Lexer"},
+             3554: {"status": "Open", "category": "Application::FeatureAdd"},
+             3555: {"status": "Open", "category": "Application::FeatureAdd"},
+             3556: {"status": "Open", "category": "Application::Refinement"},
+             3557: {"status": "Open", "category": "Plugin::Refinement"},
+             3558: {"status": "Open", "category": "Plugin::Refinement"},
+             3559: {"status": "Open", "category": "Plugin::Refinement"},
+             3560: {"status": "Open", "category": "Plugin::Refinement"},
+             3561: {"status": "Open", "category": "Plugin::FeatureAdd"},
+             3563: {"status": "Open", "category": "Plugin::Bugfix"},
+             3564: {"status": "Open", "category": "Plugin::Refinement"},
+             3565: {"status": "Open", "category": "Plugin::Refinement"},
+             3566: {"status": "Open", "category": "Plugin::Bugfix"} }
 for patch in lookupDb["trackers"]["patches"]["artifacts"]:
     statusDb[patch["id"]] = { "status": patch["status"], "category": patch["category"] }
 
@@ -213,7 +229,8 @@ for ticket in docTree.getroot():
                 ticketOut["$$STATUS$$"] = "Open"
                 ticketOut["$$CLOSE_DATE$$"] = "&nbsp;"
             if int(ticket.attrib["id"]) in statusDb:
-                ticketOut["$$STATUS$$"] = statusDb[int(ticket.attrib["id"])]["status"]
+                if statusDb[int(ticket.attrib["id"])]["status"] != "Open": # statusDb *might* be out of date
+                    ticketOut["$$STATUS$$"] = statusDb[int(ticket.attrib["id"])]["status"]
                 ticketOut["$$CATEGORY$$"] = statusDb[int(ticket.attrib["id"])]["category"]
 
         elif prop.tag == "history" and prop[0].text == "details":
