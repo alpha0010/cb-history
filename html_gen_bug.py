@@ -323,8 +323,22 @@ def getPagination():
         pagination += '><a href="bugs.html">&laquo;</a></li>'
     else:
         pagination += '><a href="bugs' + str(numOutput / numPerPage - 1) + '.html">&laquo;</a></li>'
+    skipMin = 0
+    skipMax = 0
+    if numPages > 25:
+        skipDelta = int(min(numPages / 3, numPages - 22))
+        if numOutput / numPerPage < numPages / 2:
+            skipMax = numPages - 2
+            skipMin = skipMax - skipDelta
+        else:
+            skipMin = 3
+            skipMax = skipMin + skipDelta
     for i in range(1, numPages + 1):
-        if i == numOutput / numPerPage:
+        if i == skipMin:
+            pagination += '<li class="disabled"><span>&middot;&middot;&middot;</span></li>'
+        elif i > skipMin and i <= skipMax:
+            continue
+        elif i == numOutput / numPerPage:
             pagination += '<li class="active"><span>' + str(i) + '</span></li>'
         elif i == 1:
             pagination += '<li><a href="bugs.html">1</a></li>'
