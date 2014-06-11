@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 17725 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #17725 <small>2010-11-21 16:43:39</small></h3>
+          <h4>clemens1509</h4>
+          <p class="lead">Save C++ file in Editor causes crash</p>
+          <pre class="pre-scrollable">Sometimes if a C++ file in Editor is saved it crashes. I very quickly save with a shortcut and repeat work very fast. It seams to me that saving is not threadsave.
+
+------------------ crash report --------------------------
+
+System: Linux 2.6.30.10-105.2.23.fc11.x86_64 #1 SMP Thu Feb 11 07:06:34 UTC 2010 x86_64
+X Vendor: The X.Org Foundation
+X Vendor Release: 10603901
+Selinux: No
+Accessibility: Disabled
+GTK+ Theme: Nodoka
+Icon Theme: Fedora
+GTK+ Modules: canberra-gtk-module, pk-gtk-module, gnomebreakpad
+
+Memory status: size: 1163730944 vsize: 1163730944 resident: 200994816 share: 34836480 rss: 200994816 rss_rlim: 18446744073709551615
+CPU usage: start_time: 1290353152 rtime: 30203 utime: 29189 stime: 1014 cutime:25 cstime: 28 timeout: 0 it_real_value: 0 frequency: 100
+
+Backtrace was generated from '/home/cvmann/dev/codeblocks/bin/codeblocks'
+
+[Thread debugging using libthread_db enabled]
+[New Thread 0x7f0bd7fff910 (LWP 7551)]
+[New Thread 0x7f0be53af910 (LWP 7426)]
+[New Thread 0x7f0be5db0910 (LWP 7425)]
+[New Thread 0x7f0be7d0e910 (LWP 7395)]
+[New Thread 0x7f0bf21fc910 (LWP 7391)]
+[New Thread 0x7f0bf2bfd910 (LWP 7390)]
+[New Thread 0x7f0bf35fe910 (LWP 7389)]
+[New Thread 0x7f0bf3fff910 (LWP 7388)]
+[New Thread 0x7f0bfabe7910 (LWP 7387)]
+0x00000030a240e9ed in waitpid () from /lib64/libpthread.so.0
+#0  0x00000030a240e9ed in waitpid () from /lib64/libpthread.so.0
+#1  0x00000030a3c6e829 in g_spawn_sync () from /lib64/libglib-2.0.so.0
+#2  0x00000030a3c6eb39 in g_spawn_command_line_sync ()
+   from /lib64/libglib-2.0.so.0
+#3  0x00007f0bffb10dc1 in ?? ()
+   from /usr/lib64/gtk-2.0/modules/libgnomebreakpad.so
+#4  &lt;signal handler called&gt;
+#5  0x00000030a1833275 in raise () from /lib64/libc.so.6
+#6  0x00000030a1834a55 in abort () from /lib64/libc.so.6
+#7  0x0000003eb62f65e1 in wxFatalSignalHandler ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+#8  &lt;signal handler called&gt;
+#9  std::_Rb_tree&lt;int, int, std::_Identity&lt;int&gt;, std::less&lt;int&gt;, std::allocator&lt;int&gt; &gt;::_M_insert_unique (__v=&lt;value optimized out&gt;, 
+    this=&lt;value optimized out&gt;)
+    at /usr/lib/gcc/x86_64-redhat-linux/4.4.1/../../../../include/c++/4.4.1/bits/stl_tree.h:1171
+#10 std::set&lt;int, std::less&lt;int&gt;, std::allocator&lt;int&gt; &gt;::insert (
+    __v=&lt;value optimized out&gt;, this=&lt;value optimized out&gt;)
+    at /usr/lib/gcc/x86_64-redhat-linux/4.4.1/../../../../include/c++/4.4.1/bits/stl_set.h:411
+#11 Token::AddChild (__v=&lt;value optimized out&gt;, this=&lt;value optimized out&gt;)
+    at parser/token.cpp:339
+#12 0x00007f0be7dc3333 in ParserThread::DoAddToken (this=0x343aa00, 
+    kind=tkVariable, name=&lt;value optimized out&gt;, line=&lt;value optimized out&gt;, 
+    implLineStart=&lt;value optimized out&gt;, implLineEnd=&lt;value optimized out&gt;, 
+    args=@0x7fff461705f0, isOperator=false, isImpl=false)
+    at parser/parserthread.cpp:1231
+#13 0x00007f0be7dc6d55 in ParserThread::DoParse (this=0x343aa00)
+    at parser/parserthread.cpp:964
+#14 0x00007f0be7dcbab4 in ParserThread::Parse (this=0x343aa00)
+    at parser/parserthread.cpp:467
+#15 0x00007f0be7db94c8 in Parser::Parse (this=0x2c88820, 
+    bufferOrFilename=@0x7fff461709f0, isLocal=&lt;value optimized out&gt;, 
+    opts=@0x7fff461708d0) at parser/parser.cpp:518
+#16 0x00007f0be7db98a2 in Parser::ParseBuffer (this=0x2c88820, 
+    buffer=@0x7fff461709f0, isLocal=true, 
+    bufferSkipBlocks=&lt;value optimized out&gt;, isTemp=&lt;value optimized out&gt;, 
+    filename=&lt;value optimized out&gt;, parent=0x7f0bd23a3010, initLine=84)
+    at parser/parser.cpp:417
+#17 0x00007f0be7da2302 in NativeParser::ParseLocalBlock (this=0x2706200, 
+    searchData=0x7fff46170b30, caretPos=&lt;value optimized out&gt;)
+    at nativeparser.cpp:1464
+#18 0x00007f0be7dafc8a in NativeParser::MarkItemsByAI (this=0x2706200, 
+    searchData=0x7fff46170b30, result=std::set with 0 elements, 
+    reallyUseAI=true, isPrefix=&lt;value optimized out&gt;, 
+    caseSensitive=&lt;value optimized out&gt;, caretPos=7280)
+    at nativeparser.cpp:1586
+#19 0x00007f0be7daff79 in NativeParser::MarkItemsByAI (this=0x2706200, result=
+    std::set with 0 elements, reallyUseAI=178, isPrefix=false, 
+    caseSensitive=true, caretPos=7280) at nativeparser.cpp:1556
+#20 0x00007f0be7d7a487 in CodeCompletion::OnValueTooltip (this=0x2706180, 
+    event=&lt;value optimized out&gt;) at codecompletion.cpp:2449
+#21 0x00007f0c05a9d8f9 in Manager::ProcessEvent (this=&lt;value optimized out&gt;, 
+    event=@0x7fff46170ca0) at manager.cpp:179
+#22 0x00007f0c059e7c79 in cbEditor::NotifyPlugins (this=0x309b930, 
+    type=&lt;value optimized out&gt;, intArg=11, strArg=@0x7fff46170d90, xArg=146, 
+    yArg=&lt;value optimized out&gt;) at cbeditor.cpp:795
+#23 0x00007f0c059e7f7f in cbEditor::OnEditorDwellStart (this=0x309b930, 
+    event=@0x7fff46170e60) at cbeditor.cpp:3301
+#24 0x0000003eb62f20b0 in wxEvtHandler::ProcessEventIfMatches(wxEventTableEntryBase const&amp;, wxEvtHandler*, wxEvent&amp;) () from /usr/lib64/libwx_baseu-2.8.so.0
+#25 0x0000003eb62f221f in wxEvtHandler::SearchDynamicEventTable(wxEvent&amp;) ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+#26 0x0000003eb62f3112 in wxEvtHandler::ProcessEvent(wxEvent&amp;) ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+#27 0x00000032d82eb119 in wxWindowBase::TryParent(wxEvent&amp;) ()
+   from /usr/lib64/libwx_gtk2u_core-2.8.so.0
+#28 0x0000003eb62f30d0 in wxEvtHandler::ProcessEvent(wxEvent&amp;) ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+#29 0x00007f0c05bbf1d8 in wxScintilla::NotifyParent (this=0x30d3140, 
+    _scn=0x7fff46170f70) at src/wxscintilla.cpp:4954
+#30 0x00007f0c05bb1c95 in ScintillaWX::NotifyParent (
+    this=&lt;value optimized out&gt;, scn=
+      {nmhdr = {hwndFrom = 0x0, idFrom = 0, code = 2016}, position = 7277, ch = 0, modifiers = 0, modificationType = 0, text = 0x0, length = 0, linesAdded = 0, message = 0, wParam = 0, lParam = 0, line = 0, foldLevelNow = 0, foldLevelPrev = 0, margin = 0, listType = 0, x = 146, y = 355, token = 0, annotationLinesAdded = 0}) at src/ScintillaWX.cpp:514
+#31 0x00007f0c05cf050e in Editor::NotifyDwelling (this=0x310f800, 
+    pt=&lt;value optimized out&gt;, state=&lt;value optimized out&gt;)
+    at src/scintilla/src/Editor.cxx:4297
+#32 0x00000032d81ee89b in ?? () from /usr/lib64/libwx_gtk2u_core-2.8.so.0
+#33 0x00000030a3c3801b in ?? () from /lib64/libglib-2.0.so.0
+#34 0x00000030a3c3790e in g_main_context_dispatch ()
+   from /lib64/libglib-2.0.so.0
+#35 0x00000030a3c3b0e8 in ?? () from /lib64/libglib-2.0.so.0
+#36 0x00000030a3c3b535 in g_main_loop_run () from /lib64/libglib-2.0.so.0
+#37 0x0000003ce89422b7 in gtk_main () from /usr/lib64/libgtk-x11-2.0.so.0
+#38 0x00000032d81e5fd8 in wxEventLoop::Run() ()
+   from /usr/lib64/libwx_gtk2u_core-2.8.so.0
+#39 0x00000032d826ac9b in wxAppBase::MainLoop() ()
+   from /usr/lib64/libwx_gtk2u_core-2.8.so.0
+#40 0x000000000042f85b in CodeBlocksApp::OnRun (this=0x7f0bd23a3010)
+    at app.cpp:780
+#41 0x0000003eb6297e15 in wxEntry(int&amp;, wchar_t**) ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+#42 0x000000000042f422 in main (argc=1, argv=0x54b2) at app.cpp:260
+
+Thread 10 (Thread 0x7f0bfabe7910 (LWP 7387)):
+#0  0x00000030a18d4db3 in poll () from /lib64/libc.so.6
+No symbol table info available.
+#1  0x0000003a0fc3381b in ?? () from /usr/lib64/libpulse.so.0
+No symbol table info available.
+#2  0x0000003a0fc212d4 in pa_mainloop_poll () from /usr/lib64/libpulse.so.0
+No symbol table info available.
+#3  0x0000003a0fc21683 in pa_mainloop_iterate () from /usr/lib64/libpulse.so.0
+No symbol table info available.
+#4  0x0000003a0fc216f6 in pa_mainloop_run () from /usr/lib64/libpulse.so.0
+No symbol table info available.
+#5  0x0000003a0fc33898 in ?? () from /usr/lib64/libpulse.so.0
+No symbol table info available.
+#6  0x0000003a0b442c4f in ?? () from /usr/lib64/libpulsecommon-0.9.15.so
+No symbol table info available.
+#7  0x00000030a240685a in start_thread () from /lib64/libpthread.so.0
+No symbol table info available.
+#8  0x00000030a18de22d in clone () from /lib64/libc.so.6
+No symbol table info available.
+#9  0x0000000000000000 in ?? ()
+No symbol table info available.
+
+Thread 9 (Thread 0x7f0bf3fff910 (LWP 7388)):
+#0  0x00000030a240b2c9 in pthread_cond_wait@@GLIBC_2.3.2 ()
+   from /lib64/libpthread.so.0
+No symbol table info available.
+#1  0x0000003eb62efb23 in wxConditionInternal::Wait() ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#2  0x0000003eb62f0bd9 in wxSemaphoreInternal::Wait() ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#3  0x00007f0c05a7e2f9 in BackgroundThread::Entry (this=0x19b2c38)
+    at ../../src/include/backgroundthread.h:151
+        job = 0x33b6470
+#4  0x0000003eb62f18e1 in wxThreadInternal::PthreadStart(wxThread*) ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#5  0x00000030a240685a in start_thread () from /lib64/libpthread.so.0
+No symbol table info available.
+#6  0x00000030a18de22d in clone () from /lib64/libc.so.6
+No symbol table info available.
+#7  0x0000000000000000 in ?? ()
+No symbol table info available.
+
+Thread 8 (Thread 0x7f0bf35fe910 (LWP 7389)):
+#0  0x00000030a240b2c9 in pthread_cond_wait@@GLIBC_2.3.2 ()
+   from /lib64/libpthread.so.0
+No symbol table info available.
+#1  0x0000003eb62efb23 in wxConditionInternal::Wait() ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#2  0x0000003eb62f0bd9 in wxSemaphoreInternal::Wait() ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#3  0x00007f0c05a7e2f9 in BackgroundThread::Entry (this=0x19b2c70)
+    at ../../src/include/backgroundthread.h:151
+        job = 0x19b2c80
+#4  0x0000003eb62f18e1 in wxThreadInternal::PthreadStart(wxThread*) ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#5  0x00000030a240685a in start_thread () from /lib64/libpthread.so.0
+No symbol table info available.
+#6  0x00000030a18de22d in clone () from /lib64/libc.so.6
+No symbol table info available.
+#7  0x0000000000000000 in ?? ()
+No symbol table info available.
+
+Thread 7 (Thread 0x7f0bf2bfd910 (LWP 7390)):
+#0  0x00000030a240b2c9 in pthread_cond_wait@@GLIBC_2.3.2 ()
+   from /lib64/libpthread.so.0
+No symbol table info available.
+#1  0x0000003eb62efb23 in wxConditionInternal::Wait() ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#2  0x0000003eb62f0bd9 in wxSemaphoreInternal::Wait() ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#3  0x00007f0c05a7e2f9 in BackgroundThread::Entry (this=0x19b2ca8)
+    at ../../src/include/backgroundthread.h:151
+        job = 0x19b2cb8
+#4  0x0000003eb62f18e1 in wxThreadInternal::PthreadStart(wxThread*) ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#5  0x00000030a240685a in start_thread () from /lib64/libpthread.so.0
+No symbol table info available.
+#6  0x00000030a18de22d in clone () from /lib64/libc.so.6
+No symbol table info available.
+#7  0x0000000000000000 in ?? ()
+No symbol table info available.
+
+Thread 6 (Thread 0x7f0bf21fc910 (LWP 7391)):
+#0  0x00000030a240b2c9 in pthread_cond_wait@@GLIBC_2.3.2 ()
+   from /lib64/libpthread.so.0
+No symbol table info available.
+#1  0x0000003eb62efb23 in wxConditionInternal::Wait() ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#2  0x0000003eb62f0bd9 in wxSemaphoreInternal::Wait() ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#3  0x00007f0c05a7e360 in BackgroundThread::Entry (this=0x19b2ce0)
+    at ../../src/include/backgroundthread.h:151
+        job = 0x3354340
+#4  0x0000003eb62f18e1 in wxThreadInternal::PthreadStart(wxThread*) ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#5  0x00000030a240685a in start_thread () from /lib64/libpthread.so.0
+No symbol table info available.
+#6  0x00000030a18de22d in clone () from /lib64/libc.so.6
+No symbol table info available.
+#7  0x0000000000000000 in ?? ()
+No symbol table info available.
+
+Thread 5 (Thread 0x7f0be7d0e910 (LWP 7395)):
+#0  0x00000030a240b2c9 in pthread_cond_wait@@GLIBC_2.3.2 ()
+   from /lib64/libpthread.so.0
+No symbol table info available.
+#1  0x0000003eb62efb23 in wxConditionInternal::Wait() ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#2  0x0000003eb62f0bd9 in wxSemaphoreInternal::Wait() ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#3  0x00007f0c05a0bcdd in cbThreadPool::cbWorkerThread::Entry (this=0x2706b70)
+    at cbthreadpool.cpp:199
+        element = {task = 0x0, autodelete = false}
+        workingThread = true
+#4  0x0000003eb62f18e1 in wxThreadInternal::PthreadStart(wxThread*) ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#5  0x00000030a240685a in start_thread () from /lib64/libpthread.so.0
+No symbol table info available.
+#6  0x00000030a18de22d in clone () from /lib64/libc.so.6
+No symbol table info available.
+#7  0x0000000000000000 in ?? ()
+No symbol table info available.
+
+Thread 4 (Thread 0x7f0be5db0910 (LWP 7425)):
+#0  0x00000030a240b2c9 in pthread_cond_wait@@GLIBC_2.3.2 ()
+   from /lib64/libpthread.so.0
+No symbol table info available.
+#1  0x0000003eb62efb23 in wxConditionInternal::Wait() ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#2  0x0000003eb62f0bd9 in wxSemaphoreInternal::Wait() ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#3  0x00007f0be7d72eea in ClassBrowserBuilderThread::Entry (this=0x2afd6a0)
+    at classbrowserbuilderthread.cpp:258
+No locals.
+#4  0x0000003eb62f18e1 in wxThreadInternal::PthreadStart(wxThread*) ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#5  0x00000030a240685a in start_thread () from /lib64/libpthread.so.0
+No symbol table info available.
+#6  0x00000030a18de22d in clone () from /lib64/libc.so.6
+No symbol table info available.
+#7  0x0000000000000000 in ?? ()
+No symbol table info available.
+
+Thread 3 (Thread 0x7f0be53af910 (LWP 7426)):
+#0  0x00000030a240b2c9 in pthread_cond_wait@@GLIBC_2.3.2 ()
+   from /lib64/libpthread.so.0
+No symbol table info available.
+#1  0x0000003eb62efb23 in wxConditionInternal::Wait() ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#2  0x0000003eb62f0bd9 in wxSemaphoreInternal::Wait() ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#3  0x00007f0c05a0bcdd in cbThreadPool::cbWorkerThread::Entry (this=0x3298e10)
+    at cbthreadpool.cpp:199
+        element = {task = 0x7f0bdf3ca9e0, autodelete = true}
+        workingThread = true
+#4  0x0000003eb62f18e1 in wxThreadInternal::PthreadStart(wxThread*) ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#5  0x00000030a240685a in start_thread () from /lib64/libpthread.so.0
+No symbol table info available.
+#6  0x00000030a18de22d in clone () from /lib64/libc.so.6
+No symbol table info available.
+#7  0x0000000000000000 in ?? ()
+No symbol table info available.
+
+Thread 2 (Thread 0x7f0bd7fff910 (LWP 7551)):
+#0  0x00000030a240b2c9 in pthread_cond_wait@@GLIBC_2.3.2 ()
+   from /lib64/libpthread.so.0
+No symbol table info available.
+#1  0x0000003eb62efb23 in wxConditionInternal::Wait() ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#2  0x0000003eb62f0bd9 in wxSemaphoreInternal::Wait() ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#3  0x00007f0c05a0bcdd in cbThreadPool::cbWorkerThread::Entry (this=0x32f0dc0)
+    at cbthreadpool.cpp:199
+        element = {task = 0x7f0bd0699760, autodelete = true}
+        workingThread = true
+#4  0x0000003eb62f18e1 in wxThreadInternal::PthreadStart(wxThread*) ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#5  0x00000030a240685a in start_thread () from /lib64/libpthread.so.0
+No symbol table info available.
+#6  0x00000030a18de22d in clone () from /lib64/libc.so.6
+No symbol table info available.
+#7  0x0000000000000000 in ?? ()
+No symbol table info available.
+
+Thread 1 (Thread 0x7f0c0583b800 (LWP 7386)):
+#0  0x00000030a240e9ed in waitpid () from /lib64/libpthread.so.0
+No symbol table info available.
+#1  0x00000030a3c6e829 in g_spawn_sync () from /lib64/libglib-2.0.so.0
+No symbol table info available.
+#2  0x00000030a3c6eb39 in g_spawn_command_line_sync ()
+   from /lib64/libglib-2.0.so.0
+No symbol table info available.
+#3  0x00007f0bffb10dc1 in ?? ()
+   from /usr/lib64/gtk-2.0/modules/libgnomebreakpad.so
+No symbol table info available.
+#4  &lt;signal handler called&gt;
+No symbol table info available.
+#5  0x00000030a1833275 in raise () from /lib64/libc.so.6
+No symbol table info available.
+#6  0x00000030a1834a55 in abort () from /lib64/libc.so.6
+No symbol table info available.
+#7  0x0000003eb62f65e1 in wxFatalSignalHandler ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#8  &lt;signal handler called&gt;
+No symbol table info available.
+#9  std::_Rb_tree&lt;int, int, std::_Identity&lt;int&gt;, std::less&lt;int&gt;, std::allocator&lt;int&gt; &gt;::_M_insert_unique (__v=&lt;value optimized out&gt;, 
+    this=&lt;value optimized out&gt;)
+    at /usr/lib/gcc/x86_64-redhat-linux/4.4.1/../../../../include/c++/4.4.1/bits/stl_tree.h:1171
+        __y = 0x6500000076
+        __comp = 178
+#10 std::set&lt;int, std::less&lt;int&gt;, std::allocator&lt;int&gt; &gt;::insert (
+    __v=&lt;value optimized out&gt;, this=&lt;value optimized out&gt;)
+    at /usr/lib/gcc/x86_64-redhat-linux/4.4.1/../../../../include/c++/4.4.1/bits/stl_set.h:411
+No locals.
+#11 Token::AddChild (__v=&lt;value optimized out&gt;, this=&lt;value optimized out&gt;)
+    at parser/token.cpp:339
+No locals.
+#12 0x00007f0be7dc3333 in ParserThread::DoAddToken (this=0x343aa00, 
+    kind=tkVariable, name=&lt;value optimized out&gt;, line=&lt;value optimized out&gt;, 
+    implLineStart=&lt;value optimized out&gt;, implLineEnd=&lt;value optimized out&gt;, 
+    args=@0x7fff461705f0, isOperator=false, isImpl=false)
+    at parser/parserthread.cpp:1231
+        finalParent = &lt;value optimized out&gt;
+        newidx = 0
+        newname = {&lt;wxStringBase&gt; = {static npos = 18446744073709551615, 
+            m_pchData = 0x33bea98 L"guard"}, &lt;No data fields&gt;}
+        baseArgs = {&lt;wxStringBase&gt; = {static npos = 18446744073709551615, 
+            m_pchData = 0x3eb6314a98 L""}, &lt;No data fields&gt;}
+        localParent = 0x7f0bd23a3010
+        q = std::queue wrapping: std::deque with 0 elements
+        newToken = &lt;value optimized out&gt;
+#13 0x00007f0be7dc6d55 in ParserThread::DoParse (this=0x343aa00)
+    at parser/parserthread.cpp:964
+        newToken = &lt;value optimized out&gt;
+        peek = {&lt;wxStringBase&gt; = {static npos = 18446744073709551615, 
+            m_pchData = 0x3384998 L"(m_criLoad)"}, &lt;No data fields&gt;}
+        token = {&lt;wxStringBase&gt; = {static npos = 18446744073709551615, 
+            m_pchData = 0x33bea98 L"guard"}, &lt;No data fields&gt;}
+        switchHandled = &lt;value optimized out&gt;
+        oldState = tsSkipUnWanted
+#14 0x00007f0be7dcbab4 in ParserThread::Parse (this=0x343aa00)
+    at parser/parserthread.cpp:467
+        result = &lt;value optimized out&gt;
+#15 0x00007f0be7db94c8 in Parser::Parse (this=0x2c88820, 
+    bufferOrFilename=@0x7fff461709f0, isLocal=&lt;value optimized out&gt;, 
+    opts=@0x7fff461708d0) at parser/parser.cpp:518
+        thread = 0x343aa00
+        result = &lt;value optimized out&gt;
+#16 0x00007f0be7db98a2 in Parser::ParseBuffer (this=0x2c88820, 
+    buffer=@0x7fff461709f0, isLocal=true, 
+    bufferSkipBlocks=&lt;value optimized out&gt;, isTemp=&lt;value optimized out&gt;, 
+    filename=&lt;value optimized out&gt;, parent=0x7f0bd23a3010, initLine=84)
+    at parser/parser.cpp:417
+        opts = {useBuffer = true, bufferSkipBlocks = false, 
+          bufferSkipOuterBlocks = false, wantPreprocessor = true, 
+          followLocalIncludes = false, followGlobalIncludes = false, 
+          isTemp = true, handleFunctions = false, handleVars = true, 
+          handleClasses = true, handleEnums = true, handleTypedefs = true, 
+          parseComplexMacros = false, fileOfBuffer = {&lt;wxStringBase&gt; = {
+              static npos = 18446744073709551615, 
+              m_pchData = 0x311a708 L"/home/cvmann/dev/GeoVis/libGeoVis/GvVpfLayer.cpp"}, &lt;No data fields&gt;}, parentOfBuffer = 0x7f0bd23a3010, 
+          initLineOfBuffer = 84, loader = 0x0}
+#17 0x00007f0be7da2302 in NativeParser::ParseLocalBlock (this=0x2706200, 
+    searchData=0x7fff46170b30, caretPos=&lt;value optimized out&gt;)
+    at nativeparser.cpp:1464
+        pos = &lt;value optimized out&gt;
+        line = &lt;value optimized out&gt;
+        blockEnd = 7289
+        buffer = {&lt;wxStringBase&gt; = {static npos = 18446744073709551615, 
+            m_pchData = 0x33d0958 L"\n  if( ! m_bLoadOnDemand)\n  {\n    Load( true);\n    return;\n  }\n\n  CritGuard guard( m_criLoad);\n  m_bLoading = true;\n  while( ! m_bStopLoading)\n  {\n    m_evLoad.Wait( m_criLoad);\n    if( m_bStopLoading"...}, &lt;No data fields&gt;}
+        parent = 0x7f0bd23a3010
+        blockStart = &lt;value optimized out&gt;
+#18 0x00007f0be7dafc8a in NativeParser::MarkItemsByAI (this=0x2706200, 
+    searchData=0x7fff46170b30, result=std::set with 0 elements, 
+    reallyUseAI=true, isPrefix=&lt;value optimized out&gt;, 
+    caseSensitive=&lt;value optimized out&gt;, caretPos=7280)
+    at nativeparser.cpp:1586
+        search_scope = std::set with 3 elements = {
+          [0] = 137,
+          [1] = 13510,
+          [2] = 18449
+        }
+#19 0x00007f0be7daff79 in NativeParser::MarkItemsByAI (this=0x2706200, result=
+    std::set with 0 elements, reallyUseAI=178, isPrefix=false, 
+    caseSensitive=true, caretPos=7280) at nativeparser.cpp:1556
+        editor = &lt;value optimized out&gt;
+        searchData = {control = 0x30d3140, file = {&lt;wxStringBase&gt; = {
+              static npos = 18446744073709551615, 
+              m_pchData = 0x311a708 L"/home/cvmann/dev/GeoVis/libGeoVis/GvVpfLayer.cpp"}, &lt;No data fields&gt;}}
+#20 0x00007f0be7d7a487 in CodeCompletion::OnValueTooltip (this=0x2706180, 
+    event=&lt;value optimized out&gt;) at codecompletion.cpp:2449
+        style = &lt;value optimized out&gt;
+        base = 0x309b930
+        pos = 7277
+        result = std::set with 0 elements
+        endOfWord = 3
+#21 0x00007f0c05a9d8f9 in Manager::ProcessEvent (this=&lt;value optimized out&gt;, 
+    event=@0x7fff46170ca0) at manager.cpp:179
+No locals.
+#22 0x00007f0c059e7c79 in cbEditor::NotifyPlugins (this=0x309b930, 
+    type=&lt;value optimized out&gt;, intArg=11, strArg=@0x7fff46170d90, xArg=146, 
+    yArg=&lt;value optimized out&gt;) at cbeditor.cpp:795
+        event = {&lt;&gt; = {&lt;No data fields&gt;}, &lt;BlockAllocated&lt;CodeBlocksEvent, 75u, false&gt;&gt; = {static allocator = {
+              allocBlocks = std::vector of length 1, capacity 1 = {
+                0x7f0be00008c0}, first = 0x7f0be00008c0, ref_count = 0, 
+              max_refs = 0, total_refs = 0}}, m_pProject = 0x0, 
+          m_pEditor = 0x309b930, m_pOldEditor = 0x0, m_pPlugin = 0x0, 
+          m_X = 146, m_Y = 355, m_TargetName = {&lt;wxStringBase&gt; = {
+              static npos = 18446744073709551615, 
+              m_pchData = 0x3eb6314a98 L""}, &lt;No data fields&gt;}, 
+          m_OldTargetName = {&lt;wxStringBase&gt; = {
+              static npos = 18446744073709551615, 
+              m_pchData = 0x3eb6314a98 L""}, &lt;No data fields&gt;}, 
+          static ms_classInfo = {
+            m_className = 0x7f0c05d88f28 L"CodeBlocksEvent", 
+            m_objectSize = 168, 
+            m_objectConstructor = 0x7f0c05b06f60 &lt;CodeBlocksEvent::wxCreateObject()&gt;, m_baseInfo1 = 0x3eb6562360, m_baseInfo2 = 0x0, 
+            static sm_first = 0x7f0be62febe0, m_next = 0x7f0c06069380, 
+            static sm_classTable = 0x13c4250}}
+#23 0x00007f0c059e7f7f in cbEditor::OnEditorDwellStart (this=0x309b930, 
+    event=@0x7fff46170e60) at cbeditor.cpp:3301
+        control = 0x30d3140
+        pos = &lt;value optimized out&gt;
+        style = 11
+#24 0x0000003eb62f20b0 in wxEvtHandler::ProcessEventIfMatches(wxEventTableEntryBase const&amp;, wxEvtHandler*, wxEvent&amp;) () from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#25 0x0000003eb62f221f in wxEvtHandler::SearchDynamicEventTable(wxEvent&amp;) ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#26 0x0000003eb62f3112 in wxEvtHandler::ProcessEvent(wxEvent&amp;) ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#27 0x00000032d82eb119 in wxWindowBase::TryParent(wxEvent&amp;) ()
+   from /usr/lib64/libwx_gtk2u_core-2.8.so.0
+No symbol table info available.
+#28 0x0000003eb62f30d0 in wxEvtHandler::ProcessEvent(wxEvent&amp;) ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#29 0x00007f0c05bbf1d8 in wxScintilla::NotifyParent (this=0x30d3140, 
+    _scn=0x7fff46170f70) at src/wxscintilla.cpp:4954
+        evt = {&lt;&gt; = {&lt;No data fields&gt;}, static ms_classInfo = {
+            m_className = 0x7f0c05da97b8 L"wxScintillaEvent", 
+            m_objectSize = 200, 
+            m_objectConstructor = 0x7f0c05bb7de0 &lt;wxScintillaEvent::wxCreateObject()&gt;, m_baseInfo1 = 0x32d86149a0, m_baseInfo2 = 0x0, 
+            static sm_first = 0x7f0be62febe0, m_next = 0x7f0c0606aaa0, 
+            static sm_classTable = 0x13c4250}, m_position = 7277, m_key = 0, 
+          m_modifiers = 0, m_modificationType = 0, 
+          m_text = {&lt;wxStringBase&gt; = {static npos = 18446744073709551615, 
+              m_pchData = 0x3eb6314a98 L""}, &lt;No data fields&gt;}, m_length = 0, 
+          m_linesAdded = 0, m_line = 0, m_foldLevelNow = 0, 
+          m_foldLevelPrev = 0, m_margin = 0, m_message = 0, m_wParam = 0, 
+          m_lParam = 0, m_listType = 0, m_x = 146, m_y = 355, 
+          m_dragText = {&lt;wxStringBase&gt; = {static npos = 18446744073709551615, 
+              m_pchData = 0x3eb6314a98 L""}, &lt;No data fields&gt;}, 
+          m_dragAllowMove = 0, m_dragResult = wxDragNone}
+#30 0x00007f0c05bb1c95 in ScintillaWX::NotifyParent (
+    this=&lt;value optimized out&gt;, scn=
+      {nmhdr = {hwndFrom = 0x0, idFrom = 0, code = 2016}, position = 7277, ch = 0, modifiers = 0, modificationType = 0, text = 0x0, length = 0, linesAdded = 0, message = 0, wParam = 0, lParam = 0, line = 0, foldLevelNow = 0, foldLevelPrev = 0, margin = 0, listType = 0, x = 146, y = 355, token = 0, annotationLinesAdded = 0}) at src/ScintillaWX.cpp:514
+No locals.
+#31 0x00007f0c05cf050e in Editor::NotifyDwelling (this=0x310f800, 
+    pt=&lt;value optimized out&gt;, state=&lt;value optimized out&gt;)
+    at src/scintilla/src/Editor.cxx:4297
+        scn = {nmhdr = {hwndFrom = 0x0, idFrom = 0, code = 2016}, 
+          position = 7277, ch = 0, modifiers = 0, modificationType = 0, 
+          text = 0x0, length = 0, linesAdded = 0, message = 0, wParam = 0, 
+          lParam = 0, line = 0, foldLevelNow = 0, foldLevelPrev = 0, 
+          margin = 0, listType = 0, x = 146, y = 355, token = 0, 
+          annotationLinesAdded = 0}
+#32 0x00000032d81ee89b in ?? () from /usr/lib64/libwx_gtk2u_core-2.8.so.0
+No symbol table info available.
+#33 0x00000030a3c3801b in ?? () from /lib64/libglib-2.0.so.0
+No symbol table info available.
+#34 0x00000030a3c3790e in g_main_context_dispatch ()
+   from /lib64/libglib-2.0.so.0
+No symbol table info available.
+#35 0x00000030a3c3b0e8 in ?? () from /lib64/libglib-2.0.so.0
+No symbol table info available.
+#36 0x00000030a3c3b535 in g_main_loop_run () from /lib64/libglib-2.0.so.0
+No symbol table info available.
+#37 0x0000003ce89422b7 in gtk_main () from /usr/lib64/libgtk-x11-2.0.so.0
+No symbol table info available.
+#38 0x00000032d81e5fd8 in wxEventLoop::Run() ()
+   from /usr/lib64/libwx_gtk2u_core-2.8.so.0
+No symbol table info available.
+#39 0x00000032d826ac9b in wxAppBase::MainLoop() ()
+   from /usr/lib64/libwx_gtk2u_core-2.8.so.0
+No symbol table info available.
+#40 0x000000000042f85b in CodeBlocksApp::OnRun (this=0x7f0bd23a3010)
+    at app.cpp:780
+        retval = &lt;value optimized out&gt;
+#41 0x0000003eb6297e15 in wxEntry(int&amp;, wchar_t**) ()
+   from /usr/lib64/libwx_baseu-2.8.so.0
+No symbol table info available.
+#42 0x000000000042f422 in main (argc=1, argv=0x54b2) at app.cpp:260
+No locals.
+The program is running.  Quit anyway (and detach it)? (y or n) [answered Y; input not from terminal]
+
+
+----------- .xsession-errors ---------------------
+Updating class browser...
+Class browser updated.
+Reparsing when typing for editor /home/cvmann/dev/GeoVis/libGeoVis/GvVpfLayer.cpp
+Reparsing modified files for project 'libGeoVis'
+Project 'libGeoVis' parsing stage done (695 total parsed files, 39873 tokens in 0 minute(s), 0.009 seconds).
+Updating class browser...
+Class browser updated.
+Reparsing when editor modified: /home/cvmann/dev/GeoVis/libGeoVis/GvVpfLayer.cpp
+Reparsing active editor /home/cvmann/dev/GeoVis/libGeoVis/GvVpfLayer.cpp
+Reparsing modified files for project 'libGeoVis'
+Project 'libGeoVis' parsing stage done (695 total parsed files, 39873 tokens in 0 minute(s), 0.006 seconds).
+Updating class browser...
+Class browser updated.
+Missing separate debuginfo for /usr/lib64/libtdb.so.1
+Try: yum --enablerepo='*-debuginfo' install /usr/lib/debug/.build-id/56/1175f4b142f66a751e5f31b5f5726780123787.debug
+--------------------------------------------------</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 6972 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #6972 <small>2006-04-04 10:44:45</small></h3>
+          <h4>karakas</h4>
+          <p class="lead">It's wxUsleep, not wxUSleep</p>
+          <p>I get a compiler error when trying to compile with wxGTK wxGTK-2.5.3.1. That's because the check for wxGTK &gt; 2.6 contains the wrong function name to be called in the 2.5 case. Use this simple patch to correct it:</p>
+          <p>--- src/sdk/cbthreadpool.cpp    2005-10-25 09:59:02.000000000 +0200</p>
+          <p>+++ src/sdk/cbthreadpool.cpp    2006-04-03 23:22:00.000000000 +0200</p>
+          <p>@@ -250,7 +250,7 @@</p>
+          <p>#if wxCHECK_VERSION(2,6,0)^M</p>
+          <p>wxMilliSleep(1);^M</p>
+          <p>#else^M</p>
+          <p>-    wxUSleep(1);^M</p>
+          <p>+    wxUsleep(1);^M</p>
+          <p>#endif^M</p>
+          <p>^M</p>
+          <p>wxLogNull logNo;^M</p>
+          <p>@@ -265,7 +265,7 @@</p>
+          <p>#if wxCHECK_VERSION(2,6,0)^M</p>
+          <p>wxMilliSleep(1);^M</p>
+          <p>#else^M</p>
+          <p>-            wxUSleep(1);^M</p>
+          <p>+            wxUsleep(1);^M</p>
+          <p>#endif^M</p>
+          <p>if(++count &gt; 10)^M</p>
+          <p>break;^M</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>&nbsp;</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2006-04-10 08:46:27</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2006-04-05 08:15:14</div>
+        <div class="panel-body">
+          <p>Actually, I don't think C::B can be built anymore with anything less than wx2.6.0.</p>
+          <p>If you managed to build it, without other modifications, I 'll apply this patch (but please post it in the patch tracker). Else it is considered obsolete code which will be removed in a future cleanup...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ID_24639 2006-04-08 21:57:48</div>
+        <div class="panel-body">
+          <p>You cannot build C::B with anything less than wx 2.6.1. because of wxLaunchDefaultBrowser(). This is not a bug.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">karakas 2006-04-08 22:09:40</div>
+        <div class="panel-body">
+          <p>Yes, I could compile it without problems after this miniscule change (which corrects actually a typo, nothing more). The IDE starts, seems to work, but I didn't use it for any serious programming (yet).</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">karakas 2006-04-08 22:27:07</div>
+        <div class="panel-body">
+          <p>sethjackson,</p>
+          <p>well, indeed I get a "We are sorry, but this is currently not supported in your platform" error when I click on the "Visit the Code::Blocks website" link, as well as other links that obviously need to know my "default browser".</p>
+          <p>But is this a reason to drop support for "anything less than wx 2.6.1"? Just say that "the links will not work" and let people use it, even if they happen to have a somewhat older environment. Don't force everybody to be on the bleeding edge.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ID_24639 2006-04-09 00:07:42</div>
+        <div class="panel-body">
+          <p>There are more than one reason(s) for dropping support for anything besides wx 2.6.1 or higher. wx Bugs, wxFNB (needs the wx 2.6 series AFAIK), and possibly wxScintilla needing wx 2.6.x or higher (not sure about wxScintilla). Anyways no one is going to force you to do anything. Feel free to use whatever wx version you want. As of right now the only supported way of compiling C::B is with wx 2.6.2 and GCC. Oh and BTW wxU(S)sleep is depreciated anyways. ;)</p>
+          <p><a href="http://www.wxwidgets.org/manuals/2.6.2/wx_timefunctions.html#wxusleep">http://www.wxwidgets.org/manuals/2.6.2/wx_timefunctions.html#wxusleep</a></p>
+          <p>So we need to use wx/Milli/Micro/Sleep instead.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2006-04-10 08:46:27</div>
+        <div class="panel-body">
+          <p>First of all, you didn't tell us which version of C::B you 're referring to.</p>
+          <p>Judging from the dates in your diff, I 'd say rc2. For rc2, yes, this is the only needed change to build it.</p>
+          <p>But for the HEAD version, you do need wx2.6+. Many things have changed/improved sice rc2 and wx2.6+ is a must now.</p>
+          <p>&gt; Don't force everybody to be on the bleeding edge.</p>
+          <p>Uh? Current stable wx version is wx2.6.3 already. It's not bleeding edge.</p>
+          <p>wx2.7 is bleeding edge and nobody asked you to use this...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

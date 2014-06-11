@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 13230 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #13230 <small>2008-02-28 15:19:44</small></h3>
+          <h4>collins2</h4>
+          <p class="lead">Rename file problem</p>
+          <pre class="pre-scrollable">
+I have had a file "comm32_c.c" and try to compile (Build-&gt;Compile current file)
+and I get ...
+
+mingw32-g++.exe -pipe -mthreads -D__GNUWIN32__ -D__WXMSW__  -Wall  -g -D__WXDEBUG__    -ID:\LANG\wxPack28\include 
+
+-ID:\LANG\wxPack28\contrib\include -ID:\LANG\wxPack28\lib\gcc_lib\mswd -ID:\LANG\MinGW410\include  -c 
+
+D:\PROJ\wxcbTETRASym\comm32_c.c -o obj\Debug\comm32_c.o
+Process terminated with status 0 (0 minutes, 0 seconds)
+0 errors, 0 warnings
+
+
+Next, I've renamed it to "comm32c.c", and try to compile (Build-&gt;Compile current file)
+and I get ... stack of errors.
+
+gcc.exe   -ID:\LANG\gnuh8elf.603\include  -c comm32c.c -o comm32c.o
+In file included from comm32c.c:5:
+comm32c.h:9:21: error: no include path in which to search for windows.h
+comm32c.h:10:21: error: no include path in which to search for winbase.h
+comm32c.h:11:19: error: no include path in which to search for conio.h
+comm32c.h:12:19: error: no include path in which to search for stdio.h
+comm32c.h:13:20: error: no include path in which to search for string.h
+In file included from comm32c.c:5:
+....other errors....
+comm32c.c:111: error: 'ReadBytes' undeclared (first use in this function)
+comm32c.c: In function 'CommOutQueCount':
+comm32c.c:120: error: 'struct &lt;anonymous&gt;' has no member named 'Handle'
+comm32c.c:120: error: 'NULL' undeclared (first use in this function)
+Process terminated with status 1 (0 minutes, 0 seconds)
+50 errors, 1 warnings
+ 
+
+Next, I've try to rebuild (Build-&gt;Rebuild)
+and I get ...
+
+
+-------------- Build: Debug in wxcbTETRASym ---------------
+
+mingw32-g++.exe -pipe -mthreads -D__GNUWIN32__ -D__WXMSW__  -Wall  -g -D__WXDEBUG__    -ID:\LANG\wxPack28\include 
+
+-ID:\LANG\wxPack28\contrib\include -ID:\LANG\wxPack28\lib\gcc_lib\mswd -ID:\LANG\MinGW410\include  -c 
+
+D:\PROJ\wxcbTETRASym\comm32c.c -o obj\Debug\comm32_c.o
+
+..... other files compilation logs....
+
+mingw32-g++.exe -LD:\LANG\wxPack28\lib\gcc_lib -LD:\LANG\MinGW410\lib  -o bin\Debug\wxcbTETRASym.exe obj\Debug\comm32_c.o 
+
+obj\Debug\muarts.o obj\Debug\mycrc.o obj\Debug\mystdlib.o obj\Debug\mystring.o obj\Debug\pcgufunc.o obj\Debug\tetradataobjs.o 
+
+obj\Debug\tetraenv.o obj\Debug\wxCOMport.o obj\Debug\wxcbTETRASymApp.o obj\Debug\wxcbTETRASymMain.o  obj\Debug\resource.res   
+
+-lwxmsw28d -lwxpngd -lwxjpegd -lwxtiffd -lwxzlibd -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 -ladvapi32 -lshell32 -lole32 
+
+-loleaut32 -luuid -lcomctl32 -lwsock32 -lodbc32  -mwindows
+Output size is 28.14 MB
+Process terminated with status 0 (0 minutes, 31 seconds)
+0 errors, 0 warnings
+
+
+but "comm32_c.c" is stil compiled and linked.
+
+ 
+
+When I close and reopen project or shutdown and relaunch C::B and reload project
+everything is OK.
+
+
+Compile (Build-&gt;Compile current file) after project reopen
+
+mingw32-g++.exe -pipe -mthreads -D__GNUWIN32__ -D__WXMSW__  -Wall  -g -D__WXDEBUG__    -ID:\LANG\wxPack28\include 
+
+-ID:\LANG\wxPack28\contrib\include -ID:\LANG\wxPack28\lib\gcc_lib\mswd -ID:\LANG\MinGW410\include  -c 
+
+D:\PROJ\wxcbTETRASym\comm32c.c -o obj\Debug\comm32c.o
+Process terminated with status 0 (0 minutes, 0 seconds)
+0 errors, 0 warnings
+
+
+
+
+Rebuild (Build-&gt;Rebuild)  after project reopen
+
+-------------- Build: Debug in wxcbTETRASym ---------------
+
+mingw32-g++.exe -pipe -mthreads -D__GNUWIN32__ -D__WXMSW__  -Wall  -g -D__WXDEBUG__    -ID:\LANG\wxPack28\include 
+
+-ID:\LANG\wxPack28\contrib\include -ID:\LANG\wxPack28\lib\gcc_lib\mswd -ID:\LANG\MinGW410\include  -c 
+
+D:\PROJ\wxcbTETRASym\comm32c.c -o obj\Debug\comm32c.o
+
+.....other files compilation logs....
+
+mingw32-g++.exe -LD:\LANG\wxPack28\lib\gcc_lib -LD:\LANG\MinGW410\lib  -o bin\Debug\wxcbTETRASym.exe obj\Debug\comm32c.o 
+
+obj\Debug\muarts.o obj\Debug\mycrc.o obj\Debug\mystdlib.o obj\Debug\mystring.o obj\Debug\pcgufunc.o obj\Debug\tetradataobjs.o 
+
+obj\Debug\tetraenv.o obj\Debug\wxCOMport.o obj\Debug\wxcbTETRASymApp.o obj\Debug\wxcbTETRASymMain.o  obj\Debug\resource.res   
+
+-lwxmsw28d -lwxpngd -lwxjpegd -lwxtiffd -lwxzlibd -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 -ladvapi32 -lshell32 -lole32 
+
+-loleaut32 -luuid -lcomctl32 -lwsock32 -lodbc32  -mwindows
+Output size is 28.14 MB
+Process terminated with status 0 (0 minutes, 31 seconds)
+0 errors, 0 warnings
+
+Best regards,
+Collins</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Error</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 11141 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #11141 <small>2007-05-21 19:00:37</small></h3>
+          <h4>biplab</h4>
+          <p class="lead">Fatal Crash while removing tools</p>
+          <pre class="pre-scrollable">A fatal crash can be observed while removing tools from Tools menu. To reproduce the crash do the following,
+
+    * Add a tool using Tools&gt;Configure menu option and click OK. Now the added tool will be available under Tools menu.
+    * Delete the newly added tool using Tools&gt;Configure menu option and click OK. Now C::B will crash.
+
+
+The crash is not observed if:
+
+    * A separator is added &amp; removed.
+    * If tool list is not empty.
+
+
+The backtrace is as follows:
+Quote
+(gdb) run
+Starting program: F:\cbsource\src\devel/codeblocks.exe
+---Type &lt;return&gt; to continue, or q &lt;return&gt; to quit---
+
+Program received signal SIGSEGV, Segmentation fault.
+0x61a1a0aa in wxListBase::GetCount (this=0xfeeeff22)
+    at C:/wxWidgets-2.8.4/include/wx/list.h:517
+517         size_t GetCount() const { return m_count; }
+(gdb) bt full
+#0  0x61a1a0aa in wxListBase::GetCount (this=0xfeeeff22)
+    at C:/wxWidgets-2.8.4/include/wx/list.h:517
+No locals.
+#1  0x61a1a0f0 in wxMenuBase::GetMenuItemCount (this=0xfeeefeee)
+    at C:/wxWidgets-2.8.3/include/wx/menu.h:218
+No locals.
+#2  0x61884319 in MenuItemsManager::Clear (this=0x22ac818)
+    at F:/cbsource/src/sdk/menuitemsmanager.cpp:92
+        ni = (struct wxMenuItem *) 0x22ac8d0
+        menu = (struct wxMenu *) 0xfeeefeee
+        subMenu = (struct wxMenu *) 0xfeeefeee
+        i = 0
+#3  0x619271ef in ToolsManager::BuildToolsMenu (this=0x22ac7d0, menu=0x229ead8)
+    at F:/cbsource/src/sdk/toolsmanager.cpp:318
+        node = (wxToolsListNode *) 0x23f46c
+#4  0x619279fd in ToolsManager::Configure (this=0x22ac7d0)
+    at F:/cbsource/src/sdk/toolsmanager.cpp:358
+        dlg = {&lt;&gt; = {&lt;No data fields&gt;}, static sm_eventTableEntries = {
+    {&lt;wxEventTableEntryBase&gt; = {m_id = 127, m_lastId = -1, m_fn = {__pfn = (
+    void ( struct wxObject::*)(struct wxEvent &amp;,)) 204487774, __delta = 0},
+        m_callbackUserData = 0x0}, m_eventType = @0x6d2f55e8},
+    {&lt;wxEventTableEntryBase&gt; = {m_id = 128, m_lastId = -1, m_fn = {__pfn = (
+    void ( struct wxObject::*)(struct wxEvent &amp;,)) 204487802, __delta = 0},
+        m_callbackUserData = 0x0}, m_eventType = @0x6d2f55e8},
+    {&lt;wxEventTableEntryBase&gt; = {m_id = 637, m_lastId = -1, m_fn = {__pfn = (
+    void ( struct wxObject::*)(struct wxEvent &amp;,)) 204487819, __delta = 0},
+        m_callbackUserData = 0x0}, m_eventType = @0x6d2f55e8},
+    {&lt;wxEventTableEntryBase&gt; = {m_id = 638, m_lastId = -1, m_fn = {__pfn = (
+    void ( struct wxObject::*)(struct wxEvent &amp;,)) 204487881, __delta = 0},
+        m_callbackUserData = 0x0}, m_eventType = @0x6d2f55e8},
+    {&lt;wxEventTableEntryBase&gt; = {m_id = 639, m_lastId = -1, m_fn = {__pfn = (
+    void ( struct wxObject::*)(struct wxEvent &amp;,)) 204487937, __delta = 0},
+        m_callbackUserData = 0x0}, m_eventType = @0x6d2f55e8},
+    {&lt;wxEventTableEntryBase&gt; = {m_id = 640, m_lastId = -1, m_fn = {__pfn = (
+    void ( struct wxObject::*)(struct wxEvent &amp;,)) 204487986, __delta = 0},
+        m_callbackUserData = 0x0}, m_eventType = @0x6d2f55e8},
+    {&lt;wxEventTableEntryBase&gt; = {m_id = -1, m_lastId = -1, m_fn = {__pfn = (
+    void ( struct wxObject::*)(struct wxEvent &amp;,)) 204487675, __delta = 0},
+        m_callbackUserData = 0x0}, m_eventType = @0x6d2f5438},
+    {&lt;wxEventTableEntryBase&gt; = {m_id = 0, m_lastId = 0, m_fn = {__pfn = invalid
+pointer to member function
+(gdb)
+
+C::B crashes at line 92 of sdk/menuitemsmanager.cpp file where subMenu-&gt;GetMenuItemCount() has been called.</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2007-05-22 09:17:03</dd>
+            <dt>Assigned to</dt><dd>mandrav</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2007-05-22 09:17:03</div>
+        <div class="panel-body">
+          <p>This bug is now fixed in HEAD.</p>
+          <p>Thank you for reporting it.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

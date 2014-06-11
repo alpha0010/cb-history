@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 8904 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #8904 <small>2006-09-27 08:11:29</small></h3>
+          <h4>once_upon_user</h4>
+          <p class="lead">random crashes in a big project</p>
+          <pre class="pre-scrollable">CB compiled from SVN(19th of Sep also 21st) because of my retired distro: Fedora Core 3. I have compiled and installed CodeBlocks and wxWidgets along the Installation guide from the CB Wiki. My system is:
+
+kernel: 2.6.9-1.667smp #1 SMP Tue Nov 2 14:59:52 EST 2004 i686 i686 i386 GNU/Linux
+wx-config --version : 2.6.3
+glibc-2.3.3-74
+gcc (GCC) 3.4.2 20041017 (Red Hat 3.4.2-6.fc3)
+xorg-x11: 6.8.1-12
+
+I Use CB to work with my project which is rather big (based of Graphics Engine, over 600000 lines of code) and was created in VC++ so I have imported it to CB and edit my code with CB, and
+CodeBlocks runs in pretty unstable way.. I often get Segmentation Faults..  I present three situations in which I get segfault:
+
+1. Sometimes without any particular action (during diffrent operations) I get SegFault. Most often My console(The one I used to run CB) output
+ looks like this:
+Xft: locking error too many file unlocks
+Xft: locking error too many file unlocks
+Xft: locking error too many file unlocks
+Xft: locking error too many file unlocks
+....
+And after some time , in GDB:
+Program received signal SIGSEGV, Segmentation fault.
+[Switching to Thread -225825872 (LWP 5424)]
+0x00000019 in ?? ()
+(gdb) bt
+#0  0x00000019 in ?? ()
+#1  0x00a6842c in g_hash_table_insert () from /usr/lib/libglib-2.0.so.0
+#2  0x00c53a70 in pango_context_get_base_dir () from /usr/lib/libpango-1.0.so.0
+#3  0x00c54270 in pango_context_get_base_dir () from /usr/lib/libpango-1.0.so.0
+#4  0x00c545b4 in pango_context_get_base_dir () from /usr/lib/libpango-1.0.so.0
+#5  0x00c5495a in pango_itemize_with_base_dir () from /usr/lib/libpango-1.0.so.0
+#6  0x00c5b75c in pango_layout_line_get_pixel_extents () from /usr/lib/libpango-1.0.so.0
+#7  0x00c5c4f7 in pango_layout_line_get_pixel_extents () from /usr/lib/libpango-1.0.so.0
+#8  0x00c5cccf in pango_layout_get_pixel_size () from /usr/lib/libpango-1.0.so.0
+#9  0xf686c784 in wxWindowDC::DoGetTextExtent () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#10 0xf6989942 in wxGenericTreeCtrl::CalculateSize () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#11 0xf6989bf8 in wxGenericTreeCtrl::SetItemImage () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#12 0xf37f7316 in ClassBrowserBuilderThread::AddNodeIfNotThere (this=0x53, tree=0x9165fe0, parent={m_pItem = 0xf2acfc58}, name=@0xf28a2260, imgIndex=1,
+    data=0xee893b00, sorted=152) at classbrowserbuilderthread.cpp:192
+#13 0xf37f7e31 in ClassBrowserBuilderThread::AddNodes (this=0x8fcafc8, tree=0x9165fe0, parent={m_pItem = 0xf2acfc58}, start={_M_node = 0xf11718a0},
+    tokenKindMask=-609, allowGlobals=false) at openfilestree.h:14
+#14 0xf37f80fe in ClassBrowserBuilderThread::AddChildrenOf (this=0x8fcafc8, tree=0x9165fe0, parentTokenIdx=-1, tokenKindMask=-609)
+    at classbrowserbuilderthread.cpp:253
+#15 0xf37f8207 in ClassBrowserBuilderThread::ExpandItem (this=0x8fcafc8, item={m_pItem = 0xf2acfc58}) at token.h:91
+#16 0xf37f8b66 in ClassBrowserBuilderThread::BuildTree (this=0x8fcafc8) at classbrowserbuilderthread.cpp:128
+#17 0xf37f8bfb in ClassBrowserBuilderThread::Entry (this=0x8fcafc8) at classbrowserbuilderthread.cpp:85
+#18 0xf68317bd in wxThreadInternal::PthreadStart () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#19 0xf683182b in wxPthreadStart () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#20 0x0092c1d5 in start_thread () from /lib/tls/libpthread.so.0
+#21 0x007ad2da in clone () from /lib/tls/libc.so.6
+
+//-----------------------------------------
+
+2. Another situation when I have launched CB (another case after quitting ) 
+I have got in console:
+Starting program: /usr/local/bin/codeblocks
+[Thread debugging using libthread_db enabled]
+[New Thread -161216832 (LWP 5480)]
+[New Thread -165549136 (LWP 5483)]
+[New Thread -176038992 (LWP 5484)]
+[New Thread -186528848 (LWP 5485)]
+[New Thread -197018704 (LWP 5486)]
+[New Thread -209982544 (LWP 5487)]
+[New Thread -225899600 (LWP 5488)]
+Detaching after fork from child process 5489.
+Detaching after fork from child process 5491.
+Detaching after fork from child process 5493.
+[New Thread -236389456 (LWP 5495)]
+[Thread -236389456 (zombie) exited]
+[New Thread -236389456 (LWP 5496)]
+[Thread -236389456 (LWP 5496) exited]
+[New Thread -236389456 (LWP 5497)]
+[Thread -236389456 (LWP 5497) exited]
+[New Thread -236389456 (LWP 5498)]
+[Thread -236389456 (LWP 5498) exited]
+and Backtrace from GDB
+
+Program received signal SIGSEGV, Segmentation fault.
+[Switching to Thread -161216832 (LWP 5480)]
+0x00000019 in ?? ()
+(gdb) bt
+#0  0x00000019 in ?? ()
+#1  0x00a6842c in g_hash_table_insert () from /usr/lib/libglib-2.0.so.0
+#2  0x00c53a70 in pango_context_get_base_dir () from /usr/lib/libpango-1.0.so.0
+#3  0x00c54270 in pango_context_get_base_dir () from /usr/lib/libpango-1.0.so.0
+#4  0x00c545b4 in pango_context_get_base_dir () from /usr/lib/libpango-1.0.so.0
+#5  0x00c5495a in pango_itemize_with_base_dir () from /usr/lib/libpango-1.0.so.0
+#6  0x00c5b75c in pango_layout_line_get_pixel_extents () from /usr/lib/libpango-1.0.so.0
+#7  0x00c5c4f7 in pango_layout_line_get_pixel_extents () from /usr/lib/libpango-1.0.so.0
+#8  0x00c5cccf in pango_layout_get_pixel_size () from /usr/lib/libpango-1.0.so.0
+#9  0xf686c784 in wxWindowDC::DoGetTextExtent () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#10 0xf6989942 in wxGenericTreeCtrl::CalculateSize () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#11 0xf698e2f7 in wxGenericTreeCtrl::CalculateLevel () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#12 0xf698e364 in wxGenericTreeCtrl::CalculateLevel () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#13 0xf698e40c in wxGenericTreeCtrl::CalculatePositions () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#14 0xf698f250 in wxGenericTreeCtrl::OnInternalIdle () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#15 0xf68efca6 in wxAppBase::SendIdleEvents () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#16 0xf68efccd in wxAppBase::SendIdleEvents () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#17 0xf68efccd in wxAppBase::SendIdleEvents () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#18 0xf68efccd in wxAppBase::SendIdleEvents () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#19 0xf68efccd in wxAppBase::SendIdleEvents () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#20 0xf68efccd in wxAppBase::SendIdleEvents () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#21 0xf68efbc4 in wxAppBase::ProcessIdle () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#22 0xf6859312 in wxapp_idle_callback () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#23 0x00a74a98 in g_child_watch_add () from /usr/lib/libglib-2.0.so.0
+#24 0x00a7174b in g_main_context_dispatch () from /usr/lib/libglib-2.0.so.0
+#25 0x00a731d2 in g_main_context_acquire () from /usr/lib/libglib-2.0.so.0
+#26 0x00a7347f in g_main_loop_run () from /usr/lib/libglib-2.0.so.0
+#27 0x0270e78e in gtk_main () from /usr/lib/libgtk-x11-2.0.so.0
+#28 0xf6871d51 in wxEventLoop::Run () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#29 0xf68ef8c2 in wxAppBase::MainLoop () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#30 0xf68efa03 in wxAppBase::OnRun () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#31 0x08064b56 in CodeBlocksApp::OnRun (this=0x9b212d8) at app.cpp:513
+#32 0xf67dfc72 in wxEntry () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#33 0xf67dfd51 in wxEntry () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#34 0x0806404f in main (argc=1, argv=0xfefe2cf4) at app.cpp:131
+(gdb) f 34
+#34 0x0806404f in main (argc=1, argv=0xfefe2cf4) at app.cpp:131
+131     IMPLEMENT_APP(CodeBlocksApp)
+//--------------------------------------------------------------------
+
+3. Another situations occured during usual way:
+Console:
+[Thread debugging using libthread_db enabled]
+[New Thread -161216832 (LWP 11507)]
+[New Thread -165549136 (LWP 11510)]
+[New Thread -176038992 (LWP 11511)]
+[New Thread -186528848 (LWP 11512)]
+[New Thread -197018704 (LWP 11513)]
+[New Thread -209982544 (LWP 11514)]
+[New Thread -225825872 (LWP 11515)]
+Detaching after fork from child process 11516.
+Detaching after fork from child process 11518.
+Detaching after fork from child process 11520.
+[New Thread -238232656 (LWP 11522)]
+[Thread -238232656 (zombie) exited]
+[New Thread -238232656 (LWP 11523)]
+[Thread -238232656 (LWP 11523) exited]
+[New Thread -238232656 (LWP 11524)]
+[Thread -238232656 (LWP 11524) exited]
+[New Thread -238232656 (LWP 11525)]
+[Thread -238232656 (LWP 11525) exited]
+[New Thread -238232656 (LWP 11526)]
+[Thread -238232656 (LWP 11526) exited]
+[New Thread -238232656 (LWP 11527)]
+[Thread -238232656 (LWP 11527) exited]
+[New Thread -238232656 (LWP 11528)]
+[Thread -238232656 (LWP 11528) exited]
+*** glibc detected *** double free or corruption: 0x08eea1a8 ***
+And GDB log :
+Program received signal SIGABRT, Aborted.
+[Switching to Thread -225825872 (LWP 11515)]
+0x006cf7a2 in _dl_sysinfo_int80 () from /lib/ld-linux.so.2
+(gdb) bt
+#0  0x006cf7a2 in _dl_sysinfo_int80 () from /lib/ld-linux.so.2
+#1  0x0070f955 in raise () from /lib/tls/libc.so.6
+#2  0x00711319 in abort () from /lib/tls/libc.so.6
+#3  0x00748a1b in malloc_printerr () from /lib/tls/libc.so.6
+#4  0x007494ba in free () from /lib/tls/libc.so.6
+#5  0x00a77cc1 in g_free () from /usr/lib/libglib-2.0.so.0
+#6  0x00c55169 in pango_coverage_unref () from /usr/lib/libpango-1.0.so.0
+#7  0x00c55b2e in pango_engine_lang_get_type () from /usr/lib/libpango-1.0.so.0
+#8  0x00c55dc4 in _pango_engine_shape_covers () from /usr/lib/libpango-1.0.so.0
+#9  0x00c53fc4 in pango_context_get_base_dir () from /usr/lib/libpango-1.0.so.0
+#10 0x00c56ecc in pango_fontset_simple_size () from /usr/lib/libpango-1.0.so.0
+#11 0x00c568d9 in pango_fontset_foreach () from /usr/lib/libpango-1.0.so.0
+#12 0x00c540b1 in pango_context_get_base_dir () from /usr/lib/libpango-1.0.so.0
+#13 0x00c545b4 in pango_context_get_base_dir () from /usr/lib/libpango-1.0.so.0
+#14 0x00c5495a in pango_itemize_with_base_dir () from /usr/lib/libpango-1.0.so.0
+#15 0x00c5b75c in pango_layout_line_get_pixel_extents () from /usr/lib/libpango-1.0.so.0
+#16 0x00c5c4f7 in pango_layout_line_get_pixel_extents () from /usr/lib/libpango-1.0.so.0
+#17 0x00c5cccf in pango_layout_get_pixel_size () from /usr/lib/libpango-1.0.so.0
+#18 0xf686c784 in wxWindowDC::DoGetTextExtent () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#19 0xf6989942 in wxGenericTreeCtrl::CalculateSize () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#20 0xf6989bf8 in wxGenericTreeCtrl::SetItemImage () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#21 0xf37f7307 in ClassBrowserBuilderThread::AddNodeIfNotThere (this=0x0, tree=0x9337360, parent={m_pItem = 0x91a9bb0}, name=@0xf28a2260, imgIndex=1,
+    data=0xee933450, sorted=6) at classbrowserbuilderthread.cpp:191
+#22 0xf37f7e31 in ClassBrowserBuilderThread::AddNodes (this=0x919c330, tree=0x9337360, parent={m_pItem = 0x91a9bb0}, start={_M_node = 0xf0b5dd88},
+    tokenKindMask=-609, allowGlobals=false) at openfilestree.h:14
+#23 0xf37f80fe in ClassBrowserBuilderThread::AddChildrenOf (this=0x919c330, tree=0x9337360, parentTokenIdx=-1, tokenKindMask=-609)
+    at classbrowserbuilderthread.cpp:253
+#24 0xf37f8207 in ClassBrowserBuilderThread::ExpandItem (this=0x919c330, item={m_pItem = 0x91a9bb0}) at token.h:91
+#25 0xf37f8b66 in ClassBrowserBuilderThread::BuildTree (this=0x919c330) at classbrowserbuilderthread.cpp:128
+#26 0xf37f8bfb in ClassBrowserBuilderThread::Entry (this=0x919c330) at classbrowserbuilderthread.cpp:85
+#27 0xf68317bd in wxThreadInternal::PthreadStart () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#28 0xf683182b in wxPthreadStart () from /opt/wx/2.6/lib/libwx_gtk2u-2.6.so.0
+#29 0x0092c1d5 in start_thread () from /lib/tls/libpthread.so.0
+#30 0x007ad2da in clone () from /lib/tls/libc.so.6
+</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2007-04-16 10:14:03</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">dermeister 2006-09-30 09:23:11</div>
+        <div class="panel-body">
+          <p>What pango version is installed on your system? Because all three crashes either occour directly in pango-code or in functions called from pango. With version 1.12.3 I don't have any crashes.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">once_upon_user 2006-10-31 14:34:23</div>
+        <div class="panel-body">
+          <p>I'm not able to upgrade pango library, so CB crased every 5 minuts for a long time.. but With revision 3162(Maybe earlielr I wasn't able to compile some revisions), it stopped</p>
+          <p>I mean it works Ok.  Thanks</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2007-04-16 10:14:03</div>
+        <div class="panel-body">
+          <p>Please try with a nightly build and reopen this bug report, if</p>
+          <p>needed.</p>
+          <p>See <a href="http://forums.codeblocks.org/index.php/board,20.0.html">http://forums.codeblocks.org/index.php/board,20.0.html</a></p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">once_upon_user 2007-04-16 10:27:39</div>
+        <div class="panel-body">
+          <p>As I have mentioned previously, situation seems to be stable.</p>
+          <p>I mean for the last few months the submited bug didn't occur. Nowadays I had to change distro so I'm not able to check</p>
+          <p>how does recent rev work on Fedora Core 3.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

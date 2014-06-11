@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 18736 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #18736 <small>2012-09-22 08:12:03</small></h3>
+          <h4>schorsch_76</h4>
+          <p class="lead">ReadClsNames() : Unexpected token '&gt;'.</p>
+          <pre class="pre-scrollable">Version:
+svn build rev 8401 (2012-09-22 00:39:03) gcc 4.5.4 Linux/unicode - 64 bit 
+
+URL: svn://svn.berlios.de/codeblocks/trunk
+Basis des Projektarchivs: svn://svn.berlios.de/codeblocks
+UUID des Projektarchivs: 98b59c6a-2706-0410-b7d6-d2fa1a1880c9
+Revision: 8401
+Knotentyp: Verzeichnis
+Plan: normal
+Letzter Autor: tpetrov
+Letzte geänderte Rev: 8401
+Letztes Änderungsdatum: 2012-09-22 00:39:03 +0200 (Sa, 22. Sep 2012)
+
+Platform: 
+Gentoo
+kernel 3.4.10
+gcc 4.5.4
+
+CodeComplettion check box in Settings/Editor/CodeCompletion is disabled.
+
+Codeblocks mostly crashes or hangs unlimited until processtermination if i open the attached cpp file. On the commandline appears permanently the following line
+
+ReadClsNames() : Unexpected token '&gt;'.
+ReadClsNames() : Unexpected token '&gt;'.
+ReadClsNames() : Unexpected token '&gt;'.
+ReadClsNames() : Unexpected token '&gt;'.
+ReadClsNames() : Unexpected token '&gt;'.
+ReadClsNames() : Unexpected token '&gt;'.
+ReadClsNames() : Unexpected token '&gt;'.
+ReadClsNames() : Unexpected token '&gt;'.
+ReadClsNames() : Unexpected token '&gt;'.
+ReadClsNames() : Unexpected token '&gt;'.
+ReadClsNames() : Unexpected token '&gt;'.
+ReadClsNames() : Unexpected token '&gt;'.
+ReadClsNames() : Unexpected token '&gt;'.
+
+CodeCompletetion is already disabled after i found this forum post:
+<a href="http://forums.codeblocks.org/index.php?topic=16466.30">http://forums.codeblocks.org/index.php?topic=16466.30</a>
+Its for 8059 .. but nevertheless i disabled codecomplettion
+
+If i completly disable code completion by disabling the pkugin in "Plugin/Manage Plugins ..." i can load that file. I think this prooves that the bug is located inside the code completion plugin.
+
+Best Regards and keep up the good work ;)
+
+Georg
+
+cpp-file
+----------------------
+/***************************************************************
+ * Name:      client-connection.cpp
+ **************************************************************/
+
+#define FUSION_MAX_VECTOR_SIZE                  20
+#define BOOST_MPL_CFG_NO_PREPROCESSED_HEADERS
+#define BOOST_MPL_LIMIT_VECTOR_SIZE             30
+#define BOOST_MPL_LIMIT_MAP_SIZE                30
+
+#include "client-connection.h"
+#include "serialize.h"
+#include "event-dispatcher.h"
+#include "logger.h"
+
+#include &lt;sstream&gt;
+#include &lt;algorithm&gt;
+
+#include &lt;boost/bind.hpp&gt;
+
+// front- and back-end
+#include &lt;boost/msm/back/state_machine.hpp&gt;
+#include &lt;boost/msm/front/state_machine_def.hpp&gt;
+
+#define NR_OF_THREADS    1
+
+namespace msm = boost::msm;
+namespace mpl = boost::mpl;
+
+class ClientProtocolImpl
+{
+public:
+    ClientProtocolImpl(ClientConnection::WeakPtr p_client_connection,
+                       ClientWarRoom::WeakPtr p_war_room,
+                       std::string username,
+                       std::string password)
+        :   mp_client_connection(p_client_connection)
+    {
+        mp_sm.reset(new SP(this, p_war_room, username, password));
+        mp_sm-&gt;start();
+    }
+
+    bool    SendData(SerializeableObjectBase::SharedPtr p_data)
+    {
+        ClientConnection::SharedPtr p_client_connection = mp_client_connection.lock();
+        if (p_client_connection)
+        {
+            p_client_connection-&gt;SendData(p_data);
+            return true;
+        }
+        return false;
+    }
+
+    template &lt;class Event&gt;
+    void process_event(Event evt)
+    {
+        mp_sm-&gt;process_event(evt);
+    }
+
+    template &lt;class Flag&gt;
+    bool is_flag_active()
+    {
+        return mp_sm-&gt;is_flag_active&lt;Flag&gt;();
+    }
+
+// flags
+    struct FlagAllOk {};
+    typedef mpl::vector1&lt;FlagAllOk&gt; flag_list;
+
+// our war room data objects are events too.
+// they signal a incoming object of that type
+
+// Socket successully conencted
+    struct  EvConnected   {};
+
+// Somwone wants to send data to the client
+    struct  EvSendData
+    {
+        EvSendData(SerializeableObjectBase::SharedPtr p_data)
+        {
+            mp_data = p_data;
+        }
+
+        SerializeableObjectBase::SharedPtr  mp_data;
+    };
+
+// data was successfully written to the client
+    struct  EvDataWritten   {};
+
+private:
+// -----------------------------------------------------------------------
+// We need to handle the state of the stream by a statemachine
+// -----------------------------------------------------------------------
+
+// define the front end
+// front-end: define the FSM structure
+    struct ClientProtocolFrontEnd : public msm::front::state_machine_def&lt;ClientProtocolFrontEnd&gt;
+    {
+        ClientProtocolFrontEnd(ClientProtocolImpl* p_parent,
+                               ClientWarRoom::WeakPtr p_war_room,
+                               std::string username,
+                               std::string password)
+            :   m_username(username),
+            m_password(password),
+            mp_parent(p_parent)
+        {
+
+        }
+
+        // data from the constructor
+        std::string m_username;
+        std::string m_password;
+
+        // data of the state machine
+        ClientProtocolImpl*                 mp_parent;
+        ClientWarRoom::WeakPtr              mp_war_room;
+
+        // error message. If != "" it indicates that there was an error
+        // and the statemachin terminates
+        std::string                         ms_error;
+
+        // temporary data for sending to the client
+        SerializeableObjectBase::SharedPtr  mp_temp_write_data;
+
+        // The list of FSM states
+        // Authentication states
+        struct NotConnected : public msm::front::state&lt;&gt;
+        {
+            typedef mpl::vector&lt;EvSendData&gt; deferred_events;
+        };
+
+        struct SendPassword : public msm::front::state&lt;&gt;
+        {
+            typedef mpl::vector&lt;EvSendData&gt; deferred_events;
+
+            template &lt;class Event, class Fsm&gt;
+            void on_entry(const Event&amp;, Fsm&amp; fsm)
+            {
+                 TRACE("ClientProtocolFrontEnd::SendPassword");
+
+               // send Password
+                ProtocolPassword::SharedPtr p_password;
+                p_password.reset(new ProtocolPassword(fsm.m_password));
+                fsm.mp_parent-&gt;SendData(p_password);
+            }
+        };
+
+        struct SendVersion : public msm::front::state&lt;&gt;
+        {
+            typedef mpl::vector&lt;EvSendData&gt; deferred_events;
+
+            template &lt;class Event, class Fsm&gt;
+            void on_entry(const Event&amp;, Fsm&amp; fsm)
+            {
+                 TRACE("ClientProtocolFrontEnd::SendVersion");
+
+                // send Version
+                ProtocolVersion::SharedPtr p_version;
+                p_version.reset(new ProtocolVersion);
+                p_version-&gt;m_version = ConnectionInterface::version;
+                fsm.mp_parent-&gt;SendData(p_version);
+            }
+        };
+
+        struct SendUsername : public msm::front::state&lt;&gt;
+        {
+            typedef mpl::vector&lt;EvSendData&gt; deferred_events;
+
+            template &lt;class Event, class Fsm&gt;
+            void on_entry(const Event&amp;, Fsm&amp; fsm)
+            {
+                 TRACE("ClientProtocolFrontEnd::SendUsername");
+
+                // send Version
+                ProtocolUsername::SharedPtr p_username;
+                p_username.reset(new ProtocolUsername);
+                p_username-&gt;m_username = fsm.m_username;
+                fsm.mp_parent-&gt;SendData(p_username);
+            }
+        };
+
+        struct WaitForTraffic : public msm::front::state&lt;&gt;
+        {
+            template &lt;class Event, class Fsm&gt;
+            void on_entry(const Event&amp;, Fsm&amp; fsm)
+            {
+                 TRACE("ClientProtocolFrontEnd::WaitForTraffic");
+            }
+        };
+
+        // Receive data from server
+        struct ServerLockedStream : public msm::front::state&lt;&gt;
+        {
+            typedef mpl::vector&lt;EvSendData&gt; deferred_events;
+
+            template &lt;class Event, class Fsm&gt;
+            void on_entry(const Event&amp;, Fsm&amp; fsm)
+            {
+                 TRACE("ClientProtocolFrontEnd::ServerLockedStream");
+            }
+        };
+
+        // Send data to server
+        struct TryToLockStream : public msm::front::state&lt;&gt;
+        {
+            typedef mpl::vector&lt;ProtocolTryStreamLock::SharedPtr&gt; deferred_events;
+
+            template &lt;class Event, class Fsm&gt;
+            void on_entry(const Event&amp; evt, Fsm&amp; fsm)
+            {
+                 TRACE("ClientProtocolFrontEnd::TryToLockStream");
+
+                // store data in fsm
+                fsm.mp_temp_write_data = evt.mp_data;
+
+                // send ProtocolTryStreamLock
+                ProtocolTryStreamLock::SharedPtr p_msg;
+                p_msg.reset(new ProtocolTryStreamLock);
+
+                fsm.mp_parent-&gt;SendData(p_msg);
+            }
+        };
+
+        struct ClientLockedStream : public msm::front::state&lt;&gt;
+        {
+            typedef mpl::vector&lt;ProtocolTryStreamLock::SharedPtr&gt; deferred_events;
+
+            template &lt;class Event, class Fsm&gt;
+            void on_entry(const Event&amp;, Fsm&amp; fsm)
+            {
+                 TRACE("ClientProtocolFrontEnd::ClientLockedStream");
+
+                // send DataObjectBase
+                fsm.mp_parent-&gt;SendData(fsm.mp_temp_write_data);
+            }
+        };
+
+        struct TryToUnlockStream : public msm::front::state&lt;&gt;
+        {
+            typedef mpl::vector&lt;ProtocolTryStreamLock::SharedPtr&gt; deferred_events;
+
+            template &lt;class Event, class Fsm&gt;
+            void on_entry(const Event&amp;, Fsm&amp; fsm)
+            {
+                 TRACE("ClientProtocolFrontEnd::TryToUnlockStream");
+
+                // send ProtocolTryStreamUnlock
+                ProtocolTryStreamUnlock::SharedPtr p_data;
+                p_data.reset(new ProtocolTryStreamUnlock);
+                fsm.mp_parent-&gt;SendData(p_data);
+            }
+        };
+
+        // orthogonal region
+        // this state is also made terminal so that all the events are blocked
+        struct AllOk : public msm::front::state&lt;&gt;
+        {
+            typedef mpl::vector1&lt;FlagAllOk&gt; flag_list;
+        };
+
+        struct ErrorMode :  public msm::front::terminate_state&lt;&gt; // ErrorMode terminates the state machine
+        {
+            template &lt;class Event, class Fsm&gt;
+            void on_entry(const Event&amp;, Fsm&amp; fsm)
+            {
+                 TRACE("---!!!ClientProtocolFrontEnd::ErrorMode!!!---");
+
+                // send DataObjectBase
+                fsm.mp_parent-&gt;SendData(fsm.mp_temp_write_data);
+            }
+        };
+
+        // the initial state of the SM. Must be defined
+        typedef mpl::vector&lt;NotConnected, AllOk&gt; initial_state;
+
+        // transition actions
+        void UpdateWarRoom(const ProtocolDataCarrier::SharedPtr&amp; evt)
+        {
+            TRACE("ClientProtocolFrontEnd::UpdateWarRoom");
+
+            // try to lock war room
+            ClientWarRoom::SharedPtr p_war_room = mp_war_room.lock();
+            if (p_war_room)
+            {
+                p_war_room-&gt;Update(evt-&gt;mp_data);
+            }
+        }
+
+        template &lt;class Event&gt;
+        void SendStreamStatusUnlocked(const Event&amp; )
+        {
+            TRACE("ClientProtocolFrontEnd::SendStreamStatusUnlocked");
+
+             // send ProtocolStreamLockStatus: Unlocked
+            ProtocolStreamLockStatus::SharedPtr p_status;
+            p_status.reset(new ProtocolStreamLockStatus);
+            p_status-&gt;mb_ok = false;
+
+            mp_parent-&gt;SendData(p_status);
+        }
+
+        // guard conditions
+        bool IsStreamLockOk(const ProtocolStreamLockStatus::SharedPtr&amp; p_evt)
+        {
+            // Signal the anonymous transistion, that there is an error
+            if (!p_evt-&gt;mb_ok)
+            {
+                ms_error = "IsStreamLockOk(): Stream not Locked!";
+            }
+            return p_evt-&gt;mb_ok;
+        }
+
+        bool IsStreamLockNOk(const ProtocolStreamLockStatus::SharedPtr&amp; p_evt)
+        {
+            if (p_evt-&gt;mb_ok)
+            {
+                ms_error = "IsStreamLockNOk(): Stream not Unlocked!";
+            }
+            return !p_evt-&gt;mb_ok;
+        }
+
+        bool IsErrorActive(const msm::front::none&amp;)
+        {
+            return ms_error != "";
+        }
+
+        // enable defered events
+        typedef int activate_deferred_events;
+
+        // Transition table for Protocol
+        typedef ClientProtocolFrontEnd fe; // makes transition table cleaner
+        struct transition_table : mpl::vector&lt;
+                //         Start                Event                                        Next                Action                   Guard
+                //       +---------------------+--------------------------------------------+----------------------+-------------------------+----------------------+
+                //         Authentication
+                _row     &lt; NotConnected        , EvConnected                                , SendPassword                                                         &gt;,
+                _row     &lt; SendPassword        , EvDataWritten                              , SendVersion                                                          &gt;,
+                _row     &lt; SendVersion         , EvDataWritten                              , SendUsername                                                         &gt;,
+                _row     &lt; SendUsername        , EvDataWritten                              , WaitForTraffic                                                       &gt;,
+                //       +---------------------+--------------------------------------------+----------------------+-------------------------+----------------------+
+                // What action next?
+                _row     &lt; WaitForTraffic      , ProtocolTryStreamLock::SharedPtr           , ServerLockedStream                                                   &gt;,
+                _row     &lt; WaitForTraffic      , EvSendData                                 , TryToLockStream                                                      &gt;,
+                //       +---------------------+--------------------------------------------+----------------------+-------------------------+----------------------+
+                //         ServerLockedStream
+                a_irow   &lt; ServerLockedStream  , ProtocolDataCarrier::SharedPtr             ,                        &amp;fe::UpdateWarRoom                            &gt;,
+                a_row    &lt; ServerLockedStream  , ProtocolTryStreamUnlock::SharedPtr         , WaitForTraffic       , &amp;fe::SendStreamStatusUnlocked                 &gt;,
+                //       +---------------------+--------------------------------------------+----------------------+-------------------------+----------------------+
+                //          Client lock Stream
+                g_row    &lt; TryToLockStream     , ProtocolStreamLockStatus::SharedPtr        , ClientLockedStream   ,                           &amp;fe::IsStreamLockOk &gt;,
+                _row     &lt; ClientLockedStream  , EvDataWritten                              , TryToUnlockStream                                                    &gt;,
+                g_row    &lt; TryToUnlockStream   , ProtocolStreamLockStatus::SharedPtr        , WaitForTraffic       ,                           &amp;fe::IsStreamLockNOk&gt;,
+                //       +---------------------+--------------------------------------------+----------------------+-------------------------+----------------------+
+                g_row    &lt; AllOk               , msm::front::none                           , ErrorMode                                      , &amp;fe::IsErrorActive  &gt;
+                //       +---------------------+--------------------------------------------+----------------------+-------------------------+----------------------+
+                &gt; {};
+
+        // Replaces the default no-transition response.
+        template &lt;class FSM,class Event&gt;
+        void no_transition(Event const&amp; e, FSM&amp;,int state)
+        {
+            std::cerr &lt;&lt; "ClientConnection: NoTransition: " &lt;&lt; typeid(e).name() &lt;&lt; std::endl;
+        }
+    };
+
+// Protocol implementation
+    typedef msm::back::state_machine&lt;ClientProtocolFrontEnd&gt; SP;
+
+    ClientConnection::WeakPtr               mp_client_connection;
+    boost::shared_ptr&lt;SP&gt;                   mp_sm;
+};
+
+// -----------------------------------------------------------------------
+// The connection between socket and protocol
+// -----------------------------------------------------------------------
+
+ClientConnection::ClientConnection(std::string address,
+                                   std::string port,
+                                   std::string username,
+                                   std::string password,
+                                   ClientWarRoom::WeakPtr p_war_room)
+    :    m_address(address),
+    m_port(port),
+    m_username(username),
+    m_password(password),
+    mp_war_room(p_war_room),
+    m_socket(m_io),
+    m_resolver(m_io),
+    m_strand(m_io)
+{
+}
+
+ClientConnection::~ClientConnection()
+{
+    if (m_threads.size() &gt; 0)
+    {
+        // stop the io service
+        m_io.stop();
+
+        // join all threads
+        m_threads.join_all();
+    }
+}
+
+void ClientConnection::Start()
+{
+    lock lk(m_monitor);
+
+    TRACE("ClientConnection::Start");
+
+    mp_client_protocol.reset(new ClientProtocolImpl(shared_from_this(), mp_war_room, m_username, m_password));
+    start_resolve();
+
+    // start thread group
+    for (int i = 0; i &lt; NR_OF_THREADS; ++i)
+    {
+        m_threads.create_thread(boost::bind(&amp;boost::asio::io_service::run, boost::ref(m_io)));
+    }
+}
+
+// send a item to the server
+void ClientConnection::Send(SerializeableObjectBase::SharedPtr p_item)
+{
+    lock lk(m_monitor);
+
+    TRACE("ClientConnection::Send(SerializeableObjectBase::SharedPtr p_item)");
+
+    mp_client_protocol-&gt;process_event(ClientProtocolImpl::EvSendData(p_item));
+}
+
+// Get the socket associated with the connection.
+boost::asio::ip::tcp::socket&amp; ClientConnection::GetSocket()
+{
+    return m_socket;
+}
+
+// -----------------------------------------------------------------------
+// Resolve
+// -----------------------------------------------------------------------
+void    ClientConnection::start_resolve()
+{
+    TRACE("ClientConnection::start_resolve");
+
+    // Start an asynchronous resolve to translate the server and service names
+    // into a list of endpoints.
+    boost::asio::ip::tcp::resolver::query query(m_address, m_port);
+    m_resolver.async_resolve(query,
+                             m_strand.wrap(
+                                 boost::bind(&amp;ClientConnection::handle_resolve, this,
+                                         boost::asio::placeholders::error,
+                                         boost::asio::placeholders::iterator)));
+}
+void    ClientConnection::handle_resolve(const boost::system::error_code&amp; e, boost::asio::ip::tcp::resolver::iterator endpoint_iterator)
+{
+    TRACE("ClientConnection::handle_resolve");
+
+    if (!e)
+    {
+        // Attempt a connection to each endpoint in the list until we
+        // successfully establish a connection.
+        boost::asio::async_connect(m_socket, endpoint_iterator,
+                                   m_strand.wrap(
+                                       boost::bind(&amp;ClientConnection::handle_connect, this,
+                                               boost::asio::placeholders::error)));
+    }
+    else
+    {
+        // Error occured -&gt; disconnect
+        // Initiate graceful connection closure.
+        boost::system::error_code ignored_ec;
+        m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
+    }
+}
+
+void    ClientConnection::handle_connect(const boost::system::error_code&amp; e)
+{
+    TRACE("ClientConnection::handle_connect");
+
+    if (!e)
+    {
+        mp_client_protocol-&gt;process_event(ClientProtocolImpl::EvConnected());
+        start_read_header();
+    }
+    else
+    {
+        // Error occured -&gt; disconnect
+        // Initiate graceful connection closure.
+        boost::system::error_code ignored_ec;
+        m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
+    }
+}
+
+// -----------------------------------------------------------------------
+// Handle the incoming data
+// -----------------------------------------------------------------------
+void ClientConnection::start_read_header()
+{
+    TRACE("ClientConnection::start_read_header");
+
+    // begin to read the header
+    m_incoming_header = std::vector&lt;char&gt;(ConnectionInterface::header_length);
+    boost::asio::async_read(m_socket,
+                            boost::asio::buffer(m_incoming_header),
+                            m_strand.wrap(boost::bind(
+                                    &amp;ClientConnection::handle_read_header, shared_from_this(),
+                                    boost::asio::placeholders::error,
+                                    boost::asio::placeholders::bytes_transferred)));
+}
+
+void ClientConnection::handle_read_header(const boost::system::error_code&amp; e, std::size_t bytes_transferred)
+{
+    TRACE("ClientConnection::handle_read_header");
+
+    if (!e)
+    {
+        // begin to read the body
+        size_t body_length = DecodeHeader(m_incoming_header);
+        m_incoming_body = std::vector&lt;char&gt;(body_length);
+        boost::asio::async_read(m_socket,
+                                boost::asio::buffer(m_incoming_body),
+                                m_strand.wrap(boost::bind(
+                                        &amp;ClientConnection::handle_read_body, shared_from_this(),
+                                        boost::asio::placeholders::error,
+                                        boost::asio::placeholders::bytes_transferred)));
+    }
+    else
+    {
+        // Error occured -&gt; disconnect
+        // Initiate graceful connection closure.
+        boost::system::error_code ignored_ec;
+        m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
+    }
+}
+
+void ClientConnection::handle_read_body(const boost::system::error_code&amp; e, std::size_t bytes_transferred)
+{
+    TRACE("ClientConnection::handle_read_body");
+
+    if (!e)
+    {
+        // parse the buffer for the protocol
+        SerializeableObjectBase::SharedPtr result = deserialize(m_incoming_body);
+
+        // send this packet to the server protocol
+        ProtocolEventDispatcher&lt;ClientProtocolImpl&gt; dispatcher(mp_client_protocol.get());
+        result-&gt;Accept(&amp;dispatcher);
+
+        //if there was no error, wait for new packets
+        if (mp_client_protocol-&gt;is_flag_active&lt;ClientProtocolImpl::FlagAllOk&gt;())
+        {
+            start_read_header();
+        }
+    }
+    else
+    {
+        // Error occured -&gt; disconnect
+        // Initiate graceful connection closure.
+        boost::system::error_code ignored_ec;
+        m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
+    }
+}
+
+// -----------------------------------------------------------------------
+// Handle write of a item to the servers
+// -----------------------------------------------------------------------
+// access to the socket for the implementation
+void    ClientConnection::SendData(SerializeableObjectBase::SharedPtr p_data)
+{
+    TRACE("ClientConnection::SendData");
+
+    // only called from the state machine
+    // serialize the result
+    m_outgoing_body = serialize(p_data);
+    m_outgoing_header = EncodeHeader(m_outgoing_body);
+
+    // ok, simply send the header
+    boost::asio::async_write(m_socket, ToBuffers(m_outgoing_header, m_outgoing_body),
+                             m_strand.wrap(boost::bind(&amp;ClientConnection::handle_write, shared_from_this(),
+                                           boost::asio::placeholders::error)));
+
+}
+
+void ClientConnection::handle_write(const boost::system::error_code&amp; e)
+{
+    TRACE("ClientConnection::handle_write");
+
+    if (!e)
+    {
+        // signal the protocol, that the data was written
+        mp_client_protocol-&gt;process_event(ClientProtocolImpl::EvDataWritten());
+    }
+    else
+    {
+        // Error occured -&gt; disconnect
+        // Initiate graceful connection closure.
+        boost::system::error_code ignored_ec;
+        m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
+    }
+}
+
+----------------------
+</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::CodeCompletion</dd>
+            <dt>Group</dt><dd>Platform:Linux</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2012-10-11 12:39:07</dd>
+            <dt>Assigned to</dt><dd>mortenmacfly</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2012-09-22 14:23:32</div>
+        <div class="panel-body">
+          <p>Can you try to extract a minimal example by stripping the code? w/o the rest a lot of #includes cannot be resolved, the CC stuff is missing important components therefore and it parses just fine.</p>
+          <p>Please try to remove #includes / methods step-by-step to track down what the actual root cause is.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">schorsch_76 2012-09-23 07:39:08</div>
+        <div class="panel-body">
+          <p>i did a debug rebuild.and update to 8405 After that i could not reproduce this behaviour. I hope this is not a debug/release issue...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2012-10-11 12:39:07</div>
+        <div class="panel-body">
+          <p>Cannot reproduce.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

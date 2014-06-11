@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 19111 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #19111 <small>2013-09-05 06:47:03</small></h3>
+          <h4>mojca</h4>
+          <p class="lead">m_WorkingCopy: array initializer must be an initializer list</p>
+          <pre class="pre-scrollable">When compiling the released version of codeblocks-12.11release8629 with clang on Mac OS X 10.7 with Xcode 4.6 I first had to fix src/sdk/wxscintilla/src/PlatWX.cpp to make the code compile, else I ended up with
+    src/PlatWX.cpp:304:19: error: variable length array of non-POD element type 'wxPoint'
+but that seems to have been fixed in SVN already.
+
+But then I hit another problem, namely:
+
+librariesdlg.cpp:93:7: error: array initializer must be an initializer list
+    , m_WorkingCopy(knownLibraries)
+      ^
+
+I tried to compile the code from trunk, but it doesn't seem that anything has changed there and compilation also fails a lot earlier there.
+
+/bin/sh ../../../../libtool --tag=CXX   --mode=compile /usr/bin/clang++ -DHAVE_CONFIG_H -I. -I../../../../src/include -I/opt/local/Library/Frameworks/wxWidgets.framework/Versions/wxGTK/2.8/lib/wx/include/gtk2-unicode-release-2.8 -I/opt/local/Library/Frameworks/wxWidgets.framework/Versions/wxGTK/2.8/include/wx-2.8 -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES -D__WXGTK__  -I../../../../src/include -I../../../../src/sdk/wxscintilla/include -I./../wxContribItems/wxFlatNotebook/include -I../../../../src/include/scripting/include -I../../../../src/include/scripting/sqplus -I../../../../src/include/scripting/squirrel -I../../../../src/include/scripting/bindings -I../../../../src/include/mozilla_chardet  -I/opt/local/include -Ulinux -Uunix  -O2 -ffast-math -DCB_AUTOCONF -pipe -Os -arch x86_64 -DCB_PRECOMP -Winvalid-pch -fPIC -DPIC -fexceptions -MT projectmissinglibs.lo -MD -MP -MF .deps/projectmissinglibs.Tpo -c -o projectmissinglibs.lo projectmissinglibs.cpp
+libtool: compile:  /usr/bin/clang++ -DHAVE_CONFIG_H -I. -I../../../../src/include -I/opt/local/Library/Frameworks/wxWidgets.framework/Versions/wxGTK/2.8/lib/wx/include/gtk2-unicode-release-2.8 -I/opt/local/Library/Frameworks/wxWidgets.framework/Versions/wxGTK/2.8/include/wx-2.8 -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES -D__WXGTK__ -I../../../../src/include -I../../../../src/sdk/wxscintilla/include -I./../wxContribItems/wxFlatNotebook/include -I../../../../src/include/scripting/include -I../../../../src/include/scripting/sqplus -I../../../../src/include/scripting/squirrel -I../../../../src/include/scripting/bindings -I../../../../src/include/mozilla_chardet -I/opt/local/include -Ulinux -Uunix -O2 -ffast-math -DCB_AUTOCONF -pipe -Os -arch x86_64 -DCB_PRECOMP -Winvalid-pch -fPIC -DPIC -fexceptions -MT projectmissinglibs.lo -MD -MP -MF .deps/projectmissinglibs.Tpo -c projectmissinglibs.cpp  -fno-common -DPIC -o .libs/projectmissinglibs.o
+librariesdlg.cpp:93:7: error: array initializer must be an initializer list
+    , m_WorkingCopy(knownLibraries)
+      ^
+1 error generated.
+</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>&nbsp;</dd>
+            <dt>Group</dt><dd>Platform:Mac</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2013-10-01 23:44:53</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mojca 2013-09-17 07:36:40</div>
+        <div class="panel-body">
+          <p>I submitted the patch in "Patch #3498", so this ticket may be closed.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mojca 2013-10-01 21:34:29</div>
+        <div class="panel-body">
+          <p>This ticket may be closed. It was fixed in r9378.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2013-10-01 23:44:53</div>
+        <div class="panel-body">
+          <p>This bug is now fixed in HEAD.</p>
+          <p>Thank you for reporting it.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

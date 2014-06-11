@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 17767 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #17767 <small>2010-12-03 20:38:45</small></h3>
+          <h4>secks</h4>
+          <p class="lead">Debugging window closes during gdb debug process</p>
+          <p>If you debug a program in linux for longer than roughly a day the debugging terminal will close while the program is still active.  The problem exists because the terminal is created with a sleep command, and then the debugger outputs to that terminals tty once it has been identified by it's unique sleep command.  The sleep is defined by 80000 plus the current process ID.  I have put together a patch that fixes this bug by increasing the sleep time to hours instead of seconds.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Debugger</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2011-04-09 21:33:43</dd>
+            <dt>Assigned to</dt><dd>tpetrov</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">secks 2010-12-03 20:39:19</div>
+        <div class="panel-body">
+          <p>Index: trunk/src/plugins/debuggergdb/debuggergdb.cpp</p>
+          <p>===================================================================</p>
+          <p>--- trunk/src/plugins/debuggergdb/debuggergdb.cpp	(revision 6872)</p>
+          <p>+++ trunk/src/plugins/debuggergdb/debuggergdb.cpp	(working copy)</p>
+          <p>@@ -2898,7 +2898,7 @@</p>
+          <p>{</p>
+          <p>#ifndef __WXMSW__</p>
+          <p>-    // start the xterm and put the shell to sleep with -e sleep 80000</p>
+          <p>+    // start the xterm and put the shell to sleep with -e sleep 80000h</p>
+          <p>// fetch the xterm tty so we can issue to gdb a "tty /dev/pts/#"</p>
+          <p>// redirecting program stdin/stdout/stderr to the xterm console.</p>
+          <p>@@ -2911,7 +2911,7 @@</p>
+          <p>term.Replace(_T("$TITLE"), _T("'") + title + _T("'"));</p>
+          <p>cmd &lt;&lt; term &lt;&lt; _T(" ");</p>
+          <p>cmd2 &lt;&lt; wxT("sleep ");</p>
+          <p>-    cmd2 &lt;&lt; wxString::Format(wxT("%d"),80000 + ::wxGetProcessId());</p>
+          <p>+    cmd2 &lt;&lt; wxString::Format(wxT("%dh"),80000 + ::wxGetProcessId());</p>
+          <p>if (!cmd.Replace(_T("$SCRIPT"), cmd2))</p>
+          <p>// if they didn't specify $SCRIPT, append:</p>
+          <p>@@ -2970,7 +2970,7 @@</p>
+          <p>ConsPidStr &lt;&lt; ConsPid;</p>
+          <p>//find task with our unique sleep time</p>
+          <p>wxString uniqueSleepTimeStr;</p>
+          <p>-    uniqueSleepTimeStr &lt;&lt; wxT("sleep ") &lt;&lt; wxString::Format(wxT("%d"),80000 + ::wxGetProcessId());</p>
+          <p>+    uniqueSleepTimeStr &lt;&lt; wxT("sleep ") &lt;&lt; wxString::Format(wxT("%dh"),80000 + ::wxGetProcessId());</p>
+          <p>// search the output of "ps pid" command</p>
+          <p>int knt = psOutput.GetCount();</p>
+          <p>for (int i=knt-1; i&gt;-1; --i)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2011-04-09 21:33:43</div>
+        <div class="panel-body">
+          <p>Bug is fixed in the debuggers branch...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

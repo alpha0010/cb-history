@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 19344 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #19344 <small>2014-04-04 16:59:46</small></h3>
+          <h4>mateidavid</h4>
+          <p class="lead">"Make" commands processed inconsistently or ignored</p>
+          <p>When using a custom (external) Makefile, the interface between CB and the Makefile is made through:</p>
+          <p>Build options / "Make" commands</p>
+          <p>However:</p>
+          <p>1. The command for "Compile single file" is ignored when attempting to build a single file. A generic compile command is attempted instead. Bug #18071 could be related.</p>
+          <p>2. The command for "Build project/target" is fully interpreted, but the commands for "Clean project/target" and "Ask if rebuild is needed" are not. I mean that, for "build", if one writes "cd dir &amp;&amp; make" and the following are executed: "cd dir", then "make". However, for "clean" (and similarly for "ask"), if one writes "cd dir &amp;&amp; make clean", the following is executed: "cd dir &amp;&amp; make". So the "&amp;&amp;" is escaped, and passed as argument to "cd". This is inconsistent.</p>
+          <p>To reproduce, save this as 'print-args' and put it in your PATH:</p>
+          <p>#!/bin/bash</p>
+          <p>echo "[$PWD] $0 $@" | tee -a /tmp/print-args.log</p>
+          <p>Then use commands of the form "print-args {build|clean|ask}_target &amp;&amp; make". You can see in /tmp/print-args.log that for "build", print-args is passed only the argument "build_target", whereas for "clean" and "ask", it is also passed the "&amp;&amp;" and "make" tokens.</p>
+          <p>As a workaround, for "clean" and "ask", one can force the command to be interpreted with by using, e.g. "bash -c 'cd dir &amp;&amp; make' ".</p>
+          <p>IMO, you should allow full interpretation, as in the case of "build", because this allows more customization. Since the "build" dialog already allows it, this should be easy to fix.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Interface</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

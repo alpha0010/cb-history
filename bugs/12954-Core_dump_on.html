@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 12954 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #12954 <small>2008-01-17 08:55:27</small></h3>
+          <h4>dalex</h4>
+          <p class="lead">Core dump on Solaris 10 x86 when exiting CB</p>
+          <p>This seems to happen with quite a few recent versions. When exiting the Code::Blocks the core dumped during deinitializing plugins. The stack trace is below. It looks like the problem lies in wxsItemFactory destructor.</p>
+          <p>080470c4 libc.so.1`_lwp_kill+7(1, 6)</p>
+          <p>080470dc libc.so.1`raise+0x1f(6)</p>
+          <p>08047128 libc.so.1`abort+0xcd(0, fe008000, 804714c, fdfe001f, b, 0)</p>
+          <p>08047138 0xfe172fee(b, 0, 80471e0)</p>
+          <p>0804714c libc.so.1`__sighndlr+0xf(b, 0, 80471e0, fe172fc0)</p>
+          <p>080471a8 libc.so.1`call_user_handler+0x22b(b, 0, 80471e0)</p>
+          <p>080471cc libc.so.1`sigacthandler+0xbb(b, 0, 80471e0)</p>
+          <p>08047438 libwxsmithlib.so.0.0.1`_ZN14wxsItemFactoryD2Ev+0x97(fbf74ee0, fbeec1b4, 8047518, fbd97d29, fbf74dec, fbeec1b4)</p>
+          <p>08047518 libwxsmithlib.so.0.0.1`_Z41__static_initialization_and_destruction_0ii+0x34f(feffa1c8, fbeec1b4, 8047534, fbe20c55, feffa840, 8047554)</p>
+          <p>08047528 0xfbcbd7ab(feffa840, 8047554, fefd5acd, feffc908, feffa220, feffa840)</p>
+          <p>08047534 libwxsmithlib.so.0.0.1`_fini+0x15(feffc908, feffa220, feffa840, 0, fbe20c40, 8047570)</p>
+          <p>08047554 ld.so.1`call_fini+0x99(feffa220, fbf80578)</p>
+          <p>08047570 ld.so.1`atexit_fini+0x5b(804766c, 8047574, fe008000, fe00c6c0, 80475ac, fdf63f22)</p>
+          <p>08047588 libc.so.1`_exithandle+0x4e(feffa840, 8073a66, 0, 0, 80475ac, 80739fe)</p>
+          <p>080475ac libc.so.1`exit+0x12(1, 80476d4, 0, 80476df, 804771b, 804776a)</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">dalex 2008-01-17 10:39:27</div>
+        <div class="panel-body">
+          <p>I did some analysis. This seems to happen because static 	instance of ItemMapT (in declared in ItemMap() method) is getting destructed somewhere in the middle of the destruction processes while it seems that there are still some wxsItemFactory classes being destructed and trying to refer to that ItemMap.</p>
+          <p>However moving this static ItemMap in different context does not help. It seems that wxsItemFactory  constructors/destructors are called from other static initialisation/destruction code and it seems that there is a great chance they are called before the static ItemMap is initialised or after it is destroyed.</p>
+          <p>The only reasonable solution is to allocate the ItemMap object on-demand dynamically first time it is used.</p>
+          <p>Incidentally, all the wxsItemFactory classes seem to initialise with the same classname. This results in that they use the same element of the ItemMap pointing to the last initialised wxsItemFactory. What is the point of using Map structure then?</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

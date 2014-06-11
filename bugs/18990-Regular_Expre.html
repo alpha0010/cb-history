@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 18990 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #18990 <small>2013-05-04 01:22:52</small></h3>
+          <h4>kaslai</h4>
+          <p class="lead">Regular Expression "\d*\ returns 0 length result</p>
+          <p>The RegEx engine matches \d* to a 0-length string, even on lines containing numbers.</p>
+          <p>This is a failing of the regular expression engine because regular expressions are supposed to be greedy.</p>
+          <p>I'm using a build of SVN 8438 and if you try to search for it in your project files, the application will attempt to compile an infinitely long list of empty results. This locks the application up. It's not a huge issue, but it would be nice to see this fixed.</p>
+          <p>Related: [ Bug #17195 ] Search all files for regex "^" freezes IDE</p>
+          <p>This is another case of a 0 length RegEx result tying up the application.</p>
+          <p>Possible bandaid: Before searching through files for a given Regular Expression, check and see if it results in a 0-length string. If it does, abort.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Editor</dd>
+            <dt>Group</dt><dd>Platform:Windows</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2013-05-11 12:16:55</dd>
+            <dt>Assigned to</dt><dd>biplab</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2013-05-09 13:38:36</div>
+        <div class="panel-body">
+          <p>I have added a bandaid for [Bug #17195]. However I can't reproduce the first bug you mentioned. Can you give more details?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kaslai 2013-05-10 03:31:40</div>
+        <div class="panel-body">
+          <p>I have tried this in the latest SVN build of Code::Blocks, and the bug is still present. When searching for "\d*" a 0-length string is highlighted, even when a numeric answer is clearly there. While technically, * should match 0 or more of any character, RegEx is supposed to be greedy, so it should only return a 0-length string if no numbers are present.</p>
+          <p>Here is a screenshot of the search window: <a href="http://puu.sh/2Qmz5.png">http://puu.sh/2Qmz5.png</a> and I'm using the latest update of Windows 7.</p>
+          <p>Just to be clear, \d+ works as \d* SHOULD work, with the caveat that it doesn't match a 0 length string when a larger match is available if it were to do so.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2013-05-11 12:16:55</div>
+        <div class="panel-body">
+          <p>Sorry, but I can't reproduce. Any additional information? Does it</p>
+          <p>still persist?</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 15517 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #15517 <small>2009-04-14 19:37:04</small></h3>
+          <h4>markos</h4>
+          <p class="lead">Recursive fail</p>
+          <pre class="pre-scrollable">I've had a problem with the Code::Blocks IDE, and figured it happened in the Code Completion plugin.
+
+When I saved a specific header file, Code::Blocks IDE just had a segmentation fault, and the crash report dialog did not even showed up. Then, I downloaded the source code and verified that the crash happened in the Code Completion plugin.
+
+The class TokesTree has two methods RemoveToken, a RemoveToken(int) and a RemoveToken(Token *), in file codecompletion/parser/token.cpp.
+
+In line 601, in method RemoveToken(Token *), there is a call for RemoveToken(int), which in turn, calls RemoveToken(Token *).
+
+In this same line, 601, we verified that there were several calls for RemoveToken(int idx) with the same idx as argument, leading to an infinite recursion, leading to the seg fault.
+
+As a workaround, we added the first 3 lines in RemoveToken(int idx), to check if the same idx was used before:
+
+void TokensTree::RemoveToken(int idx)
+{
+    static int lastidx = -1;
+    if(lastidx == idx) return;
+    lastidx = idx;
+
+    if(idx&lt;0 || (size_t)idx &gt;= m_Tokens.size())
+        return;
+    RemoveToken(m_Tokens[idx]);
+}
+
+It solved the seg fault, but I know this is not a solution to this problem at all.
+
+One thing that I have to say is that this bug happened in a project where there are two files with same name but in different directories, representing two classes in different namespaces.
+
+If I open only the file or if I open the file in a project where it appears only once, the bug does not happen.
+
+Another interesting thing is that I have other files, in the same project, with equal names, representing classes with the same name, but in different namespaces, and the bug does not happen. It only happen in that specific file.
+
+I don't know if it helps, but a .cbTemp file is created and is not deleted in the directory that has that specific file I mentioned before.
+
+Unfortunately, I cannot release my source code. I hope what I reported helps you developers to correct this bug.
+
+Thanks</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::CodeCompletion</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2011-02-24 05:49:18</dd>
+            <dt>Assigned to</dt><dd>mortenmacfly</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2009-04-16 23:24:50</div>
+        <div class="panel-body">
+          <p>Can you strip down the files in question to a minimal sample which you can provide?</p>
+          <p>A.k.a. remove all methods / content until the error disappears?!</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">markos 2009-04-17 17:47:41</div>
+        <div class="panel-body">
+          <p>I have done what you said and uploaded a file codeblocks_bug.tar.bz2 in website <a href="http://www.lia.ufc.br/~markos/codeblocks_bug/">http://www.lia.ufc.br/~markos/codeblocks_bug/</a> containing the files and a Code::Blocks project.</p>
+          <p>If you change anything in any of the provided header files, for example, just by adding a character and saving, the Code::Blocks crashes.</p>
+          <p>I'd appreciate if, once you download the file, you let me know so that I erase it from the webpage.</p>
+          <p>My Code::Blocks version is SVN 5489.</p>
+          <p>Thanks in advance.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2009-04-19 12:03:49</div>
+        <div class="panel-body">
+          <p>Got the files and can reproduce. Thanks! Now give me (us) some time to analyse...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">markos 2009-05-14 16:40:11</div>
+        <div class="panel-body">
+          <p>Hi again,</p>
+          <p>I just tested the files again and the bug did not happen.</p>
+          <p>My Code::Blocks version is the very same, SVN 5489, but it is not happening again.</p>
+          <p>Maybe a gtk or wxWidgets update corrected the bug somehow.</p>
+          <p>Thanks for everything.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">markos 2010-10-16 11:18:29</div>
+        <div class="panel-body">
+          <p>No,  it has never happened again. Thanks for everything.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">loaden 2010-10-16 02:14:13</div>
+        <div class="panel-body">
+          <p>Does this bug still persist?</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

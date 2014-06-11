@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 9331 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #9331 <small>2006-11-01 19:39:15</small></h3>
+          <h4>kev</h4>
+          <p class="lead">Compile SVN trunk: TinyXML headers missing</p>
+          <pre class="pre-scrollable">This problem has been plaguing me on both my Linux boxes for several weeks now.  I use gcc 4.1.1 (Gentoo) on both.  I've tried checking out a fresh copy of trunk from SVN.
+
+I haven't seen this reported anywhere else.  I don't know why the build would suddenly break on two separate computers.
+
+Basically,
+  src/tools/cb_share_config/app.cpp
+
+is having trouble finding
+  src/sdk/tinyxml/tinyxml.h
+
+Thanks for any ideas!
+
+
+&lt;tail of build log&gt;:
+make[6]: Leaving directory `/home/kev/build/codeblocks/src/plugins/contrib/wxSmith'
+make[5]: Leaving directory `/home/kev/build/codeblocks/src/plugins/contrib/wxSmith'
+make[4]: Leaving directory `/home/kev/build/codeblocks/src/plugins/contrib/wxSmith'
+make[4]: Entering directory `/home/kev/build/codeblocks/src/plugins/contrib'
+make[4]: Nothing to be done for `all-am'.
+make[4]: Leaving directory `/home/kev/build/codeblocks/src/plugins/contrib'
+make[3]: Leaving directory `/home/kev/build/codeblocks/src/plugins/contrib'
+make[3]: Entering directory `/home/kev/build/codeblocks/src/plugins'
+make[3]: Nothing to be done for `all-am'.
+make[3]: Leaving directory `/home/kev/build/codeblocks/src/plugins'
+make[2]: Leaving directory `/home/kev/build/codeblocks/src/plugins'
+Making all in tools
+make[2]: Entering directory `/home/kev/build/codeblocks/src/tools'
+Making all in cb_share_config
+make[3]: Entering directory `/home/kev/build/codeblocks/src/tools/cb_share_config'
+if g++ -DHAVE_CONFIG_H -I. -I../../../../../src/codeblocks/trunk/src/tools/cb_share_config -I../../../src/
+sdk -I/usr/lib64/wx/include/gtk2-ansi-release-2.6 -I/usr/include/wx-2.6 -DGTK_NO_CHECK_CASTS -D__WXGTK__ -
+D_FILE_OFFSET_BITS=64 -D_LARGE_FILES      -O2 -ffast-math -g -O2 -DCB_PRECOMP -Winvalid-pch -fPIC -DPIC -M
+T app.o -MD -MP -MF ".deps/app.Tpo" \
+  -c -o app.o `test -f '../../../../../src/codeblocks/trunk/src/tools/cb_share_config/app.cpp' || echo '..
+/../../../../src/codeblocks/trunk/src/tools/cb_share_config/'`../../../../../src/codeblocks/trunk/src/tool
+s/cb_share_config/app.cpp; \
+then mv -f ".deps/app.Tpo" ".deps/app.Po"; \
+else rm -f ".deps/app.Tpo"; exit 1; \
+fi
+In file included from ../../../../../src/codeblocks/trunk/src/tools/cb_share_config/app.cpp:4:
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:20:29: error: tinyxml/tinystr.h:
+ No such file or directory
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:21:29: error: tinyxml/tinyxml.h:                     No such file or directory
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:92: error: 'TiXmlDocument' has n                    ot been declared
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:94: error: 'TiXmlDocument' has n                    ot been declared
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:95: error: 'TiXmlNode' was not d                    eclared in this scope
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:95: error: template argument 1 i                    s invalid
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:95: error: template argument 2 i                    s invalid
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:96: error: 'TiXmlNode' has not b                    een declared
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:97: error: 'TiXmlNode' was not d                    eclared in this scope
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:97: error: template argument 1 i                    s invalid
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:97: error: template argument 2 i                    s invalid
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:99: error: 'TiXmlNode' has not b                    een declared
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:102: error: 'TiXmlDocument' has                     not been declared
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:105: error: ISO C++ forbids decl                    aration of 'TiXmlDocument' with no type
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:105: error: expected ';' before                     '*' token
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:107: error: 'TiXmlNode' was not                     declared in this scope
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:107: error: template argument 1                     is invalid
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:107: error: template argument 2                     is invalid
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:110: error: ISO C++ forbids decl                    aration of 'TiXmlDocument' with no type
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:110: error: expected ';' before                     '*' token
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:112: error: 'TiXmlNode' was not                     declared in this scope
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:112: error: template argument 1                     is invalid
+../../../../../src/codeblocks/trunk/src/tools/cb_share_config/mainframe.h:112: error: template argument 2                     is invalid
+make[3]: *** [app.o] Error 1
+make[3]: Leaving directory `/home/kev/build/codeblocks/src/tools/cb_share_config'
+make[2]: *** [all-recursive] Error 1
+make[2]: Leaving directory `/home/kev/build/codeblocks/src/tools'
+make[1]: *** [all-recursive] Error 1
+make[1]: Leaving directory `/home/kev/build/codeblocks/src'
+make: *** [all-recursive] Error 1
+</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Compiler</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2006-11-07 06:34:21</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">kev 2006-11-07 02:39:45</div>
+        <div class="panel-body">
+          <p>This bug was resolved on the forums.  Makefile.am was missing a header include directory.</p>
+          <p><a href="http://forums.codeblocks.org/index.php?topic=4381.msg34731">http://forums.codeblocks.org/index.php?topic=4381.msg34731</a>#msg34731</p>
+          <p>Thanks Morten!</p>
+          <p>$ svn log src/tools/cb_share_config</p>
+          <p>------------------------------------------------------------------------</p>
+          <p>r3181 | mortenmacfly | 2006-11-05 04:46:27 -0500 (Sun, 05 Nov 2006) | 1 line</p>
+          <p>- Makefile.am fix for cb_share_config (autotools)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 18528 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #18528 <small>2012-03-11 10:05:02</small></h3>
+          <h4>alrock</h4>
+          <p class="lead">Incorrect variable list in Watches window</p>
+          <p>Seems that with some specific text in variable, the variables list displays bad. All next variables goes in the same line. For example: text = "some text here", next_var = "next_var value". See screenshot here: <a href="http://i41.tinypic.com/fegda9.png">http://i41.tinypic.com/fegda9.png</a></p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Debugger</dd>
+            <dt>Group</dt><dd>Platform:Windows</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2013-10-04 22:19:03</dd>
+            <dt>Assigned to</dt><dd>tpetrov</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">alrock 2012-03-11 10:14:18</div>
+        <div class="panel-body">
+          <p>Release 10.5 Build 6283, wx 2.8.10, Windows 7</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-03-12 05:52:41</div>
+        <div class="panel-body">
+          <p>Hi, First, I do not understand what your bug really means.</p>
+          <p>You C::B is too old, I suggest you try a more recent nightly version(especially the debugger branch nightly build), and test again. Also, if the bug still exist, then please post your test code and tell us how to reproduce this bug.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">alrock 2012-03-12 11:22:25</div>
+        <div class="panel-body">
+          <p>Ok, I've got 7789 build, result the same. You can use code below to reproduce this bug. When "step into" at "assert" line to wfrfunc function you should see that local variables list in Watches window looks incorrect.</p>
+          <p>And yes, sorry for my English.</p>
+          <p>#include &lt;iostream&gt;</p>
+          <p>#include &lt;cstring&gt;</p>
+          <p>#include &lt;cassert&gt;</p>
+          <p>#include &lt;cstdlib&gt;</p>
+          <p>using namespace std;</p>
+          <p>int wfrfunc(char *buffer, long bufsize, long reply)</p>
+          <p>{</p>
+          <p>int   found = 0;</p>
+          <p>int   error = 0;</p>
+          <p>long  code;</p>
+          <p>char  text[80];</p>
+          <p>char *pstart;</p>
+          <p>char *pend;</p>
+          <p>buffer[bufsize] = '\0';</p>
+          <p>pend = buffer;</p>
+          <p>code = strtol(pend, &amp;pstart, 10);</p>
+          <p>pend = strstr(pstart, "/r/n");</p>
+          <p>found = (code == reply);</p>
+          <p>error = (code &gt;= 400);</p>
+          <p>return found;</p>
+          <p>}</p>
+          <p>int main()</p>
+          <p>{</p>
+          <p>char buffer[1024];</p>
+          <p>strcpy(buffer, "\r\n231\r\n\r\n221 Sample code\r\n");</p>
+          <p>assert(wfrfunc(buffer, strlen(buffer), 231) &gt; 0);</p>
+          <p>return 0;</p>
+          <p>}</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">alrock 2012-03-12 11:27:06</div>
+        <div class="panel-body">
+          <p>Or just place breakpoint at first line of wfrfunc function.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-03-15 13:01:11</div>
+        <div class="panel-body">
+          <p>It works OK on my system, WinXP, and latest c::b debugger branch, gdb cvs.</p>
+          <p>See the screen shot.</p>
+          <p><a href="http://i683.photobucket.com/albums/vv194/ollydbg_cb/2012-03-15205806.png">http://i683.photobucket.com/albums/vv194/ollydbg_cb/2012-03-15205806.png</a></p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">alrock 2012-03-16 04:23:17</div>
+        <div class="panel-body">
+          <p>My Watches window looks different. It should contain all local variables (6 in example code). See my screen shot:</p>
+          <p><a href="http://i1175.photobucket.com/albums/r622/askalrive/ss-2012-03-16101322.png">http://i1175.photobucket.com/albums/r622/askalrive/ss-2012-03-16101322.png</a></p>
+          <p>Also, I tryed cb on Ubuntu, and it works Ok there.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-03-16 09:51:08</div>
+        <div class="panel-body">
+          <p>Please use the debugger branch to test it. BTW: the "show local variables" feature was disabled in the debugger branch, because it will cause some crash problem and slow the step speed.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">alrock 2012-03-19 06:04:03</div>
+        <div class="panel-body">
+          <p>Ok, the bug could be closed if this feature was disabled.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-03-19 09:57:45</div>
+        <div class="panel-body">
+          <p>Hi, alrock, Even the show local variable feature is disabled, you can still test it. Can you just add those variables you thought cause the bug to the watch list and see what happened.</p>
+          <p>To my knowledge, I think that the gdb output parser in debugger branch is much better than in normal trunk.</p>
+          <p>Also, some uninitiated local variables will be interpret badly by gdb, because gdb interprets them as normal variables, but as the memory is corrupt at this case, it will sometimes crash gdb.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2013-10-04 22:19:03</div>
+        <div class="panel-body">
+          <p>This dialog has been replaced by a new one. Please retest and post here if the bug is still present, so we can fix it.</p>
+          <p>Closing for now.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

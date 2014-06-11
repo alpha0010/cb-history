@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 19280 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #19280 <small>2014-02-07 23:02:29</small></h3>
+          <h4>jpd2014</h4>
+          <p class="lead">Very slow operation in background</p>
+          <pre class="pre-scrollable">With CodeBlocks 13.12 On Ubuntu 13.10 / IA 64bits.
+
+The IDE is sometimes doing a background operation very very long (several minutes), blocking the IDE. Which I don't know.
+The first times, I thought it was a race condition with no end. So I killed the process.
+But one time I let the computer running and then the IDE was usable again.
+
+Here is the stack from gdb interrupt with Ctrl+C :
+
+0x0000003c6f6bdd75 in __getdents (fd=31, buf=buf@entry=0x1b50a100 "K", &lt;incomplete sequence \320&gt;, nbytes=32768) at ../sysdeps/unix/sysv/linux/getdents.c:112
+112	../sysdeps/unix/sysv/linux/getdents.c: Aucun fichier ou dossier de ce type.
+(gdb) where
+#0  0x0000003c6f6bdd75 in __getdents (fd=31, buf=buf@entry=0x1b50a100 "K", &lt;incomplete sequence \320&gt;, nbytes=32768) at ../sysdeps/unix/sysv/linux/getdents.c:112
+#1  0x0000003c6f6bd973 in __readdir (dirp=0x1b50a0d0) at ../sysdeps/posix/readdir.c:65
+#2  0x0000003d73ac5d89 in wxDirData::Read(wxString*) () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0
+#3  0x0000003d73a67900 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0
+#4  0x0000003d73a679b1 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0
+#5  0x0000003d73a679b1 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0
+#6  0x0000003d73a679b1 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0
+#7  0x0000003d73a679b1 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0
+#8  0x0000003d73a679b1 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0
+#9  0x0000003d73a679b1 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0
+#10 0x0000003d73a679b1 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0
+#11 0x0000003d73a679b1 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0
+#12 0x00007fffddc4c864 in NativeParser::GetAllPathsByFilename (this=0x1c6b420, filename=...) at nativeparser.cpp:522
+#13 0x00007fffddc1dcf2 in ClassBrowserBuilderThread::Init (this=0x2c7e6b0, np=&lt;optimized out&gt;, treeTop=&lt;optimized out&gt;, treeBottom=&lt;optimized out&gt;, active_filename=..., 
+    user_data=user_data@entry=0x4fa5e00, bo=..., tt=0xa003d30, idThreadEvent=idThreadEvent@entry=2142) at classbrowserbuilderthread.cpp:118
+#14 0x00007fffddc1a687 in ClassBrowser::ThreadedBuildTree (this=0x216ce90, activeProject=0x4fa5e00) at classbrowser.cpp:897
+#15 0x00007fffddc1a8df in ClassBrowser::UpdateClassBrowserView (this=0x216ce90, checkHeaderSwap=&lt;optimized out&gt;) at classbrowser.cpp:254
+#16 0x00007fffddc4ced8 in NativeParser::OnParserEnd (this=0x1c6b420, event=...) at nativeparser.cpp:2585
+#17 0x0000003d73ada756 in wxEvtHandler::ProcessEventIfMatches(wxEventTableEntryBase const&amp;, wxEvtHandler*, wxEvent&amp;) () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0
+#18 0x0000003d73adaa7f in wxEvtHandler::SearchDynamicEventTable(wxEvent&amp;) () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0
+#19 0x0000003d73adab32 in wxEvtHandler::ProcessEvent(wxEvent&amp;) () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0
+#20 0x00007fffddc6cf95 in Parser::ProcessParserEvent (this=this@entry=0x1ade6c50, state=ParserCommon::ptReparseFile, id=&lt;optimized out&gt;, info=...) at parser/parser.cpp:1194
+#21 0x00007fffddc6d5d9 in Parser::OnAllThreadsDone (this=0x1ade6c50, event=...) at parser/parser.cpp:974
+#22 0x0000003d73ada756 in wxEvtHandler::ProcessEventIfMatches(wxEventTableEntryBase const&amp;, wxEvtHandler*, wxEvent&amp;) () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0
+#23 0x0000003d73adaa7f in wxEvtHandler::SearchDynamicEventTable(wxEvent&amp;) () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0
+#24 0x0000003d73adab32 in wxEvtHandler::ProcessEvent(wxEvent&amp;) () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0
+#25 0x0000003d73ada6b8 in wxEvtHandler::ProcessPendingEvents() () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0
+#26 0x0000003d73a581b1 in wxAppConsole::ProcessPendingEvents() () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0
+#27 0x0000003de0447bae in wxAppBase::ProcessIdle() () from /usr/lib/x86_64-linux-gnu/libwx_gtk2u_core-2.8.so.0
+#28 0x0000003de03c2e11 in ?? () from /usr/lib/x86_64-linux-gnu/libwx_gtk2u_core-2.8.so.0
+#29 0x0000003044e483f6 in g_main_context_dispatch () from /lib/x86_64-linux-gnu/libglib-2.0.so.0
+#30 0x0000003044e48748 in ?? () from /lib/x86_64-linux-gnu/libglib-2.0.so.0
+#31 0x0000003044e48b4a in g_main_loop_run () from /lib/x86_64-linux-gnu/libglib-2.0.so.0
+#32 0x0000003ddf72b2a7 in gtk_main () from /usr/lib/x86_64-linux-gnu/libgtk-x11-2.0.so.0
+#33 0x0000003de03d631a in wxEventLoop::Run() () from /usr/lib/x86_64-linux-gnu/libwx_gtk2u_core-2.8.so.0
+#34 0x0000003de04479ac in wxAppBase::MainLoop() () from /usr/lib/x86_64-linux-gnu/libwx_gtk2u_core-2.8.so.0
+#35 0x000000000045ad3b in CodeBlocksApp::OnRun (this=0x9f5d30) at app.cpp:809
+#36 0x0000003d73a87e2d in wxEntry(int&amp;, wchar_t**) () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0
+#37 0x000000000044e462 in main (argc=1, argv=&lt;optimized out&gt;) at app.cpp:276
+   </pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Interface</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2014-02-28 06:41:45</div>
+        <div class="panel-body">
+          <p>The strange thing is there are some recursive calls, like:</p>
+          <p>#3 0x0000003d73a67900 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0</p>
+          <p>#4 0x0000003d73a679b1 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0</p>
+          <p>#5 0x0000003d73a679b1 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0</p>
+          <p>#6 0x0000003d73a679b1 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0</p>
+          <p>#7 0x0000003d73a679b1 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0</p>
+          <p>#8 0x0000003d73a679b1 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0</p>
+          <p>#9 0x0000003d73a679b1 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0</p>
+          <p>#10 0x0000003d73a679b1 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0</p>
+          <p>#11 0x0000003d73a679b1 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0</p>
+          <p>Anyway, I need a way to reproduce this bug, any further help? Thanks.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">jpd2014 2014-02-28 07:44:01</div>
+        <div class="panel-body">
+          <p>It seems to be linked to a garbage collection of memory.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 8579 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #8579 <small>2006-08-25 21:14:42</small></h3>
+          <h4>kiplingw</h4>
+          <p class="lead">Crashes Randomly During Use</p>
+          <p>Code::Blocks crashes randomly during use. I am using the latest subversion source and the latest libcairo out of Ubuntu's edgy repository.</p>
+          <p>codeblocks: /build/buildd/libcairo-1.2.2/src/cairo-ft-font.c:681: _cairo_ft_unscaled_font_set_scale: Assertion `error == 0' failed.</p>
+          <p>Aborted</p>
+          <p>Kip</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2006-10-17 23:48:47</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">ID_32261 2006-10-03 11:27:22</div>
+        <div class="panel-body">
+          <pre class="pre-scrollable">Further information to assist developers for this and closed/duplicate Bug #7968.
+
+Since downloading CodeBlocks a few days ago, I have the same problem with it crashing almost every time a file is saved.
+
+The save can be either explicit, or a result of performing a build with a modified file open.
+
+Platform: Linux Fedore Core 5 x86, updated to latest libraries (wxWidgets, pango, cairo etc.)
+
+CodeBlocks version. Local build, SVN checkout from trunk on Sunday 1st October 2006. 
+Was also crashing with rpm :- codeblocks-1.0-0.9.20060909svn2965.fc5
+
+I am running CodeBlocks on an old dual CPU machine, usually good for highlighting thread safety/synchronization bugs.
+
+Investigation steps and results:-
+
+Ran CodeBlocks  under gdb (actually 'ddd' GUI), ie.
+% ddd /usr/local/bin/codeblocks
+
+Do stuff to cause failure.., in this case not identical to original report but similar enough.
+
+codeblocks: cairo-ft-font.c:562: _cairo_ft_unscaled_font_unlock_face: Assertion 
+`unscaled-&gt;lock &gt; 0' failed.
+
+gdb had caught the SIGABRT. The assertion failure had occurred in the main CodeBlocks GUI App thread.
+Used gdb to list other active threads (about 7) and performed a backtrace for each. Found another thread appeared to be executing wx library code below method :- ClassBrowserBuilderThread::Entry().
+
+Since wxWidgets is documented as NOT thread safe, tried adding a test patch as below (the ::wxMutexGuiEnter()/::wxMutexGuiLeave()).
+This should prevent simultaneous access by the worker and main GUI threads.
+
+&lt;code&gt;
+
+FILE:- ..trunk/src/plugins/codecompletion/classbrowserbuilderthread.cpp
+
+void* ClassBrowserBuilderThread::Entry()
+{
+    while (!TestDestroy())
+    {
+        // wait until the classbrowser signals
+        m_Semaphore.Wait();
+//        DBGLOG(_T(" - - - - - -"));
+
+        if (TestDestroy())
+            break;
+
+	// BJM experimantal patch, ensure exclusive access to 
+        // wx GUI library.
+        if(!::wxIsMainThread())
+	    ::wxMutexGuiEnter();
+
+        BuildTree();
+
+// BJM experimantal patch, ensure exclusive access to 
+        // wx GUI library.
+        if(!::wxIsMainThread())
+	    ::wxMutexGuiLeave();
+    }
+...
+&lt;/code&gt;
+
+Since the above change I have not (yet) had any further crashes. However, it would be unwise to accept this as the final 'fix'. I have only used CodeBlocks for a few days and don't know the code very well. There could be other unwanted side effects or potential mutex deadlocks I haven't spotted. This needs review by the developers, when they get time.
+
+If anybody else sees similar/random crashes which may be related to GUI access, it may be
+worth trying the same approach with gdb, ie. get a stack trace for each thread as evidence for the developers. Note: 'ddd' doesn't seem to have a working 'copy to clipboard' function in its backtrace display window (my excuse for not including any!). The SVN checked out sources currently build with debug symbols by default.
+
+Hope this is helpful to somebody.
+
+Many thanks to the developers for making CodeBlocks available to the world.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</pre>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kiplingw 2006-10-18 04:17:35</div>
+        <div class="panel-body">
+          <p>It hasn't crashed on me yet. Well done. You've saved me a shit load of time.</p>
+          <p>Kip</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

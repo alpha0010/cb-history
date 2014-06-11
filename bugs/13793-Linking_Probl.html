@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 13793 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #13793 <small>2008-05-11 20:52:21</small></h3>
+          <h4>jimp</h4>
+          <p class="lead">Linking Problem with Global Variables</p>
+          <pre class="pre-scrollable">Linking Problem with Global Variables
+
+I have a problem when compiling the CodeBlocks project ContribPlugins.workspace on Windows. It uses global variables and I am using a directory with spaces in the name.  Linking AutoVersioning gets the following error. At the end of the command line note that the -o option is not enclosed in quotes and a directory name, "Visual Studio 2008", contains spaces.
+
+mingw32-g++.exe -shared   -Wl,--dll -L"C:\Users\jp\Documents\Visual Studio 2008\Projects\CodeBlocks\src\devel" -LC:\Programs\wxWidgets-2.8.7\lib\gcc_dll -LC:\Programs\MinGW\lib -LC:\Programs\MinGW\lib\gcc\mingw32\3.4.5  "C:\Users\jp\Documents\Visual Studio 2008\Projects\CodeBlocks\src\.objs\plugins\contrib\AutoVersioning\avChangesDlg.o" "C:\Users\jp\Documents\Visual Studio 2008\Projects\CodeBlocks\src\.objs\plugins\contrib\AutoVersioning\avHeader.o" "C:\Users\jp\Documents\Visual Studio 2008\Projects\CodeBlocks\src\.objs\plugins\contrib\AutoVersioning\avSvnRevision.o" "C:\Users\jp\Documents\Visual Studio 2008\Projects\CodeBlocks\src\.objs\plugins\contrib\AutoVersioning\avVersionEditorDlg.o" "C:\Users\jp\Documents\Visual Studio 2008\Projects\CodeBlocks\src\.objs\plugins\contrib\AutoVersioning\AutoVersioning.o"   -o C:\Users\jp\Documents\Visual Studio 2008\Projects\CodeBlocks\src\devel\share\codeblocks\plugins\AutoVersioning.dll  -lwxmsw28u -lcodeblocks 
+mingw32-g++.exe: Studio: No such file or directory
+mingw32-g++.exe: 2008\Projects\CodeBlocks\src\devel\share\codeblocks\plugins\AutoVersioning.dll: No such file or directory
+
+
+In the function QuoteStringIfNeeded(wxString&amp; str) in sdk\globals.cpp the "$(#cb)" global variable has not been expanded so that "str" has the following value when passed to the function:
+
+$(#cb)\devel\share\codeblocks\plugins\AutoVersioning.dll
+
+Since there are no spaces it is not quoted. But when $(#cb) is replaced, there are spaces and the link fails. The include directories and library directories which came thru this function had the global variable already expanded. And they are quoted if needed as you can see in the above linker statement.
+
+I patched the problem by checking for $ in QuoteStringIfNeeded(wxString&amp; str) and enclosing the directory in quotes. But this is probably not the permanent solution you would want. The global variable for the linker should be replaced before calling QuoteStringIfNeeded() like the others.
+</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Compiler</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

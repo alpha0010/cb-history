@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 18915 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #18915 <small>2013-03-02 23:35:52</small></h3>
+          <h4>anyname</h4>
+          <p class="lead">Memory leak when editing medium size files</p>
+          <p>If I try to save edits to a 2.3MB C file, code::blocks gets stuck requesting memory and eventually causes thrashing. Replicating this with a process viewer shows memory consumption grow at about 1GB/sec.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>Platform:Linux</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>mortenmacfly</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2013-03-03 05:18:03</div>
+        <div class="panel-body">
+          <p>Exmaples, please. Cannot reproduce - even way larger files work just fine.</p>
+          <p>Version, platform?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">anyname 2013-03-25 19:40:31</div>
+        <div class="panel-body">
+          <pre class="pre-scrollable">Release 12.11 rev 8629
+SDK 1.13.14
+Fedora 17/x86_64
+
+It appears to have something to do with the trailing whitespace removal AND the size of the file. I have a testcase but I can't attach files and it's 1.3MB so I'm not sure how to demonstrate this. When I tested saving a 0.8MB version of the file, C::B allocated an 800MB chunk of memory so it seems it's not stuck in a loop it just wants excessive amounts of memory.
+
+Here is the massif log from 'valgrind --tool=massif codeblocks' with the 1.3MB file. I killed it after it used 1.5GB of memory(after starting with 64MB).
+
+#-----------
+snapshot=61
+#-----------
+time=35987940494
+mem_heap_B=1594864873
+mem_heap_extra_B=4610999
+mem_stacks_B=0
+heap_tree=detailed
+n2: 1594864873 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n2: 1566171728 0x3A848FDB8F: RunStyles::PersistantForm() const (in /usr/lib64/libcodeblocks.so.0.0.1)
+  n1: 1566171716 0x3A848C731F: CellBuffer::DeleteChars(int, int, bool&amp;) (in /usr/lib64/libcodeblocks.so.0.0.1)
+   n1: 1566171716 0x3A848CEB1C: Document::DeleteChars(int, int) (in /usr/lib64/libcodeblocks.so.0.0.1)
+    n1: 1566171716 0x3A848DAC8B: Editor::ReplaceTarget(bool, char const*, int) (in /usr/lib64/libcodeblocks.so.0.0.1)
+     n1: 1566171716 0x3A848EC7AB: Editor::WndProc(unsigned int, unsigned long, long) (in /usr/lib64/libcodeblocks.so.0.0.1)
+      n1: 1566171716 0x3A8474175C: ScintillaWX::WndProc(unsigned int, unsigned long, long) (in /usr/lib64/libcodeblocks.so.0.0.1)
+       n1: 1566171716 0x3A8474870E: wxScintilla::ReplaceTarget(wxString const&amp;) (in /usr/lib64/libcodeblocks.so.0.0.1)
+        n1: 1566171716 0x3A845AE74C: cbEditorInternalData::StripTrailingSpaces() (in /usr/lib64/libcodeblocks.so.0.0.1)
+         n1: 1566171716 0x3A845ABEBB: cbEditor::Save() (in /usr/lib64/libcodeblocks.so.0.0.1)
+          n1: 1566171716 0x48124E: MainFrame::OnFileSave(wxCommandEvent&amp;) (in /usr/bin/codeblocks)
+           n1: 1566171716 0x308AAE6794: wxEvtHandler::ProcessEventIfMatches(wxEventTableEntryBase const&amp;, wxEvtHandler*, wxEvent&amp;) (in /usr/lib64/libwx_baseu-2.8.so.0.8.0)
+            n1: 1566171716 0x308AAE6902: wxEventHashTable::HandleEvent(wxEvent&amp;, wxEvtHandler*) (in /usr/lib64/libwx_baseu-2.8.so.0.8.0)
+             n1: 1566171716 0x308AAE6C25: wxEvtHandler::ProcessEvent(wxEvent&amp;) (in /usr/lib64/libwx_baseu-2.8.so.0.8.0)
+              n1: 1566171716 0x308AAE6BAE: wxEvtHandler::ProcessEvent(wxEvent&amp;) (in /usr/lib64/libwx_baseu-2.8.so.0.8.0)
+               n1: 1566171716 0x308AAE6BAE: wxEvtHandler::ProcessEvent(wxEvent&amp;) (in /usr/lib64/libwx_baseu-2.8.so.0.8.0)
+                n1: 1566171716 0x308AAE6BAE: wxEvtHandler::ProcessEvent(wxEvent&amp;) (in /usr/lib64/libwx_baseu-2.8.so.0.8.0)
+                 n1: 1566171716 0x308AAE6BAE: wxEvtHandler::ProcessEvent(wxEvent&amp;) (in /usr/lib64/libwx_baseu-2.8.so.0.8.0)
+                  n1: 1566171716 0x308AAE6BAE: wxEvtHandler::ProcessEvent(wxEvent&amp;) (in /usr/lib64/libwx_baseu-2.8.so.0.8.0)
+                   n1: 1566171716 0x308AAE6BAE: wxEvtHandler::ProcessEvent(wxEvent&amp;) (in /usr/lib64/libwx_baseu-2.8.so.0.8.0)
+                    n1: 1566171716 0x308AAE6BAE: wxEvtHandler::ProcessEvent(wxEvent&amp;) (in /usr/lib64/libwx_baseu-2.8.so.0.8.0)
+                     n1: 1566171716 0x308AAE6BAE: wxEvtHandler::ProcessEvent(wxEvent&amp;) (in /usr/lib64/libwx_baseu-2.8.so.0.8.0)
+                      n1: 1566171716 0x308AAE6BAE: wxEvtHandler::ProcessEvent(wxEvent&amp;) (in /usr/lib64/libwx_baseu-2.8.so.0.8.0)
+                       n1: 1566171716 0x308AAE6BAE: wxEvtHandler::ProcessEvent(wxEvent&amp;) (in /usr/lib64/libwx_baseu-2.8.so.0.8.0)
+                        n1: 1566171716 0x308AAE6BAE: wxEvtHandler::ProcessEvent(wxEvent&amp;) (in /usr/lib64/libwx_baseu-2.8.so.0.8.0)
+                         n1: 1566171716 0x308AAE6BAE: wxEvtHandler::ProcessEvent(wxEvent&amp;) (in /usr/lib64/libwx_baseu-2.8.so.0.8.0)
+                          n1: 1566171716 0x308AAE6BAE: wxEvtHandler::ProcessEvent(wxEvent&amp;) (in /usr/lib64/libwx_baseu-2.8.so.0.8.0)
+                           n1: 1566171716 0x308AAE6BAE: wxEvtHandler::ProcessEvent(wxEvent&amp;) (in /usr/lib64/libwx_baseu-2.8.so.0.8.0)
+                            n1: 1566171716 0x308AAE6BAE: wxEvtHandler::ProcessEvent(wxEvent&amp;) (in /usr/lib64/libwx_baseu-2.8.so.0.8.0)
+                             n1: 1566171716 0x308AAE6BAE: wxEvtHandler::ProcessEvent(wxEvent&amp;) (in /usr/lib64/libwx_baseu-2.8.so.0.8.0)
+                              n0: 1566171716 0x308AAE6BAE: wxEvtHandler::ProcessEvent(wxEvent&amp;) (in /usr/lib64/libwx_baseu-2.8.so.0.8.0)
+</pre>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">anyname 2013-03-25 19:48:54</div>
+        <div class="panel-body">
+          <p>This replicates the issue for me:</p>
+          <p>Make a text file consisting of 35,000 copies of the following line, including the 12 spaces at the end:</p>
+          <p>abcdefghijlkmnopqrstuvwxyz abcdefghijlkmnopqrstuvwxyz</p>
+          <p>Open it in C::B then try to save it after modifying one character. Trailing space removal needs to be enabled of course.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2013-10-04 22:51:52</div>
+        <div class="panel-body">
+          <p>I can confirm that doing the steps from the last comment cause C::B to use excessive amounts of memory.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

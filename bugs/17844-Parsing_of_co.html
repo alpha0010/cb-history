@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 17844 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #17844 <small>2011-01-07 08:44:41</small></h3>
+          <h4>ondra_holub</h4>
+          <p class="lead">Parsing of compiler messages reporting line and column</p>
+          <p>GCC can report some warnings in a way</p>
+          <p>filename:line:column message</p>
+          <p>For example D:\src\main.cpp:292:1:   instantiated from 'bla bla'</p>
+          <p>Such warning is not correctly parsed, because column number is considered to be line number. I suggest to modify compiler settings for gcc this way:</p>
+          <p>- Go to Settings -&gt; Compiler and debugger</p>
+          <p>- Select other settings</p>
+          <p>- select advanced options</p>
+          <p>- select output parsing</p>
+          <p>- add new parsing expression before 3rd one named 'Instantiated from' info with regular expression ([][{}() \t#%$~A-Za-z0-9_:+/\.-]+):([0-9]+):([0-9]+):[ \t]+([iI]nstantiated from .*)</p>
+          <p>- set it to be Info</p>
+          <p>- set subexpression indices to Message=3, Additional message2 = 4, Additional message3 = 0, Filename = 1 and Line = 2</p>
+          <p>This should work for both cases - when columns are or are not reported in warning. Both cases must be supported, because this warning reporting may be switched on or off by parameters.</p>
+          <p>There may be other messages with same problem, although I did not find them till now.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Compiler</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2011-01-12 01:20:46</div>
+        <div class="panel-body">
+          <p>I just test the steps you give, but it seems I still get the "warning" message if I just past a log like below:</p>
+          <p>F:\cb\test_code\testwx\testwxMain.cpp:95:7: warning: 'i' may be used uninitialized in this function</p>
+          <p>I think we can discuss this on the Codeblocks forum, can you post a message here?</p>
+          <p><a href="http://forums.codeblocks.org/index.php">http://forums.codeblocks.org/index.php</a></p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2011-01-12 01:25:34</div>
+        <div class="panel-body">
+          <p>Oh, just notice that this is a reg specific for "instantiated from" kind  warning??</p>
+          <p>am I right??</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

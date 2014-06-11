@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 9041 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #9041 <small>2006-10-08 03:14:31</small></h3>
+          <h4>julienlecomte</h4>
+          <p class="lead">TinyXML / blocking startup</p>
+          <p>I've tried out the Oct-07 build, and I now get some TinyXML error:</p>
+          <p>&lt;&lt;</p>
+          <p>This application encountered an error at sdk\configmanager.cpp, on line 130.</p>
+          <p>The error message is:</p>
+          <p>TinyXML error:</p>
+          <p>Error reading end tag.</p>
+          <p>C::B version rev. 3030 (gcc 3.4.5 ...)</p>
+          <p>&gt;&gt;</p>
+          <p>At the same time of the crash, which is always at startup of C::B, i've got a message that the project or workspace can't be loaded ("Windows cannot find '...filename...'. Make sure you typed ...")</p>
+          <p>I don't get this extra message if just opening C::B executable (but C::B still crashes with XML error), I only get it if opening project or workspace by double click in explorer.</p>
+          <p>I can solve the problem only by deleting my "default.conf" file located in %USER%\Application Data\codeblocks (and thus lose all preferences).</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2006-10-09 17:11:59</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">julienlecomte 2006-10-08 03:43:42</div>
+        <div class="panel-body">
+          <p>I've located the XML crash in "&lt;replace_options&gt;&lt;LAST&gt;&lt;str&gt;"</p>
+          <p>C::B crashes if the XML tag for "str" contains less-greater signs. (duh !)</p>
+          <p>In otherwords, if the last search/replace was for something like "#include &lt;foobar.h&gt;", then C::B will crash upon next startup.</p>
+          <p>To reproduce:</p>
+          <p>- create a new project</p>
+          <p>- add a new file to project</p>
+          <p>- run "replace" and enter a search string containing less-greater symbols ( &lt; or &gt; )</p>
+          <p>- close C::B</p>
+          <p>- re-open C::B and watch it crash.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">artoj 2006-10-08 10:09:01</div>
+        <div class="panel-body">
+          <p>Revision 3004 (2006-10-03 nightly) does not have this problem; it encodes the less-greater signs correctly.</p>
+          <p>From revision 3009 and up there were several patches to TinyXML which are the probable cause of this issue.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">thomasdenk 2006-10-09 17:11:35</div>
+        <div class="panel-body">
+          <p>This bug is now fixed in HEAD.</p>
+          <p>Thank you for reporting it.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

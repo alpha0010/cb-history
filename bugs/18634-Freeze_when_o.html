@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 18634 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #18634 <small>2012-06-09 18:56:49</small></h3>
+          <h4>earlgrey</h4>
+          <p class="lead">Freeze when opening "/usr/include/gtk+2-.0/gdk/gdkkeysyms.h"</p>
+          <p>========================= OS =======================================</p>
+          <p>OS : Debian "squeeze"</p>
+          <p>2.6.32.38-debian-gwr.01 #1 SMP Sun Oct 16 06:39:52 CEST 2011 x86_64 GNU/Linux</p>
+          <p>========================= C::B ======================================</p>
+          <p>svn build rev 8032 (2012-06-05 07:19:34) gcc 4.4.5 Linux/unicode - 64 bit</p>
+          <p>Build Jun 6 2012 17:55:01 - wx2.8.12 ( Lnux, unicode ) - 64 bits</p>
+          <p>svn build rev 8032</p>
+          <p>SDK version 1.13.3</p>
+          <p>=========================== BUG ===================================</p>
+          <p>1) Open C::B</p>
+          <p>2) File -&gt; Open -&gt; "/usr/include/gtk+2-.0/gdk/gdkkeysyms.h"</p>
+          <p>3) C::B freezes, forcing to kill it.</p>
+          <p>Same behaviour with or without Code Completion enabled.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Editor</dd>
+            <dt>Group</dt><dd>Platform:Linux</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>ollydbg</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-11 19:02:01</div>
+        <div class="panel-body">
+          <p>Problem is Linux-only related ;</p>
+          <p>Can be :</p>
+          <p>- 64 bits glibc or compiler failure</p>
+          <p>- wx calling glibc with bad params</p>
+          <p>######################################</p>
+          <p>(gdb) backtrace</p>
+          <p>#0 0x00007ffff20a7ec5 in *__GI___xstat (vers=&lt;value optimized out&gt;, name=&lt;value optimized out&gt;, buf=0x7fffffff9f70) at ../sysdeps/unix/sysv/linux/wordsize-64/xstat.c:38</p>
+          <p>#######################################</p>
+          <p>Here is the function :</p>
+          <p>/* Get information about the file NAME in BUF.  */</p>
+          <p>34 int</p>
+          <p>35 __xstat (int vers, const char *name, struct stat *buf)</p>
+          <p>36 {</p>
+          <p>37   if (vers == _STAT_VER_KERNEL || vers == _STAT_VER_LINUX)</p>
+          <p>38     return INLINE_SYSCALL (stat, 2, name, CHECK_1 (buf));</p>
+          <p>39</p>
+          <p>40   __set_errno (EINVAL);</p>
+          <p>41   return -1;</p>
+          <p>42 }</p>
+          <p>Line 38 is IO call, so the bug is an IO lock.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-17 03:51:51</div>
+        <div class="panel-body">
+          <pre class="pre-scrollable">nativeparser.cpp , line approximatively 2500
+=========================================================================================================================
+
+wxArrayString NativeParser::GetAllPathsByFilename(const wxString&amp; filename)
+{
+    TRACE(_T("NativeParser::GetAllPathsByFilename()"));
+
+    [ ...  ]
+
+        if (project)
+        {
+            const wxString prjPath = project-&gt;GetCommonTopLevelPath();                                                       [ problematic value : "/"  ( or for you, "E:\" ) ]
+            wxString priorityPath;
+            if (fn.HasExt() &amp;&amp; (fn.GetExt().StartsWith(_T("h")) || fn.GetExt().StartsWith(_T("c"))))
+            {
+                wxFileName priFn(prjPath);
+                priFn.AppendDir(fn.GetExt().StartsWith(_T("h")) ? _T("sdk") : _T("include"));
+                if (priFn.DirExists())                                                                                                                                [ m_CommonTopLevelPath/sdk or m_CommonTopLevelPath/include search ]
+                {
+
+                  [ ... ]
+
+                }
+            }
+
+            if (dirs.IsEmpty())
+            {
+                wxDir prjDir(prjPath);                                                                                                        [ prjDir is "/"  ( or for you, "E:\" ) ]
+                if (prjDir.IsOpened())
+                {
+                    wxArrayString others;
+                    NativeParserHelper::ParserDirTraverser traverser(priorityPath, others);
+                    prjDir.Traverse(traverser, filespec, wxDIR_FILES | wxDIR_DIRS);                       [ Here is the long wait, wxDIR_DIR flag implies recursive scan ]
+                    if (others.GetCount() == 1)
+                        AddPaths(dirs, others[0], fn.HasExt());
+                }
+            }
+        }
+    }
+
+    if (!files.IsEmpty())
+        AddPaths(dirs, files[0], fn.HasExt());
+
+    return dirs;
+}
+=========================================================================================================================
+</pre>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-17 04:49:39</div>
+        <div class="panel-body">
+          <p>&gt; I don't have any freeze when open the a.h file.</p>
+          <p>How many files have you under "E:\" ?</p>
+          <p>&gt;  I'm still not sure which behavior will let c::b to scan all the files under: E:\ ?</p>
+          <p>This is the right way to reproduce the bug</p>
+          <p>OK, I will look at building rev 8032 under win7.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-06-17 05:24:34</div>
+        <div class="panel-body">
+          <p>Quote: nativeparser.cpp , line approximatively 2500 ...</p>
+          <p>This file is in the sources of Code-Completion plugin, so If you disable the Code-Completion plugin (from the plugin manager panel), I believe there is no freeze. In fact I think the freeze was caused by the header file crawler.</p>
+          <p>Quote:How many files have you under "E:\" ?</p>
+          <p>I have a lot of files under E:\, which is much much larger then C:\</p>
+          <p>I will look into this issue. (debug the NativeParser::GetAllPathsByFilename related code). Thanks you!!!</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-14 18:18:17</div>
+        <div class="panel-body">
+          <p>&gt; I hope some developer under Linux can help you more.</p>
+          <p>Maybe me ( C::B was easy to compile ). Can I ask you / C::B developper ( maybe mortenmacfly ) about the purpose of the</p>
+          <p>================================</p>
+          <p>"NativeParser::GetAllPathsByFilename()"</p>
+          <p>================================</p>
+          <p>method , and what is it supposed to do ?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-06-10 08:59:59</div>
+        <div class="panel-body">
+          <p>How do you disable the Code-Completion plugin?</p>
+          <p>It should be disabled by plugin manager, Thanks.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-12 18:47:38</div>
+        <div class="panel-body">
+          <p>What is doing this "//srv" on my Linux box ?</p>
+          <p>==========================================</p>
+          <p>37      in ../sysdeps/unix/sysv/linux/wordsize-64/xstat.c</p>
+          <p>(gdb) print vers</p>
+          <p>$6 = 1</p>
+          <p>(gdb) print name</p>
+          <p>$7 = 0x825cb90 "//srv"</p>
+          <p>==========================================</p>
+          <p>Could it be the reason of the freeze ?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-12 19:50:21</div>
+        <div class="panel-body">
+          <p>Sorry, confusion between "//" and "\\"</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-12 20:28:45</div>
+        <div class="panel-body">
+          <p>Got it : seems like C::B is scanning recursively my filesystem from "/"</p>
+          <p>Hope it helps.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-14 18:18:24</div>
+        <div class="panel-body">
+          <p>&gt; I hope some developer under Linux can help you more.</p>
+          <p>Maybe me ( C::B was easy to compile ). Can I ask you / C::B developper ( maybe mortenmacfly ) about the purpose of the</p>
+          <p>================================</p>
+          <p>"NativeParser::GetAllPathsByFilename()"</p>
+          <p>================================</p>
+          <p>method , and what is it supposed to do ?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-10 10:03:00</div>
+        <div class="panel-body">
+          <p>* I used : Settings &gt; Editor &gt; Code Completion &gt; "Disable Code Completion" checkbox</p>
+          <p>* Disabling then re-enabling CC through the plugin manager first worked ( so I thought it was a ld.so.cache problem, plugins are shared libraries, no ? ), but after one minute  the bug re-appeared.</p>
+          <p>* The bug disappear by disabling CC through the plugin manager - but it is not a satisfactory solution :)</p>
+          <p>Please also note that this bug was present in the two precedent svn revisions that I got from jens lody apt repository.</p>
+          <p>Regards</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-06-12 23:56:08</div>
+        <div class="panel-body">
+          <p>QUOTE: Got it : seems like C::B is scanning recursively my filesystem from "/"</p>
+          <p>As you said, CC does not cause this issue. If I remember correct, maybe there are some bug in the path handling in C::B. But sorry I mainly works on Windows system, so I hope some developer under Linux can help you more.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-10 10:05:56</div>
+        <div class="panel-body">
+          <p>Seems that you have got an infinite loop, or more likely a thread lock, somewhere.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-14 19:39:15</div>
+        <div class="panel-body">
+          <p>OK, a cbproject class has a "m_CommonTopLevelPath" member ; and in my project I have :</p>
+          <p>- files of type "/home/......." ,</p>
+          <p>- file of type "/mnt/..."  ( due of usage of some symlinks )</p>
+          <p>so logically m_CommonTopLevelPath will be "/", and unfortunately at nativeparser.cpp:2537</p>
+          <p>=================================================</p>
+          <p>prjDir.Traverse(traverser, filespec, wxDIR_FILES | wxDIR_DIRS);</p>
+          <p>=================================================</p>
+          <p>will therefore scan recursively all my filesystem.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-06-11 00:37:35</div>
+        <div class="panel-body">
+          <p>QUOTE: * The bug disappear by disabling CC through the plugin manager</p>
+          <p>It looks like there is a infinite loop in the CC's parser.</p>
+          <p>QUOTE: * I used : Settings &gt; Editor &gt; Code Completion &gt; "Disable Code Completion" checkbox</p>
+          <p>If I remember correctly, this does not disable the CC correctly.</p>
+          <p>I need some test code snippet to reproduce the bug(infinite loop).</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2012-06-11 06:50:26</div>
+        <div class="panel-body">
+          <p>I tried on Windows - no problems at all. I also don't see why it should fail, because in this file are only #defines.</p>
+          <p>Can you provide a sample case, including the exact (!) version of that file through the forums, for example?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-11 18:02:41</div>
+        <div class="panel-body">
+          <p>My version of "gdkkeysyms.h" is at</p>
+          <p><a href="http://gwr.free.fr/gdkkeysyms.h">http://gwr.free.fr/gdkkeysyms.h</a></p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-11 18:28:08</div>
+        <div class="panel-body">
+          <pre class="pre-scrollable">###################################################################################################
+#  I open my workspace, with CC enabled through plugin manager, but disabled from Settigs &gt; Editor &gt; CC
+#
+#  Immediatly after all files have been opened, I open manually "gdkkeysyms.h" ; and C::B freezes, last message in gdb is 
+#  the "[Thread 0x7fffd8e02700 (LWP 16026) exited]" line.
+# 
+#  Seems to be linux / wx related...
+###################################################################################################
+
+(gdb) start
+Temporary breakpoint 1 at 0x441570: file app.cpp, line 266.
+Starting program: /usr/bin/codeblocks 
+[Thread debugging using libthread_db enabled]
+
+Temporary breakpoint 1, main (argc=1, argv=0x7fffffffe718) at app.cpp:266
+266	app.cpp: No such file or directory.
+	in app.cpp
+(gdb) continue
+Continuing.
+Initialize EditColourSet .....
+[New Thread 0x7fffea642700 (LWP 15998)]
+[New Thread 0x7fffe9e41700 (LWP 15999)]
+[New Thread 0x7fffe9640700 (LWP 16000)]
+[New Thread 0x7fffe8e3f700 (LWP 16001)]
+Initialize EditColourSet: done.
+EnvVars: loaded
+Debugger: loaded
+OpenFilesList: loaded
+ClassWizard: loaded
+CB_Koders: loaded
+BYOGames: loaded
+Autosave: loaded
+HelpPlugin: loaded
+SpellChecker: loaded
+Valgrind: loaded
+ToolsPlus: loaded
+EditorTweaks: loaded
+cbDragScroll: loaded
+Cccc: loaded
+NassiShneidermanPlugin: loaded
+ThreadSearch: loaded
+wxSmith: loaded
+wxSmithMime: loaded
+CodeSnippets: loaded
+FilesExtensionHandler: loaded
+CppCheck: loaded
+wxSmithAui: loaded
+DoxyBlocks: loaded
+Profiler: loaded
+Abbreviations: loaded
+lib_finder: loaded
+ProjectsImporter: loaded
+HeaderFixup: loaded
+copystrings: loaded
+AutoVersioning: loaded
+AStylePlugin: loaded
+Compiler: loaded
+wxSmithContribItems: loaded
+Exporter: loaded
+BrowseTracker: loaded
+SymTab: loaded
+Cscope: loaded
+cbKeyBinder: loaded
+MouseSap: loaded
+ReopenEditor: loaded
+RegExTestbed: loaded
+CodeCompletion: loaded
+ScriptedWizard: loaded
+FileManager: loaded
+ToDoList: loaded
+HexEditor: loaded
+CodeStat: loaded
+IncrementalSearch: loaded
+Environment variables plugin activated
+Debugger plugin activated
+Open files list plugin activated
+Class wizard plugin activated
+Koders query plugin activated
+BYO Games plugin activated
+Autosave plugin activated
+Help plugin plugin activated
+SpellChecker plugin activated
+Valgrind plugin activated
+ToolsPlus plugin activated
+Editor Tweaks plugin: Building menu
+Editor Tweaks plugin: making the menu 14
+EditorTweaks plugin activated
+DragScroll plugin activated
+Cccc plugin activated
+NassiShneidermanPlugin plugin activated
+ThreadSearch plugin activated
+wxSmith plugin activated
+wxSmith - MIME plugin plugin activated
+Code snippets plugin activated
+Files extension handler plugin activated
+CppCheck plugin activated
+wxSmith - Aui plugin activated
+DoxyBlocks plugin activated
+Code profiler plugin activated
+Abbreviations plugin activated
+Library finder plugin activated
+Foreign projects importer plugin activated
+Header Fixup plugin activated
+Copy Strings to clipboard plugin activated
+AutoVersioning plugin activated
+Source code formatter (AStyle) plugin activated
+Added compiler "GNU GCC Compiler"
+Added compiler "Intel C/C++ Compiler"
+Added compiler "SDCC Compiler"
+Added compiler "Tiny C Compiler"
+Added compiler "GDC D Compiler"
+Added compiler "LLVM D Compiler"
+Added compiler "Digital Mars D Compiler"
+Added compiler "GNU Fortran Compiler"
+Added compiler "G95 Fortran Compiler"
+Added compiler "GNU ARM GCC Compiler"
+Added compiler "GNU AVR GCC Compiler"
+Added compiler "GNU GCC Compiler for PowerPC"
+Added compiler "GNU GCC Compiler for TriCore"
+Compiler plugin activated
+wxSmith - Contrib Items plugin activated
+Source Exporter plugin activated
+BrowseTracker plugin activated
+Symbol Table Plugin plugin activated
+Cscope plugin activated
+Keyboard shortcuts plugin activated
+MouseSap plugin activated
+ReopenEditor plugin activated
+Regular expressions testbed plugin activated
+[New Thread 0x7fffdb48c700 (LWP 16009)]
+Code completion plugin activated
+Project wizard added for 'Empty project'
+Project wizard added for 'Fortran application'
+Project wizard added for 'Fortran library'
+Project wizard added for 'Fortran DLL'
+Project wizard added for 'Console application'
+Project wizard added for 'D application'
+Project wizard added for 'FLTK project'
+Project wizard added for 'GLFW project'
+Project wizard added for 'GLUT project'
+Project wizard added for 'GTK+ project'
+Project wizard added for 'Irrlicht project'
+Project wizard added for 'Lightfeather project'
+Project wizard added for 'Matlab project'
+Project wizard added for 'OpenGL project'
+Project wizard added for 'Ogre project'
+Project wizard added for 'Code::Blocks plugin'
+Project wizard added for 'QT4 project'
+Project wizard added for 'SDL project'
+Project wizard added for 'SFML project'
+Project wizard added for 'Static library'
+Project wizard added for 'Shared library'
+Project wizard added for 'wxWidgets project'
+Build-target wizard added for 'Console'
+Build-target wizard added for 'Static library'
+Build-target wizard added for 'wxWidgets'
+Project wizard added for 'ARM Project'
+Project wizard added for 'AVR Project'
+Project wizard added for 'TriCore Project'
+Project wizard added for 'PowerPC Project'
+Project wizard added for 'MCS51 Project'
+File(s) wizard added for 'Empty file'
+File(s) wizard added for 'C/C++ source'
+File(s) wizard added for 'C/C++ header'
+File(s) wizard added for 'Fortran source'
+Scripted wizard plugin activated
+[New Thread 0x7fffdac8b700 (LWP 16010)]
+FileManager plugin activated
+Todo List plugin activated
+HexEditor plugin activated
+Code statistics plugin activated
+IncrementalSearch plugin activated
+
+(codeblocks:15810): GLib-GObject-WARNING **: invalid uninstantiatable type `&lt;invalid&gt;' in cast to `GtkRadioMenuItem'
+
+(codeblocks:15810): Gtk-CRITICAL **: gtk_radio_menu_item_get_group: assertion `GTK_IS_RADIO_MENU_ITEM (radio_menu_item)' failed
+
+(codeblocks:15810): GLib-GObject-WARNING **: invalid uninstantiatable type `&lt;invalid&gt;' in cast to `GtkRadioMenuItem'
+
+(codeblocks:15810): Gtk-CRITICAL **: gtk_radio_menu_item_get_group: assertion `GTK_IS_RADIO_MENU_ITEM (radio_menu_item)' failed
+Loading toolbar...
+Initializing plugins...
+[New Thread 0x7fffda48a700 (LWP 16013)]
+[Thread 0x7fffda48a700 (LWP 16013) exited]
+Updating class browser...
+Class browser updated.
+Loading workspace "/home/gwr/.codeblocks/gkconfig.workspace"
+Loading project file...
+Parsing project file...
+Loading target Debug
+Loading target Release
+Loading project files...
+37 files loaded
+Done loading project in 2ms
+Project's base path: /mnt/Clean/gwr/Src/libgwr/
+Project's common toplevel path: /mnt/Clean/gwr/Src/libgwr/
+Loading project file...
+Parsing project file...
+Loading target Debug
+Loading target Release
+Loading project files...
+39 files loaded
+Done loading project in 7ms
+Project's base path: /mnt/Clean/gwr/Src/libkconfig/
+Project's common toplevel path: /mnt/Clean/gwr/Src/libkconfig/
+Text seems to be pure ASCII!
+We use user specified encoding: Unicode 8 bit (UTF-8) (ID: 41)
+Final encoding detected: Unicode 8 bit (UTF-8) (ID: 41)
+Editor Open
+Project data set for /mnt/Clean/gwr/Src/libkconfig/src/objects/kconfig-objects-kernel.cc
+
+** (codeblocks:15810): CRITICAL **: clearlooks_style_draw_flat_box: assertion `width &gt;= -1' failed
+
+** (codeblocks:15810): CRITICAL **: clearlooks_style_draw_flat_box: assertion `width &gt;= -1' failed
+
+** (codeblocks:15810): CRITICAL **: clearlooks_style_draw_flat_box: assertion `width &gt;= -1' failed
+Text seems to be pure ASCII!
+We use user specified encoding: Unicode 8 bit (UTF-8) (ID: 41)
+Final encoding detected: Unicode 8 bit (UTF-8) (ID: 41)
+Editor Open
+Project data set for /mnt/Clean/gwr/Src/libkconfig/src/objects/kconfig-objects-item.h
+
+** (codeblocks:15810): CRITICAL **: clearlooks_style_draw_flat_box: assertion `width &gt;= -1' failed
+Text seems to be pure ASCII!
+We use user specified encoding: Unicode 8 bit (UTF-8) (ID: 41)
+Final encoding detected: Unicode 8 bit (UTF-8) (ID: 41)
+Editor Open
+Project data set for /mnt/Clean/gwr/Src/libkconfig/src/objects/kconfig-objects-symbol.h
+
+** (codeblocks:15810): CRITICAL **: clearlooks_style_draw_flat_box: assertion `width &gt;= -1' failed
+Text seems to be pure ASCII!
+We use user specified encoding: Unicode 8 bit (UTF-8) (ID: 41)
+Final encoding detected: Unicode 8 bit (UTF-8) (ID: 41)
+Editor Open
+Project data set for /mnt/Clean/gwr/Src/libkconfig/src/objects/kconfig-objects-containers.h
+
+** (codeblocks:15810): CRITICAL **: clearlooks_style_draw_flat_box: assertion `width &gt;= -1' failed
+Text seems to be pure ASCII!
+We use user specified encoding: Unicode 8 bit (UTF-8) (ID: 41)
+Final encoding detected: Unicode 8 bit (UTF-8) (ID: 41)
+Editor Open
+Project data set for /mnt/Clean/gwr/Src/libkconfig/src/common/kconfig-public.h
+
+** (codeblocks:15810): CRITICAL **: clearlooks_style_draw_flat_box: assertion `width &gt;= -1' failed
+Text seems to be pure ASCII!
+We use user specified encoding: Unicode 8 bit (UTF-8) (ID: 41)
+Final encoding detected: Unicode 8 bit (UTF-8) (ID: 41)
+Editor Open
+Project data set for /mnt/Clean/gwr/Src/libkconfig/src/objects/kconfig-objects-kernel.h
+
+** (codeblocks:15810): CRITICAL **: clearlooks_style_draw_flat_box: assertion `width &gt;= -1' failed
+Text seems to be pure ASCII!
+We use user specified encoding: Unicode 8 bit (UTF-8) (ID: 41)
+Final encoding detected: Unicode 8 bit (UTF-8) (ID: 41)
+Editor Open
+Project data set for /mnt/Clean/gwr/Src/libkconfig/src/common/kconfig-exp.cc
+
+** (codeblocks:15810): CRITICAL **: clearlooks_style_draw_flat_box: assertion `width &gt;= -1' failed
+Text seems to be pure ASCII!
+We use user specified encoding: Unicode 8 bit (UTF-8) (ID: 41)
+Final encoding detected: Unicode 8 bit (UTF-8) (ID: 41)
+Editor Open
+Project data set for /mnt/Clean/gwr/Src/libkconfig/src/objects/kconfig-objects-scalar.cc
+Loading project file...
+Parsing project file...
+Loading target Release
+Loading target Debug
+Loading project files...
+23 files loaded
+Done loading project in 2ms
+Project's base path: /mnt/Clean/gwr/Src/gkconfig/
+Project's common toplevel path: /
+
+** (codeblocks:15810): CRITICAL **: clearlooks_style_draw_flat_box: assertion `width &gt;= -1' failed
+Text seems to be pure ASCII!
+We use user specified encoding: Unicode 8 bit (UTF-8) (ID: 41)
+Final encoding detected: Unicode 8 bit (UTF-8) (ID: 41)
+Editor Open
+Project data set for /mnt/Clean/gwr/Src/gkconfig/src/gkconfig-kernel.h
+
+** (codeblocks:15810): CRITICAL **: clearlooks_style_draw_flat_box: assertion `width &gt;= -1' failed
+Text seems to be pure ASCII!
+We use user specified encoding: Unicode 8 bit (UTF-8) (ID: 41)
+Final encoding detected: Unicode 8 bit (UTF-8) (ID: 41)
+Editor Open
+Project data set for /mnt/Clean/gwr/Src/gkconfig/src/gkconfig-kernel.cc
+
+** (codeblocks:15810): CRITICAL **: clearlooks_style_draw_flat_box: assertion `width &gt;= -1' failed
+Text seems to be pure ASCII!
+We use user specified encoding: Unicode 8 bit (UTF-8) (ID: 41)
+Final encoding detected: Unicode 8 bit (UTF-8) (ID: 41)
+Editor Open
+Project data set for /mnt/Clean/gwr/Src/gkconfig/src/widget/gkconfig-widget-panel-kernel.h
+
+** (codeblocks:15810): CRITICAL **: clearlooks_style_draw_flat_box: assertion `width &gt;= -1' failed
+Text seems to be pure ASCII!
+We use user specified encoding: Unicode 8 bit (UTF-8) (ID: 41)
+Final encoding detected: Unicode 8 bit (UTF-8) (ID: 41)
+Editor Open
+Project data set for /mnt/Clean/gwr/Src/gkconfig/src/widget/gkconfig-widget-panel-kernel.cc
+
+** (codeblocks:15810): CRITICAL **: clearlooks_style_draw_flat_box: assertion `width &gt;= -1' failed
+Text seems to be pure ASCII!
+We use user specified encoding: Unicode 8 bit (UTF-8) (ID: 41)
+Final encoding detected: Unicode 8 bit (UTF-8) (ID: 41)
+Editor Open
+Project data set for /mnt/Clean/gwr/Src/gkconfig/src/widget/gkconfig-widget-panel-kernel-shell.cc
+
+** (codeblocks:15810): CRITICAL **: clearlooks_style_draw_flat_box: assertion `width &gt;= -1' failed
+Text seems to be pure ASCII!
+We use user specified encoding: Unicode 8 bit (UTF-8) (ID: 41)
+Final encoding detected: Unicode 8 bit (UTF-8) (ID: 41)
+Editor Open
+Project data set for /mnt/Clean/gwr/Src/gkconfig/src/widget/gkconfig-widget-panel-kernel-shell-search.cci
+Top Editor: /mnt/Clean/gwr/Src/gkconfig/src/widget/gkconfig-widget-panel-kernel-shell-search.cci
+libkconfig now depends on libgwr (1 deps)
+gkconfig now depends on libgwr (1 deps)
+gkconfig now depends on libkconfig (2 deps)
+Loading workspace layout "/home/gwr/.codeblocks/gkconfig.workspace.layout"
+Project /mnt/Clean/gwr/Src/libkconfig/libkconfig.cbp has been activated.
+[New Thread 0x7fffd9c19700 (LWP 16014)]
+Caching result of `pkg-config --cflags gtk+-2.0`
+
+** (codeblocks:15810): CRITICAL **: clearlooks_style_draw_flat_box: assertion `width &gt;= -1' failed
+Cached
+Caching result of `pkg-config gtk+-2.0 --cflags`
+Cached
+Caching result of `pkg-config gtk+-2.0 --libs`
+Cached
+Caching GCC dir: /usr/include/c++/4.4
+Caching GCC dir: /usr/include/c++/4.4/x86_64-linux-gnu
+Caching GCC dir: /usr/include/c++/4.4/backward
+Caching GCC dir: /usr/local/include
+Caching GCC dir: /usr/lib/gcc/x86_64-linux-gnu/4.4.5/include
+Caching GCC dir: /usr/lib/gcc/x86_64-linux-gnu/4.4.5/include-fixed
+Caching GCC dir: /usr/include/x86_64-linux-gnu
+Caching GCC dir: /usr/include
+Passing list of files to batch-parser.
+Header to parse with priority: '/usr/include/c++/4.4/cstddef'
+Header to parse with priority: '/usr/include/boost/config.hpp'
+Header to parse with priority: '/usr/include/boost/filesystem/config.hpp'
+Add 3 priority parsing file(s) for project 'libkconfig'...
+Added 29 file(s) for project 'libkconfig' to batch-parser...
+Create new parser for project 'libkconfig'
+Updating class browser...
+Class browser updated.
+[New Thread 0x7fffda48a700 (LWP 16022)]
+Starting batch parsing for project 'libkconfig'...
+Project 'libkconfig' parsing stage done!
+Project 'libkconfig' parsing stage done (569 total parsed files, 25632 tokens in 0 minute(s), 0.727 seconds).
+Updating class browser...
+Class browser updated.
+[New Thread 0x7fffd9a18700 (LWP 16023)]
+Caching result of `pkg-config --libs gtk+-2.0 libglade-2.0`
+Cached
+Passing list of files to batch-parser.
+Header to parse with priority: '/usr/include/c++/4.4/cstddef'
+Header to parse with priority: '/usr/include/boost/config.hpp'
+Header to parse with priority: '/usr/include/boost/filesystem/config.hpp'
+Add 3 priority parsing file(s) for project 'gkconfig'...
+Added 12 file(s) for project 'gkconfig' to batch-parser...
+Create new parser for project 'gkconfig'
+Start switch from OnParsingOneByOneTimer
+Switch parser to project 'gkconfig'
+Updating class browser...
+Class browser updated.
+[New Thread 0x7fffd9817700 (LWP 16025)]
+Starting batch parsing for project 'gkconfig'...
+[Thread 0x7fffda48a700 (LWP 16022) exited]
+[New Thread 0x7fffd8e02700 (LWP 16026)]
+[New Thread 0x7fffd3fff700 (LWP 16027)]
+Project 'gkconfig' parsing stage done!
+Project 'gkconfig' parsing stage done (1783 total parsed files, 54687 tokens in 0 minute(s), 2.449 seconds).
+Updating class browser...
+Class browser updated.
+[Thread 0x7fffd3fff700 (LWP 16027) exited]
+Text seems to be pure ASCII!
+We use user specified encoding: Unicode 8 bit (UTF-8) (ID: 41)
+Final encoding detected: Unicode 8 bit (UTF-8) (ID: 41)
+Editor Open
+
+** (codeblocks:15810): CRITICAL **: clearlooks_style_draw_flat_box: assertion `width &gt;= -1' failed
+[Thread 0x7fffd8e02700 (LWP 16026) exited]
+
+### Here gdkkeysyms.h has been opened, and C::B has frozen ###
+
+^C
+Program received signal SIGINT, Interrupt.
+0x00007ffff20a7ec5 in *__GI___xstat (vers=&lt;value optimized out&gt;, name=&lt;value optimized out&gt;, buf=0x7fffffff9f70) at ../sysdeps/unix/sysv/linux/wordsize-64/xstat.c:38
+38	../sysdeps/unix/sysv/linux/wordsize-64/xstat.c: No such file or directory.
+	in ../sysdeps/unix/sysv/linux/wordsize-64/xstat.c
+Current language:  auto
+The current source language is "auto; currently c".
+
+*******************************************************************************************************************************************
+
+(gdb) backtrace
+#0  0x00007ffff20a7ec5 in *__GI___xstat (vers=&lt;value optimized out&gt;, name=&lt;value optimized out&gt;, buf=0x7fffffff9f70) at ../sysdeps/unix/sysv/linux/wordsize-64/xstat.c:38
+#1  0x00007ffff584944e in wxStat(wchar_t const*, stat*) () from /usr/lib/libwx_baseu-2.8.so.0
+#2  0x00007ffff5849f77 in wxDirExists(wchar_t const*) () from /usr/lib/libwx_baseu-2.8.so.0
+#3  0x00007ffff58a09d6 in wxDirData::Read(wxString*) () from /usr/lib/libwx_baseu-2.8.so.0
+#4  0x00007ffff5838d39 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#5  0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#6  0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#7  0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#8  0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#9  0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#10 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#11 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#12 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#13 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#14 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#15 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#16 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#17 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#18 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#19 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#20 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#21 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#22 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#23 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#24 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#25 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#26 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#27 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#28 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#29 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#30 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#31 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+
+
+
+
+</pre>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-06-15 02:18:03</div>
+        <div class="panel-body">
+          <p>QUOTE: will therefore scan recursively all my filesystem.</p>
+          <p>I think you have found the reason, the first thing I suggest that you can disable the "Enable headers code completion", this will disable the running of header file crawlering.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-15 18:07:38</div>
+        <div class="panel-body">
+          <p>=======================================================================</p>
+          <p>/** Get the implementation file path if the input is a header file. or Get the header file path</p>
+          <p>* if the input is an implementation file.</p>
+          <p>* Both the implementation file and header file can be in different directories.</p>
+          <p>* @param filename input filename</p>
+          <p>* @return corresponding file paths, in wxArrayString format</p>
+          <p>*/</p>
+          <p>wxArrayString GetAllPathsByFilename(const wxString&amp; filename);</p>
+          <p>=======================================================================</p>
+          <p>- your tip failed on headers code completion failed ; but it is not so important ;</p>
+          <p>- on the other side, &lt;gdkkeysyms.h&gt; does not belong to my project ( I just open it within a debug session ) so it should not have anything to do with the "CommonTopLevelPath" of my cbproject ; right ?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-15 18:16:31</div>
+        <div class="panel-body">
+          <p>I mean why search gdkkeysyms.c in my project's files, while gdkkeysyms.h does not belong to my project ? ( this is not directly related to the bug )</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-17 07:34:15</div>
+        <div class="panel-body">
+          <p>As wxDir::Traverse() is based on callbacks on Traversers, maybe the win32 implementation uses "overlapped IO"  wether the Linux impl uses blocking IO ?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-06-17 12:35:50</div>
+        <div class="panel-body">
+          <p>I debugged, and found that:</p>
+          <p>const wxString prjPath = project-&gt;GetCommonTopLevelPath();</p>
+          <p>wxString priorityPath;</p>
+          <p>if (fn.HasExt() &amp;&amp; (fn.GetExt().StartsWith(_T("h")) || fn.GetExt().StartsWith(_T("c"))))</p>
+          <p>{</p>
+          <p>wxFileName priFn(prjPath);</p>
+          <p>priFn.AppendDir(fn.GetExt().StartsWith(_T("h")) ? _T("sdk") : _T("include"));</p>
+          <p>if (priFn.DirExists())</p>
+          <p>Here, the prjPath="E:\\"</p>
+          <p>and the prjFn="E"</p>
+          <p>and the if(prjFn.DirExists()) is false, so this if clause does not get any chance to run.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-06-17 12:39:55</div>
+        <div class="panel-body">
+          <p>Forgot to say: there:</p>
+          <p>priFn has such values:</p>
+          <p>[debug]{m_volume = "E", m_dirs = 1 count of wxArrayString = {[0] = 0x4041044 L"sdk"}, m_name = "", m_ext = "", m_relative = false, m_hasExt = false}&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:</p>
+          <p>and if (priFn.DirExists()) is false.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-17 14:05:30</div>
+        <div class="panel-body">
+          <p>- The bug is not Linux-related, neither unix-symlinks related, it is a side-effect of C::B assuming 2 assertions :</p>
+          <p>* "a cbProject has all of its files under the same directory"</p>
+          <p>* "this directory contains a reasonable number of files, so we can use wxDir::Traverse() on it"</p>
+          <p>This is usual practice in coding, but you know end-users ( like me ) are a pain :)</p>
+          <p>=&gt; The "CommonTopLevelPath concept" is broken.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-06-17 14:17:41</div>
+        <div class="panel-body">
+          <p>/** @return the top-level path common to all project files. */</p>
+          <p>wxString GetCommonTopLevelPath() const;</p>
+          <p>Its logic is OK. It do return the root folder "/" in your cases, but I think some plugins don't use this function correctly. (like the code-completion plugin).</p>
+          <p>In fact, the freeze only happens in the code-completion plugin, right?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-17 14:41:53</div>
+        <div class="panel-body">
+          <p>Me &gt; The "CommonTopLevelPath concept" is broken !</p>
+          <p>You &gt; Its logic is OK !</p>
+          <p>Anyway this is minor side effect, easy to correct. So thank you for your answers.</p>
+          <p>Regards again to all the C::B Team.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-06-16 02:50:02</div>
+        <div class="panel-body">
+          <p>QUOTE- on the other side, &lt;gdkkeysyms.h&gt; does not belong to my project ( I just open it within a debug session ) so it should not have anything to do with the "CommonTopLevelPath" of my cbproject ; right ?</p>
+          <p>The gdkkeysyms.h does not belong to your project file, but this header file maybe included in your cpp files. I don't think it is related to CommonTopLevelPath.</p>
+          <p>BTW: Mostly I can't test for you because you are in Linux but I'm mainly under Windows. I hope you can create a sample project file, and attachment to our c::b forum, and some linux guys can test it.</p>
+          <p>Thanks.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-16 06:27:06</div>
+        <div class="panel-body">
+          <p>-= LAST POST =- :)</p>
+          <p>- sorry for having been verbose, but I love C::B, use it every single day since I downloaded it :)</p>
+          <p>- The bug is not Linux-related, neither unix-symlinks related, it is a side-effect of C::B assuming 2 assertions :</p>
+          <p>* "a cbProject has all of its files under the same directory"</p>
+          <p>* "this directory contains a reasonable number of files, so we can use wxDir::Traverse() on it"</p>
+          <p>- Bug should be reproducible under Windows ( unfortunately no svn installer is available, I could not test ) :</p>
+          <p>* Make a dummy workspace containing a dummy project containing 2 files :</p>
+          <p>** "/A/dummy.h"</p>
+          <p>** "/B/dummy.c"</p>
+          <p>* Open any file from your filesystem in the C::B editor</p>
+          <p>Well, under Windows, you are "encouraged" to put everything under "C:\Users\user\My Documents", but C::B is said cross-platform, so this is definitely a C::B bug.</p>
+          <p>- In fact I simply remove my 2 old bash scripts that resided in "/usr/local/bin" from one of my projects, and all is OK now.</p>
+          <p>- thank you very much for your attention</p>
+          <p>- Regards to you and all the C::B team.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-06-16 13:23:16</div>
+        <div class="panel-body">
+          <p>QUOTE:</p>
+          <p>- Bug should be reproducible under Windows ( unfortunately no svn installer is available, I could not test ) :</p>
+          <p>* Make a dummy workspace containing a dummy project containing 2 files :</p>
+          <p>** "/A/dummy.h"</p>
+          <p>** "/B/dummy.c"</p>
+          <p>* Open any file from your filesystem in the C::B editor</p>
+          <p>How can I do this under Windows?</p>
+          <p>I have a dummy cbp file: E:\code\cb\test_code\dummy\cmd.cbp</p>
+          <p>and I have two files in this project:</p>
+          <p>E:\code\A\dummy.h</p>
+          <p>E:\code\B\dummy.c</p>
+          <p>But it looks like I have no freeze issue.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-11 18:30:37</div>
+        <div class="panel-body">
+          <pre class="pre-scrollable">###################################################################################################
+# I am not familar with gdb, so I forgot the rest of the call stack :)
+################################################################################################### 
+
+#56 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#57 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#58 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#59 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#60 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#61 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#62 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#63 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+---Type &lt;return&gt; to continue, or q &lt;return&gt; to quit---
+#64 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#65 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#66 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#67 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#68 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#69 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#70 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#71 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#72 0x00007fffdc510291 in NativeParser::GetAllPathsByFilename (this=&lt;value optimized out&gt;, filename=&lt;value optimized out&gt;) at nativeparser.cpp:2537
+#73 0x00007fffdc4da18f in ClassBrowserBuilderThread::Init (this=0x205a200, np=&lt;value optimized out&gt;, treeTop=&lt;value optimized out&gt;, treeBottom=&lt;value optimized out&gt;, active_filename=&lt;value optimized out&gt;, user_data=0x254dff0, bo=..., tt=0x7fffd40321b0, 
+    idThreadEvent=2656) at classbrowserbuilderthread.cpp:116
+#74 0x00007fffdc4d34fc in ClassBrowser::ThreadedBuildTree (this=0x2041420) at classbrowser.cpp:856
+#75 0x00007fffdc4d4fdd in ClassBrowser::UpdateClassBrowserView (this=0x2041420, checkHeaderSwap=224) at classbrowser.cpp:244
+#76 0x00007fffdc514cc2 in NativeParser::OnEditorActivated (this=0x1be8900, editor=&lt;value optimized out&gt;) at nativeparser.cpp:2408
+#77 0x00007fffdc4e6414 in CodeCompletion::OnEditorActivatedTimer (this=0x1be8880, event=&lt;value optimized out&gt;) at codecompletion.cpp:2363
+#78 0x00007ffff58b4e60 in wxEvtHandler::ProcessEventIfMatches(wxEventTableEntryBase const&amp;, wxEvtHandler*, wxEvent&amp;) () from /usr/lib/libwx_baseu-2.8.so.0
+#79 0x00007ffff58b5e24 in wxEventHashTable::HandleEvent(wxEvent&amp;, wxEvtHandler*) () from /usr/lib/libwx_baseu-2.8.so.0
+#80 0x00007ffff58b5f07 in wxEvtHandler::ProcessEvent(wxEvent&amp;) () from /usr/lib/libwx_baseu-2.8.so.0
+#81 0x00007ffff6254168 in wxTimerBase::Notify() () from /usr/lib/libwx_gtk2u_core-2.8.so.0
+#82 0x00007ffff615f5ab in ?? () from /usr/lib/libwx_gtk2u_core-2.8.so.0
+#83 0x00007ffff2f51ecb in ?? () from /lib/libglib-2.0.so.0
+#84 0x00007ffff2f516f2 in g_main_context_dispatch () from /lib/libglib-2.0.so.0
+#85 0x00007ffff2f55568 in ?? () from /lib/libglib-2.0.so.0
+#86 0x00007ffff2f55a75 in g_main_loop_run () from /lib/libglib-2.0.so.0
+#87 0x00007ffff52da6b7 in gtk_main () from /usr/lib/libgtk-x11-2.0.so.0
+#88 0x00007ffff61569f8 in wxEventLoop::Run() () from /usr/lib/libwx_gtk2u_core-2.8.so.0
+#89 0x00007ffff61dbc2b in wxAppBase::MainLoop() () from /usr/lib/libwx_gtk2u_core-2.8.so.0
+#90 0x000000000044186b in CodeBlocksApp::OnRun (this=0x56d23f0) at app.cpp:777
+#91 0x00007ffff585b855 in wxEntry(int&amp;, wchar_t**) () from /usr/lib/libwx_baseu-2.8.so.0
+#92 0x0000000000441582 in main (argc=1, argv=0x7fffffff9f70) at app.cpp:266
+</pre>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-16 14:30:55</div>
+        <div class="panel-body">
+          <p>&gt; E:\code\A\dummy.h</p>
+          <p>&gt; E:\code\B\dummy.c</p>
+          <p>At this point cbProject-&gt;m_CommonTopLevelPath is "E:\code"</p>
+          <p>Add</p>
+          <p>"E:\foo.h"</p>
+          <p>to your project, so cbProject-&gt;m_CommonTopLevelPath is now "E:\"</p>
+          <p>Then open for example "E:\code\bar.h" in C::B ( bar.h must not belong to your project ), and E: should be scanned recursively.</p>
+          <p>But if you dont have many files on that partition, you wont have the "long loop" effect.</p>
+          <p>You can try with :</p>
+          <p>C:\code1\dummy.h</p>
+          <p>C:\code2\dummy.c</p>
+          <p>So cbProject-&gt;m_CommonTopLevelPath is "C:\" : in Windows many things are under C:\</p>
+          <p>And then open "C:\code3\toto.h"</p>
+          <p>You can put a breakpoint on</p>
+          <p>===================================================</p>
+          <p>wxStat(wchar_t const*, stat*) () from /usr/lib/libwx_baseu-2.8.so.0</p>
+          <p>===================================================</p>
+          <p>to verify what C::B is doing, that is what I did.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-16 15:00:23</div>
+        <div class="panel-body">
+          <p>More concisely,</p>
+          <p>&gt; E:\code\A\dummy.h</p>
+          <p>&gt; E:\code\B\dummy.c</p>
+          <p>should be :</p>
+          <p>&gt; E:\A\dummy.h</p>
+          <p>&gt; E:\B\dummy.c</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-06-17 01:22:11</div>
+        <div class="panel-body">
+          <p>QUOTE:</p>
+          <p>More concisely,</p>
+          <p>&gt; E:\code\A\dummy.h</p>
+          <p>&gt; E:\code\B\dummy.c</p>
+          <p>should be :</p>
+          <p>&gt; E:\A\dummy.h</p>
+          <p>&gt; E:\B\dummy.c</p>
+          <p>I did that, but still no freeze.</p>
+          <p>I have E:\code\cb\test_code\dummy\cmd.cbp which contains two files:</p>
+          <p>E:\A\dummy.h</p>
+          <p>E:\B\dummy.c</p>
+          <p>Now, I try to open a file which does not belong this cbp, like: E:\C\a.h</p>
+          <p>I don't have any freeze when open the a.h file. I'm still not sure which behavior will let c::b to scan all the files under: E:\ ?</p>
+          <p>Thanks.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

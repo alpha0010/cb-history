@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 19290 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #19290 <small>2014-02-14 04:02:57</small></h3>
+          <h4>nduplessis</h4>
+          <p class="lead">"-I" Flag for GNU G++ Compiler Causing Issues</p>
+          <p>Release: 13.12, Revision: 9501</p>
+          <p>Whenever I create a C++ project with the header file and source file of a class in the same folder as the project file and try to compile them together using the GNU G++ compiler CB puts the "-I" flag into the compile line with no include directory following it. This causes a compile error with G++ when trying to create the object file for the class (Undefined reference to 'WinMain@16').</p>
+          <p>To find out was causing it I copy/pasted the compile line from the build log into the command line and used trial and error with the compile flags.</p>
+          <p>To Recreate:</p>
+          <p>1.) Start Code Blocks</p>
+          <p>2.) Go to File-&gt;New-&gt;Project-&gt;Console Application (using default settings)</p>
+          <p>3.) Try to build it, should work fine (no "-I" flag in compile line)</p>
+          <p>4.) Go to File-&gt;New-&gt;Class</p>
+          <p>5.) Put a check next to "Header and implementation file shall be in the same folder" and create the class</p>
+          <p>6.) Try to build and you should get the WinMain@16 error ("-I" in compile line).</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Compiler</dd>
+            <dt>Group</dt><dd>Platform:Windows</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">nduplessis 2014-02-14 04:17:06</div>
+        <div class="panel-body">
+          <p>Note:</p>
+          <p>If you create a class foo with foo.h and foo.cpp in the same directory and try to create an object file foo.o with this:</p>
+          <p>"g++ -I -c -o foo.o foo.cpp" - won't compile.</p>
+          <p>"g++ -c -o foo.o foo.cpp" - compiles.</p>
+          <p>If foo.h is in a subdirectory called include:</p>
+          <p>"g++ -Iinclude -c -o foo.o foo.cpp" - compiles</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">nduplessis 2014-02-14 16:59:10</div>
+        <div class="panel-body">
+          <p>Update:</p>
+          <p>Upon further investigation, there was some new file pathing options added to the new class dialog in one of the latest revisions. The problem is fixed when the "add paths to project" box is left unchecked.</p>
+          <p>So whenever the user checks the box "header and implementation file shall be in the same folder" the "add paths to project" checkbox should automatically get unchecked and grey out.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">nduplessis 2014-02-15 15:41:43</div>
+        <div class="panel-body">
+          <p>This was fixed in the latest nightly build. Apologize for any inconvenience.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 19025 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #19025 <small>2013-06-16 15:39:07</small></h3>
+          <h4>schizofrenikh</h4>
+          <p class="lead">'std::bad_alloc' when loading cmake generated project</p>
+          <p>The crash occures only when code completion plugin is enabled.</p>
+          <p>The minimal project necessary to reproduce the behaviour is available here:</p>
+          <p><a href="http://schizofrenikh.tk/pliki321/test_project.tar.gz">http://schizofrenikh.tk/pliki321/test_project.tar.gz</a></p>
+          <p>Environment:</p>
+          <p>Linux konserwa 3.2.0-4-amd64 #1 SMP Debian 3.2.46-1 x86_64 GNU/Linux</p>
+          <p>Code::Blocks version: svn 9156</p>
+          <p>Build: Jan 14 2013, 07:54:56 - wx2.8.12 (Linux, unicode) - 64 bit</p>
+          <p>The build comes from repository:</p>
+          <p><a href="http://apt.jenslody.de/testing/">http://apt.jenslody.de/testing/</a></p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::CodeCompletion</dd>
+            <dt>Group</dt><dd>Platform:Linux</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2013-10-04 21:18:16</dd>
+            <dt>Assigned to</dt><dd>tpetrov</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2013-10-02 17:12:46</div>
+        <div class="panel-body">
+          <p>File is missing, re-upload and reopen the bug.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">schizofrenikh 2013-10-03 18:48:25</div>
+        <div class="panel-body">
+          <p>Here are the files:</p>
+          <p><a href="http://filecloud.io/vc2ht658">http://filecloud.io/vc2ht658</a></p>
+          <p>When line :</p>
+          <p>include( src )</p>
+          <p>is commented out in CMakeLists.txt the editor works fine.</p>
+          <p>With the line present I get the following in console:</p>
+          <p>...</p>
+          <p>NativeParser::CreateParser(): Finish creating a new parser for project 'test'</p>
+          <p>ClassBrowser::OnThreadEvent(): Updating class browser...</p>
+          <p>ClassBrowser::OnThreadEvent(): Class browser updated.</p>
+          <p>NativeParser::OnParserStart(): Starting batch parsing for project 'test'...</p>
+          <p>terminate called after throwing an instance of 'std::bad_alloc'</p>
+          <p>what():  std::bad_alloc</p>
+          <p>Przerwane</p>
+          <p>Problem still present in version 9298</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2013-10-03 19:33:45</div>
+        <div class="panel-body">
+          <p>I was able to reproduce it. I'll see what is going on with it.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2013-10-03 19:49:16</div>
+        <div class="panel-body">
+          <p>Hm, it seems that the generated cbp file is ill-formed.</p>
+          <p>There are this tags in it:</p>
+          <p>&lt;Unit filename="/tmp/test/src"&gt;</p>
+          <p>&lt;Option virtualFolder="CMake Files\" /&gt;</p>
+          <p>&lt;/Unit&gt;</p>
+          <p>I think the unit should point to a filename, not a directory.</p>
+          <p>Could you please report this problem to cmake developers, so they can fix the generator?</p>
+          <p>I'll fix the crash in C::B, because it should not happen. But I suppose this file will cause many other similar problems.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2013-10-04 21:18:16</div>
+        <div class="panel-body">
+          <p>This bug is now fixed in HEAD.</p>
+          <p>Thank you for reporting it.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

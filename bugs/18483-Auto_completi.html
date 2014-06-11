@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 18483 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #18483 <small>2012-01-17 14:13:23</small></h3>
+          <h4>rsn10100</h4>
+          <p class="lead">Auto-completion of function pointers in a structure</p>
+          <p>Using Code::Blocks SVN build 7671 (well the zip said rev7678 but the About page says SVN 7671) on windows.</p>
+          <p>This works in some cases but not where attributes are set at the start of the line.</p>
+          <p>Examples:</p>
+          <p>struct MY_STRUCT1</p>
+          <p>{</p>
+          <p>unsigned int (*func1)(int var1);</p>
+          <p>__stdcall short (*func2)(int var1, int var2);</p>
+          <p>};</p>
+          <p>#define SOME_ATTRIBUTE __stdcall</p>
+          <p>struct MY_STRUCT2</p>
+          <p>{</p>
+          <p>SOME_ATTRIBUTE int (*func1)(int var1);</p>
+          <p>SOME_ATTRIBUTE short (*func2)(int var1, int var2);</p>
+          <p>};</p>
+          <p>In both examples the auto completion window would pop up a list with "int" and "short" as choices.  I suspect that only the first two words are being analyzed here and not the rest of the line.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::CodeCompletion</dd>
+            <dt>Group</dt><dd>Platform:Windows</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>ollydbg</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-02-04 00:11:52</div>
+        <div class="panel-body">
+          <p>I understand your problem. You can simply add a "replacement rule" in your Codecompletion setting dialog.</p>
+          <p>SOME_ATTRIBUTE-&gt;__stdcall</p>
+          <p>Or better:</p>
+          <p>SOME_ATTRIBUTE-&gt;</p>
+          <p>The second rule have an empty string after "-&gt;".</p>
+          <p>For speed and complexity reason, the parser does not do a macro expansion on each Tokens.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">rsn10100 2012-02-04 06:17:18</div>
+        <div class="panel-body">
+          <p>After more experimenting I found a work around, but what you suggested doesn't seem to work as I get the same results.  I may have not been clear enough about what is wrong in my first post.  My problem isn't that it isn't parsing the macro, it's that it does not display the function names in the auto completion list if there is more then one token before the function name.  It does not matter if it's a macro or not.  For example:</p>
+          <p>struct MY_STRUCT1</p>
+          <p>{</p>
+          <p>unsigned int (*func1)(int var1);</p>
+          <p>};</p>
+          <p>Would 'not' give me 'func1' as a choice, but instead I get 'int' as a choice.</p>
+          <p>What I did to work around it was I created a macro for unsigned types and moved the attributes to the end like this.</p>
+          <p>#define UINT unsigned int</p>
+          <p>#define SOME_ATTRIBUTE __stdcall</p>
+          <p>struct MY_STRUCT2</p>
+          <p>{</p>
+          <p>UINT (*func1)(int var1) SOME_ATTRIBUTE;</p>
+          <p>};</p>
+          <p>Now with MY_STRUCT2 I get the function name 'func1' as an option, but if there is more then one token before the function name like MY_STRUCT1 then it breaks.  No big deal as it's just a convenience feature and I can work around it, but I thought it should be reported.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-02-10 03:50:48</div>
+        <div class="panel-body">
+          <p>First, thanks for the report.</p>
+          <p>The reason of the bug is:</p>
+          <p>The code:</p>
+          <p>AAA BBB (*CCC)</p>
+          <p>will trigger our parser to HandleFunction().  I will look into it in the next days.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-02-10 14:31:32</div>
+        <div class="panel-body">
+          <p>I have a patch to fix this issue:</p>
+          <p><a href="http://forums.codeblocks.org/index.php/topic,15934.msg107342.html#msg107342">http://forums.codeblocks.org/index.php/topic,15934.msg107342.html#msg107342</a></p>
+          <p>You can test it. Thanks.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

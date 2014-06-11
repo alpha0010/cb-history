@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 18695 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #18695 <small>2012-08-04 23:11:28</small></h3>
+          <h4>ohir</h4>
+          <p class="lead">Parsing GDB output failed</p>
+          <p>Linux 2.6.32-41 i686 GNU/Linux</p>
+          <p>C::B version svn8150</p>
+          <p>GDB parser goes astray for certain kind of input (strings).</p>
+          <p>Watch head contains "Parsing GDB output failed for ..." error message.</p>
+          <p>Dereferenced struct view usually is incomplete.</p>
+          <p>Cause:</p>
+          <p>Unknown.</p>
+          <p>Seems like a bad (overeager) regexp code going into the content of the string.</p>
+          <p>How to replicate:</p>
+          <p>Watch dereferenced 't' in code below:</p>
+          <p>[code]</p>
+          <p>#include &lt;malloc.h&gt;</p>
+          <p>const char ok1[]="\"a\" .         b , c";</p>
+          <p>const char ok2[]="\"a\"           b   c";</p>
+          <p>const char ok3[]="\"a\"           b ; c";</p>
+          <p>const char ok4[]="\"a\"          b , c";</p>
+          <p>const char bad[]="\"a\"           b , c";</p>
+          <p>/* note 11: spaces between " and b. 10 spaces is ok. */</p>
+          <p>struct</p>
+          <p>test {</p>
+          <p>const char*           s;</p>
+          <p>};</p>
+          <p>int</p>
+          <p>main(void) {</p>
+          <p>struct test *t;</p>
+          <p>t = calloc(1,sizeof(struct test));</p>
+          <p>t-&gt;s = ok1;</p>
+          <p>t-&gt;s = ok2;</p>
+          <p>t-&gt;s = ok3;</p>
+          <p>t-&gt;s = ok4;</p>
+          <p>t-&gt;s = bad;</p>
+          <p>t-&gt;s = ok4;</p>
+          <p>free(t);</p>
+          <p>return 0;</p>
+          <p>}</p>
+          <p>[/code]</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Debugger</dd>
+            <dt>Group</dt><dd>Platform:All</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>tpetrov</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-08-14 08:23:56</div>
+        <div class="panel-body">
+          <p>Hi, ohir, today, I have a chance to test the gdb-mi plugin for C::B, I can't find the bug you reported in the new plugin. If you are brave enough, you can use this gdb-mi plugin(build it from source), Thanks.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ohir 2012-08-04 23:23:07</div>
+        <div class="panel-body">
+          <p>As submit cleaner ate spaces within code, below is block</p>
+          <p>of test strings with spaces represented by '-' char.</p>
+          <p>If you are gonna to replicate test scenario, you need to</p>
+          <p>replace '-' with spaces back.</p>
+          <p>const-char-ok1[]="\"a\"-.---------b-,-c";</p>
+          <p>const-char-ok2[]="\"a\"-----------b---c";</p>
+          <p>const-char-ok3[]="\"a\"-----------b-;-c";</p>
+          <p>const-char-ok4[]="\"a\"----------b-,-c";</p>
+          <p>const-char-bad[]="\"a\"-----------b-,-c";</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-08-11 09:34:59</div>
+        <div class="panel-body">
+          <p>Indeed, it has the bug of strings.</p>
+          <p>Currently, it both happens in Windows and Linux system, so I change the platform.</p>
+          <p>BTW: Currently there is a on-going work of the gdb-mi plugin, but that may have the same issue. (if you have time, you can have a try)</p>
+          <p><a href="http://forums.codeblocks.org/index.php/topic,16230.msg109713.html#msg109713">http://forums.codeblocks.org/index.php/topic,16230.msg109713.html#msg109713</a></p>
+          <p>Thanks for your detailed report.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ohir 2012-08-05 12:50:31</div>
+        <div class="panel-body">
+          <p>in file: src/plugins/debuggergdb/parsewatchvalue.cpp</p>
+          <p>in function: line 113: GetNextToken</p>
+          <p>Seem that tokenizer did not get account for escape</p>
+          <p>char being at the start. It just skips opening \ .</p>
+          <p>Here is obvious patch:</p>
+          <p>--- parsewatchvalue.cpp.orig</p>
+          <p>+++ parsewatchvalue.cpp</p>
+          <p>@@ -122,6 +122,7 @@</p>
+          <p>token.start = -1;</p>
+          <p>bool in_quote = false;</p>
+          <p>+    bool escape_next = false;</p>
+          <p>int open_braces = 0;</p>
+          <p>struct BraceType { enum Enum { None, Angle, Square }; };</p>
+          <p>BraceType::Enum brace_type = BraceType::None;</p>
+          <p>@@ -141,6 +142,11 @@</p>
+          <p>token = Token(pos, pos + 1, Token::CloseBrace);</p>
+          <p>return true;</p>
+          <p>+    case _T('\\'):</p>
+          <p>+        escape_next = true;</p>
+          <p>+        token.type = Token::String;</p>
+          <p>+        token.start = pos;</p>
+          <p>+        break;</p>
+          <p>case _T('"'):</p>
+          <p>in_quote = true;</p>
+          <p>token.type = Token::String;</p>
+          <p>@@ -164,7 +170,6 @@</p>
+          <p>}</p>
+          <p>++pos;</p>
+          <p>-    bool escape_next = false;</p>
+          <p>while (pos &lt; static_cast&lt;int&gt;(str.length()))</p>
+          <p>{</p>
+          <p>if (open_braces == 0)</p>
+          <p>=================</p>
+          <p>I have no time to set up env for compiling C::B by myself,</p>
+          <p>so this patch was NOT tested.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ohir 2012-08-06 10:40:36</div>
+        <div class="panel-body">
+          <p>&gt;&gt;&gt;&gt;&gt;&gt; is the prompt as set by C::B.</p>
+          <p>I do not know if this is another kind of bug.</p>
+          <p>but I can tell that for parsing cited output tokenizer has another bug: It tries to check for repeated chars,</p>
+          <p>while "in_quote" state. That is wrong for output:</p>
+          <p>"\"a\"", ' ' &lt;repeats 11 times&gt;, "b , c"</p>
+          <p>because phrase &lt;repeats 11 times&gt; is NOT within if(in_quote) scope. \"a\" is in_quote, then quote closes. "b , c" again is in</p>
+          <p>quote.</p>
+          <p>184:    if (in_quote)</p>
+          <p>{</p>
+          <p>if (!escape_next)</p>
+          <p>{</p>
+          <p>int newPos = DetectRepeatingSymbols(str, pos);</p>
+          <p>Tokenizer code itself is enough convulted to have more quirks like that. Can't tell for the rest.</p>
+          <p>Someone needs to test it, um, with debugger step by step with enough sample outputs to see where and how assumptions and presumptions bent the code to fail.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-08-06 04:54:22</div>
+        <div class="panel-body">
+          <p>Hi, I can confirm the bug under Windows + gcc + gdb.</p>
+          <p>But I see that gdb does not print the whole string buffer, somethings, it will print something like:</p>
+          <p>[debug]{s = 0x40b0d3 "\"a\"", ' ' &lt;repeats 11 times&gt;, "b , c"}&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:</p>
+          <p>Then, the gdb parser always stop after the "&gt;", I mean the "b , c" is not shown on the watches, this is another kind of bug, right?</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

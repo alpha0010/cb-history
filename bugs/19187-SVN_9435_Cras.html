@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 19187 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #19187 <small>2013-11-08 10:44:27</small></h3>
+          <h4>yamakuzure</h4>
+          <p class="lead">[SVN 9435] Crash without debug mode (iCCP, Gtk)</p>
+          <p>The current SVN revision 9435 crashes when I start C::B without options and wants to send a debug log. (Which has only modules information in it.)</p>
+          <p>SVN revision 9425 worked fine.</p>
+          <p>When starting with</p>
+          <p>codeblocks -d -v</p>
+          <p>it works and no longer crashes after</p>
+          <p>- A message on the console:</p>
+          <p>(codeblocks:10887): Gtk-WARNING **: gtk_widget_size_allocate(): attempt to allocate widget with width 18 and height -16</p>
+          <p>- A popup with the text</p>
+          <p>"iCCP: known incorrect sRGB profile"</p>
+          <p>-&gt; Details shows the same message 9 times.</p>
+          <p>After clicking "OK" on the popup I can work with C::B normally.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>Platform:Linux</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>jenslody</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">jenslody 2013-11-08 21:46:31</div>
+        <div class="panel-body">
+          <p>How did you compile C::B ?</p>
+          <p>I see the ICCP-messages only with C::B compiled with wx2.9+, and only if I start it from inside C::B</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">yamakuzure 2013-11-08 13:07:16</div>
+        <div class="panel-body">
+          <p>I wanted to attach the generated "codeblocks.xml", but this system doesn't seem to allow it. (Or I am too blind to see the button.)</p>
+          <p>After a couple of starts, project/workspace loading and closing, Codeblocks starts normally again.</p>
+          <p>So the Warnings mentioned above do not seem to be related to the crash I experienced, because those remain if started with -d and -v option.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">yamakuzure 2014-01-15 08:43:38</div>
+        <div class="panel-body">
+          <p>I am useing wxGTK-2.8.12.1 on gtk+-2.24.22.</p>
+          <p>The ICCP message eventually went away. Current version is SVN 9549 and the crash is now perfectly reproducable. Use Desktop-Icon: Crash. Start from console: No problem.</p>
+          <p>When I route the output to log files, the last lines of the log when crashing are:</p>
+          <p>========</p>
+          <p>ReopenEditor plugin activated</p>
+          <p>CppCheck plugin activated</p>
+          <p>Loading toolbar...</p>
+          <p>ClassBrowser::UpdateClassBrowserView(): No active project available.</p>
+          <p>Initializing plugins...</p>
+          <p>KeyBinder failed UpdateById on[922][Cu_t]</p>
+          <p>KeyBinder failed UpdateById on[921][_Copy]</p>
+          <p>KeyBinder failed UpdateById on[923][_Paste]</p>
+          <p>ClassBrowser::OnThreadEvent(): Updating class browser...</p>
+          <p>ClassBrowser::OnThreadEvent(): Class browser updated.</p>
+          <p>========</p>
+          <p>While the lines around that when I start C::B from a console are:</p>
+          <p>========</p>
+          <p>KeyBinder failed UpdateById on[922][Cu_t]</p>
+          <p>KeyBinder failed UpdateById on[921][_Copy]</p>
+          <p>KeyBinder failed UpdateById on[923][_Paste]</p>
+          <p>ClassBrowser::OnThreadEvent(): Updating class browser...</p>
+          <p>ClassBrowser::OnThreadEvent(): Class browser updated.</p>
+          <p>Loading workspace "/home/sed/pryde/PrydeWorX/pwxLib/pwxLib.workspace"</p>
+          <p>Loading project file...</p>
+          <p>Parsing project file...</p>
+          <p>========</p>
+          <p>So the last line in the log from the crashed instance is actually the last line possible before interactivity starts.</p>
+          <p>I do not know whether this helps, but I am using KDE-4.11.5 at the moment on a Gentoo linux 64bit system with kernel 3.12.7.</p>
+          <p>The desktop icon starter does not do anything funny but calling the codeblocks executable with enabled launch feedback. No dbus registration or any other options.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">yamakuzure 2014-01-20 09:36:20</div>
+        <div class="panel-body">
+          <p>I *think* I have solved it. The permissions on the desktop file were 744 (-rwxr--r--) with the group set to my private group. After I changed it to 755 (-rwxr-xr-x) the start via desktop icon no longer produced a crash. Tested about a dozen times.</p>
+          <p>So while this is more a topic for an FAQ, the question remains why C::B crashes if the group (or other) permission(s) of a desktop file starter haven't have the executable bit set. I have other desktop files with the executable bit set only for the user, and none of them has a problem.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ID_65312 2014-03-02 10:17:34</div>
+        <div class="panel-body">
+          <pre class="pre-scrollable">The Problem is still there in my C::B 13.12 (stable version).
+
+Every time I start codeblocks, it show me a "Debug report" dialog box (A debug report has been generated in the directory /tmp/codeblocks_dbgrpt-blabla).
+
+I tried download C::B 13.12 from official site (instead of apt-get from wheezy-backport), and also tried download the sorce of C::B 13.12 then compile it myself, delete ~/.codeblocks, and reinstall, the problem is still there.
+
+But if I start the codeblocks in terminal with -d option, everything seems OK.
+
+Interestingly, if now close codeblocks, start again with command "codeblocks", with some probability, the program may work again, the last message is
+	SmartIndentLua plugin activated
+	Loading toolbar...
+	Initializing plugins...
+	KeyBinder failed UpdateById on[1433][_Export Source...]
+	KeyBinder failed UpdateById on[1436][StrukTeX]
+	KeyBinder failed UpdateById on[1437][PNG]
+	KeyBinder failed UpdateById on[1435][PS]
+	KeyBinder failed UpdateById on[3288][_Export]
+	KeyBinder failed UpdateById on[923][Cu_t]
+	KeyBinder failed UpdateById on[922][_Copy]
+	KeyBinder failed UpdateById on[924][_Paste]
+or fail, and show
+	...
+	FileManager plugin activated
+	MouseSap plugin activated
+	wxSmith - Aui plugin activated
+	Added compiler "GNU GCC Compiler"
+	Segmentation fault
+or fail to start and generate a "debug report" as before
+	...
+	FileManager plugin activated
+	MouseSap plugin activated
+	wxSmith - Aui plugin activated
+	Added compiler "GNU GCC Compiler"
+	ClassBrowser::UpdateClassBrowserView(): No active project available.
+	ClassBrowser::OnThreadEvent(): Updating class browser...
+	ClassBrowser::OnThreadEvent(): Class browser updated.
+	Aborted
+
+I'm using Debian 7. One more interesting thing is that C::B can run without problem in my another computer which is also running Debian7....
+
+
+There warnings and error(s) when run in terminal:
+...
+SmartIndentLua: loaded
+
+(codeblocks:6206): GLib-GObject-WARNING **: instance of invalid non-instantiatable type `(null)'
+
+(codeblocks:6206): GLib-GObject-CRITICAL **: g_signal_emit_valist: assertion `G_TYPE_CHECK_INSTANCE (instance)' failed
+
+(codeblocks:6206): GLib-GObject-WARNING **: instance with invalid (NULL) class pointer
+
+(codeblocks:6206): GLib-GObject-CRITICAL **: g_signal_emit_valist: assertion `G_TYPE_CHECK_INSTANCE (instance)' failed
+
+(codeblocks:6206): GLib-GObject-WARNING **: instance of invalid non-instantiatable type `&lt;invalid&gt;'
+
+(codeblocks:6206): GLib-GObject-CRITICAL **: g_signal_emit_valist: assertion `G_TYPE_CHECK_INSTANCE (instance)' failed
+Library finder plugin activated
+...</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

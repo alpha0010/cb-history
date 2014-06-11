@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 11433 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #11433 <small>2007-06-22 07:51:05</small></h3>
+          <h4>rekisum</h4>
+          <p class="lead">symbols tab crash on file change</p>
+          <p>C::B crashes always on following:</p>
+          <p>-activate the symbols tab on the left</p>
+          <p>- select 'Current file's symbols'</p>
+          <p>- select to another file tab with the mouse</p>
+          <p>svn build  rev 4124 (2007-06-20 19:54:37)   gcc 3.4.5 Windows/unicode</p>
+          <p>used under WinXP</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2007-07-02 17:25:58</dd>
+            <dt>Assigned to</dt><dd>mandrav</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">dermeister 2007-06-22 18:15:19</div>
+        <div class="panel-body">
+          <p>I can't reproduce this here with revision 4153 on Linux (gcc 4.1.2, wxGTK 2.6.3).</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2007-06-23 15:19:34</div>
+        <div class="panel-body">
+          <pre class="pre-scrollable">It crashes. I'm attaching the crash report. Rev 4160, WinXP-SP2.
+
+Program received signal SIGSEGV, Segmentation fault.
+[Switching to thread 6036.0x174c]
+0x6cde42ec in wxTreeCtrl::GetItemParam ()
+   from F:\cbsource\src\devel\wxmsw28u_gcc_cb.dll
+(gdb) bt full
+#0  0x6cde42ec in wxTreeCtrl::GetItemParam ()
+   from F:\cbsource\src\devel\wxmsw28u_gcc_cb.dll
+No symbol table info available.
+#1  0x6cde44d8 in wxTreeCtrl::GetItemData ()
+   from F:\cbsource\src\devel\wxmsw28u_gcc_cb.dll
+No symbol table info available.
+#2  0x6ce8b18d in wxTreeEvent::wxTreeEvent ()
+   from F:\cbsource\src\devel\wxmsw28u_gcc_cb.dll
+No symbol table info available.
+#3  0x6cde62d6 in wxTreeCtrl::DoExpand ()
+   from F:\cbsource\src\devel\wxmsw28u_gcc_cb.dll
+No symbol table info available.
+#4  0x6cde6601 in wxTreeCtrl::CollapseAndReset ()
+   from F:\cbsource\src\devel\wxmsw28u_gcc_cb.dll
+No symbol table info available.
+#5  0x65ea0a61 in ClassBrowserBuilderThread::CollapseItem (this=0x4583748,
+    item={m_pItem = 0xffff0000})
+    at F:/cbsource/src/plugins/codecompletion/classbrowserbuilderthread.cpp:620
+        lock = {m_isOk = true, m_mutex = @0x45837ac}
+#6  0x65e9e749 in ClassBrowserBuilderThread::RemoveInvalidNodes (
+    this=0x4583748, tree=0x4595c88, parent={m_pItem = 0xffff0000})
+    at F:/cbsource/src/plugins/codecompletion/classbrowserbuilderthread.cpp:249
+        parent = {m_pItem = 0xffff0000}
+        isLastChild = true
+        data = (CBTreeData *) 0x8d90cc8
+        existing = {m_pItem = 0x2c5818}
+#7  0x65e9e487 in ClassBrowserBuilderThread::BuildTree (this=0x4583748)
+    at F:/cbsource/src/plugins/codecompletion/classbrowserbuilderthread.cpp:189
+        root = {m_pItem = 0x28d130}
+#8  0x65e9dfbf in ClassBrowserBuilderThread::Entry (this=0x4583748)
+    at F:/cbsource/src/plugins/codecompletion/classbrowserbuilderthread.cpp:107
+No locals.
+#9  0x6ccff82b in wxThreadInternal::DoThreadStart ()
+   from F:\cbsource\src\devel\wxmsw28u_gcc_cb.dll
+No symbol table info available.
+#10 0x6ccff93d in wxThreadInternal::WinThreadStart ()
+   from F:\cbsource\src\devel\wxmsw28u_gcc_cb.dll
+No symbol table info available.
+#11 0x77c3a3b0 in msvcrt!_endthreadex () from C:\WINDOWS\system32\msvcrt.dll
+No symbol table info available.
+#12 0x04583748 in ?? ()
+No symbol table info available.
+#13 0x00000002 in ?? ()
+No symbol table info available.
+#14 0x00ffffff in ?? ()
+No symbol table info available.
+#15 0x045837c8 in ?? ()
+No symbol table info available.
+#16 0x00000000 in ?? ()
+No symbol table info available.
+(gdb)
+#0  0x6cde42ec in wxTreeCtrl::GetItemParam ()
+   from F:\cbsource\src\devel\wxmsw28u_gcc_cb.dll
+No symbol table info available.
+#1  0x6cde44d8 in wxTreeCtrl::GetItemData ()
+   from F:\cbsource\src\devel\wxmsw28u_gcc_cb.dll
+No symbol table info available.
+#2  0x6ce8b18d in wxTreeEvent::wxTreeEvent ()
+   from F:\cbsource\src\devel\wxmsw28u_gcc_cb.dll
+No symbol table info available.
+#3  0x6cde62d6 in wxTreeCtrl::DoExpand ()
+   from F:\cbsource\src\devel\wxmsw28u_gcc_cb.dll
+No symbol table info available.
+#4  0x6cde6601 in wxTreeCtrl::CollapseAndReset ()
+   from F:\cbsource\src\devel\wxmsw28u_gcc_cb.dll
+No symbol table info available.
+#5  0x65ea0a61 in ClassBrowserBuilderThread::CollapseItem (this=0x4583748,
+    item={m_pItem = 0xffff0000})
+    at F:/cbsource/src/plugins/codecompletion/classbrowserbuilderthread.cpp:620
+        lock = {m_isOk = true, m_mutex = @0x45837ac}
+#6  0x65e9e749 in ClassBrowserBuilderThread::RemoveInvalidNodes (
+    this=0x4583748, tree=0x4595c88, parent={m_pItem = 0xffff0000})
+    at F:/cbsource/src/plugins/codecompletion/classbrowserbuilderthread.cpp:249
+        parent = {m_pItem = 0xffff0000}
+        isLastChild = true
+        data = (CBTreeData *) 0x8d90cc8
+        existing = {m_pItem = 0x2c5818}
+#7  0x65e9e487 in ClassBrowserBuilderThread::BuildTree (this=0x4583748)
+    at F:/cbsource/src/plugins/codecompletion/classbrowserbuilderthread.cpp:189
+        root = {m_pItem = 0x28d130}
+#8  0x65e9dfbf in ClassBrowserBuilderThread::Entry (this=0x4583748)
+    at F:/cbsource/src/plugins/codecompletion/classbrowserbuilderthread.cpp:107
+No locals.
+#9  0x6ccff82b in wxThreadInternal::DoThreadStart ()
+   from F:\cbsource\src\devel\wxmsw28u_gcc_cb.dll
+No symbol table info available.
+#10 0x6ccff93d in wxThreadInternal::WinThreadStart ()
+   from F:\cbsource\src\devel\wxmsw28u_gcc_cb.dll
+No symbol table info available.
+#11 0x77c3a3b0 in msvcrt!_endthreadex () from C:\WINDOWS\system32\msvcrt.dll
+No symbol table info available.
+#12 0x04583748 in ?? ()
+No symbol table info available.
+#13 0x00000002 in ?? ()
+No symbol table info available.
+#14 0x00ffffff in ?? ()
+No symbol table info available.
+#15 0x045837c8 in ?? ()
+No symbol table info available.
+#16 0x00000000 in ?? ()
+No symbol table info available.</pre>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">rickg22 2007-06-25 14:10:25</div>
+        <div class="panel-body">
+          <p>Code completion has experienced some changes, we're at revision 4168 now. Can anyone reproduce this bug?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">rickg22 2007-06-26 22:50:05</div>
+        <div class="panel-body">
+          <p>Does it crash with revision 4185? There were some changes in code completion (again).</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">rekisum 2007-06-27 09:00:09</div>
+        <div class="panel-body">
+          <p>Yes it does still crash with svn 4185.</p>
+          <p>(svn build rev 4185 (2007-06-26 14:15:11) gcc 3.4.5 Windows/unicode)</p>
+          <p>WinXP SP2</p>
+          <p>Unhandled exception at 0x00000000 in codeblocks.exe: 0xC0000005: Access violation reading location 0x00000028.</p>
+          <p>On my installation the VisualC debugger is popping up. But gives me no further information.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2007-06-27 19:42:46</div>
+        <div class="panel-body">
+          <p>Can't reproduce here, too (Windows, r4186, wx26). :-(</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pauliusz 2007-06-25 22:30:35</div>
+        <div class="panel-body">
+          <p>Works fine for me...</p>
+          <p>Rev: 4177</p>
+          <p>OS: Win XP SP2</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2007-06-28 09:31:15</div>
+        <div class="panel-body">
+          <p>Can't reproduce this on Linux.</p>
+          <p>Will check on Windows today.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">yesno 2007-06-28 15:08:25</div>
+        <div class="panel-body">
+          <p>The crash also occurs if you have selected the view "Active project's symbols" and selected a file, where none of the shown symbols is in, and switch back to "Current file's symbols".</p>
+          <p>Having "Show inherited members" on and selecting Base/Derived class of the one in the current file does the same after changing the view.</p>
+          <p>(WinXP, CB_20070627_rev4190_win32)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">rickg22 2007-06-29 02:14:48</div>
+        <div class="panel-body">
+          <p>Patch #2084 fixes this bug. At least on my machine...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2007-06-29 04:06:27</div>
+        <div class="panel-body">
+          <p>Oops!! There was a typo in my last comment. It should be Patch #2084.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">rickg22 2007-06-28 18:12:05</div>
+        <div class="panel-body">
+          <p>Is anybody actually working on this bug? If not, assign it to me, I think I have an idea of how to fix it...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2007-06-29 03:53:25</div>
+        <div class="panel-body">
+          <p>Patch #2048 fixes this. I've tested it. :-)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2007-07-02 17:25:58</div>
+        <div class="panel-body">
+          <p>This bug is now fixed in HEAD.</p>
+          <p>Thank you for reporting it.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

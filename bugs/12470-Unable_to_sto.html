@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 12470 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #12470 <small>2007-11-18 16:58:51</small></h3>
+          <h4>tpetrov</h4>
+          <p class="lead">Unable to stop the debug process! message box</p>
+          <p>When I try to debug any project I get a message box: "Unable to stop the debug process!" and I have to kill gdb and the debugged app to stop it.</p>
+          <p>If I set a break point before hitting F8 it stops on it, but if I hit F8 it can't be stopped from Code::Blocks.</p>
+          <p>After little investigation of the problem I found that:</p>
+          <p>void DebuggerDriver::SetChildPID(long pid) is never called on linux (don't know about windows, there it might work).</p>
+          <p>And here is the debug log of the debugger:</p>
+          <p>LD_LIBRARY_PATH=.:~/projects/codeblocks/trunk/src/devel</p>
+          <p>Command-line: /usr/bin/gdb -nx -fullname  -quiet -args ./cmd_purple</p>
+          <p>Working dir : /home/obfuscated/projects/cmd_purple/</p>
+          <p>&gt; set prompt &gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:</p>
+          <p>Executing: xterm -e sleep 110143</p>
+          <p>[?1034hUsing host libthread_db library "/lib/libthread_db.so.1".</p>
+          <p>(gdb) &gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:</p>
+          <p>&gt; show version</p>
+          <p>GNU gdb 6.6</p>
+          <p>Copyright (C) 2006 Free Software Foundation, Inc.</p>
+          <p>GDB is free software, covered by the GNU General Public License, and you are</p>
+          <p>welcome to change it and/or distribute copies of it under certain conditions.</p>
+          <p>Type "show copying" to see the conditions.</p>
+          <p>There is absolutely no warranty for GDB.  Type "show warranty" for details.</p>
+          <p>This GDB was configured as "x86_64-pc-linux-gnu".</p>
+          <p>&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:</p>
+          <p>&gt; set confirm off</p>
+          <p>&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:</p>
+          <p>&gt; set width 0</p>
+          <p>&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:</p>
+          <p>&gt; set height 0</p>
+          <p>&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:</p>
+          <p>&gt; set breakpoint pending on</p>
+          <p>&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:</p>
+          <p>&gt; set print asm-demangle on</p>
+          <p>&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:</p>
+          <p>&gt; set unwindonsignal on</p>
+          <p>&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:</p>
+          <p>&gt; set disassembly-flavor intel</p>
+          <p>&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:</p>
+          <p>&gt; directory /home/obfuscated/projects/cmd_purple/</p>
+          <p>&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:</p>
+          <p>Executing: ps x -o tty,pid,command</p>
+          <p>PS result: pts/2    30197 ps x -o tty,pid,command</p>
+          <p>PS result: pts/3    30195 sleep 110143</p>
+          <p>TTY is[/dev/pts/3]</p>
+          <p>GetConsoleTTY[/dev/pts/3]ConsolePid[30193]</p>
+          <p>&gt; tty /dev/pts/3</p>
+          <p>Queued:[tty /dev/pts/3]</p>
+          <p>&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:</p>
+          <p>&gt; run</p>
+          <p>[Thread debugging using libthread_db enabled]</p>
+          <p>[New Thread 47851103670336 (LWP 30198)]</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Debugger</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2008-01-10 11:27:00</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2007-11-18 17:01:24</div>
+        <div class="panel-body">
+          <p>OS is gentoo linux 64bit, wxWidgets 2.8.6, gcc 4.1.2 c::b rev 4640</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2008-01-10 11:27:00</div>
+        <div class="panel-body">
+          <p>This bug is now fixed in HEAD.</p>
+          <p>Thank you for reporting it.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

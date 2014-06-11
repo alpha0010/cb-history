@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 12193 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #12193 <small>2007-10-17 08:47:19</small></h3>
+          <h4>christobal</h4>
+          <p class="lead">Code::Blocks ${TARGET_*} Macros empty after project change</p>
+          <p>After changing from one workspace project to another, the Code::Blocks ${TARGET_*}  Macros (like ${TARGET_OUTPUT_DIR}) are empty.</p>
+          <p>They keep being empty even if the build target is switched to another one.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Error</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2007-11-15 12:37:50</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mariocupelli 2007-10-20 22:39:57</div>
+        <div class="panel-body">
+          <p>See bug #011665 for details.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pauliusz 2007-11-08 01:41:11</div>
+        <div class="panel-body">
+          <p>If you are still having problems then try Patch #2234</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">christobal 2007-11-08 10:42:35</div>
+        <div class="panel-body">
+          <p>Unfortunatly, this didn't solve the problem.</p>
+          <p>(win32 CB Revision 4600 + patch #2234)</p>
+          <p>The Build process results now in the correct output files, but the macros can still be "messed up".</p>
+          <p>Maybe you can reproduce it with a little example:</p>
+          <p>- Create 2 projects (let's say P1 and P2)</p>
+          <p>- define for each project 2 build targets ("release" and "debug")</p>
+          <p>- make P1 "release" target active</p>
+          <p>- make P2 "debug" target active</p>
+          <p>- save workspace and reopen code::blocks</p>
+          <p>-&gt; now P2 is active and the "Build Target ComboBox" says "debug";</p>
+          <p>${TARGET_NAME} is "debug" as well.</p>
+          <p>- activate project P1</p>
+          <p>-&gt; the ComboBox still says "debug" but  ${TARGET_NAME} is "result"</p>
+          <p>- this could be solved by selecting in the ComboBox -&gt; "result" and then "debug" again, but we don't do this ;-)</p>
+          <p>- instead, we select in the ComboBox "debug" again</p>
+          <p>-&gt; Now the ${TARGET_NAME} is locked to "result" and won't change,</p>
+          <p>no matter how often we try to switch project and targets</p>
+          <p>-&gt; We have to restart Code::Blocks to unlock ${TARGET_NAME}</p>
+          <p>I gues that this behaviour is the same for all ${TARGET_*} macros, but I tested just ${TARGET_NAME} and ${TARGET_OUTPUT_FILE}</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pauliusz 2007-11-11 23:50:48</div>
+        <div class="panel-body">
+          <p>Unfortunately I was not able to reproduce this problem... Maybe I am doing something wrong... Can you send me this workspace with two projects to pauliusz(at)yahoo.com</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pauliusz 2007-11-13 02:35:08</div>
+        <div class="panel-body">
+          <p>Thanks christobal for good reports. Looks like I have fixed this bug completely. Would be very nice if you could test updated patch once more.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">christobal 2007-11-13 09:23:20</div>
+        <div class="panel-body">
+          <p>I can agree.</p>
+          <p>Patch #2234 works fine on</p>
+          <p>Win32 Code::Blocks (svn build 4600)</p>
+          <p>Thanks for fixing :-).</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2007-11-15 12:37:50</div>
+        <div class="panel-body">
+          <p>This bug is now fixed in HEAD.</p>
+          <p>Thank you for reporting it.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

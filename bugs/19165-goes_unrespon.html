@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 19165 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #19165 <small>2013-10-22 17:06:11</small></h3>
+          <h4>jeffreyohill</h4>
+          <p class="lead">goes unresponsive during custom mf build</p>
+          <pre class="pre-scrollable">Hi,
+
+I have been using C::B on Linux for awhile. I tried it on windows but it frequently becomes 100% unresponsive if I start a build based on our of custom mingw32-make Makefile based build system. For now I must give up on C::B on windows although I really like it on Linux. This may have something to do with interactions with mingw msys, I don't know for certain.
+
+Release 12.11  rev 8629 (2012/11/28 11:40:31)   gcc 4.7.1 Windows/unicode - 32 bit
+
+I am running 64 bit windows.
+
+I did fire up MSVC++ so that I could give you some stack traces on the hung up C::B process.
+
+****main****
+&gt;	ntdll.dll!_NtDelayExecution@8()  + 0x15 bytes	
+ 	ntdll.dll!_NtDelayExecution@8()  + 0x15 bytes	
+ 	KernelBase.dll!_Sleep@4()  + 0xf bytes	
+ 	wxmsw28u_gcc_cb.dll!6ccbdf62() 	
+ 	[Frames below may be incorrect and/or missing, no symbols loaded for wxmsw28u_gcc_cb.dll]	
+ 	wxmsw28u_gcc_cb.dll!6ccc2245() 	
+ 	codecompletion.dll!65ec64d5() 	
+ 	codecompletion.dll!65ec70e4() 	
+ 	codecompletion.dll!65ec8614() 	
+ 	codecompletion.dll!65ec895a() 	
+ 	codecompletion.dll!65eeea5b() 	
+ 	codecompletion.dll!65e9a63a() 	
+ 	user32.dll!_NtUserSetTimer@16()  + 0x15 bytes	
+ 	wxmsw28u_gcc_cb.dll!6ccfa7f1() 	
+ 	byogames.dll!6e14d083() 	
+ 	wxmsw28u_gcc_cb.dll!6cc41242() 	
+ 	wxmsw28u_gcc_cb.dll!6ccc04d6() 	
+ 	wxmsw28u_gcc_cb.dll!6ccc0614() 	
+ 	wxmsw28u_gcc_cb.dll!6ccc09f5() 	
+ 	wxmsw28u_gcc_cb.dll!6cdb6062() 	
+ 	wxmsw28u_gcc_cb.dll!6ccfa5de() 	
+ 	user32.dll!_InternalCallWinProc@20()  + 0x23 bytes	
+ 	user32.dll!_UserCallWinProcCheckWow@32()  + 0xb7 bytes	
+ 	user32.dll!_DispatchMessageWorker@8()  + 0xed bytes	
+ 	user32.dll!_DispatchMessageW@4()  + 0xf bytes	
+ 	user32.dll!_IsDialogMessageW@8()  + 0x11e bytes	
+ 	wxmsw28u_gcc_cb.dll!6cce9c84() 	
+ 	wxmsw28u_gcc_cb.dll!6cce989c() 	
+ 	wxmsw28u_gcc_cb.dll!6cce9a48() 	
+ 	user32.dll!_NtUserPeekMessage@20()  + 0x15 bytes	
+ 	user32.dll!__PeekMessage@24()  + 0x2d bytes	
+
+****worker thread****
+&gt;	ntdll.dll!_NtWaitForSingleObject@12()  + 0x15 bytes	
+ 	ntdll.dll!_NtWaitForSingleObject@12()  + 0x15 bytes	
+ 	codeblocks.dll!61b6f829() 	
+ 	[Frames below may be incorrect and/or missing, no symbols loaded for codeblocks.dll]	
+ 	codeblocks.dll!61b9f7bf() 	
+ 	wxmsw28u_gcc_cb.dll!6ccba5e0() 	
+ 	msvcrt.dll!_free()  + 0x39 bytes	
+ 	msvcrt.dll!__getptd_noexit()  + 0x29 bytes	
+ 	msvcrt.dll!__endthreadex()  - 0x35 bytes	
+ 	msvcrt.dll!__endthreadex()  + 0x6c bytes	
+ 	kernel32.dll!@BaseThreadInitThunk@12()  + 0x12 bytes	
+ 	ntdll.dll!___RtlUserThreadStart@8()  + 0x27 bytes	
+ 	ntdll.dll!__RtlUserThreadStart@8()  + 0x1b bytes	
+
+
+****Worker Thread****
+&gt;	ntdll.dll!_NtWaitForSingleObject@12()  + 0x15 bytes	
+ 	ntdll.dll!_NtWaitForSingleObject@12()  + 0x15 bytes	
+ 	kernel32.dll!_WaitForSingleObjectExImplementation@12()  + 0x43 bytes	
+ 	kernel32.dll!_WaitForSingleObject@8()  + 0x12 bytes	
+ 	wxmsw28u_gcc_cb.dll!6ccb8879() 	
+ 	[Frames below may be incorrect and/or missing, no symbols loaded for wxmsw28u_gcc_cb.dll]	
+ 	wxmsw28u_gcc_cb.dll!6ccba079() 	
+ 	codeblocks.dll!61b9f7bf() 	
+ 	wxmsw28u_gcc_cb.dll!6ccba5e0() 	
+ 	msvcrt.dll!_free()  + 0x39 bytes	
+ 	msvcrt.dll!__getptd_noexit()  + 0x29 bytes	
+ 	msvcrt.dll!__endthreadex()  - 0x35 bytes	
+ 	msvcrt.dll!__endthreadex()  + 0x6c bytes	
+ 	kernel32.dll!@BaseThreadInitThunk@12()  + 0x12 bytes	
+ 	ntdll.dll!___RtlUserThreadStart@8()  + 0x27 bytes	
+ 	ntdll.dll!__RtlUserThreadStart@8()  + 0x1b bytes	
+
+
+****Worker Thread (several of this type)****
+&gt;	ntdll.dll!_NtWaitForSingleObject@12()  + 0x15 bytes	
+ 	ntdll.dll!_NtWaitForSingleObject@12()  + 0x15 bytes	
+ 	kernel32.dll!_WaitForSingleObjectExImplementation@12()  + 0x43 bytes	
+ 	kernel32.dll!_WaitForSingleObject@8()  + 0x12 bytes	
+ 	wxmsw28u_gcc_cb.dll!6ccb8879() 	
+ 	[Frames below may be incorrect and/or missing, no symbols loaded for wxmsw28u_gcc_cb.dll]	
+ 	wxmsw28u_gcc_cb.dll!6ccba079() 	
+ 	codeblocks.dll!61b9f7bf() 	
+ 	wxmsw28u_gcc_cb.dll!6ccba5e0() 	
+ 	msvcrt.dll!_free()  + 0x39 bytes	
+ 	msvcrt.dll!__getptd_noexit()  + 0x29 bytes	
+ 	msvcrt.dll!__endthreadex()  - 0x35 bytes	
+ 	msvcrt.dll!__endthreadex()  + 0x6c bytes	
+ 	kernel32.dll!@BaseThreadInitThunk@12()  + 0x12 bytes	
+ 	ntdll.dll!___RtlUserThreadStart@8()  + 0x27 bytes	
+ 	ntdll.dll!__RtlUserThreadStart@8()  + 0x1b bytes	
+
+****Worker Thread****
+&gt;	user32.dll!_NtUserMessageCall@28()  + 0x15 bytes	
+ 	user32.dll!_NtUserMessageCall@28()  + 0x15 bytes	
+ 	user32.dll!@HMValidateHandle@8()  + 0xb1ac bytes	
+ 	kernel32.dll!@BaseThreadInitThunk@12()  + 0x12 bytes	
+ 	000001f8()	
+
+****Worker Thread****
+&gt;	user32.dll!_NtUserGetMessage@16()  + 0x15 bytes	
+ 	user32.dll!_NtUserGetMessage@16()  + 0x15 bytes	
+ 	shell32.dll!MessagePumpThreadProc()  + 0x25 bytes	
+ 	shlwapi.dll!WrapperThreadProc()  + 0xd3 bytes	
+ 	kernel32.dll!@BaseThreadInitThunk@12()  + 0x12 bytes	
+ 	ntdll.dll!___RtlUserThreadStart@8()  + 0x27 bytes	
+ 	ntdll.dll!__RtlUserThreadStart@8()  + 0x1b bytes	
+
+****Worker Thread****
+&gt;	ntdll.dll!_ZwWaitForWorkViaWorkerFactory@8()  + 0x12 bytes	
+ 	ntdll.dll!_ZwWaitForWorkViaWorkerFactory@8()  + 0x12 bytes	
+ 	kernel32.dll!@BaseThreadInitThunk@12()  + 0x12 bytes	
+ 	ntdll.dll!___RtlUserThreadStart@8()  + 0x27 bytes	
+ 	ntdll.dll!__RtlUserThreadStart@8()  + 0x1b bytes	
+
+****Worker Thread****
+&gt;	ntdll.dll!_NtWaitForSingleObject@12()  + 0x15 bytes	
+ 	ntdll.dll!_NtWaitForSingleObject@12()  + 0x15 bytes	
+ 	kernel32.dll!_WaitForSingleObject@8()  + 0x12 bytes	
+ 	kernel32.dll!_WaitForSingleObjectExImplementation@12()  + 0x43 bytes	
+ 	kernel32.dll!_WaitForSingleObject@8()  + 0x12 bytes	
+ 	wxmsw28u_gcc_cb.dll!6ccb8879() 	
+ 	[Frames below may be incorrect and/or missing, no symbols loaded for wxmsw28u_gcc_cb.dll]	
+ 	ntdll.dll!_NtReleaseMutant@8()  + 0x15 bytes	
+ 	KernelBase.dll!_ReleaseMutex@4()  + 0x10 bytes	
+
+****Worker Thread****
+&gt;	user32.dll!_NtUserMessageCall@28()  + 0x15 bytes	
+ 	user32.dll!_NtUserMessageCall@28()  + 0x15 bytes	
+ 	user32.dll!@HMValidateHandle@8()  + 0xb1ac bytes	
+ 	kernel32.dll!@BaseThreadInitThunk@12()  + 0x12 bytes	
+ 	ntdll.dll!___RtlUserThreadStart@8()  + 0x27 bytes	
+ 	ntdll.dll!__RtlUserThreadStart@8()  + 0x1b bytes	
+
+****Worker Thread****
+&gt;	ntdll.dll!_ZwWaitForWorkViaWorkerFactory@8()  + 0x12 bytes	
+ 	ntdll.dll!_ZwWaitForWorkViaWorkerFactory@8()  + 0x12 bytes	
+ 	kernel32.dll!@BaseThreadInitThunk@12()  + 0x12 bytes	
+ 	ntdll.dll!___RtlUserThreadStart@8()  + 0x27 bytes	
+ 	ntdll.dll!__RtlUserThreadStart@8()  + 0x1b bytes	
+
+
+
+
+
+</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>Platform:Windows</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">jeffreyohill 2013-10-22 17:14:16</div>
+        <div class="panel-body">
+          <p>PS: I have been running C::B with a startup script something like as follows (simplified version)</p>
+          <p>rem ## mingw</p>
+          <p>set path=c:\MinGW\bin;%path%</p>
+          <p>set path=C:\MinGW\msys\1.0\bin;%path%</p>
+          <p>rem ## add PERL to the path</p>
+          <p>set path=C:\Perl64\bin;%path%</p>
+          <p>"C:\Program Files (x86)\CodeBlocks\codeblocks.exe"</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

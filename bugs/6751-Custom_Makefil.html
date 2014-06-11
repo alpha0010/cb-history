@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 6751 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #6751 <small>2006-03-11 14:47:37</small></h3>
+          <h4>yop</h4>
+          <p class="lead">Custom Makefiles are not used when building a workspace</p>
+          <p>Version 1.0 revision 2170 (gcc 3.3.5 Linux/unicode, build: Mar 10 2006 21:44:14)</p>
+          <p>Open up a workspace that contains of projects with custom makefiles.</p>
+          <p>Set all the projects to build using a custom makefile.</p>
+          <p>Build-&gt;Build, everything works as expected, the custom Makefile is used.</p>
+          <p>Build-&gt;Build Workspace, the custom Makefiles are not used, the queued commands scenario starts.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Compiler</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2006-09-08 11:16:32</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">ID_24639 2006-03-13 18:42:13</div>
+        <div class="panel-body">
+          <p>I can't confirm........ I have Version 1.0 revision 2189 (gcc 3.4.4 Windows/unicode, build: Mar 13 2006 13:22:41).</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">yop 2006-03-13 22:32:58</div>
+        <div class="panel-body">
+          <p>This is the output I'm getting...</p>
+          <p>make: Nothing to be done for `addressbook'.</p>
+          <p>-------------- Build: addressbook in qtcb ---------------</p>
+          <p>g++  -I- -I. -I/usr/include  -c addressbook/centralwidget.cpp -o addressbook/objs/addressbook/centralwidget.o</p>
+          <p>addressbook/centralwidget.cpp:11:27: centralwidget.h: No such file or directory</p>
+          <p>...tons of errors...</p>
+          <p>See the make: Nothing to be done? This means that the Makefile was used but then (?) the queued commands started. This project had two targets, maybe that has something to do with it. Beacause you can't reproduce I investigated a little further and I tried with a single target project. It kept giving me ...doesn't have a target named "default"... so I changed the make commands (removed the $target) and got it to build (the only target of the project is named "default" in C::B as all the newlly created targets are, but target default isn't there in the Makefile). This seems like the expected behaviour. I then added another project and I got "...doesn't have a target named "default"..." all over again though the second project doesn't have any target named default (the target names in the Makefile match the ones in C::B). I should note that for both projects the plain Build using Makefiles works out of the box.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">yop 2006-03-13 22:34:17</div>
+        <div class="panel-body">
+          <p>Version 1.0 revision 2189 (gcc 3.3.5 Linux/unicode, build: Mar 13 2006 22:26:38)</p>
+          <p>Got carried away and forgot to mention my setup</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ID_24639 2006-03-14 00:15:59</div>
+        <div class="panel-body">
+          <p>Ok. Umm could you PM me the makefile? I'm not so good at writing them. :P Sorry for the late response. I didn't get an e-mail.  :(</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ID_24639 2006-03-14 00:49:41</div>
+        <div class="panel-body">
+          <p>I can confirm now. :) Now to figure out why it doesn't work......</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2006-09-08 11:16:32</div>
+        <div class="panel-body">
+          <p>The build system has changed since this bug was opened.</p>
+          <p>Closing it now because it doesn't apply anymore.</p>
+          <p>If you find other related bugs in the current build system, please open a new bug report.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

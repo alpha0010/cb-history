@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 17286 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #17286 <small>2010-06-21 07:16:14</small></h3>
+          <h4>argentwolf</h4>
+          <p class="lead">perhaps big-array's worry</p>
+          <p>CB in my computer use MinGW.</p>
+          <p>In my code,I want print a matrix as follow:</p>
+          <p>1   3   4 10</p>
+          <p>2   5   9 11</p>
+          <p>6   8 12 15</p>
+          <p>7 13 14 16</p>
+          <p>when the length of side growth to 34 or longer,the binary will print as</p>
+          <p>1 2 ...</p>
+          <p>3 ...</p>
+          <p>...</p>
+          <p>when i use TC compiled it,the binary is right.</p>
+          <p>I tried to use MinGW in command mode to compile my code,result also worry.</p>
+          <p>I don't know why...</p>
+          <p>My code:</p>
+          <p>#include &lt;stdio.h&gt;</p>
+          <p>#include&lt;conio.h&gt;</p>
+          <p>#define N 34</p>
+          <p>int main(void)</p>
+          <p>{</p>
+          <p>int a[N][N],i=0,j=0,count,*p=*a;</p>
+          <p>for(count=0; count&lt;N*N; count++,p++) *p=0;</p>
+          <p>for(i=0,j=0,count=0; count&lt;N*N; count++)</p>
+          <p>{</p>
+          <p>a[i][j]=count+1;</p>
+          <p>if(((i+1==N||j-1&lt;0)||(a[i+1][j-1]!=0))&amp;&amp;((i-1&gt;=0&amp;&amp;j+1&lt;N)&amp;&amp;a[i-1][j+1]==0)) i--,j++;</p>
+          <p>else if(((i-1&lt;0&amp;&amp;j+1&lt;N)||a[i-1][j+1]!=0)&amp;&amp;((i+1&lt;N&amp;&amp;j-1&gt;=0)&amp;&amp;a[i+1][j-1]==0)) i++,j--;</p>
+          <p>else if((j-1&lt;0&amp;&amp;i+1!=N&amp;&amp;a[i-1][j+1]!=0)||(j+1==N&amp;&amp;a[i+1][j-1]!=0)) i++;</p>
+          <p>else if((i-1&lt;0||a[i+1][j-1]!=0)||(i+1==N&amp;&amp;a[i-1][j+1]!=0)) j++;</p>
+          <p>}</p>
+          <p>for(i=0; i&lt;N; i++)</p>
+          <p>{</p>
+          <p>for(j=0; j&lt;N; j++) printf("%4d",a[i][j]);</p>
+          <p>printf("\n");</p>
+          <p>}</p>
+          <p>getch();</p>
+          <p>return 0;</p>
+          <p>}</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Compiler</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2010-08-24 22:42:17</dd>
+            <dt>Assigned to</dt><dd>jenslody</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">ID_54638 2010-07-08 16:51:21</div>
+        <div class="panel-body">
+          <p>That sounds like a compiler-specific bug, or a bug in your code (I have not tested which is problematic); however neither of those are of concern to Code::Blocks. Code::Blocks is just an IDE, not a compiler: if you are sure that this is a bug in MinGW please report it to them, not us.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">jenslody 2010-08-24 22:42:17</div>
+        <div class="panel-body">
+          <p>Not a C::B issue.</p>
+          <p>Either code or compiler related.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

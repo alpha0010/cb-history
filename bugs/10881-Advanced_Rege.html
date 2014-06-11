@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 10881 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #10881 <small>2007-04-13 22:23:24</small></h3>
+          <h4>ondra_holub</h4>
+          <p class="lead">Advanced Regexes not available on some versions of wx lib</p>
+          <p>In revision 3853, file src/sdk/editormanager.cpp, method EditorManager::Replace are used advanced regular expressions - flag wxRE_ADVANCED. However this flag is available in wxWidgets library only when builtin regexes are used (configure --with-regex=bultin). Otherwise it is not compilable.</p>
+          <p>I think that either requrement to have wxWidgets library with builtin regex support should be added somewhere or the whole feature with advanced regexes should be #ifdef'ed  with wxHAS_REGEX_ADVANCED.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::WrongBehaviour</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2007-06-08 09:48:06</dd>
+            <dt>Assigned to</dt><dd>biplab</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">pauliusz 2007-04-14 11:27:50</div>
+        <div class="panel-body">
+          <p>You can turn this feature off in Settings-&gt;Editor...-&gt;General settings-&gt;Other options-&gt;Use Advanced RegEx searches</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ondra_holub 2007-04-14 18:40:33</div>
+        <div class="panel-body">
+          <p>Yes, it can be turned off in settings in compiled application. But non-existence of wxRE_ADVANCED causes compilation error.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pauliusz 2007-04-15 10:09:29</div>
+        <div class="panel-body">
+          <p>I don't see why it shouldn't compile...</p>
+          <p>In wx/regex.h:</p>
+          <p>#ifdef wxHAS_REGEX_ADVANCED</p>
+          <p>wxRE_ADVANCED = 1,</p>
+          <p>#endif</p>
+          <p>and this file includes wx/features.h:</p>
+          <p>#ifndef WX_NO_REGEX_ADVANCED</p>
+          <p>#define wxHAS_REGEX_ADVANCED</p>
+          <p>#else</p>
+          <p>#undef wxHAS_REGEX_ADVANCED</p>
+          <p>#endif</p>
+          <p>Since CB is compiled without WX_NO_REGEX_ADVANCED there will be no errors unless someone specifies this manually... I think very unlikely to happen...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pauliusz 2007-04-15 11:05:32</div>
+        <div class="panel-body">
+          <p>OK, I am taking my last words back :)</p>
+          <p>I am working on the patch...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">stahta01 2007-04-15 11:28:33</div>
+        <div class="panel-body">
+          <p>Possible Quick Fix</p>
+          <p>Index: src/sdk/editormanager.cpp</p>
+          <p>===================================================================</p>
+          <p>--- src/sdk/editormanager.cpp	(revision 3858)</p>
+          <p>+++ src/sdk/editormanager.cpp	(working copy)</p>
+          <p>@@ -64,6 +64,9 @@</p>
+          <p>#include "wx/wxFlatNotebook/wxFlatNotebook.h"</p>
+          <p>+#ifndef wxHAS_REGEX_ADVANCED</p>
+          <p>+    #define wxRE_ADVANCED wxRE_EXTENDED</p>
+          <p>+#endif</p>
+          <p>namespace compatibility { typedef TernaryCondTypedef&lt;wxMinimumVersion&lt;2,5&gt;::eval, wxTreeItemIdValue, long int&gt;::eval tree_cookie_t; };</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pauliusz 2007-05-02 22:01:02</div>
+        <div class="panel-body">
+          <p>I think someone should apply stahta01 patch... It is the best solution so far...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">stahta01 2007-05-20 19:59:54</div>
+        <div class="panel-body">
+          <p>Slightly simpler patch. Tim S</p>
+          <p>Index: src/sdk/editormanager.cpp</p>
+          <p>===================================================================</p>
+          <p>--- src/sdk/editormanager.cpp	(revision 3858)</p>
+          <p>+++ src/sdk/editormanager.cpp	(working copy)</p>
+          <p>@@ -64,6 +64,9 @@</p>
+          <p>#include "wx/wxFlatNotebook/wxFlatNotebook.h"</p>
+          <p>+#ifndef wxHAS_REGEX_ADVANCED</p>
+          <p>+    #define wxRE_ADVANCED 0</p>
+          <p>+#endif</p>
+          <p>namespace compatibility { typedef TernaryCondTypedef&lt;wxMinimumVersion&lt;2,5&gt;::eval, wxTreeItemIdValue, long int&gt;::eval tree_cookie_t; };</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2007-05-21 16:47:54</div>
+        <div class="panel-body">
+          <p>Tim, the patch will avoid compilation error. But it may create a False sense of Advanced Feature.</p>
+          <p>IMHO, it would not be a good idea to keep that option enabled if wxRE_ADVANCED is not at all available during compilation. If an user tries to use advanced regex function with wxRE_ADVANCED set to 0, the function will not work appropriately and we may see another bug report on that case.</p>
+          <p>I hope I could explain the problem.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2007-06-08 09:48:06</div>
+        <div class="panel-body">
+          <p>This bug is now fixed in HEAD.</p>
+          <p>Thank you for reporting it.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

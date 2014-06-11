@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 17989 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #17989 <small>2011-03-07 21:22:20</small></h3>
+          <h4>youarefunny</h4>
+          <p class="lead">Will Not Build From a Directory with Spaces</p>
+          <pre class="pre-scrollable">When trying to build Code::Blocks from a directory path with spaces the build tries to split up the path into multiple filenames.
+
+Building on Arch Linux.
+
+Section of make command that crashed:
+Making all in resources
+make[4]: Entering directory `/data/Scripts/Code Blocks/trunk/src/plugins/astyle/resources'
+make[4]: Nothing to be done for `all'.
+make[4]: Leaving directory `/data/Scripts/Code Blocks/trunk/src/plugins/astyle/resources'
+make[4]: Entering directory `/data/Scripts/Code Blocks/trunk/src/plugins/astyle'
+/bin/sh ../../../libtool --tag=CXX   --mode=link g++  -O2 -ffast-math -DCB_AUTOCONF -g -O2 -DCB_PRECOMP -Winvalid-pch -fPIC -DPIC -fexceptions -module -version-info 0:1:0 -shared -no-undefined -avoid-version  -o libastyle.la -rpath /usr/local/lib/codeblocks/plugins asstreamiterator.lo astyleconfigdlg.lo astyleplugin.lo dlgformattersettings.lo formattersettings.lo ASBeautifier.lo ASFormatter.lo ASEnhancer.lo ASResource.lo  ../../sdk/libcodeblocks.la -lpthread -ldl 
+libtool: link: rm -fr  .libs/libastyle.la .libs/libastyle.lai .libs/libastyle.so .libs/libastyle.soT
+libtool: link: g++  -fPIC -DPIC -shared -nostdlib /usr/lib/gcc/x86_64-unknown-linux-gnu/4.5.2/../../../../lib/crti.o /usr/lib/gcc/x86_64-unknown-linux-gnu/4.5.2/crtbeginS.o  .libs/asstreamiterator.o .libs/astyleconfigdlg.o .libs/astyleplugin.o .libs/dlgformattersettings.o .libs/formattersettings.o .libs/ASBeautifier.o .libs/ASFormatter.o .libs/ASEnhancer.o .libs/ASResource.o   -Wl,-rpath -Wl,/data/Scripts/Code -Wl,-rpath -Wl,Blocks/trunk/src/sdk/.libs -Wl,-rpath -Wl,/usr/local/lib ../../sdk/.libs/libcodeblocks.so -lwx_gtk2u_richtext-2.8 -lwx_gtk2u_aui-2.8 -lwx_gtk2u_xrc-2.8 -lwx_gtk2u_qa-2.8 -lwx_gtk2u_html-2.8 -lwx_gtk2u_adv-2.8 -lwx_gtk2u_core-2.8 -lwx_baseu_xml-2.8 -lwx_baseu_net-2.8 -lwx_baseu-2.8 -lpthread -ldl -L/usr/lib/gcc/x86_64-unknown-linux-gnu/4.5.2 -L/usr/lib/gcc/x86_64-unknown-linux-gnu/4.5.2/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-unknown-linux-gnu/4.5.2/../../.. -lstdc++ -lm -lc -lgcc_s /usr/lib/gcc/x86_64-unknown-linux-gnu/4.5.2/crtendS.o /usr/lib/gcc/x86_64-unknown-linux-gnu/4.5.2/../../../../lib/crtn.o  -O2 -O2   -pthread -Wl,-soname -Wl,libastyle.so -o .libs/libastyle.so
+/bin/sed: can't read Blocks/trunk/src/sdk/libcodeblocks.la: No such file or directory
+libtool: link: `Blocks/trunk/src/sdk/libcodeblocks.la' is not a valid libtool archive
+make[4]: *** [libastyle.la] Error 1
+make[4]: Leaving directory `/data/Scripts/Code Blocks/trunk/src/plugins/astyle'
+make[3]: *** [all-recursive] Error 1
+make[3]: Leaving directory `/data/Scripts/Code Blocks/trunk/src/plugins/astyle'
+make[2]: *** [all-recursive] Error 1
+make[2]: Leaving directory `/data/Scripts/Code Blocks/trunk/src/plugins'
+make[1]: *** [all-recursive] Error 1
+make[1]: Leaving directory `/data/Scripts/Code Blocks/trunk/src'
+make: *** [all-recursive] Error 1
+
+Please note '/bin/sed: can't read Blocks/trunk/src/sdk/libcodeblocks.la: No such file or directory'
+
+It is trying to read only the second half of the directory.
+It works perfectly when building from a directory path with no spaces. </pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

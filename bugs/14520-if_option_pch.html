@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 14520 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #14520 <small>2008-09-18 20:06:52</small></h3>
+          <h4>amarty</h4>
+          <p class="lead">if option pch_mode absent in .cbp, wrong value aplied by def</p>
+          <p>If there is no &lt;Option pch_mode="N"/&gt; tag in project file (.cbp), aplied value 1 (pchObjectDir), but in project settings - PCH strategy wroten that the default value is "Generate PCH alongside original header" - 2 (pchSourceFile).</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::WrongBehaviour</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">geister 2008-09-21 05:37:59</div>
+        <div class="panel-body">
+          <p>Some information would be useful:</p>
+          <p>Code::Blocks version</p>
+          <p>Platform/Operating system</p>
+          <p>How is the behavior wrong?</p>
+          <p>Here's what I have collected on this so far.</p>
+          <p>Version: SVN Revision 5208</p>
+          <p>File: sdk/cbproject.cpp</p>
+          <p>Line: 60</p>
+          <p>Function: cbProject::cbProject(const wxString&amp; filename)</p>
+          <p>m_PCHMode(pchSourceFile)</p>
+          <p>When creating the cbProject object, it initializes m_PCHMode to pchSourceFile (2).</p>
+          <p>"In a file alongside the source header (with .gch appended)." as the comments say.</p>
+          <p>I don't know how this is wrong behavior as the comments might be wrong...</p>
+          <p>File: include/cbproject.h</p>
+          <p>Line: 83</p>
+          <p>pchSourceDir = 0,   /// In a dir (named by the PCH) on the same level as the source header (default).</p>
+          <p>The comments say it is the default value, but pchSourceFile is when instantiating cbProject.</p>
+          <p>That is the only wrong behavior I can see there.</p>
+          <p>However...</p>
+          <p>File: sdk/projectloader.cpp</p>
+          <p>Line: 385, 423-424, 448</p>
+          <p>Function: void ProjectLoader::DoProjectOptions(TiXmlElement* parentNode)</p>
+          <p>If the Code::Blocks project is old (before version 1.2, we are at 1.6), it will default to pchSourceDir (the default value as defined by the comments), otherwise it is pchObjectDir.</p>
+          <p>So, as far as I can tell, you are either loading an old project file (or using an old version of Code::Blocks), or I was wrong somewhere. But, I still don't see how this would be wrong behavior.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">amarty 2008-09-21 09:00:49</div>
+        <div class="panel-body">
+          <p>Cobedlocks v8.02 - Windows, from package woth MinGW; Codeblocks 8.02 - Linux.</p>
+          <p>In a project properties dialog option "Generate PCH alongside original header" marked as this is a default value. I think, in every cases this value must be applied if no other taken. My project file (marked with v1.6, but it is generated by my tools and may be have some wrongs) does not contain tag &lt;Option pch_mode="N"/&gt;, and when I open this project, the "Generate PCH in the object output dir" pch strategy apllied. Thats are the facts, and I think this is an incorrect behavior of C::B.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 18609 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #18609 <small>2012-05-11 21:18:41</small></h3>
+          <h4>secks</h4>
+          <p class="lead">New debugger doesn't play nice with gnome-terminal</p>
+          <p>I previously had Settings - General settings - Terminal set to:</p>
+          <p>gnome-terminal -t $TITLE --geometry=140x50 -x</p>
+          <p>Once I updated to the latest code the debugger stopped working.  If I add a breakpoint the program with terminate at that breakpoint.  It's almost as if the SIGINT that is supposed to be sent to the debugee, is being sent to the sleep command or the terminal itself.</p>
+          <p>Also, depending on if gnome-terminal factory is enabled (reusing terminal windows instead of new processes,) the gdb process will start but the actual process never starts.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Debugger</dd>
+            <dt>Group</dt><dd>Platform:Linux</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2013-10-04 21:27:37</dd>
+            <dt>Assigned to</dt><dd>tpetrov</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">secks 2012-05-11 22:25:22</div>
+        <div class="panel-body">
+          <p>The build that I experienced this on was svn7957</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2012-10-01 21:13:21</div>
+        <div class="panel-body">
+          <p>As far as I can see r8048 has fixed the first issue.</p>
+          <p>See here for the details: <a href="http://svn.berlios.de/wsvn/codeblocks/trunk/?op=revision&amp;rev=8048">http://svn.berlios.de/wsvn/codeblocks/trunk/?op=revision&amp;rev=8048</a></p>
+          <p>Is the second issue still relevant?</p>
+          <p>What are the steps needed to reproduce it?</p>
+          <p>Does it happen with older gnome-terminals (the one in centos 5.xx for example)?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">secks 2012-05-14 18:30:39</div>
+        <div class="panel-body">
+          <p>There are actually two issues here</p>
+          <p>--------------------</p>
+          <p>#1</p>
+          <p>--------------------</p>
+          <p>there is a hard coded check that has been added in cbplugin.cpp</p>
+          <p>wxString cbDebuggerPlugin::GetConsoleTty(int ConsolePid)</p>
+          <p>.. the culprit is this:</p>
+          <p>if (psCmd.Contains(wxT("-T"))) {</p>
+          <p>-T is only valid if using xterm .. also, the terminal is a setting so that if statement can't be based on a  hard coded value.  it needs to be based on whatever is in the setting:</p>
+          <p>app -&gt; /console_terminal</p>
+          <p>-------------------</p>
+          <p>#2</p>
+          <p>-------------------</p>
+          <p>this happens when app/console_terminal is set to gnome-terminal, --disable-factory is not set, and there is already an instance of gnome-terminal running that would be reused.  what happens is gnome-terminal starts, finds the previous instance that is running, sends the command to the first terminal to run.. the second gnome-terminal then stops .. the function RunNixConsole sends a kill 0 signal to that process id to see if it's really running .. BOOM! there is a comment above the kill that states:</p>
+          <p>// For some reason wxExecute returns PID&gt;0, when the command cannot be launched.</p>
+          <p>// Here we check if the process is alive and the PID is really a valid one.</p>
+          <p>i did some testing and it appears that wxExecute is returning the pid of the vforked process, which is correct if the command to be executed is valid.  i propose better parsing in GetConsoleTty() instead of requiring the pid to exist (as this bug shows, the pid can be different)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">secks 2012-05-14 21:18:02</div>
+        <div class="panel-body">
+          <p>I have submitted a patch for this bug:</p>
+          <p>Patch #3291</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2013-10-04 21:27:37</div>
+        <div class="panel-body">
+          <p>Report is closed.</p>
+          <p>Note: This is a preformatted standard message.</p>
+          <p>Possible reasons for closing this report are:</p>
+          <p>* the developer in charge of the issue</p>
+          <p>- could not reproduce it despite trying several times</p>
+          <p>- did not get sufficient information</p>
+          <p>- got no reply to an inquiry for specific information</p>
+          <p>* the report is quite a bit dated of now, and</p>
+          <p>- no user comments have been added for several weeks</p>
+          <p>- significant changes have been made to the code</p>
+          <p>- no other developer could reproduce it either</p>
+          <p>It is assumed that the problem does not persist and the report</p>
+          <p>can be closed.</p>
+          <p>If the problem reappears in future releases, please feel free to</p>
+          <p>re-open this report and provide precise information on how to</p>
+          <p>reproduce it.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

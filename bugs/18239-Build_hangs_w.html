@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 18239 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #18239 <small>2011-07-15 10:45:02</small></h3>
+          <h4>petschy</h4>
+          <p class="lead">Build hangs with 100% cpu usage</p>
+          <pre class="pre-scrollable">This happens only now and then, building the same automake based project.
+
+The UI is not responsive, have to kill the process by hand and the project changes are lost, unfortunately, so the end result is very similar to a crash.
+
+The platform is Debian/Squeeze/AMD64, gcc version is 4.6.1, codeblocks was built from svn-7280 (I will try the current 7286, too).
+ 
+There are two dead processes, according to top:
+4619 petschy   20   0     0    0    0 Z    0  0.0   0:00.01 make &lt;defunct&gt;
+5792 petschy   20   0     0    0    0 Z    0  0.0   0:00.00 g++  &lt;defunct&gt;
+
+Attached to the process from gdb, the stack trace is:
+
+#0  0x00007f341bc63594 in wxYield() () from /usr/lib/libwx_baseu-2.8.so.0
+#1  0x00007f341c4efcc5 in wxGUIAppTraits::WaitForChild(wxExecuteData&amp;) () from /usr/lib/libwx_gtk2u_core-2.8.so.0
+#2  0x00007f341bc640e0 in wxExecute(wchar_t**, int, wxProcess*) () from /usr/lib/libwx_baseu-2.8.so.0
+#3  0x00007f341bc647c3 in wxExecute(wxString const&amp;, int, wxProcess*) () from /usr/lib/libwx_baseu-2.8.so.0
+#4  0x00007f341bc61cf2 in ?? () from /usr/lib/libwx_baseu-2.8.so.0
+#5  0x00007f34054f15ad in NativeParser::GetGCCCompilerDirs (this=&lt;value optimized out&gt;, cpp_compiler=...) at nativeparser.cpp:1079
+#6  0x00007f34054f2803 in NativeParser::AddCompilerDirs (this=0x1b4b6a0, project=0x21f1ea0, parser=0x31bf480) at nativeparser.cpp:810
+#7  0x00007f34054f37fa in NativeParser::DoFullParsing (this=0x1b4b6a0, project=0x21f1ea0, parser=0x31bf480) at nativeparser.cpp:1261
+#8  0x00007f34054f516b in NativeParser::CreateParser (this=0x1b4b6a0, project=0x21f1ea0) at nativeparser.cpp:1138
+#9  0x00007f34054c937b in CodeCompletion::OnProjectSavedTimer (this=0x1b4b620, event=&lt;value optimized out&gt;) at codecompletion.cpp:1855
+#10 0x00007f341bc603b5 in wxEvtHandler::ProcessEventIfMatches(wxEventTableEntryBase const&amp;, wxEvtHandler*, wxEvent&amp;) () from /usr/lib/libwx_baseu-2.8.so.0
+#11 0x00007f341bc6051c in wxEventHashTable::HandleEvent(wxEvent&amp;, wxEvtHandler*) () from /usr/lib/libwx_baseu-2.8.so.0
+#12 0x00007f341bc60854 in wxEvtHandler::ProcessEvent(wxEvent&amp;) () from /usr/lib/libwx_baseu-2.8.so.0
+#13 0x00007f341c5e85c9 in wxTimerBase::Notify() () from /usr/lib/libwx_gtk2u_core-2.8.so.0
+#14 0x00007f341c51113b in ?? () from /usr/lib/libwx_gtk2u_core-2.8.so.0
+#15 0x00007f341876dddb in ?? () from /lib/libglib-2.0.so.0
+#16 0x00007f341876c4a3 in g_main_context_dispatch () from /lib/libglib-2.0.so.0
+#17 0x00007f341876cc80 in ?? () from /lib/libglib-2.0.so.0
+#18 0x00007f341876cf1d in g_main_context_iteration () from /lib/libglib-2.0.so.0
+#19 0x00007f341a7234c1 in gtk_main_iteration () from /usr/lib/libgtk-x11-2.0.so.0
+#20 0x00007f341c4f68b5 in wxApp::Yield(bool) () from /usr/lib/libwx_gtk2u_core-2.8.so.0
+#21 0x00007f341c4efcc5 in wxGUIAppTraits::WaitForChild(wxExecuteData&amp;) () from /usr/lib/libwx_gtk2u_core-2.8.so.0
+#22 0x00007f341bc640e0 in wxExecute(wchar_t**, int, wxProcess*) () from /usr/lib/libwx_baseu-2.8.so.0
+#23 0x00007f341bc647c3 in wxExecute(wxString const&amp;, int, wxProcess*) () from /usr/lib/libwx_baseu-2.8.so.0
+#24 0x00007f341bc61cf2 in ?? () from /usr/lib/libwx_baseu-2.8.so.0
+#25 0x00007f340e79c269 in CompilerGCC::BuildStateManagement (this=0x14b3b90) at compilergcc.cpp:2380
+#26 0x00007f340e79f52d in CompilerGCC::DoRunQueue (this=0x14b3b90) at compilergcc.cpp:1145
+#27 0x00007f340e7a2c04 in CompilerGCC::DoBuild (this=0x14b3b90, target=&lt;value optimized out&gt;, clean=false, build=true, clearLog=true) at compilergcc.cpp:2721
+#28 0x00007f340e78e77c in CompilerGCC::Build (this=0x14b3b90, target=&lt;value optimized out&gt;) at compilergcc.cpp:2732
+#29 0x00007f340e7992a3 in CompilerGCC::OnCompile (this=0x14b3b90, event=&lt;value optimized out&gt;) at compilergcc.cpp:3023
+#30 0x00007f340e79fa65 in CompilerGCC::Dispatcher (this=&lt;value optimized out&gt;, event=&lt;value optimized out&gt;) at compilergcc.cpp:664
+#31 0x00007f341bc603b5 in wxEvtHandler::ProcessEventIfMatches(wxEventTableEntryBase const&amp;, wxEvtHandler*, wxEvent&amp;) () from /usr/lib/libwx_baseu-2.8.so.0
+#32 0x00007f341bc6051c in wxEventHashTable::HandleEvent(wxEvent&amp;, wxEvtHandler*) () from /usr/lib/libwx_baseu-2.8.so.0
+#33 0x00007f341bc60854 in wxEvtHandler::ProcessEvent(wxEvent&amp;) () from /usr/lib/libwx_baseu-2.8.so.0
+#34 0x00007f341bc607f0 in wxEvtHandler::ProcessEvent(wxEvent&amp;) () from /usr/lib/libwx_baseu-2.8.so.0
+#35 0x00007f341bc607f0 in wxEvtHandler::ProcessEvent(wxEvent&amp;) () from /usr/lib/libwx_baseu-2.8.so.0
+#36 0x00007f341bc607f0 in wxEvtHandler::ProcessEvent(wxEvent&amp;) () from /usr/lib/libwx_baseu-2.8.so.0
+#37 0x00007f341bc607f0 in wxEvtHandler::ProcessEvent(wxEvent&amp;) () from /usr/lib/libwx_baseu-2.8.so.0
+#38 0x00007f341bc607f0 in wxEvtHandler::ProcessEvent(wxEvent&amp;) () from /usr/lib/libwx_baseu-2.8.so.0
+#39 0x00007f341bc607f0 in wxEvtHandler::ProcessEvent(wxEvent&amp;) () from /usr/lib/libwx_baseu-2.8.so.0
+#40 0x00007f341bc607f0 in wxEvtHandler::ProcessEvent(wxEvent&amp;) () from /usr/lib/libwx_baseu-2.8.so.0
+#41 0x00007f341bc607f0 in wxEvtHandler::ProcessEvent(wxEvent&amp;) () from /usr/lib/libwx_baseu-2.8.so.0
+#42 0x00007f341bc607f0 in wxEvtHandler::ProcessEvent(wxEvent&amp;) () from /usr/lib/libwx_baseu-2.8.so.0
+#43 0x00007f341bc607f0 in wxEvtHandler::ProcessEvent(wxEvent&amp;) () from /usr/lib/libwx_baseu-2.8.so.0
+
+When stopped again, the trace is a little different:
+
+#0  0x00007f341bc636b6 in wxPipeInputStream::CanRead() const () from /usr/lib/libwx_baseu-2.8.so.0
+#1  0x00007f341c4efc02 in wxGUIAppTraits::WaitForChild(wxExecuteData&amp;) () from /usr/lib/libwx_gtk2u_core-2.8.so.0
+#2  0x00007f341bc640e0 in wxExecute(wchar_t**, int, wxProcess*) () from /usr/lib/libwx_baseu-2.8.so.0
+#3  0x00007f341bc647c3 in wxExecute(wxString const&amp;, int, wxProcess*) () from /usr/lib/libwx_baseu-2.8.so.0
+#4  0x00007f341bc61cf2 in ?? () from /usr/lib/libwx_baseu-2.8.so.0
+#5  0x00007f34054f15ad in NativeParser::GetGCCCompilerDirs (this=&lt;value optimized out&gt;, cpp_compiler=...) at nativeparser.cpp:1079
+
+I did more stop/continue cycles, and Yield, CanRead and WaitForChild were at the top of the call stack.
+</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>Platform:Linux</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

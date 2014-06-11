@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 8784 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #8784 <small>2006-09-13 11:06:02</small></h3>
+          <h4>blokley</h4>
+          <p class="lead">Tab button text color predefined</p>
+          <p>I use darker than normal window background (Windows) and it seems that codeblocks respects that by using it,</p>
+          <p>but codeblocks doesn't seem to read the button's (tab buttons "build messages", "build log" etc.) text color from system set colors.. Thus I end up having hard time seeing what it says on the tabs.</p>
+          <p>( <a href="http://img208.imageshack.us/my.php?image=hardtoseerq0.png">http://img208.imageshack.us/my.php?image=hardtoseerq0.png</a> )</p>
+          <p>Could codeblocks a) read the value from some system set color b) let the user specify the color c) both</p>
+          <p>I'm using "11 september 2006 build" (though it was present in "06 september 2006 build" when I first tried a nightly build.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Interface</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2007-02-05 11:32:26</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">dermeister 2006-09-13 22:17:30</div>
+        <div class="panel-body">
+          <p>This is a problem of wxFlatNotebook, thus I don't think the C::B developers will solve this as long as it is not solved in the source of wxFlatNotebook.</p>
+          <p>In fact, wxFlatNotebook already uses the system defined color for the buttons. But it only uses it for active tabs. Inactive tabs simply get "GREY" as color.</p>
+          <p>Anyway, here is a small patch that might solve your problem if you compile Code::Blocks yourself:</p>
+          <p>Index: src/sdk/wxFlatNotebook/wxFlatNotebook.cpp</p>
+          <p>===================================================================</p>
+          <p>--- src/sdk/wxFlatNotebook/wxFlatNotebook.cpp   (revision 2970)</p>
+          <p>+++ src/sdk/wxFlatNotebook/wxFlatNotebook.cpp   (working copy)</p>
+          <p>@@ -1057,7 +1057,7 @@</p>
+          <p>wxWindow::Create(parent, id, pos, size, style | wxNO_BORDER | wxNO_FULL_REPAINT_ON_RESIZE);</p>
+          <p>-       m_nonActiveTextColor = wxT("GREY");</p>
+          <p>+       m_nonActiveTextColor = wxColor(wxSystemSettings::GetColour(wxSYS_COLOUR_INACTIVECAPTIONTEXT));</p>
+          <p>m_pDropTarget = new wxFNBDropTarget&lt;wxPageContainerBase&gt;(this, &amp;wxPageContainerBase::OnDropTarget);</p>
+          <p>SetDropTarget(m_pDropTarget);</p>
+          <p>}</p>
+          <p>I'm not 100% sure if wxSYS_COLOUR_INACTIVECAPTIONTEXT is the right color - just take a look at <a href="http://www.wxwindows.org/manuals/2.6.3/wx_wxsystemsettings.html#wxsystemsettingsgetcolour">http://www.wxwindows.org/manuals/2.6.3/wx_wxsystemsettings.html#wxsystemsettingsgetcolour</a> and pick another one if it is not the correct color.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">dermeister 2006-10-14 21:39:27</div>
+        <div class="panel-body">
+          <p>Forget about this patch, it can't be applied anymore.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">artoj 2007-01-19 21:12:33</div>
+        <div class="panel-body">
+          <p>Works for me (the tab's title color is not predefined).</p>
+          <p>Windows XP x64, wxMSW 2.6.3p2, rev 3504.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">artoj 2007-02-05 11:32:26</div>
+        <div class="panel-body">
+          <p>Closing as no response for weeks + works for me. If the bug still persists, create a new report (testing with the latest revision).</p>
+          <p>Thank you for the bug report.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

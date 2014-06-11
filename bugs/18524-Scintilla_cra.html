@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 18524 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #18524 <small>2012-03-05 20:37:31</small></h3>
+          <h4>ded32</h4>
+          <p class="lead">Scintilla crashes while opening C++ source file</p>
+          <p>Version: Nightly Build 11 February 2012 build (7789) and earlier nightly builds.</p>
+          <p>I get Scintilla error when simply opening some C++ header file.</p>
+          <p>The assert() screenshot, the problematic source file which causes the error (sorry for its size), config and RPT files are in archive here: <a href="http://dl.dropbox.com/u/1557330/temp/ScintillaFailure.rar">http://dl.dropbox.com/u/1557330/temp/ScintillaFailure.rar</a></p>
+          <p>Other source files don't cause such errors, and stable version 10.05 doesn't cause it with this problematic source file.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>Platform:Windows</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>mortenmacfly</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">ded32 2012-08-01 23:47:22</div>
+        <div class="panel-body">
+          <p>Hi mortenmacfly,</p>
+          <p>Sorry for delays, I tested nightly build SVN rev 8150. The problem is still reproducing with Scintilla assert: val &gt;= 0, file is still sdk\wxscintilla\src\scintilla\lexlib\CharacterSet.h, line is now 83.</p>
+          <p>I played with settings and found that if graying out of conditional preprocessor code is disabled, C::B works well (but, of course, shows inactive preproc code without graying out). The option is: Settings -- Editor -- Other options -- Interpret #if, #else, #endif to grey out inactive preprocessor-code.</p>
+          <p>Also I confirm bugs in C++ syntax highlighting in 8150 mentioned in the appropriate thread of the C::B forum, so I rolled back to 8086.</p>
+          <p>Regards, Ilya</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ded32 2012-07-02 07:49:46</div>
+        <div class="panel-body">
+          <p>Yes, it does.</p>
+          <p>I played with the options and found that it is possibly a preprocessing issue. The build stops to crash when the following option is OFF:</p>
+          <p>Settings -- Editor -- General settings -- Other options -- Interpret #if, #else, #endif to grey out inactive preprocessor-code.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2012-07-02 08:04:10</div>
+        <div class="panel-body">
+          <p>We had a major update of the underlying scintilla core recently. Please try again with a recent nightly (its revision must be greater than 8069!) and then report back. You may also try to self-compile C::B for this purpose.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ded32 2012-07-02 14:55:10</div>
+        <div class="panel-body">
+          <p>Current revision is 8059 (June 17). Did you mean it? Or I should wait for 8069?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2012-07-02 15:21:14</div>
+        <div class="panel-body">
+          <p>I mean a revision greater than 8069, therefore 8059 is too old. I don't know, when the next nightly will ship that's why I suggested you compile C::B yourself.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ded32 2012-07-02 15:24:26</div>
+        <div class="panel-body">
+          <p>OK, I'll better wait for the appropriate nightly and then report about this bug.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2012-07-02 05:47:43</div>
+        <div class="panel-body">
+          <p>Does this bug still persist?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-03-12 05:55:46</div>
+        <div class="panel-body">
+          <p>I have no such crash here. The header file can be opened and shown correctly. WindowsXP, rev 7790(nightly debugger branch build)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

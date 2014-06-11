@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 10621 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #10621 <small>2007-03-13 21:56:01</small></h3>
+          <h4>kirkd</h4>
+          <p class="lead">Breakpoints moved, not cleared, or undefined</p>
+          <p>This is a tough one to reproduce and diagnose, but breakpoints give many problems.</p>
+          <p>Starting from the beginning, if I set breakpoints, they work fine in debug.</p>
+          <p>Occassionaly, if I modify code - most likely above my set breakpoint, the breakpoint indicator is on the correct line, however, the breakpoint occurs at a different location.</p>
+          <p>If I remove a breakpoint (clicking in the left border when breakpoints are indicated by a red dot) will sometimes work and sometimes the breakpoint is not removed.  This can occur while I am in debug mode or when I remove the breakpoint during edit mode.  It also occurs when setting a new breakpoint.</p>
+          <p>Occassionally, the debugger will get "stuck" and I'll have to kill the gdb process to free it.</p>
+          <p>I am currently using build SVN 3455 on Windows XP with GCC.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::WrongBehaviour</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">kirkd 2007-03-15 15:55:47</div>
+        <div class="panel-body">
+          <pre class="pre-scrollable">Here's some more detail on the problem:
+
+Here's an example as best as I can describe it.  If I set a breakpoint on line 2 the debugger actually stops there - no problem.  If I then click on Next Line in the debugger menu, you would expect it to go to Line 3, right?  But the file stl_iterator.h opens and I'm on line 603:
+
+__normal_iterator(const _Iterator&amp; __i) : _M_current(__i) { }
+
+Next line then goes to line 666 in this file.  Next Line then opens stl_vector.h at line 375.  Next Line then ends up in my code corresponding to the call from line 194.  Next Line then goes to line 195.  I then make excursions through stl_iterator.h, stl_vector.h, new_allocator.h, basic_string.h.
+
+If I then put a breakpoint on line 241, it is ignored.  Also, a breakpoint on line 245 is ignored despite the fact that the conditional on line 241 is guaranteed to succeeed.
+
+To get the debugger to stop on line 245, I have to stop the debugger, clear higher breakpoints, put a breakpoint on line 245, and restart in Debug mode.  Next Line then follows this sequence of lines:  245, 246, 251, 245, 251, 252, another .h file of mine UNRELATED to Line 252 and not having any breakpoints set, 251, yet another file of mine with no breakpoints set, 252, a long excursion thorugh other files of mine unrelated to line 252, and eventually settling on line 81.
+
+What is going on here???
+
+[code]
+1	PowerUpControllers = *(m_pWorld-&gt;GetPowerUpControllers());
+2	    for (index = 0; index &lt; PowerUpControllers.size(); index++)
+3	    {
+4	        if ( Params.GetLongParam("PowerUpXY") == 1 )
+5	        {
+6	            PowerUpControllers.at(index)-&gt;GetPosition(X,Y);
+7	            inputs.push_back(X/16);
+8	            inputs.push_back(Y/16);
+9	        }
+10	        if ( Params.GetLongParam("PowerUpState") == 1 )
+11	        {
+12	            PowerUpControllers.at(index)-&gt;GetState(state);
+13	            inputs.push_back(state);
+14	        }
+15	    }
+16	
+17	    m_pWorld-&gt;GetPacManController()-&gt;GetPosition(X,Y);
+18	    if ( Params.GetLongParam("PacManXY") == 1 )
+19	    {
+20	        inputs.push_back(X/16);
+21	        inputs.push_back(Y/16);
+22	    }
+23	
+24	    if ( Params.GetLongParam("CheckForWalls") == 1 )
+25	    {
+26	        if ( m_pWorld-&gt;GetMazeController()-&gt;CheckMapByPixels(X,X+31,Y-8,(Y-8)+31) )
+27	            inputs.push_back(0);  //nothing in the up direction
+28	        else
+29	            inputs.push_back(1);  //a wall is in the way
+30	
+31	        if ( m_pWorld-&gt;GetMazeController()-&gt;CheckMapByPixels(X,X+31,Y+8,(Y+8)+31) )
+32	            inputs.push_back(0);  //nothing in the down direction
+33	        else
+34	            inputs.push_back(1);  //a wall is in the way
+35	
+36	        if ( m_pWorld-&gt;GetMazeController()-&gt;CheckMapByPixels(X-8,(X-8)+31,Y,Y+31) )
+37	            inputs.push_back(0);  //nothing in the left direction
+38	        else
+39	            inputs.push_back(1);  //a wall is in the way
+40	
+41	        if ( m_pWorld-&gt;GetMazeController()-&gt;CheckMapByPixels(X+8,(X+8)+31,Y,Y+31) )
+42	            inputs.push_back(0);  //nothing in the right direction
+43	        else
+44	            inputs.push_back(1);  //a wall is in the way
+45	    }
+46	
+47	    //use the starting variables to limit the number of times we check the dot content
+48	    if ( Params.GetLongParam("CheckDots") == 1 )
+49	    {
+50	        if ( abs(StartingX - X) &gt; 32 || abs(StartingY - Y) &gt; 32 )
+51	        {
+52	            StartingX = X;
+53	            StartingY = Y;
+54	
+55	            //only update the number of dots every 8 steps
+56	            //profiling suggested this would be a good place to save computation time
+57	            rct.top = 0;
+58	            rct.bottom = (Y+31)/16;
+59	            rct.left = 0;
+60	            rct.right = m_pWorld-&gt;GetDotController()-&gt;GetWidth()-1;
+61	            DotsUp = m_pWorld-&gt;GetDotController()-&gt;CountTilesOfType(rct, 1);
+62	
+63	            rct.top = (Y/16);
+64	            rct.bottom = m_pWorld-&gt;GetDotController()-&gt;GetHeight()-1;
+65	            DotsDown = m_pWorld-&gt;GetDotController()-&gt;CountTilesOfType(rct, 1);
+66	
+67	            rct.top = 0;
+68	            rct.right = (X+31)/16;
+69	            DotsLeft = m_pWorld-&gt;GetDotController()-&gt;CountTilesOfType(rct, 1);
+70	
+71	            rct.left = (X/16);
+72	            rct.right = m_pWorld-&gt;GetDotController()-&gt;GetWidth()-1;
+73	            DotsRight = m_pWorld-&gt;GetDotController()-&gt;CountTilesOfType(rct, 1);
+74	        }
+75	
+76	        //push the number of dots in
+77	        inputs.push_back( DotsUp );
+78	        inputs.push_back( DotsDown );
+79	        inputs.push_back( DotsLeft );
+80	        inputs.push_back( DotsRight );
+81	    }
+[/code]</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

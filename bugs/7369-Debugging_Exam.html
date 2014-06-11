@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 7369 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #7369 <small>2006-05-03 08:46:34</small></h3>
+          <h4>tiwag</h4>
+          <p class="lead">Debugging Examine Memory window shows wrong addresses</p>
+          <p>the address displayed in the Memory window shows a wrong address.</p>
+          <p>The addresses are shown with an additional offset of 0x08</p>
+          <p>e.g. type in the Address edit field 0x43e000 and press Go button,</p>
+          <p>then the memory dump beginning at 0x43e000 is shown, but the</p>
+          <p>address of the first line is shown as 0x43e008: .. .. ..</p>
+          <p>the same happens if you enter a symbol name in the Address edit field,</p>
+          <p>the memory dump begins from the correct address, but the addresses</p>
+          <p>itself are offsetted by 8</p>
+          <p>i use gdb 6.3-2 and gcc 3.4.4 and CB svn rev 2397</p>
+          <p>example:</p>
+          <p>the debug output for symbol s2 from gdb communication is:</p>
+          <p>&gt; x/32xb s2</p>
+          <p>0x22fe70:	0x33	0x32	0x31	0x00	0x00	0x00	0x00	0x00</p>
+          <p>0x22fe78:	0xff	0xff	0xff	0xff	0x90	0x24	0x4e	0x80</p>
+          <p>0x22fe80:	0x98	0x9a	0x4e	0x80	0xff	0xff	0xff	0xff</p>
+          <p>0x22fe88:	0x09	0x7a	0x57	0x80	0xec	0xe7	0x4d	0x80</p>
+          <p>symbol s2 is at address 0x22fe70</p>
+          <p>the memory window shows:</p>
+          <p>0x22fe78: 33 32 31 00 00 00 00 00 ff ff ff ff 90 24 4e 80</p>
+          <p>0x22fe88: 98 9a 4e 80 ff ff ff ff 09 7a 57 80 ec e7 4d 80</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Debugger</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2006-05-03 16:40:23</dd>
+            <dt>Assigned to</dt><dd>tiwag</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">tiwag 2006-05-03 09:41:12</div>
+        <div class="panel-body">
+          <p>Index: src/plugins/debuggergdb/examinememorydlg.cpp</p>
+          <p>===================================================================</p>
+          <p>--- src/plugins/debuggergdb/examinememorydlg.cpp	(revision 2398)</p>
+          <p>+++ src/plugins/debuggergdb/examinememorydlg.cpp	(working copy)</p>
+          <p>@@ -90,6 +90,8 @@</p>
+          <p>m_pText-&gt;AppendText(_T('\n')); // prepend a newline</p>
+          <p>long a;</p>
+          <p>addr.ToLong(&amp;a, 16);</p>
+          <p>+        a -= 8; // actually addr holds the start-address of the 2nd 8-bytes sequence,</p>
+          <p>+                // but we want the start-address of the previous 8-bytes sequence displayed</p>
+          <p>m_pText-&gt;AppendText(wxString::Format(_T("0x%x: %s"), a, m_LineText));</p>
+          <p>for (int i = 0; i &lt; 67; ++i)</p>
+          <p>m_LineText[i] = _T(' ');</p>
+          <p>the above patch works as long as the minimal displayed bytes is not less than 16 and gdb output format of x/16xb doesn't change ( 2x 8-bytes sequence with prepended address of start-byte)</p>
+          <p>committed to svn rev 2403</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2006-05-03 16:40:23</div>
+        <div class="panel-body">
+          <p>I committed another fix, slightly bigger, but it doesn't use arithmetic. Although your patch fixes the problem now, it assumes some things based on the current behaviour. If we change this behaviour in the future it might stop working and what's worse is we won't remember about this hack :)</p>
+          <p>Also fixed the Enter key to work for the address field. The text control didn't have the WX_PROCESS_ENTER style flag so it didn't work.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

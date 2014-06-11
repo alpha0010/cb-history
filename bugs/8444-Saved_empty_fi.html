@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 8444 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #8444 <small>2006-08-16 21:53:31</small></h3>
+          <h4>peterbostrom</h4>
+          <p class="lead">Saved empty files areleft as Untitled# in Opened-Files list.</p>
+          <p>Created empty files are being left in the Opened-Files list, after saving them as something else, as Untitled1/Untitled# and are unclosable objects.</p>
+          <p>The new file name does not appear in the Opened-Files list. The tab does however get renamed.</p>
+          <p>Images:</p>
+          <p><a href="http://lemming.armorycore.com/keep/cb-bug/">http://lemming.armorycore.com/keep/cb-bug/</a></p>
+          <p>Code::Blocks Aug 16 Nightly</p>
+          <p>Windows XP</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::WrongBehaviour</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2006-08-20 08:38:30</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">dermeister 2006-08-19 22:29:05</div>
+        <div class="panel-body">
+          <p>I just looked into it. There are probably two problems involed.</p>
+          <p>First:</p>
+          <p>If the file is saved via 'File-&gt;Save' then EditorManager::Save or EditorManager::SaveActive is called. Both don't take into account that cbEditor::Save (which is called from both functions) may change the filename, if the file was never saved before. This is the case in this bug-report. Thus there should a check if the filename changed and if there was a change then EditorManager::RenameTreeFile should be called. But this would still suffer from the second issue:</p>
+          <p>Second:</p>
+          <p>If you use 'File-&gt;Save as' then EditorManager::SaveAs or EditorManager::SaveActiveAs is called. Both have a check whether the filename changed and call EditorManager::RenameTreeFile - but the problem appears to. The reason is: RenameTreeFile tries to find the editor belonging to the file which's filename shall be changed using it's old filename. But cbEditor::Save already changed the name thus the search doesn't bring up any result and the tree does not get updated.</p>
+          <p>I'm not sure how to solve this. It would probably work in this case if RenameTreeFile uses the new name to find the editor and the old name to find the tree item - but will this work in everywhere when EditorManager::RenameTreeFile is called?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">dermeister 2006-08-19 23:29:10</div>
+        <div class="panel-body">
+          <p>OK, I just tested my last suggestion and it seems to fix these to problems. I posted this patch on berlios, patch #1361.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2006-08-20 08:38:30</div>
+        <div class="panel-body">
+          <p>This bug is now fixed in HEAD.</p>
+          <p>Thank you for reporting it.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

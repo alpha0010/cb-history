@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 14502 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #14502 <small>2008-09-15 12:51:10</small></h3>
+          <h4>collins2</h4>
+          <p class="lead">Union and bit struct = CodeCompletion doesn't work</p>
+          <p>Hi!</p>
+          <p>I use C::B last NB=5195.</p>
+          <p>Because I develop software for microcontrollers I really</p>
+          <p>often use bit structures which are item of unions.</p>
+          <p>C::B'c codecompletion doesn't work correctly with</p>
+          <p>this structures.</p>
+          <p>I've used DevC++ 4.9.9.2 earlier and I've found that</p>
+          <p>codecompletion has the same problem with union,</p>
+          <p>but bit structures are prompted correctly.</p>
+          <p>Try this code:</p>
+          <p>typedef union</p>
+          <p>{</p>
+          <p>unsigned char bX;</p>
+          <p>struct</p>
+          <p>{</p>
+          <p>bitX0:1,</p>
+          <p>bitX1:1,</p>
+          <p>bitX2:1,</p>
+          <p>bitX3:1,</p>
+          <p>bitX4:1,</p>
+          <p>bitX5:1,</p>
+          <p>bitX6:1,</p>
+          <p>bitX7:1;</p>
+          <p>} bitX;</p>
+          <p>} TunionX;</p>
+          <p>TunionX unX;</p>
+          <p>unX.          &gt;&gt;&gt;&gt;&gt;&gt; dosen't work</p>
+          <p>unX.bitX.   &gt;&gt;&gt;&gt;&gt;&gt; dosen't work</p>
+          <p>typedef union</p>
+          <p>{</p>
+          <p>unsigned char  bYA[2];</p>
+          <p>unsigned short wY;</p>
+          <p>} TunionY;</p>
+          <p>TunionY unY;</p>
+          <p>unY.    &gt;&gt;&gt;&gt;&gt;&gt; dosen't work</p>
+          <p>Best regards,</p>
+          <p>Collins</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::CodeCompletion</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2010-10-15 13:10:14</dd>
+            <dt>Assigned to</dt><dd>loaden</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">geister 2008-09-21 06:33:54</div>
+        <div class="panel-body">
+          <p>SVN 5208</p>
+          <p>Giving a type to your bitX0..7 might help. Have you tried compiling it? It fails. =P</p>
+          <p>May I suggest the following instead:</p>
+          <p>typedef union</p>
+          <p>{</p>
+          <p>unsigned char bX;</p>
+          <p>struct</p>
+          <p>{</p>
+          <p>char bitX0:1;</p>
+          <p>char bitX1:1;</p>
+          <p>char bitX2:1;</p>
+          <p>char bitX3:1;</p>
+          <p>char bitX4:1;</p>
+          <p>char bitX5:1;</p>
+          <p>char bitX6:1;</p>
+          <p>char bitX7:1;</p>
+          <p>} bitX;</p>
+          <p>} TunionX;</p>
+          <p>After browsing plugins/codecompletion/parser/parserthread.cpp I noted that unions are not being added to the symbols browser. I guess this had been known for a while though.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">loaden 2010-10-15 13:10:14</div>
+        <div class="panel-body">
+          <p>This bug is now fixed in HEAD.</p>
+          <p>Thank you for reporting it.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

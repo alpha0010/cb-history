@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 10696 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #10696 <small>2007-03-21 13:43:32</small></h3>
+          <h4>exhu</h4>
+          <p class="lead">wrong command line for compiling without build</p>
+          <p>When I try to compile only one file from the project (Menu "Build/Compile current file", then only the default include directory is passed to the compiler and none of the project build options, including the path for generated object files, e.g.</p>
+          <p>mingw32-g++.exe  -IC:\MinGW\include  -c ..\WidgetLib\WLFontBitmapContainer.cpp -o ..\WidgetLib\WLFontBitmapContainer.o</p>
+          <p>Instead of</p>
+          <p>mingw32-g++.exe -W -O0 -DSIMULATOR -DWIN32 -D_DEBUG -D_LIB  -I"..\..\UI Widgets\xmod" -I"..\..\UI Widgets\widgets\src" -IC:\sdk\v315\inc -I"..\..\UI Widgets\widgets\inc" -I..\..\gPlayer\inc\ -I..\Controls -I..\Core -I..\Registry -I..\MemManager -IC:\MinGW\include  -c ..\WidgetLib\FontBitmapContainer.cpp -o ..\WidgetLib\Debug\FontBitmapContainer.o</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Compiler</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2007-03-22 14:35:28</dd>
+            <dt>Assigned to</dt><dd>biplab</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2007-03-22 13:38:37</div>
+        <div class="panel-body">
+          <p>Bug confirmed. Thanks for providing me steps to reproduce it.</p>
+          <p>I'll try to fix it soon.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2007-03-22 14:35:28</div>
+        <div class="panel-body">
+          <p>This bug is now fixed in HEAD.</p>
+          <p>Thank you for reporting it.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2007-03-21 15:49:52</div>
+        <div class="panel-body">
+          <p>Can't reproduce this in latest nightly (Tested with Rev 3732). Please post your nightly revision no, OS. If you're using an older release (RC2) or nightly, please upgrade to a latest nightly.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">exhu 2007-03-21 16:00:52</div>
+        <div class="panel-body">
+          <p>WinXP SP2, rev3730 (19 march nightly), unicode version.</p>
+          <p>I have imported a Visual Studio .NET 2003 .sln file and then have chosen a file from one of the projects in the workspace. While it builds with proper arguments to the G++ it doesn't pass anything (according to the logs) to the G++ except for the default parameters if and only if I order to compile the single file (CTRL-SHIFT-F9 or via the main menu) and not the whole project via the build command.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2007-03-21 16:12:27</div>
+        <div class="panel-body">
+          <p>I followed your test case. I imported one solution file. Then I used Compile current file. And it works for me. Have look at the following line.</p>
+          <p>[100.0%] mingw32-g++.exe -DWIN32 -D__WIN32__ -D__WXMSW__ -D__WXDEBUG__ -DWXUSINGDLL -DUNICODE -D_DEBUG -D_WINDOWS -DHPDF_DLL -W -O0  -IC:\wxMSW-2.8.2-RC1\lib\vc_dll\mswud -IC:\wxMSW-2.8.2-RC1\include -IC:\Required\Dev\libharu-2.0.8\include -IC:\MinGW\include  -c C:\Projects\IntzeTank\IntzeTank\AboutDialog.cpp -o Debug_Win32\AboutDialog.o</p>
+          <p>So I can't reproduce it. I'm using WinXP SP2+Rev 3732.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">exhu 2007-03-22 09:22:31</div>
+        <div class="panel-body">
+          <p>The nightly build I tested is the latest accessible for download.</p>
+          <p>But I am sure the bug persists. I have tried some more situations and found out that</p>
+          <p>1) a MS VS 2003 solution file for several .vcproj projects is needed with interdependencies (i.e. there are several projects each of them depends on the other etc.)</p>
+          <p>2) One of the projects is marked as active (displayed in bold font in C::B manager workspace)</p>
+          <p>3) The file to compile (a .cpp file) must be from non-active project</p>
+          <p>Now the bug will not reproduce if you do one of the following:</p>
+          <p>1) Right click on the file in the workspace manager tool window and select (Build file)</p>
+          <p>2) Make the project with the file an active one</p>
+          <p>i.e. after doing 1) or 2) the "compile current file" will do well.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

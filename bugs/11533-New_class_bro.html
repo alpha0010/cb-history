@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 11533 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #11533 <small>2007-07-10 13:09:45</small></h3>
+          <h4>rickg22</h4>
+          <p class="lead">New class browser crash</p>
+          <pre class="pre-scrollable">Related to the switch-file crash.
+
+Windows XP, rev. 4238.
+
+Steps to reproduce:
+
+1. Start up codeblocks. The codeblocks.cbp should be opened by default. Some of the files in the project should also be open.
+
+2. Switch to the symbols tab. Wait until the class browser is updated.
+
+3. Move the scrollbar to the bottom.
+
+4. Switch the scope to "Current file"
+
+5. While the class browser is still blank, click the "scroll up (up arrow)" button above the scrollbar. CRASH.
+
+I could replicate the crash using this procedure more than 5 times.
+
+(As a side note, in my development branch this bug doesn't appear - the nodes are removed too fast to be able to reproduce the bug - I'll copy the RemoveInvalid nodes function from my development branch to the trunk and see if they solve this bug)
+
+G:\projects\codeblocks\src\output\codeblocks.exe caused an Access Violation at location 773d73b9 in module C:\WINDOWS\WinSxS\X86_Microsoft.Windows.Common-Controls_6595b64144ccf1df_6.0.2600.2982_x-ww_ac3f9c03\COMCTL32.DLL Reading from location 00000004.
+
+Registers:
+eax=00000000 ebx=0000ffff ecx=002b0d98 edx=002b08d0 esi=00000000 edi=0027edb8
+eip=773d73b9 esp=0023deb8 ebp=0023deb8 iopl=0         nv up ei ng nz na po cy
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010287
+
+Call stack:
+773D73B9  C:\WINDOWS\WinSxS\X86_Microsoft.Windows.Common-Controls_6595b64144ccf1df_6.0.2600.2982_x-ww_ac3f9c03\COMCTL32.DLL:773D73B9  Ordinal384
+77408F57  C:\WINDOWS\WinSxS\X86_Microsoft.Windows.Common-Controls_6595b64144ccf1df_6.0.2600.2982_x-ww_ac3f9c03\COMCTL32.DLL:77408F57  Ordinal384
+773DAA7B  C:\WINDOWS\WinSxS\X86_Microsoft.Windows.Common-Controls_6595b64144ccf1df_6.0.2600.2982_x-ww_ac3f9c03\COMCTL32.DLL:773DAA7B  Ordinal384
+7E398734  C:\WINDOWS\system32\USER32.dll:7E398734  GetDC
+7E398816  C:\WINDOWS\system32\USER32.dll:7E398816  GetDC
+7E39C63F  C:\WINDOWS\system32\USER32.dll:7E39C63F  IsWindowUnicode
+7E39C665  C:\WINDOWS\system32\USER32.dll:7E39C665  CallWindowProcW
+641F1910  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:641F1910  _ZN8wxWindow16MSWDefWindowProcEjjl
+641F9AFC  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:641F9AFC  _ZN8wxWindow13MSWWindowProcEjjl
+642677D4  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:642677D4  _ZN10wxTreeCtrl13MSWWindowProcEjjl
+641F2220  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:641F2220  _Z9wxWndProcP6HWND__jjl@16
+7E398734  C:\WINDOWS\system32\USER32.dll:7E398734  GetDC
+7E398816  C:\WINDOWS\system32\USER32.dll:7E398816  GetDC
+7E39B4C0  C:\WINDOWS\system32\USER32.dll:7E39B4C0  DefWindowProcW
+7E39B50C  C:\WINDOWS\system32\USER32.dll:7E39B50C  DefWindowProcW
+7C91EAE3  C:\WINDOWS\system32\ntdll.dll:7C91EAE3  KiUserCallbackDispatcher
+7E39B3F9  C:\WINDOWS\system32\USER32.dll:7E39B3F9  DefWindowProcW
+7E39B393  C:\WINDOWS\system32\USER32.dll:7E39B393  DefWindowProcW
+773DA9D5  C:\WINDOWS\WinSxS\X86_Microsoft.Windows.Common-Controls_6595b64144ccf1df_6.0.2600.2982_x-ww_ac3f9c03\COMCTL32.DLL:773DA9D5  Ordinal384
+7E398734  C:\WINDOWS\system32\USER32.dll:7E398734  GetDC
+7E398816  C:\WINDOWS\system32\USER32.dll:7E398816  GetDC
+7E39C63F  C:\WINDOWS\system32\USER32.dll:7E39C63F  IsWindowUnicode
+7E39C665  C:\WINDOWS\system32\USER32.dll:7E39C665  CallWindowProcW
+641F1910  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:641F1910  _ZN8wxWindow16MSWDefWindowProcEjjl
+641F9AFC  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:641F9AFC  _ZN8wxWindow13MSWWindowProcEjjl
+642677D4  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:642677D4  _ZN10wxTreeCtrl13MSWWindowProcEjjl
+641F2220  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:641F2220  _Z9wxWndProcP6HWND__jjl@16
+7E398734  C:\WINDOWS\system32\USER32.dll:7E398734  GetDC
+7E398816  C:\WINDOWS\system32\USER32.dll:7E398816  GetDC
+7E39B4C0  C:\WINDOWS\system32\USER32.dll:7E39B4C0  DefWindowProcW
+7E39B50C  C:\WINDOWS\system32\USER32.dll:7E39B50C  DefWindowProcW
+7C91EAE3  C:\WINDOWS\system32\ntdll.dll:7C91EAE3  KiUserCallbackDispatcher
+7E39B3F9  C:\WINDOWS\system32\USER32.dll:7E39B3F9  DefWindowProcW
+7E39B393  C:\WINDOWS\system32\USER32.dll:7E39B393  DefWindowProcW
+773DA9D5  C:\WINDOWS\WinSxS\X86_Microsoft.Windows.Common-Controls_6595b64144ccf1df_6.0.2600.2982_x-ww_ac3f9c03\COMCTL32.DLL:773DA9D5  Ordinal384
+7E398734  C:\WINDOWS\system32\USER32.dll:7E398734  GetDC
+7E398816  C:\WINDOWS\system32\USER32.dll:7E398816  GetDC
+7E39C63F  C:\WINDOWS\system32\USER32.dll:7E39C63F  IsWindowUnicode
+7E39C665  C:\WINDOWS\system32\USER32.dll:7E39C665  CallWindowProcW
+641F1910  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:641F1910  _ZN8wxWindow16MSWDefWindowProcEjjl
+641F9AFC  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:641F9AFC  _ZN8wxWindow13MSWWindowProcEjjl
+642677D4  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:642677D4  _ZN10wxTreeCtrl13MSWWindowProcEjjl
+641F2220  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:641F2220  _Z9wxWndProcP6HWND__jjl@16
+7E398734  C:\WINDOWS\system32\USER32.dll:7E398734  GetDC
+7E398816  C:\WINDOWS\system32\USER32.dll:7E398816  GetDC
+7E3989CD  C:\WINDOWS\system32\USER32.dll:7E3989CD  GetWindowLongW
+7E398A10  C:\WINDOWS\system32\USER32.dll:7E398A10  DispatchMessageW
+7E3AD99D  C:\WINDOWS\system32\USER32.dll:7E3AD99D  IsDialogMessageW
+641F1A45  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:641F1A45  _ZN8wxWindow17MSWProcessMessageEP6tagMSG
+641CD3B6  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:641CD3B6  _ZN11wxEventLoop17PreProcessMessageEP6tagMSG
+641CD2D9  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:641CD2D9  _ZN11wxEventLoop14ProcessMessageEP6tagMSG
+641CD6EA  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:641CD6EA  _ZN11wxEventLoop8DispatchEv
+642A2956  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:642A2956  _ZN17wxEventLoopManual3RunEv
+6427161E  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:6427161E  _ZN9wxAppBase8MainLoopEv
+004047DA  G:\projects\codeblocks\src\output\codeblocks.exe:004047DA  CodeBlocksApp::OnRun()  G:/projects/codeblocks/src/src/app.cpp:600
+6410E477  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:6410E477  _Z14wxUninitializev
+64190ACC  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:64190ACC  _Z7wxEntryP11HINSTANCE__S0_Pci
+0040184C  G:\projects\codeblocks\src\output\codeblocks.exe:0040184C  WinMain  G:/projects/codeblocks/src/src/app.cpp:287
+0046242A  G:\projects\codeblocks\src\output\codeblocks.exe:0046242A
+004011E7  G:\projects\codeblocks\src\output\codeblocks.exe:004011E7
+00401258  G:\projects\codeblocks\src\output\codeblocks.exe:00401258
+7C816FD7  C:\WINDOWS\system32\kernel32.dll:7C816FD7  RegisterWaitForInputIdle
+
+
+
+
+</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2007-07-11 06:44:30</dd>
+            <dt>Assigned to</dt><dd>rickg22</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">rickg22 2007-07-10 13:31:12</div>
+        <div class="panel-body">
+          <p>Update: After I recompiled with my version of RemoveInvalidNodes, i managed to get rid of the 8-second delay when deleting the nodes, so to reproduce the bug I had to be really fast and tricky, put the mouse on the "up arrow" button and change the scope with the keyboard (it won't happen accidentally, that's for sure). However, the bug was STILL reproduced. :(</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">rickg22 2007-07-10 13:54:08</div>
+        <div class="panel-body">
+          <p>Fixed!</p>
+          <p>In ClassBrowserBuilderThread::BuildTree()</p>
+          <p>m_pTreeTop-&gt;Hide();</p>
+          <p>m_pTreeBottom-&gt;Hide();</p>
+          <p>m_pTreeTop-&gt;Freeze();</p>
+          <p>m_pTreeBottom-&gt;Freeze();</p>
+          <p>and on  the exit parts:</p>
+          <p>m_pTreeBottom-&gt;Thaw();</p>
+          <p>m_pTreeTop-&gt;Thaw();</p>
+          <p>m_pTreeBottom-&gt;Show();</p>
+          <p>m_pTreeTop-&gt;Show();</p>
+          <p>This solves the bug. It also ensures that the user won't be able to click on any item during tree construction, so it's a clear indicator that the tree is non-functional during construction :)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">rickg22 2007-07-10 14:07:28</div>
+        <div class="panel-body">
+          <p>Fixed and committed :)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

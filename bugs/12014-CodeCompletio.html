@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 12014 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #12014 <small>2007-09-17 14:15:58</small></h3>
+          <h4>christobal</h4>
+          <p class="lead">CodeCompletion doesn't start on Code::Blocks startup</p>
+          <p>Happens with: CB SVN 4451 - 4475  Nightly build + wxmsw28u_gcc_cb.dll</p>
+          <p>Details:</p>
+          <p>The codecompletion doestn't start after codeblocks has started and loaded the last project. The symbol browser doesn't show any symbols.</p>
+          <p>After a manual "reparse now" everything is working fine.</p>
+          <p>This "bug" was introduced in revision 4451 when configuration options for lexer keywords where added.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::CodeCompletion</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2007-09-19 19:19:55</dd>
+            <dt>Assigned to</dt><dd>biplab</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">christobal 2007-09-17 20:20:58</div>
+        <div class="panel-body">
+          <p>This is the same report as Bug #012012. I haven't noticed the ohter post while I tried to locate the revision.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">christobal 2007-09-19 06:36:06</div>
+        <div class="panel-body">
+          <p>Correction:</p>
+          <p>It wasn't revision 4451, but 4452 when codecompletion doesn't start parsing at application startup.</p>
+          <p>I think I figured it out now:</p>
+          <p>The cbEVT_APP_STARTUP_DONE event wasn't processed when a startup script is installed.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2007-09-19 19:19:55</div>
+        <div class="panel-body">
+          <p>This bug is now fixed in HEAD.</p>
+          <p>Thank you for reporting it.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">christobal 2007-09-20 09:37:14</div>
+        <div class="panel-body">
+          <p>It still doesn't start parsing with revision 4483 on windows.</p>
+          <p>I use mingw compiler version 3.4.5 (mingw special) and wxWidgets dll wx2.8.4(Windows, unicode).</p>
+          <p>This is what I have done:</p>
+          <p>- Add CodeBlocks project to default workspace.</p>
+          <p>- Close CodeBlocks</p>
+          <p>- Open CodeBlocks</p>
+          <p>(Debug Log says:</p>
+          <p>[11:31:49.795]: Parsing stage done (0 total parsed files, 0 tokens in 0 minute(s), 0.0 seconds).)</p>
+          <p>- Open File main.cpp</p>
+          <p>- right mouseclick on Manager::Get()</p>
+          <p>- select "Find declaration of 'Get'"</p>
+          <p>- look at Warning ;-)</p>
+          <p>- start Reparsing</p>
+          <p>(Debug Log output:</p>
+          <p>[11:35:09.013]: Updating class browser...</p>
+          <p>[11:35:09.013]: Class browser updated.</p>
+          <p>[11:35:09.013]: Add project Code::Blocks in parsing queue</p>
+          <p>[11:35:09.154]: Caching internal gcc dirs for adding to parser...</p>
+          <p>[11:35:09.279]: Passing list of files to parse</p>
+          <p>[11:35:09.904]: Starting batch parsing</p>
+          <p>[11:35:10.341]: C++ Parser is still parsing files...</p>
+          <p>[11:35:28.357]: Parsing stage done (1351 total parsed files, 74572 tokens in 0 minute(s), 17.469 seconds).</p>
+          <p>[11:35:28.373]: Updating class browser...</p>
+          <p>[11:35:28.373]: Class browser updated.</p>
+          <p>- codecompletion is now up and running...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

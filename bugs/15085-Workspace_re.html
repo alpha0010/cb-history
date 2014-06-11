@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 15085 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #15085 <small>2009-01-20 21:19:00</small></h3>
+          <h4>nacitar</h4>
+          <p class="lead">Workspace (re)build/clean commands do not function properly</p>
+          <pre class="pre-scrollable">Layout:
+  Workspace
+  - Project 1 (makefile project)
+  - Project 2 (makefile project)
+  - Project 3 (makefile project)
+
+EXPECTED:
+
+Build Workspace ==&gt; Build project 1, build project 2, build project 3
+
+Rebuild Workspace ==&gt; Rebuild project 1, rebuild project 2, rebuild project 3
+
+Clean Workspace ==&gt; Clean project 1, clean project 2, clean project 3.
+
+
+BEHAVIOR:
+Codeblocks assumes you are not using a custom makefile project, in the case of the workspace build commands.  What happens is the following:
+
+Build/Rebuild Workspace ==&gt; Build/rebuild project 1 using the custom makefile, try to build/rebuild project 1 using normal build system (should NOT happen, as this is a custom makefile project!), if it didn't fail (and it likely will, as it's a makefile project for a reason), it'll do the same thing for project 2 and then 3.
+
+A workaround the that behavior is to create a target called "None" or something similar, set it's build commands to something like "echo DO NOT BUILD THIS TARGET; return 1" if on a linux box at least, and only add your source files to that target (that way you have the convenient file listing, and you're building using the makefile).  However, even with this workaround, the headers that say what project is being build and what target is being built will be output _after_ the build log for the makefile execution, making the headers into footers, effectively.
+
+Now, what's really interesting is the behavior of clean.  Unlike build/rebuild workspace, clean workspace only cleans the first project.  That's it.  No headers or anything are output.
+
+This is a simple fix, just make build/rebuild/clean workspace into the equivalent of build/rebuild/clean project 1, then 2, then 3.. whatever order is in the workspace.  This is how I assumed it worked, but clearly that's not the case, as I can build and clean my projects fine normally, but not with the workspace commands without workarounds.  And, no workaround exists to make clean workspace function properly.  It's just broken.</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::WrongBehaviour</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2009-01-29 23:38:08</dd>
+            <dt>Assigned to</dt><dd>jenslody</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">nacitar 2009-01-20 21:20:24</div>
+        <div class="panel-body">
+          <p>Duplicate of Bug #14644, just noticed... more information is here than in the other, though.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">jenslody 2009-01-29 23:38:08</div>
+        <div class="panel-body">
+          <p>This bug is now fixed in HEAD.</p>
+          <p>Thank you for reporting it.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

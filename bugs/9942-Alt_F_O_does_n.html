@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 9942 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #9942 <small>2007-01-12 09:43:35</small></h3>
+          <h4>johanekdahl</h4>
+          <p class="lead">Alt-F, O does not activate "Open File"</p>
+          <p>Alt-F, O does not activate "Open File":</p>
+          <p>Alt-F activates the File menu, where "O" in Open is underlined, indicating that you can use it as an accelerator.</p>
+          <p>This is not what happends. When pressing "O" the project is closed. (Arggghhhh...., it takes two minutes to open again).</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::WrongBehaviour</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2007-01-20 18:13:40</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">artoj 2007-01-16 20:31:49</div>
+        <div class="panel-body">
+          <p>I can't reproduce this. The open file dialog opens as expected and the currently open project remains open.</p>
+          <p>I tested it on Windows XP (wxW 2.6.3p2, C::B revision 3444) and Ubuntu Edgy (wxW 2.6.3p2, C::B revision 3481).</p>
+          <p>What OS / wxWidgets version / Code::Blocks revision you're using?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">johanekdahl 2007-01-18 07:56:03</div>
+        <div class="panel-body">
+          <p>Windows XP Professional, Version 2002, SP2</p>
+          <p>C::B is the nightly build with rev 3202</p>
+          <p>wx2.6.3(Windows, unicode)</p>
+          <p>I'll install the latest nightly on a test machine ASAP (a few days...) to see if I get the same behaviour</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">artoj 2007-01-19 16:32:53</div>
+        <div class="panel-body">
+          <p>Use the patched wxWidgets DLL from:</p>
+          <p><a href="http://prdownload.berlios.de/codeblocks/wxmsw26u_gcc_cb_wx2.6.3p2AndCbPatch.7z">http://prdownload.berlios.de/codeblocks/wxmsw26u_gcc_cb_wx2.6.3p2AndCbPatch.7z</a></p>
+          <p>and the shortcuts should work.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2007-01-18 21:07:33</div>
+        <div class="panel-body">
+          <p>I have the same problem running SVN 3482 XP2.</p>
+          <p>The Close accelerator does not work either. Using the C on the File menu skips to every menu item beginning with C except the Close item.</p>
+          <p>I changed the &amp;amp;Open main_menu.xrc item to Op&amp;amp;en and it works.</p>
+          <p>I change it to O&amp;amp;pen and it fails just like using O.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2007-01-18 21:11:57</div>
+        <div class="panel-body">
+          <p>I placed a trap in MainFrame::OnFileOpen. But the Alt-F Open event never invoke the routine.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2007-01-18 21:46:58</div>
+        <div class="panel-body">
+          <p>Noticing that using C on the file menu skipped the &amp;Close item, I trapped "Open Default Workspace". Sure enought Alt-F O is send the event there.</p>
+          <p>I then changed "Open Default Workspace to Xpen Default Workspace". Low and behold Alt-F 0pen actually work.</p>
+          <p>The moral of this story seems to be that you cannot have multiple items on a menu that begin with the same letter and use one of those letters as an accelerator. It wont work as an accelerator.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2007-01-18 22:29:33</div>
+        <div class="panel-body">
+          <p>In the wxWidgets FAQ it contains an item about duplicate mnemonics:</p>
+          <p>Avoid duplicates</p>
+          <p>* Don't use the same mnemonic letter is twice in the same window.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2007-01-18 23:50:56</div>
+        <div class="panel-body">
+          <p>I tried to duplicate this theory via the wxWidgets menu same. But could not. The sample works fine when multiple fist letter items are on the menu.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2007-01-20 18:13:40</div>
+        <div class="panel-body">
+          <p>Please try with a nightly build and reopen this bug report, if</p>
+          <p>needed.</p>
+          <p>See <a href="http://www.codeblocks.org/nightly">http://www.codeblocks.org/nightly</a></p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2007-01-20 18:12:22</div>
+        <div class="panel-body">
+          <p>Confirmed. Fixed by nightly builds and for svn users the menu.cpp and ownerdrw.cpp built by applying <a href="http://forums.codeblocks.org/index.php?topic=4809.msg38778">http://forums.codeblocks.org/index.php?topic=4809.msg38778</a>#msg38778</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 18474 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #18474 <small>2012-01-07 07:29:28</small></h3>
+          <h4>hquan</h4>
+          <p class="lead">Sometimes wxScintilla::OnChar fails to accept key</p>
+          <p>My wxWidget version is 2.8.12-1. Version in SVN is 7663M. I found that wxScintilla::OnChar fails to accept alphanumeric key just after another non-alphanumeric is press. I checked the code and find that when the non-alphanumeric key is process in OnKeyDown, m_lastKeyDownConsumed will be set to be true. In the next turn when a alphanumeric key comes, OnKeyDown will not be called but go directly to OnChar. Thus m_lastKeyDownConsumed will be true in this turn and since the key is not unicode, this key will not be processed by calling DoAddChar. Temporarily I set m_lastKeyDownConsumed=false before judging m_lastKeyDownConsumed and skip. It seems to be working now. I don't understand the purpose of m_lastKeyDownConsumed and it seems not to be necessary. Or maybe somewhere another version of OnKeyDown is called.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Editor</dd>
+            <dt>Group</dt><dd>Platform:Linux</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2012-02-20 01:30:41</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-02-13 02:00:05</div>
+        <div class="panel-body">
+          <p>QUOTE: "My wxWidget version is 2.8.12-1. Version in SVN is 7663M. I found that wxScintilla::OnChar fails to accept alphanumeric key just after another non-alphanumeric is press."</p>
+          <p>I do not have such problem here, wx2.8.12 and C::B trunk latest.</p>
+          <p>Can you give a step by step instruction to reproduce this?</p>
+          <p>I have tried:</p>
+          <p>1, press &lt;TAB&gt; key</p>
+          <p>2, press a alphanumberic key like "a"</p>
+          <p>3, "a" is shown in the editor. So, it works OK!</p>
+          <p>Everything works FINE. and I check the value : In function void wxScintilla::OnChar (wxKeyEvent&amp; evt), m_lastKeyDownConsumed is false when I hit the "a".</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-02-13 02:01:54</div>
+        <div class="panel-body">
+          <p>Oh, forget to say that I works under Windows XP, so your problem may related to Linux....</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hquan 2012-02-14 06:53:35</div>
+        <div class="panel-body">
+          <p>I rechecked it today and find all key will go through OnKeyDown, so there maybe something wrong with the old wxGTK. I updated system recently and maybe this is the reason.</p>
+          <p>Hi admin, can you please close this bug and patch 003248? Thanks</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-02-20 01:30:41</div>
+        <div class="panel-body">
+          <p>Ok, I close this bug report.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

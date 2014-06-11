@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 18744 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #18744 <small>2012-10-02 21:25:32</small></h3>
+          <h4>zuljin</h4>
+          <p class="lead">File Names are wrongly displayed</p>
+          <p>File Names are wrongly displayed in "Open File List" window and in tab title if :</p>
+          <p>1) project file is on different partition than source files (*.cbp on c:\ and for example *.cpp of d:\)</p>
+          <p>2) and length of path to source file is longer that path of project file</p>
+          <p>(c:\project\proj.cbp vs "d:\project\lib\test\main.cpp")</p>
+          <p>File names are truncated and for example instead of displaying "d:\project\lib\test\main.cpp" filename is displayed as "st\main.cpp".</p>
+          <p>What is even worst if such loaded project is saved it saves to *.cbp file this malformed name and next time instead of getting file from disk d: it try to open it from disk c:</p>
+          <p>This bug was introduced between nightly 7966 and 8024.</p>
+          <p>How to reproduce:</p>
+          <p>1) Create new project and place it on disk c: in folder with short name e.g. "c:\project\proj.cbp"</p>
+          <p>2) Create new source file and place it on disk d: in folder with longer name e.g. "d:\project\lib\test\main.cpp"</p>
+          <p>3) Open this newly created file. Its name should be malformed.</p>
+          <p>Why this happen:</p>
+          <p>This happens because function void cbProject::CalculateCommonTopLevelPatch() from cbproject.cpp has bug :).</p>
+          <p>It assumes that all file names loaded from project files are relative, but this is not a case when files are on different partitions. In that case path are absolute and starts with drive letter c:\, d:\.</p>
+          <p>There is few options how to fix this issue:</p>
+          <p>1) This function should modify its wxFileName base variable from GetBasePath() to empty string - "". Because there is no common part of path if files are on different partitions. This should work but will replace everything to absolute path.</p>
+          <p>2) somehow detect that source file path is different from project path and modify assignment f-&gt;relativeToCommonTopLevelPath = .....</p>
+          <p>I could try to write some fix for that, but I'm not sure how it should work in the first place.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::WrongBehaviour</dd>
+            <dt>Group</dt><dd>Platform:Windows</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>mortenmacfly</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2012-10-11 12:35:11</div>
+        <div class="panel-body">
+          <p>I would vote for:</p>
+          <p>1) This function should modify its wxFileName base variable from GetBasePath() to empty string - "". Because there is no common part of path if files are on different partitions. This should work but will replace everything to absolute path.</p>
+          <p>But actually having source files cluttered across several partitions is error prone in many ways (consider debugging, for example) that it is more wise not to do it. For several issues raised with such a project we have no chance to fix it, again, as for the debugger GDB, for example.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2012-10-11 15:55:31</div>
+        <div class="panel-body">
+          <p>Please read here:</p>
+          <p><a href="http://forums.codeblocks.org/index.php/topic,16947.0.html">http://forums.codeblocks.org/index.php/topic,16947.0.html</a></p>
+          <p>...and try the patch. It should work for you. If it does, please report back.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

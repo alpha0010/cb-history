@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 18526 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #18526 <small>2012-03-09 14:12:24</small></h3>
+          <h4>zetab</h4>
+          <p class="lead">Insert all class methods without implementation malfunction</p>
+          <p>Version: svn build  rev 7789 (2012/02/11 03:42:39)   gcc 4.5.2 Windows/unicode - 32 bit</p>
+          <p>OS: WinXP</p>
+          <p>Declare a class:</p>
+          <p>class TestClass</p>
+          <p>{</p>
+          <p>public:</p>
+          <p>TestClass();</p>
+          <p>~TestClass();</p>
+          <p>int* Test1();</p>
+          <p>int&amp; Test2();</p>
+          <p>unsigned int Test3();</p>
+          <p>protected:</p>
+          <p>private:</p>
+          <p>};</p>
+          <p>Using "Insert -&gt; all class methods without implementation" for Test1, Test2, and Test3 will generate following code:</p>
+          <p>int TestClass::Test1()</p>
+          <p>{</p>
+          <p>}</p>
+          <p>int TestClass::Test2()</p>
+          <p>{</p>
+          <p>}</p>
+          <p>int TestClass::Test3()</p>
+          <p>{</p>
+          <p>}</p>
+          <p>The "*", "&amp;" and "unsigned" in the return type are missing.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::CodeCompletion</dd>
+            <dt>Group</dt><dd>Platform:Windows</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>ollydbg</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-05-09 14:35:39</div>
+        <div class="panel-body">
+          <p>I add a new bug report about your second bug in this thread.</p>
+          <p><a href="https://developer.berlios.de/bugs/?func=detailbug&amp;bug_id=18600&amp;group_id=5358">https://developer.berlios.de/bugs/?func=detailbug&amp;bug_id=18600&amp;group_id=5358</a></p>
+          <p>Here, I will focus on the original bug.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-03-12 06:09:49</div>
+        <div class="panel-body">
+          <p>Here, in the function: int CodeCompletion::DoAllMethodsImpl(), we have such code:</p>
+          <p>wxString type = token-&gt;m_BaseType;</p>
+          <p>if ((type.Last() == _T('&amp;') || type.Last() == _T('*')) &amp;&amp; type[type.Len() - 2] == _T(' '))</p>
+          <p>{</p>
+          <p>type[type.Len() - 2] = type.Last();</p>
+          <p>type.RemoveLast();</p>
+          <p>}</p>
+          <p>But both three tokens have the same "base type". Do shall we use "m_FullType" instead?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">zetab 2012-03-21 10:36:30</div>
+        <div class="panel-body">
+          <p>Found another problem:</p>
+          <p>If I have another class:</p>
+          <p>class A</p>
+          <p>{</p>
+          <p>public:</p>
+          <p>A(int x, int y){}</p>
+          <p>~A(){}</p>
+          <p>};</p>
+          <p>And declare a member function in TestClass:</p>
+          <p>void Test4(const A&amp; a = A(1, 2));</p>
+          <p>Insert implementation will result in:</p>
+          <p>void TestClass::Test4(const A&amp; a, 2))</p>
+          <p>{</p>
+          <p>}</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-03-21 12:48:21</div>
+        <div class="panel-body">
+          <p>Hi, thanks for this report, I believe this is another bug, and I will look into it. Thanks.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-03-21 13:45:57</div>
+        <div class="panel-body">
+          <p>wxString Token::GetStrippedArgs() const</p>
+          <p>{</p>
+          <p>// the argument should have the format (xxxx = y, ....) or just an empty string</p>
+          <p>// if it is empty, we just return an empty string</p>
+          <p>if (m_Args.IsEmpty())</p>
+          <p>return wxEmptyString;</p>
+          <p>wxString args;</p>
+          <p>args.Alloc(m_Args.Len() + 1);</p>
+          <p>bool skipDefaultValue = false;</p>
+          <p>for (size_t i = 0; i &lt; m_Args.Len(); ++i)</p>
+          <p>{</p>
+          <p>const wxChar ch = m_Args[i];</p>
+          <p>if (ch == _T('\n'))</p>
+          <p>continue;</p>
+          <p>else if (ch == _T('='))</p>
+          <p>{</p>
+          <p>skipDefaultValue = true;</p>
+          <p>args.Trim();</p>
+          <p>}</p>
+          <p>else if (ch == _T(','))</p>
+          <p>skipDefaultValue = false;</p>
+          <p>if (!skipDefaultValue)</p>
+          <p>args &lt;&lt; ch;</p>
+          <p>}</p>
+          <p>if (args.Last() != _T(')'))</p>
+          <p>args &lt;&lt; _T(')');</p>
+          <p>return args;</p>
+          <p>}</p>
+          <p>This function works badly when m_Args="(const A&amp; a = A(1, 2))".</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-03-24 14:22:42</div>
+        <div class="panel-body">
+          <p>Now, I see skipping parentheses is quite complex. See:</p>
+          <p>void Tokenizer::ReadParentheses(wxString&amp; str)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

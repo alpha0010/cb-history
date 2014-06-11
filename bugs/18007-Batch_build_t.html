@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 18007 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #18007 <small>2011-03-18 09:15:03</small></h3>
+          <h4>austin_hastings</h4>
+          <p class="lead">Batch build tries to interact with user</p>
+          <p>I have a workspace file that was saved with at least on GENERATED file open in a window.</p>
+          <p>When I invoke the C::B batch builder (from a Jenkins CI server) the full rebuild causes the generated file to get rebuilt.</p>
+          <p>Code::Blocks then pops up a dialog asking if I want to reload the file. The CI version doesn't show the window - presumably because it is running as a service and cannot communicate with the desktop. But the build runs forever - I suspect that the dialog either failed to create or returned an error, but the "do you want to reload the file" logic is ignoring that condition.</p>
+          <p>At any rate, I suggest that in a batch build either none of the files should even be loaded, or there should be some intelligence in the pop-up code to know when a non-interactive session is running.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::WrongBehaviour</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2011-04-18 07:33:01</dd>
+            <dt>Assigned to</dt><dd>mortenmacfly</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2011-04-18 07:22:32</div>
+        <div class="panel-body">
+          <p>You can fix this yourself quickly in CodeBlocksApp::OnAppActivate(wxActivateEvent&amp; event) (app.cpp), if you change the line:</p>
+          <p>if (Manager::Get()-&gt;GetEditorManager() &amp;&amp; Manager::Get()-&gt;GetConfigManager(_T("app"))-&gt;ReadBool(_T("/environment/check_modified_files"), true))</p>
+          <p>to:</p>
+          <p>if (!m_Batch &amp;&amp; Manager::Get()-&gt;GetEditorManager() &amp;&amp; Manager::Get()-&gt;GetConfigManager(_T("app"))-&gt;ReadBool(_T("/environment/check_modified_files"), true))</p>
+          <p>Not sure about the side effect though... this needs some testing.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2011-04-18 07:33:01</div>
+        <div class="panel-body">
+          <p>This bug is now fixed in HEAD.</p>
+          <p>Thank you for reporting it.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

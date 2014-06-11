@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 18544 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #18544 <small>2012-03-27 04:23:18</small></h3>
+          <h4>hooluupog</h4>
+          <p class="lead">Code Completion fails to show tips .</p>
+          <p>I am using Code::Blocks nightly build 7789(update from stable build 10.05).  FYI, mingw gcc -version gcc (tdm-1) 4.6.1,gdb 7.3</p>
+          <p>The code completion always fails showing tips.</p>
+          <p>List some cases as follows:</p>
+          <p>Case 1:</p>
+          <p>//--------------MyException.h-----------------</p>
+          <p>#include &lt;string&gt;</p>
+          <p>class MyException</p>
+          <p>{</p>
+          <p>public:</p>
+          <p>virtual std::string getwhat() = 0;</p>
+          <p>};</p>
+          <p>class MyDivideZero : public MyException{</p>
+          <p>public:</p>
+          <p>std::string getwhat()</p>
+          <p>{</p>
+          <p>return "Divide By Zero.";</p>
+          <p>}</p>
+          <p>};</p>
+          <p>class MyTooLarge : public MyException{</p>
+          <p>public:</p>
+          <p>std::string getwhat()</p>
+          <p>{</p>
+          <p>return "Too Large Number.";</p>
+          <p>}</p>
+          <p>};</p>
+          <p>//-------------------------main.cpp-----------------</p>
+          <p>#include "MyException.h"</p>
+          <p>#include &lt;iostream&gt;</p>
+          <p>using namespace std;</p>
+          <p>int main(){</p>
+          <p>try{</p>
+          <p>cout&lt;&lt;"It's a test."&lt;&lt;endl;</p>
+          <p>}catch(MyException&amp; e)</p>
+          <p>{</p>
+          <p>cout&lt;&lt;e.getwhat()&lt;&lt;"\n";                 //       code completion fails showing getwhat() method.  After i write 'e.' ,it shows nothing.</p>
+          <p>}</p>
+          <p>}</p>
+          <p>Case 2:</p>
+          <p>//-----------------------StrInt.h-----------------</p>
+          <p>#include &lt;iostream&gt;</p>
+          <p>#include &lt;string&gt;</p>
+          <p>class StrInt{</p>
+          <p>std::string _num;</p>
+          <p>public:</p>
+          <p>StrInt(const std::string&amp; a = "0");</p>
+          <p>};</p>
+          <p>//--------------------StrInt.cpp-----------------</p>
+          <p>#include "StrInt.h"</p>
+          <p>StrInt::StrInt(const std::string&amp; a) : _num(a)</p>
+          <p>{</p>
+          <p>if (a.length()==0) ;                   //      code completion fails showing length() method. After i write 'e.' ,it shows nothing.</p>
+          <p>}</p>
+          <p>Case 3:</p>
+          <p>#include &lt;string&gt;</p>
+          <p>#include &lt;map&gt;</p>
+          <p>using namespace std;</p>
+          <p>int main()</p>
+          <p>{</p>
+          <p>map&lt;int,string&gt; mps;</p>
+          <p>mps.begin()-&gt;second.append("hello");//     code completion fails showing second member. After i write 'begin()-&gt;' ,it shows nothing. After write 'second.' ,it shows nothing.</p>
+          <p>return 0;</p>
+          <p>}</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::CodeCompletion</dd>
+            <dt>Group</dt><dd>Platform:Windows</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>ollydbg</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">hooluupog 2012-03-27 05:01:11</div>
+        <div class="panel-body">
+          <p>And also some error tips. for example:</p>
+          <p>I defined a class named StrInt. A member method named mul.</p>
+          <p>std::string StrInt::mul(const std::string&amp; a, const std::string&amp; b)</p>
+          <p>{</p>
+          <p>std::string s(a.length()+b.length(),'0');</p>
+          <p>}</p>
+          <p>Now when putting cusor on 'a',it shows "conststring &amp; StrInt::mul::a", the same with 'b'. The correct tip info should be"const  std::string&amp; a". This error tip leads to object 'a' fail to show its length() method after inputting 'a.' Maybe this is concerned with Case 2 as stated above.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

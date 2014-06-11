@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 19278 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #19278 <small>2014-02-06 21:02:31</small></h3>
+          <h4>jpd2014</h4>
+          <p class="lead">Crash while editing</p>
+          <pre class="pre-scrollable">With CodeBlocks 13.12 (latest) on Ubuntu 13.10 IA64 :
+
+1) Find in files in numerous files (cpp) according to a pattern.
+2) Modifiy each line of files found.
+3) Random crash that I experience many times per day.
+
+Here is the stack from stdin + gdb :
+
+Editor Open
+NativeParser::DoFullParsing(): AddCompilerPredefinedMacros failed!
+NativeParser::DoFullParsing(): Adding three kind of files to batch-parser
+NativeParser::DoFullParsing(): Add priority header file: '/usr/include/c++/4.8/cstddef'
+NativeParser::DoFullParsing(): Add 1 priority file(s) for project 'sdkopt'...
+NativeParser::DoFullParsing(): Added 52 header&amp;source file(s) for project 'sdkopt' to batch-parser...
+NativeParser::CreateParser(): Finish creating a new parser for project 'sdkopt'
+NativeParser::DeleteParser(): Deleting parser for project 'sdkonw'!
+NativeParser::RemoveObsoleteParsers():Removed obsolete parser of 'sdkonw'
+NativeParser::OnParsingOneByOneTimer(): Start switch from OnParsingOneByOneTimer
+NativeParser::GetAllPathsByFilename(): Traversing '/home/jpd/up/ups500/dev/source/sdk/opt/cpp' for: upsopt1.*
+NativeParser::GetAllPathsByFilename(): Found 3 files:
+- /home/jpd/up/ups500/dev/source/sdk/opt/cpp/upsopt1.cpp
+- /home/jpd/up/ups500/dev/source/sdk/opt/cpp/upsopt1.e
+- /home/jpd/up/ups500/dev/source/sdk/opt/cpp/upsopt1.h
+Switch parser to project 'sdkopt'
+ClassBrowser::OnThreadEvent(): Updating class browser...
+ClassBrowser::OnThreadEvent(): Class browser updated.
+NativeParser::OnParserStart(): Starting batch parsing for project 'sdkopt'...
+ReadVarNames() : Unexpected token '{' for 'typupsoptsectionapi', file '/home/jpd/up/ups500/dev/source/sdk/opt/cpp/upsopt.i2', line 575.
+*** Error in `codeblocks': invalid fastbin entry (free): 0x00000000026129b0 ***
+======= Backtrace: =========
+/lib/x86_64-linux-gnu/libc.so.6[0x3c6f680996]
+/usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0(_ZN12wxStringBaseaSERKS_+0x3c)[0x3d73aa5a1c]
+/usr/lib/codeblocks/plugins/libcodecompletion.so(_ZN9Tokenizer8GetTokenEv+0x93)[0x7f37d8e482a3]
+/usr/lib/codeblocks/plugins/libcodecompletion.so(_ZN12ParserThread9SkipBlockEv+0x41)[0x7f37d8e35891]
+/usr/lib/codeblocks/plugins/libcodecompletion.so(_ZN12ParserThread14HandleFunctionERK8wxStringb+0x511)[0x7f37d8e3b971]
+/usr/lib/codeblocks/plugins/libcodecompletion.so(_ZN12ParserThread7DoParseEv+0xaf7)[0x7f37d8e3ca07]
+/usr/lib/codeblocks/plugins/libcodecompletion.so(_ZN12ParserThread5ParseEv+0x6b)[0x7f37d8e40a3b]
+/usr/lib/codeblocks/plugins/libcodecompletion.so(_ZN12ParserThread7ExecuteEv+0x9)[0x7f37d8e415f9]
+/usr/lib/libcodeblocks.so.0(_ZN12cbThreadPool14cbWorkerThread5EntryEv+0xfa)[0x3e26de0afa]
+/usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0(_ZN16wxThreadInternal12PthreadStartEP8wxThread+0xc3)[0x3d73ad9653]
+/lib/x86_64-linux-gnu/libpthread.so.0[0x3c6fe07f6e]
+/lib/x86_64-linux-gnu/libc.so.6(clone+0x6d)[0x3c6f6fa9cd]
+======= Memory map: ========
+00400000-00537000 r-xp 00000000 08:01 3147888                            /usr/bin/codeblocks
+00737000-0074e000 rw-p 00137000 08:01 3147888                            /usr/bin/codeblocks
+0074e000-00755000 rw-p 00000000 00:00 0 
+0094d000-0096a000 rw-p 0014d000 08:01 3147888                            /usr/bin/codeblocks
+012f9000-4152c000 rw-p 00000000 00:00 0                                  [heap]
+3044e00000-3044efe000 r-xp 00000000 08:01 10485799                       /lib/x86_64-linux-gnu/libglib-2.0.so.0.3800.2
+3044efe000-30450fe000 ---p 000fe000 08:01 10485799                       /lib/x86_64-linux-gnu/libglib-2.0.so.0.3800.2
+30450fe000-30450ff000 r--p 000fe000 08:01 10485799                       /lib/x86_64-linux-gnu/libglib-2.0.so.0.3800.2
+30450ff000-3045100000 rw-p 000ff000 08:01 10485799                       /lib/x86_64-linux-gnu/libglib-2.0.so.0.3800.2
+3045100000-3045101000 rw-p 00000000 00:00 0 
+3045200000-304524f000 r-xp 00000000 08:01 3146006                        /usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3800.2
+304524f000-304544f000 ---p 0004f000 08:01 3146006                        /usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3800.2
+304544f000-3045450000 r--p 0004f000 08:01 3146006                        /usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3800.2
+3045450000-3045451000 rw-p 00050000 08:01 3146006                        /usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3800.2
+3045600000-3045603000 r-xp 00000000 08:01 3146793                        /usr/lib/x86_64-linux-gnu/libgmodule-2.0.so.0.3800.2
+3045603000-3045802000 ---p 00003000 08:01 3146793                        /usr/lib/x86_64-linux-gnu/libgmodule-2.0.so.0.3800.2
+3045802000-3045803000 r--p 00002000 08:01 3146793                        /usr/lib/x86_64-linux-gnu/libgmodule-2.0.so.0.3800.2
+3045803000-3045804000 rw-p 00003000 08:01 3146793                        /usr/lib/x86_64-linux-gnu/libgmodule-2.0.so.0.3800.2
+3045a00000-3045b5c000 r-xp 00000000 08:01 3146901                        /usr/lib/x86_64-linux-gnu/libgio-2.0.so.0.3800.2
+3045b5c000-3045d5b000 ---p 0015c000 08:01 3146901                        /usr/lib/x86_64-linux-gnu/libgio-2.0.so.0.3800.2
+3045d5b000-3045d5f000 r--p 0015b000 08:01 3146901                        /usr/lib/x86_64-linux-gnu/libgio-2.0.so.0.3800.2
+3045d5f000-3045d61000 rw-p 0015f000 08:01 3146901                        /usr/lib/x86_64-linux-gnu/libgio-2.0.so.0.3800.2
+3045d61000-3045d63000 rw-p 00000000 00:00 0 
+3045e00000-3045e3a000 r-xp 00000000 08:01 3146241                        /usr/lib/x86_64-linux-gnu/libfontconfig.so.1.8.0
+3045e3a000-3046039000 ---p 0003a000 08:01 3146241                        /usr/lib/x86_64-linux-gnu/libfontconfig.so.1.8.0
+3046039000-304603b000 r--p 00039000 08:01 3146241                        /usr/lib/x86_64-linux-gnu/libfontconfig.so.1.8.0
+304603b000-304603c000 rw-p 0003b000 08:01 3146241                        /usr/lib/x86_64-linux-gnu/libfontconfig.so.1.8.0
+3046600000-3046704000 r-xp 00000000 08:01 3146640                        /usr/lib/x86_64-linux-gnu/libcairo.so.2.11200.16
+3046704000-3046903000 ---p 00104000 08:01 3146640                        /usr/lib/x86_64-linux-gnu/libcairo.so.2.11200.16
+3046903000-3046906000 r--p 00103000 08:01 3146640                        /usr/lib/x86_64-linux-gnu/libcairo.so.2.11200.16
+3046906000-3046907000 rw-p 00106000 08:01 3146640                        /usr/lib/x86_64-linux-gnu/libcairo.so.2.11200.16
+3046907000-3046909000 rw-p 00000000 00:00 0 
+3046e00000-3046e1f000 r-xp 00000000 08:01 3147228                        /usr/lib/x86_64-linux-gnu/libatk-1.0.so.0.21009.1
+3046e1f000-304701f000 ---p 0001f000 08:01 3147228                        /usr/lib/x86_64-linux-gnu/libatk-1.0.so.0.21009.1
+304701f000-3047021000 r--p 0001f000 08:01 3147228                        /usr/lib/x86_64-linux-gnu/libatk-1.0.so.0.21009.1
+3047021000-3047022000 rw-p 00021000 08:01 3147228                        /usr/lib/x86_64-linux-gnu/libatk-1.0.so.0.21009.1
+3478800000-347884a000 r-xp 00000000 08:01 3146098                        /usr/lib/x86_64-linux-gnu/libpango-1.0.so.0.3600.1
+347884a000-3478a4a000 ---p 0004a000 08:01 3146098                        /usr/lib/x86_64-linux-gnu/libpango-1.0.so.0.3600.1
+3478a4a000-3478a4c000 r--p 0004a000 08:01 3146098                        /usr/lib/x86_64-linux-gnu/libpango-1.0.so.0.3600.1
+3478a4c000-3478a4d000 rw-p 0004c000 08:01 3146098                        /usr/lib/x86_64-linux-gnu/libpango-1.0.so.0.3600.1
+3948e00000-3948e1a000 r-xp 00000000 08:01 3145802                        /usr/lib/x86_64-linux-gnu/libgraphite2.so.3.0.1
+3948e1a000-3949019000 ---p 0001a000 08:01 3145802                        /usr/lib/x86_64-linux-gnu/libgraphite2.so.3.0.1
+3949019000-394901b000 r--p 00019000 08:01 3145802                        /usr/lib/x86_64-linux-gnu/libgraphite2.so.3.0.1
+394901b000-394901c000 rw-p 0001b000 08:01 3145802                        /usr/lib/x86_64-linux-gnu/libgraphite2.so.3.0.1
+3949200000-3949250000 r-xp 00000000 08:01 3145812                        /usr/lib/x86_64-linux-gnu/libharfbuzz.so.0.919.0
+3949250000-3949450000 ---p 00050000 08:01 3145812                        /usr/lib/x86_64-linux-gnu/libharfbuzz.so.0.919.0
+3949450000-3949451000 r--p 00050000 08:01 3145812                        /usr/lib/x86_64-linux-gnu/libharfbuzz.so.0.919.0
+3949451000-3949452000 rw-p 00051000 08:01 3145812                        /usr/lib/x86_64-linux-gnu/libharfbuzz.so.0.919.0
+3949600000-394960b000 r-xp 00000000 08:01 3146119                        /usr/lib/x86_64-linux-gnu/libpangocairo-1.0.so.0.3600.1
+394960b000-394980b000 ---p 0000b000 08:01 3146119                        /usr/lib/x86_64-linux-gnu/libpangocairo-1.0.so.0.3600.1
+394980b000-394980c000 r--p 0000b000 08:01 3146119                        /usr/lib/x86_64-linux-gnu/libpangocairo-1.0.so.0.3600.1j </pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>Platform:Linux</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">jpd2014 2014-02-07 10:35:42</div>
+        <div class="panel-body">
+          <pre class="pre-scrollable">One more case :
+-------------------
+Start switch from OnEditorActivatedTimer
+NativeParser::GetAllPathsByFilename(): Traversing '/home/jpd/up/ups500/dev/source/sdk/iac/cpp' for: upsiac0.*
+NativeParser::GetAllPathsByFilename(): Found 3 files:
+- /home/jpd/up/ups500/dev/source/sdk/iac/cpp/upsiac0.cpp
+- /home/jpd/up/ups500/dev/source/sdk/iac/cpp/upsiac0.e
+- /home/jpd/up/ups500/dev/source/sdk/iac/cpp/upsiac0.h
+Switch parser to project 'sdkiac'
+ClassBrowser::OnThreadEvent(): Updating class browser...
+ClassBrowser::OnThreadEvent(): Class browser updated.
+ClassBrowser::OnThreadEvent(): Updating class browser...
+ClassBrowser::OnThreadEvent(): Class browser updated.
+[New Thread 0x7fff60fa9700 (LWP 17900)]
+NativeParser::OnParserStart(): Starting batch parsing for project 'sdkiac'...
+*** Error in `/usr/bin/codeblocks': invalid fastbin entry (free): 0x0000000001c797e0 ***
+======= Backtrace: =========
+/lib/x86_64-linux-gnu/libc.so.6[0x3c6f680996]
+/usr/lib/codeblocks/plugins/libcodecompletion.so(_ZN9Tokenizer8GetTokenEv+0xb2)[0x7fffddc852c2]
+/usr/lib/codeblocks/plugins/libcodecompletion.so(_ZN12ParserThread9SkipBlockEv+0x41)[0x7fffddc72891]
+/usr/lib/codeblocks/plugins/libcodecompletion.so(_ZN12ParserThread24ParseBufferForNamespacesERK8wxStringRSt6vectorI9NameSpaceSaIS4_EE+0x24f)[0x7fffddc78c5f]
+/usr/lib/codeblocks/plugins/libcodecompletion.so(_ZN6Parser24ParseBufferForNamespacesERK8wxStringRSt6vectorI9NameSpaceSaIS4_EE+0x10e)[0x7fffddc6cb1e]
+/usr/lib/codeblocks/plugins/libcodecompletion.so(_ZN14CodeCompletion28ParseFunctionsAndFillToolbarEv+0x6ec)[0x7fffddc3180c]
+/usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0(_ZN12wxEvtHandler21ProcessEventIfMatchesERK21wxEventTableEntryBasePS_R7wxEvent+0x56)[0x3d73ada756]
+/usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0(_ZN12wxEvtHandler23SearchDynamicEventTableER7wxEvent+0x4f)[0x3d73adaa7f]
+/usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0(_ZN12wxEvtHandler12ProcessEventER7wxEvent+0x92)[0x3d73adab32]
+/usr/lib/x86_64-linux-gnu/libwx_gtk2u_core-2.8.so.0(_ZN11wxTimerBase6NotifyEv+0x60)[0x3de04afd40]
+/usr/lib/x86_64-linux-gnu/libwx_gtk2u_core-2.8.so.0[0x3de03dd5c3]
+/lib/x86_64-linux-gnu/libglib-2.0.so.0[0x3044e48f53]
+/lib/x86_64-linux-gnu/libglib-2.0.so.0(g_main_context_dispatch+0x146)[0x3044e483f6]
+/lib/x86_64-linux-gnu/libglib-2.0.so.0[0x3044e48748]
+/lib/x86_64-linux-gnu/libglib-2.0.so.0(g_main_loop_run+0x6a)[0x3044e48b4a]
+/usr/lib/x86_64-linux-gnu/libgtk-x11-2.0.so.0(gtk_main+0xa7)[0x3ddf72b2a7]
+/usr/lib/x86_64-linux-gnu/libwx_gtk2u_core-2.8.so.0(_ZN11wxEventLoop3RunEv+0x3a)[0x3de03d631a]
+/usr/lib/x86_64-linux-gnu/libwx_gtk2u_core-2.8.so.0(_ZN9wxAppBase8MainLoopEv+0x4c)[0x3de04479ac]
+/usr/bin/codeblocks[0x45ad3b]
+/usr/lib/x86_64-linux-gnu/libwx_baseu-2.8.so.0(_Z7wxEntryRiPPw+0x5d)[0x3d73a87e2d]
+/usr/bin/codeblocks[0x44e462]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xf5)[0x3c6f621de5]
+/usr/bin/codeblocks[0x45a86d]
+======= Memory map: ========
+00400000-00537000 r-xp 00000000 08:01 3147888                            /usr/bin/codeblocks
+00737000-0074e000 rw-p 00137000 08:01 3147888                            /usr/bin/codeblocks
+0074e000-00755000 rw-p 00000000 00:00 0 
+0094d000-0096a000 rw-p 0014d000 08:01 3147888                            /usr/bin/codeblocks
+0096a000-411ed000 rw-p 00000000 00:00 0                                  [heap]
+3044e00000-3044efe000 r-xp 00000000 08:01 10485799                       /lib/x86_64-linux-gnu/libglib-2.0.so.0.3800.2
+3044efe000-30450fe000 ---p 000fe000 08:01 10485799                       /lib/x86_64-linux-gnu/libglib-2.0.so.0.3800.2
+30450fe000-30450ff000 r--p 000fe000 08:01 10485799                       /lib/x86_64-linux-gnu/libglib-2.0.so.0.3800.2
+30450ff000-3045100000 rw-p 000ff000 08:01 10485799                       /lib/x86_64-linux-gnu/libglib-2.0.so.0.3800.2
+3045100000-3045101000 rw-p 00000000 00:00 0 
+3045200000-304524f000 r-xp 00000000 08:01 3146006                        /usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3800.2
+304524f000-304544f000 ---p 0004f000 08:01 3146006                        /usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3800.2
+304544f000-3045450000 r--p 0004f000 08:01 3146006                        /usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3800.2
+3045450000-3045451000 rw-p 00050000 08:01 3146006                        /usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.3800.2
+3045600000-3045603000 r-xp 00000000 08:01 3146793                        /usr/lib/x86_64-linux-gnu/libgmodule-2.0.so.0.3800.2
+3045603000-3045802000 ---p 00003000 08:01 3146793                        /usr/lib/x86_64-linux-gnu/libgmodule-2.0.so.0.3800.2
+3045802000-3045803000 r--p 00002000 08:01 3146793                        /usr/lib/x86_64-linux-gnu/libgmodule-2.0.so.0.3800.2
+3045803000-3045804000 rw-p 00003000 08:01 3146793                        /usr/lib/x86_64-linux-gnu/libgmodule-2.0.so.0.3800.2
+3045a00000-3045b5c000 r-xp 00000000 08:01 3146901                        /usr/lib/x86_64-linux-gnu/libgio-2.0.so.0.3800.2
+3045b5c000-3045d5b000 ---p 0015c000 08:01 3146901                        /usr/lib/x86_64-linux-gnu/libgio-2.0.so.0.3800.2
+3045d5b000-3045d5f000 r--p 0015b000 08:01 3146901                        /usr/lib/x86_64-linux-gnu/libgio-2.0.so.0.3800.2
+3045d5f000-3045d61000 rw-p 0015f000 08:01 3146901                        /usr/lib/x86_64-linux-gnu/libgio-2.0.so.0.3800.2
+3045d61000-3045d63000 rw-p 00000000 00:00 0 
+3045e00000-3045e3a000 r-xp 00000000 08:01 3146241                        /usr/lib/x86_64-linux-gnu/libfontconfig.so.1.8.0
+3045e3a000-3046039000 ---p 0003a000 08:01 3146241                        /usr/lib/x86_64-linux-gnu/libfontconfig.so.1.8.0
+3046039000-304603b000 r--p 00039000 08:01 3146241                        /usr/lib/x86_64-linux-gnu/libfontconfig.so.1.8.0
+304603b000-304603c000 rw-p 0003b000 08:01 3146241                        /usr/lib/x86_64-linux-gnu/libfontconfig.so.1.8.0
+3046600000-3046704000 r-xp 00000000 08:01 3146640                        /usr/lib/x86_64-linux-gnu/libcairo.so.2.11200.16
+3046704000-3046903000 ---p 00104000 08:01 3146640                        /usr/lib/x86_64-linux-gnu/libcairo.so.2.11200.16
+3046903000-3046906000 r--p 00103000 08:01 3146640                        /usr/lib/x86_64-linux-gnu/libcairo.so.2.11200.16
+3046906000-3046907000 rw-p 00106000 08:01 3146640                        /usr/lib/x86_64-linux-gnu/libcairo.so.2.11200.16
+3046907000-3046909000 rw-p 00000000 00:00 0 
+3046e00000-3046e1f000 r-xp 00000000 08:01 3147228                        /usr/lib/x86_64-linux-gnu/libatk-1.0.so.0.21009.1
+3046e1f000-304701f000 ---p 0001f000 08:01 3147228                        /usr/lib/x86_64-linux-gnu/libatk-1.0.so.0.21009.1
+304701f000-3047021000 r--p 0001f000 08:01 3147228                        /usr/lib/x86_64-linux-gnu/libatk-1.0.so.0.21009.1
+3047021000-3047022000 rw-p 00021000 08:01 3147228                        /usr/lib/x86_64-linux-gnu/libatk-1.0.so.0.21009.1
+304b200000-304b237000 r-xp 00000000 08:01 3146531                        /usr/lib/x86_64-linux-gnu/libcroco-0.6.so.3.0.1
+304b237000-304b437000 ---p 00037000 08:01 3146531                        /usr/lib/x86_64-linux-gnu/libcroco-0.6.so.3.0.1
+304b437000-304b43a000 r--p 00037000 08:01 3146531                        /usr/lib/x86_64-linux-gnu/libcroco-0.6.so.3.0.1
+304b43a000-304b43b000 rw-p 0003a000 08:01 3146531                        /usr/lib/x86_64-linux-gnu/libcroco-0.6.so.3.0.1
+304be00000-304be34000 r-xp 00000000 08:01 3408058                        /usr/lib/x86_64-linux-gnu/gvfs/libgvfscommon.so
+304be34000-304c034000 ---p 00034000 08:01 3408058                        /usr/lib/x86_64-linux-gnu/gvfs/libgvfscommon.so
+304c034000-304c039000 r--p 00034000 08:01 3408058                        /usr/lib/x86_64-linux-gnu/gvfs/libgvfscommon.so
+304c039000-304c03a000 rw-p 00039000 08:01 3408058                        /usr/lib/x86_64-linux-gnu/gvfs/libgvfscommon.so
+3478800000-347884a000 r-xp 00000000 08:01 3146098                        /usr/lib/x86_64-linux-gnu/libpango-1.0.so.0.3600.1
+Program received signal SIGABRT, Aborted.
+</pre>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2014-02-28 06:39:24</div>
+        <div class="panel-body">
+          <p>Can you show us a sample test project(also steps to reproduce this bug), thanks.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">jpd2014 2014-02-28 07:42:51</div>
+        <div class="panel-body">
+          <p>I think it is linked to code completion, when your parser is analyzing a c/cpp or header file.</p>
+          <p>The crash occured with a file with a syntax error :</p>
+          <p>struct mystructa</p>
+          <p>{</p>
+          <p>int a;</p>
+          <p>};</p>
+          <p>struct mystructb</p>
+          <p>{</p>
+          <p>int b;</p>
+          <p>} /* Syntax error : missing ";" */</p>
+          <p>struct mystructc</p>
+          <p>{</p>
+          <p>int c;</p>
+          <p>};</p>
+          <p>On other hand, I noticed when running codeblocks from a console that I issued several times some Gtk messages indicating the try to create a window with a huge size as it where a mismatch between a int and unsigned int declaration in your code.</p>
+          <p>This is for a floating windowd for code completion help, when the mouse is moved over a definition.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

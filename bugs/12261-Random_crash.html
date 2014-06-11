@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 12261 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #12261 <small>2007-10-23 17:11:14</small></h3>
+          <h4>kazade</h4>
+          <p class="lead">Random crash while editing</p>
+          <p>I keep getting random crashes in code blocks, it tends to happen about 60% of the time when I press CTRL+S to save a source file. It also only happens when a project gets particularly big.</p>
+          <p>I ran codeblocks through gdb and got the following traceback:</p>
+          <p>#0  0xb6f4f2eb in wxGenericTreeItem::GetChildrenCount ()</p>
+          <p>from /usr/lib/libwx_gtk2u_core-2.8.so.0</p>
+          <p>#1  0xb6f4f370 in wxGenericTreeCtrl::GetChildrenCount ()</p>
+          <p>from /usr/lib/libwx_gtk2u_core-2.8.so.0</p>
+          <p>#2  0xb2dc677b in ClassBrowserBuilderThread::RemoveInvalidNodes (</p>
+          <p>this=0x8cad250, tree=0x8ca7e00, parent={m_pItem = 0x9d74dc8})</p>
+          <p>at classbrowserbuilderthread.cpp:258</p>
+          <p>#3  0xb2dc6869 in ClassBrowserBuilderThread::RemoveInvalidNodes (</p>
+          <p>this=0x8cad250, tree=0x8ca7e00, parent={m_pItem = 0x8e66720})</p>
+          <p>at classbrowserbuilderthread.cpp:291</p>
+          <p>#4  0xb2dc6869 in ClassBrowserBuilderThread::RemoveInvalidNodes (</p>
+          <p>this=0x8cad250, tree=0x8ca7e00, parent={m_pItem = 0x8e8b310})</p>
+          <p>at classbrowserbuilderthread.cpp:291</p>
+          <p>#5  0xb2dc8f66 in ClassBrowserBuilderThread::BuildTree (this=0x8cad250)</p>
+          <p>at classbrowserbuilderthread.cpp:214</p>
+          <p>#6  0xb2dc9145 in ClassBrowserBuilderThread::Entry (this=0x8cad250)</p>
+          <p>at classbrowserbuilderthread.cpp:131</p>
+          <p>#7  0xb6be68d8 in wxThreadInternal::PthreadStart ()</p>
+          <p>from /usr/lib/libwx_baseu-2.8.so.0</p>
+          <p>#8  0xb6be694d in wxPthreadStart () from /usr/lib/libwx_baseu-2.8.so.0</p>
+          <p>#9  0xb6ae146b in start_thread () from /lib/tls/i686/cmov/libpthread.so.0</p>
+          <p>#10 0xb693d73e in clone () from /lib/tls/i686/cmov/libc.so.6</p>
+          <p>The above code is found in the code completion plugin, codeblocks does attempt to display a "Debug report" window but it is just frozen and I have to kill the program.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">kazade 2007-10-23 17:14:05</div>
+        <div class="panel-body">
+          <p>Sorry I should have said. This is with wx 2.8.4 on Ubuntu Gutsy however I experienced the same problem before on Feisty.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kazade 2007-10-23 17:29:51</div>
+        <div class="panel-body">
+          <p>One other thing... the line of code this occurs on is:</p>
+          <p>bool hasChildren = (tree-&gt;GetChildrenCount(existing) &gt; 0);</p>
+          <p>Now, I may be wrong, but here you only need to know if there are ANY children in which case GetChildrenCount does not need to recurse, so perhaps this:</p>
+          <p>bool hasChildren = (tree-&gt;GetChildrenCount(existing, false) &gt; 0);</p>
+          <p>would be better?</p>
+          <p>Which will probably fix the bug I'm experiencing and would be a little quicker too :)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kazade 2007-10-24 07:28:19</div>
+        <div class="panel-body">
+          <p>Sorry to keep posting on this but I think I've come up with a  better line of code:</p>
+          <p>bool hasChildren = tree-&gt;ItemHasChildren(existing);</p>
+          <p>for line 258 of classbrowserbuilderthread.cpp. I can't test this because I can't get CodeBlocks to compile on my machine (yet).</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2007-10-31 09:27:53</div>
+        <div class="panel-body">
+          <p>Rev. 4583 contains the change you requested.</p>
+          <p>Please test if this fixes your issue (which I doubt) and report back.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kazade 2007-11-18 09:39:08</div>
+        <div class="panel-body">
+          <p>You were right, it didn't fix the problem. Here is the new backtrace:</p>
+          <p>Program received signal SIGSEGV, Segmentation fault.</p>
+          <p>[Switching to Thread -1310827632 (LWP 6908)]</p>
+          <p>0xb6f170be in wxGenericTreeCtrl::ItemHasChildren ()</p>
+          <p>from /usr/lib/libwx_gtk2u_core-2.8.so.0</p>
+          <p>(gdb) bt</p>
+          <p>#0  0xb6f170be in wxGenericTreeCtrl::ItemHasChildren ()</p>
+          <p>from /usr/lib/libwx_gtk2u_core-2.8.so.0</p>
+          <p>#1  0xb2c9c373 in ClassBrowserBuilderThread::RemoveInvalidNodes (</p>
+          <p>this=0x8c69380, tree=0x8c54870, parent={m_pItem = 0x8db1fb0})</p>
+          <p>at classbrowserbuilderthread.cpp:258</p>
+          <p>#2  0xb2c9c466 in ClassBrowserBuilderThread::RemoveInvalidNodes (</p>
+          <p>this=0x8c69380, tree=0x8c54870, parent={m_pItem = 0x8dc2858})</p>
+          <p>at classbrowserbuilderthread.cpp:291</p>
+          <p>#3  0xb2c9eb86 in ClassBrowserBuilderThread::BuildTree (this=0x8c69380)</p>
+          <p>at classbrowserbuilderthread.cpp:214</p>
+          <p>#4  0xb2c9ed65 in ClassBrowserBuilderThread::Entry (this=0x8c69380)</p>
+          <p>at classbrowserbuilderthread.cpp:131</p>
+          <p>#5  0xb6bac5a8 in wxThreadInternal::PthreadStart ()</p>
+          <p>from /usr/lib/libwx_baseu-2.8.so.0</p>
+          <p>#6  0xb6bac61d in wxPthreadStart () from /usr/lib/libwx_baseu-2.8.so.0</p>
+          <p>#7  0xb6aa646b in start_thread () from /lib/tls/i686/cmov/libpthread.so.0</p>
+          <p>#8  0xb69026de in clone () from /lib/tls/i686/cmov/libc.so.6</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kazade 2007-11-18 10:07:23</div>
+        <div class="panel-body">
+          <p>Also before that last backtrace the following is printed to the console:</p>
+          <p>//CTRL+S pressed here</p>
+          <p>Reparsing saved files...</p>
+          <p>Starting batch parsing</p>
+          <p>Parsing stage done (381 total parsed files, 11203 tokens in 0 minute(s), 0.1 seconds).</p>
+          <p>Updating class browser...</p>
+          <p>Class browser updated.</p>
+          <p>//Backtrace here</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

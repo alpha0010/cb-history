@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 17950 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #17950 <small>2011-02-21 04:00:36</small></h3>
+          <h4>moonwalker</h4>
+          <p class="lead">Code::Blocks blocks left mouse button click</p>
+          <p>After some time working in SVN 7015 on Debian Wheezy x64 systems stops responding to left mouse click, except for tabs in code editor. Once all tabs in Code::Blocks are closed mouse starts working again, however Code::Blocks crashes soon after.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Interface</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2011-02-23 11:20:01</dd>
+            <dt>Assigned to</dt><dd>jenslody</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">moonwalker 2011-02-22 22:11:58</div>
+        <div class="panel-body">
+          <p>Unfortunately, I'm haven't yet figured out exact steps to trigger the left mouse click block issue, it appears to be somewhat random. But it does seem to happen in association with open wxSmith tab. Once the left mouse clicks were blocked though it reliably crashes as soon as I do following steps:</p>
+          <p>1) close all tabs (through Ctrl+W, while I can switch by mouse between tabs I can't close them by clicking on close button on tab itself). Once all tabs are closed systems starts processing left clicks again.</p>
+          <p>3) Open any tab - either source code or wxSmith.</p>
+          <p>4) Left click inside wxSmith or code editor window - this step triggers immediate crash.</p>
+          <p>My uneducated guess is that it has something to do with mouse event handler in tab manager, though I have no clue how it can block left mouse click system-wide. Some messed up pointer?</p>
+          <p>I will keep my eye on this issue and report back as soon as I find more info.</p>
+          <p>Thanks for your hard work, Jens!</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">jenslody 2011-02-23 11:20:01</div>
+        <div class="panel-body">
+          <p>I just committed a fix for this issue (svn r7027).</p>
+          <p>It is easy reproducible: move the mous over a tab, press left mouse-button before the tooltip appears and release it if the tooltip is there but the mouse still over the tab.</p>
+          <p>The tooltip (wxTipwindow) seems to "steal" the left-up-event, so the tabCtrl does not release the mouse.</p>
+          <p>Now I check if the tabCtrl still has the mouse-capture if the mouse leaves it and force a release.</p>
+          <p>I will upload the newest version to my repo this afternoon.</p>
+          <p>Jens</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">jenslody 2011-02-22 21:34:36</div>
+        <div class="panel-body">
+          <p>Can you reproduce this issue, if yes can you give me a step by step instruction to reproduce ?</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

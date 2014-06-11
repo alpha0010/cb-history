@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 19075 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #19075 <small>2013-08-01 09:45:34</small></h3>
+          <h4>sorinev</h4>
+          <p class="lead">Keyboard Shortcuts, added combinations do not persist</p>
+          <p>Settings -&gt; Editor -&gt; Keyboard Shortcuts -&gt; File -&gt; Close File</p>
+          <p>The default is ctrl + w. When adding a second combination - ctrl + f4 for example - the combination persists through the current session. Once codeblocks is closed and then restarted however, the new combination no longer functions and is missing from the Keyboard Shortcut listing.</p>
+          <p>More info:</p>
+          <p><a href="http://forums.codeblocks.org/index.php/topic,18189.0.html">http://forums.codeblocks.org/index.php/topic,18189.0.html</a></p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Editor</dd>
+            <dt>Group</dt><dd>Platform:Windows</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">trivia21 2013-10-20 15:27:56</div>
+        <div class="panel-body">
+          <p>I had the same problem. I've found the solution as well.</p>
+          <p>When the KeyBinder plugin loads shortcuts from the configuration file, it fails to load the ones with negative IDs, because the separator character is "-" as well.</p>
+          <p>I'm not sure how to create patches for svn, please forgive me for giving the required modifications at revision 9413 here:</p>
+          <p>File: /trunk/src/plugins/contrib/keybinder/keybinder.cpp</p>
+          <p>Line: 1556 (after if (str.StartsWith(wxCMD_CONFIG_PREFIX)))</p>
+          <p>There are 4 lines that extract the Id and Type:</p>
+          <p>wxString id(str.BeforeFirst(wxT('-')));</p>
+          <p>wxString type(str.AfterFirst(wxT('-')));</p>
+          <p>id = id.Right(id.Len()-wxString(wxCMD_CONFIG_PREFIX).Len());</p>
+          <p>type = type.Right(type.Len()-wxString(wxT("type")).Len());</p>
+          <p>Replace them with something like this:</p>
+          <p>const wxString CMDPREF = wxString(wxCMD_CONFIG_PREFIX);</p>
+          <p>const wxString TYPEPREF = L"-type";</p>
+          <p>size_t typestart = str.find(TYPEPREF);</p>
+          <p>wxString id(str.substr(CMDPREF.length(), typestart - CMDPREF.length()));</p>
+          <p>wxString type(str.substr(typestart + TYPEPREF.length(), wxString::npos));</p>
+          <p>And thats it!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

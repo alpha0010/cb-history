@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 11460 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #11460 <small>2007-06-26 22:48:28</small></h3>
+          <h4>rickg22</h4>
+          <p class="lead">Switching project and class browser slowdown (windows)</p>
+          <p>Whenever I switch project (from a very populated one to a short one), it takes 3 to 4 seconds at least to remove all the symbols from the old class browser.</p>
+          <p>That should be optimized...</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::CodeCompletion</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2007-07-11 05:51:31</dd>
+            <dt>Assigned to</dt><dd>rickg22</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2007-06-28 09:38:20</div>
+        <div class="panel-body">
+          <p>Can't confirm this. The symbols browser refreshes its contents instantly here (using "Active project's symbols" view).</p>
+          <p>And I used some fairly complex projects to test:</p>
+          <p>Project 1:</p>
+          <p>Parsing stage done (888 total parsed files, 30123 tokens in 0 minute(s), 7.385 seconds).</p>
+          <p>Project 2:</p>
+          <p>Parsing stage done (1747 total parsed files, 37484 tokens in 0 minute(s), 6.249 seconds).</p>
+          <p>&gt;&gt; That should be optimized...</p>
+          <p>Errm, no, we don't optimize what does not need optimization :)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">rickg22 2007-06-28 13:44:40</div>
+        <div class="panel-body">
+          <p>Putting the crash aside, notice this behavior:</p>
+          <p>* Switching from Help-plugin to C::B changes the class browser *INSTANTLY*</p>
+          <p>* Switching from C::B to help-plugin is when the delay appears. So my assumption is that the bottleneck happens when DELETING items from the class-browser.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">rickg22 2007-06-28 14:02:30</div>
+        <div class="panel-body">
+          <p>Oops... correction. The parsing should *NOT* include "global includes". Just parse preprocessing directives.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">rickg22 2007-06-28 13:41:46</div>
+        <div class="panel-body">
+          <pre class="pre-scrollable">My test was used having the Code::Blocks project and the Help-plugin project. The test is when SWITCHING projects, not when opening new ones.
+
+Steps to reproduce:
+1. Have C::B as the active project, and the help-plugin as the other project in your workspace. The class browser tab should be in "active project's symbols". The parsing should include global includes.
+2. Start the C::B app, and wait till parsing finishes
+3. Double-click on the Help-Plugin project, and then switch to the symbols tab.
+
+You should see a 4-sec delay in the class browser appearing (there's no "class browser updated message").
+If not, I'd wonder why it only happens in my machine, because I have an AMD Dual-core 3800+ and 1GB RAM.
+
+I'm trying again... and i see a HUGE blank area to scroll instead of the class browser. The HD is having a lot of activity... I'm scrolling and O.O??? I crashed!!
+
+Error occured on Thursday, June 28, 2007 at 08:39:14.
+
+G:\cb07\codeblocks.exe caused an Access Violation at location 773d747c in module C:\WINDOWS\WinSxS\X86_Microsoft.Windows.Common-Controls_6595b64144ccf1df_6.0.2600.2982_x-ww_ac3f9c03\COMCTL32.DLL Reading from location 1c7b8bb4.
+
+Registers:
+eax=1c7b8b90 ebx=0023f28c ecx=00490055 edx=00000000 esi=00279d28 edi=1c7b8b90
+eip=773d747c esp=0023f21c ebp=0023f254 iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010206
+
+Call stack:
+773D747C  C:\WINDOWS\WinSxS\X86_Microsoft.Windows.Common-Controls_6595b64144ccf1df_6.0.2600.2982_x-ww_ac3f9c03\COMCTL32.DLL:773D747C  Ordinal384
+773D8040  C:\WINDOWS\WinSxS\X86_Microsoft.Windows.Common-Controls_6595b64144ccf1df_6.0.2600.2982_x-ww_ac3f9c03\COMCTL32.DLL:773D8040  Ordinal384
+773DA802  C:\WINDOWS\WinSxS\X86_Microsoft.Windows.Common-Controls_6595b64144ccf1df_6.0.2600.2982_x-ww_ac3f9c03\COMCTL32.DLL:773DA802  Ordinal384
+7E398734  C:\WINDOWS\system32\USER32.dll:7E398734  GetDC
+7E398816  C:\WINDOWS\system32\USER32.dll:7E398816  GetDC
+7E39C63F  C:\WINDOWS\system32\USER32.dll:7E39C63F  IsWindowUnicode
+7E39C665  C:\WINDOWS\system32\USER32.dll:7E39C665  CallWindowProcW
+641F1910  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:641F1910  _ZN8wxWindow16MSWDefWindowProcEjjl
+641F9AFC  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:641F9AFC  _ZN8wxWindow13MSWWindowProcEjjl
+642677D4  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:642677D4  _ZN10wxTreeCtrl13MSWWindowProcEjjl
+641F2220  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:641F2220  _Z9wxWndProcP6HWND__jjl@16
+7E398734  C:\WINDOWS\system32\USER32.dll:7E398734  GetDC
+7E398816  C:\WINDOWS\system32\USER32.dll:7E398816  GetDC
+7E39B4C0  C:\WINDOWS\system32\USER32.dll:7E39B4C0  DefWindowProcW
+7E39B50C  C:\WINDOWS\system32\USER32.dll:7E39B50C  DefWindowProcW
+7C91EAE3  C:\WINDOWS\system32\ntdll.dll:7C91EAE3  KiUserCallbackDispatcher
+641CD5F4  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:641CD5F4  _ZN11wxEventLoop8DispatchEv
+642A2956  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:642A2956  _ZN17wxEventLoopManual3RunEv
+6427161E  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:6427161E  _ZN9wxAppBase8MainLoopEv
+00405605  G:\cb07\codeblocks.exe:00405605  CodeBlocksApp::OnRun()  G:/projects/codeblocks/src/src/app.cpp:608
+6410E477  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:6410E477  _Z14wxUninitializev
+64190ACC  C:\WINDOWS\system32\wxmsw28u_gcc_CB.dll:64190ACC  _Z7wxEntryP11HINSTANCE__S0_Pci
+00401971  G:\cb07\codeblocks.exe:00401971  WinMain  G:/projects/codeblocks/src/src/app.cpp:199
+004760AA  G:\cb07\codeblocks.exe:004760AA
+004011E7  G:\cb07\codeblocks.exe:004011E7
+00401258  G:\cb07\codeblocks.exe:00401258
+7C816FD7  C:\WINDOWS\system32\kernel32.dll:7C816FD7  RegisterWaitForInputIdle
+</pre>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">rickg22 2007-06-28 14:12:03</div>
+        <div class="panel-body">
+          <p>Here's a snapshot of the current bug. Notice the large scrolling area in the class browser.</p>
+          <p><a href="http://www.picturebay.net/img/guests/classbrowserbug.png">http://www.picturebay.net/img/guests/classbrowserbug.png</a></p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">rickg22 2007-07-11 05:51:31</div>
+        <div class="panel-body">
+          <p>Fixed in revision 4258.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

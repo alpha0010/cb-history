@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 13029 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #13029 <small>2008-01-26 18:45:37</small></h3>
+          <h4>pecan</h4>
+          <p class="lead">Scripting console crashes codeblocks</p>
+          <pre class="pre-scrollable">Executing a statement line:
+Wizard.AddCompilerPage(_T(""), _T("*"), true, true);
+
+in the script console crashes codeblocks.
+
+Program received signal SIGSEGV, Segmentation fault.
+0x63c427a0 in Wizards::operator[] (this=0x3e6cdb0, uiIndex=3131961357)
+    at c:/Usr/Proj/cbBeta/trunk/src/plugins/scriptedwizard/wiz.h:51
+51      WX_DECLARE_OBJARRAY(WizardInfo, Wizards);
+(gdb) bt
+#0  0x63c427a0 in Wizards::operator[] (this=0x3e6cdb0, uiIndex=3131961357)
+    at c:/Usr/Proj/cbBeta/trunk/src/plugins/scriptedwizard/wiz.h:51
+#1  0x63c2197f in Wiz::AddCompilerPage (this=0x3e6cd80, compilerID=@0x195f368,
+    validCompilerIDs=@0x40d18b0, allowCompilerChange=true,
+    allowConfigChange=true)
+    at c:/Usr/Proj/cbBeta/trunk/src/plugins/scriptedwizard/wiz.cpp:1031
+#2  0x63c3d6d7 in SqPlus::ReturnSpecialization&lt;void&gt;::Call&lt;Wiz, wxString const&amp;,
+ wxString const&amp;, bool, bool&gt; (callee=@0x3e6cd80, func=
+      {__pfn = &amp;Wiz::AddCompilerPage(wxString const&amp;, wxString const&amp;, bool, boo
+l), __delta = 0}, v=0x11269f0, index=2)
+    at include/scripting/sqplus/sqplus.h:1024
+#3  0x63c3f6e5 in SqPlus::Call&lt;Wiz, void, wxString const&amp;, wxString const&amp;, bool
+, bool&gt; (callee=@0x3e6cd80, func=
+      {__pfn = &amp;Wiz::AddCompilerPage(wxString const&amp;, wxString const&amp;, bool, boo
+l), __delta = 0}, v=0x11269f0, index=2)
+    at include/scripting/sqplus/sqplus.h:1163
+#4  0x63c3ee0e in SqPlus::DirectCallInstanceMemberFunction&lt;Wiz, void (Wiz::*)(wx
+String const&amp;, wxString const&amp;, bool, bool)&gt;::Dispatch (v=0x11269f0)
+    at include/scripting/sqplus/sqplus.h:1244
+#5  0x6197c9ba in SQVM::CallNative (this=0x11269f0, nclosure=0x405da78,
+    nargs=5, stackbase=187, tailcall=false, retval=@0x1126a48,
+    suspend=@0x22e84f)
+    at c:/Usr/Proj/cbBeta/trunk/src/sdk/scripting/squirrel/sqvm.cpp:1108
+---Type &lt;return&gt; to continue, or q &lt;return&gt; to quit---q
+Quit (expect signal SIGINT when the program is resumed)
+(gdb) f 0
+#0  0x63c427a0 in Wizards::operator[] (this=0x3e6cdb0, uiIndex=3131961357)
+    at c:/Usr/Proj/cbBeta/trunk/src/plugins/scriptedwizard/wiz.h:51
+51      WX_DECLARE_OBJARRAY(WizardInfo, Wizards);
+(gdb) l
+46          wxBitmap templatePNG;
+47          wxBitmap wizardPNG;
+48          wxString xrc;
+49      };
+50
+51      WX_DECLARE_OBJARRAY(WizardInfo, Wizards);
+52      WX_DEFINE_ARRAY(wxWizardPageSimple*, WizPages);
+53
+54      class Wiz : public cbWizardPlugin
+55      {
+(gdb) f 1
+#1  0x63c2197f in Wiz::AddCompilerPage (this=0x3e6cd80, compilerID=@0x195f368,
+    validCompilerIDs=@0x40d18b0, allowCompilerChange=true,
+    allowConfigChange=true)
+    at c:/Usr/Proj/cbBeta/trunk/src/plugins/scriptedwizard/wiz.cpp:1031
+1031        m_pWizCompilerPanel = new WizCompilerPanel(compilerID, validCompiler
+IDs, m_pWizard, m_Wizards[m_LaunchIndex].wizardPNG, allowCompilerChange, allowCo
+nfigChange);
+(gdb) l
+1026
+1027    void Wiz::AddCompilerPage(const wxString&amp; compilerID, const wxString&amp; va
+lidCompilerIDs, bool allowCompilerChange, bool allowConfigChange)
+1028    {
+1029        if (m_pWizCompilerPanel)
+1030            return; // already added
+1031        m_pWizCompilerPanel = new WizCompilerPanel(compilerID, validCompiler
+IDs, m_pWizard, m_Wizards[m_LaunchIndex].wizardPNG, allowCompilerChange, allowCo
+nfigChange);
+1032        if (!m_pWizCompilerPanel-&gt;SkipPage())
+1033            m_Pages.Add(m_pWizCompilerPanel);
+1034        else
+1035        {
+(gdb) p compilerID
+$1 = (const wxString &amp;) @0x195f368: {&lt;wxStringBase&gt; = {
+    static npos = 4294967295, m_pchData = 0x1061324c}, &lt;No data fields&gt;}
+(gdb) p validCompilerIDs
+$2 = (const wxString &amp;) @0x40d18b0: {&lt;wxStringBase&gt; = {
+    static npos = 4294967295, m_pchData = 0x40909d4}, &lt;No data fields&gt;}
+(gdb) p m_pWizard
+$3 = (struct wxWizard *) 0x0
+(gdb) p m_Wizards[m_LaunchIndex]
+
+Program received signal SIGSEGV, Segmentation fault.
+0x63c427a0 in Wizards::operator[] (this=0x3e6cdb0, uiIndex=3131961357)
+    at c:/Usr/Proj/cbBeta/trunk/src/plugins/scriptedwizard/wiz.h:51
+51      WX_DECLARE_OBJARRAY(WizardInfo, Wizards);
+The program being debugged was signaled while in a function called from GDB.
+GDB remains in the frame where the signal was received.
+To change this behavior use "set unwindonsignal on"
+Evaluation of the expression containing the function (Wizards::operator[](unsign
+ed int) const) will be abandoned.
+(gdb)
+</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2008-04-05 12:57:50</dd>
+            <dt>Assigned to</dt><dd>biplab</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2008-01-30 10:14:05</div>
+        <div class="panel-body">
+          <p>Not for me. It just works fine. Which C::B version / OS do you use? PLease give more details...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2008-01-30 13:45:04</div>
+        <div class="panel-body">
+          <p><a href="http://forums.codeblocks.org/index.php/topic,7713.msg58146.html#msg58146">http://forums.codeblocks.org/index.php/topic,7713.msg58146.html#msg58146</a></p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2008-04-05 12:57:50</div>
+        <div class="panel-body">
+          <p>This bug is now fixed in HEAD.</p>
+          <p>Thank you for reporting it.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 6585 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #6585 <small>2006-02-26 11:30:40</small></h3>
+          <h4>kkez</h4>
+          <p class="lead">Changing the project's name doesn't change CB's title</p>
+          <p>As title, the title bar is not updated when changing a projects' name.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::WrongBehaviour</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2006-02-26 22:14:05</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">killerbot 2006-02-26 21:04:02</div>
+        <div class="panel-body">
+          <p>How did you change the project's name ??</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kkez 2006-02-26 21:09:30</div>
+        <div class="panel-body">
+          <p>As far as i know, the only way to change it is from the project's properties... and that's what i did.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ID_24639 2006-02-26 21:54:23</div>
+        <div class="panel-body">
+          <p>I can confirm. Right click on project select properties, change the project name, get the bug above. Alternatively Project -&gt; Properties gets you to the same place AFAIK. :)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">killerbot 2006-02-26 22:08:29</div>
+        <div class="panel-body">
+          <p>Allright I can confirm, I have already fixed it on my pc, but for now it is a 2 step process (and this also applies when a new project from a template is constructed), let me first explain this template issue :</p>
+          <p>1) create new project from template (eg console app) :</p>
+          <p>from within the CB code there will be 2 paths leading to the code that changes the title bar</p>
+          <p>- once on Project new (this one will say : start here [console application]  ...</p>
+          <p>REASON : as can be seen also from the cbp file, the cbp file still is uequal to the template cbp, that means that console app title, and no units</p>
+          <p>- once on ProjectLoad : cbp file is still as above, and now the start page has been closed, so the title only says the [console application] ...</p>
+          <p>SO also in this case, our nice little project title we specified is not shown.</p>
+          <p>But when I save the project, the cbp file will contain all the correct inf (our title, units, ...) BUT the title bar does not follow</p>
+          <p>-&gt; Solution : OnProjectSave ... also update title bar (this fix works, tried it out)</p>
+          <p>Now back to the mentioned problem :</p>
+          <p>Project is open, and change project name, nothing happens, also the cbp file is not updated !! Save project, cbp file is updated BUT titlebar does not follow. With my fix, the titlebar will follow.</p>
+          <p>So things will be better with my fix : the main question remains, when should a cbp file be saved :</p>
+          <p>- when the user says so (or just vefore compile ...), just like when the user changes a source file, as long as he does not save explicitly the contents does not make it to the harddisk file (unless compile , ...), so according to this behaviour the job is done with my fix</p>
+          <p>- the moment the project changes (like when loaded from copy of template, or when a setting has changed (could be compiler setting or the project title)</p>
+          <p>I think there are arguments for both, but for the moment I'll stick to the consistency (so option 1).</p>
+          <p>Good news : my fix fixes the bug ;-)</p>
+          <p>Problem solved.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">killerbot 2006-02-26 22:14:05</div>
+        <div class="panel-body">
+          <p>oh yes : fixed in rev 2086</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

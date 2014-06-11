@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 12211 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #12211 <small>2007-10-19 08:24:40</small></h3>
+          <h4>drzymo</h4>
+          <p class="lead">Source path for breakpoints not consistent.</p>
+          <p>I am running Code::Blocks on Windows 2000, with a MinGW based cross-compiler for an Xscale processor. On target gdbserver is running and can be connected to with the windows-based gdb. Debugging an application manually (including setting breakpoints) works perfectly. However, the debugger in Code::Blocks messes up the paths which make setting a breakpoint fail.</p>
+          <p>What I understand so far is that Code::Blocks passes the absolute path of a source file to the compiler. In my case this means that the file D:\CB_TEST\HelloCPP\main.cpp is send to the compiler. This is also put in the debug information of the executable.</p>
+          <p>If in gdb the information about the source files is requested then it will return the following:</p>
+          <p>&gt; info sources</p>
+          <p>Source files for which symbols have been read in:</p>
+          <p>Source files for which symbols will be read in on demand:</p>
+          <p>/root/new-build-final/src/gcc-4.2.1/gcc/config/arm/ieee754-df.S, /root/new-build-final/src/gcc-4.2.1/gcc/config/arm/lib1funcs.asm, D:/armeb-linux-uclibc/lib/gcc/armeb-linux-uclibc/4.2.1/../../../../armeb-linux-uclibc/include/c++/4.2.1/iostream, D:/armeb-linux-uclibc/lib/gcc/armeb-linux-uclibc/4.2.1/../../../../armeb-linux-uclibc/include/c++/4.2.1/bits/locale_facets.tcc, D:/armeb-linux-uclibc/lib/gcc/armeb-linux-uclibc/4.2.1/../../../../armeb-linux-uclibc/include/c++/4.2.1/bits/stl_algobase.h, D:\CB_TEST\HelloCPP\main.cpp</p>
+          <p>Adding a breakpoint will therefore have to be done with:</p>
+          <p>&gt; break D:\CB_TEST\HelloCPP\main.cpp:7</p>
+          <p>Breakpoint 1 at 0x839c: file D:\CB_TEST\HelloCPP\main.cpp, line 7.</p>
+          <p>However, the absolute path that is used by the Code::Blocks debugger uses the "linux notation", which makes the operation fail:</p>
+          <p>&gt; break D:/CB_TEST/HelloCPP/main.cpp:7</p>
+          <p>No source file named D:/CB_TEST/HelloCPP/main.cpp.</p>
+          <p>I would like to advise that the debugger is uses either:</p>
+          <p>1) the exact same absolute path that is send to the compiler,</p>
+          <p>2) the absolute paths obtained with 'info sources'.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Debugger</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2007-10-31 09:48:34</div>
+        <div class="panel-body">
+          <p>Rev. 4584 contains the requested change.</p>
+          <p>If things don't break for other people, this bug will be closed.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">drzymo 2007-11-05 10:55:57</div>
+        <div class="panel-body">
+          <p>In revision 4592 the fix has been reverted, so this bug is still unsolved.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

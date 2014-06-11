@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 10151 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #10151 <small>2007-01-29 13:13:51</small></h3>
+          <h4>stardust</h4>
+          <p class="lead">Crash/hang when starting/exiting</p>
+          <pre class="pre-scrollable">Unde SuSE 10.0, C::B oftern crashen when exiting and makes a "pre virtial function call".
+
+When starting, it shows the splash an than hangs. After killing and restart (and confirming the deletion of lock file) C::B comes up. At the next start, it hangs again.
+
+I am observing that over some revisions. At the moment I am using the svn build 3541.
+
+Perhaps these two problems are connected... Upon a pure virtual call there is no exception dump.
+
+For the startup problem, there is sometimes an exception  report like that:
+
+
+&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;report version="1.0" kind="exception"&gt;
+  &lt;system description="Linux 2.6.13-15-default i686"/&gt;
+  &lt;modules&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/bin/codeblocks" address="08048000" size="000a5000"/&gt;
+    &lt;module path="/lib/ld-2.3.5.so" address="40000000" size="00017000" version="2.3.5"/&gt;
+    &lt;module path="/usr/lib/locale/de_DE.utf8/LC_IDENTIFICATION" address="4001d000" size="00001000"/&gt;
+    &lt;module path="/usr/lib/locale/de_DE.utf8/LC_TELEPHONE" address="4001f000" size="00001000"/&gt;
+    &lt;module path="/usr/lib/locale/de_DE.utf8/LC_NAME" address="40021000" size="00001000"/&gt;
+    &lt;module path="/usr/lib/locale/de_DE.utf8/LC_MESSAGES/SYS_LC_MESSAGES" address="40023000" size="00001000"/&gt;
+    &lt;module path="/usr/lib/locale/de_DE.utf8/LC_TIME" address="40025000" size="00001000"/&gt;
+    &lt;module path="/usr/X11R6/lib/X11/locale/lib/common/xlcUTF8Load.so.2" address="40027000" size="00002000" version="2"/&gt;
+    &lt;module path="/usr/lib/gconv/ISO8859-1.so" address="4002a000" size="00002000" version="1"/&gt;
+    &lt;module path="/lib/libgcc_s.so.1" address="4002f000" size="0000b000" version="1"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/lib/libcodeblocks.so.0.0.1" address="404a3000" size="0001b000" version="0.0.1"/&gt;
+    &lt;module path="/usr/lib/libstdc++.so.6.0.6" address="404c5000" size="000d7000" version="6.0.6"/&gt;
+    &lt;module path="/usr/lib/libwx_gtk2u_xrc-2.6.so.0.0.0" address="405a1000" size="00083000" version="0.0.0"/&gt;
+    &lt;module path="/usr/lib/libwx_gtk2u_qa-2.6.so.0.0.0" address="40625000" size="00021000" version="0.0.0"/&gt;
+    &lt;module path="/usr/lib/libwx_gtk2u_html-2.6.so.0.0.0" address="406d6000" size="00006000" version="0.0.0"/&gt;
+    &lt;module path="/usr/lib/libwx_gtk2u_adv-2.6.so.0.0.0" address="406de000" size="000a0000" version="0.0.0"/&gt;
+    &lt;module path="/usr/lib/libwx_gtk2u_core-2.6.so.0.0.0" address="40780000" size="002f6000" version="0.0.0"/&gt;
+    &lt;module path="/usr/lib/libwx_baseu_xml-2.6.so.0.0.0" address="40a7c000" size="00009000" version="0.0.0"/&gt;
+    &lt;module path="/usr/lib/libwx_baseu_net-2.6.so.0.0.0" address="40aaf000" size="00002000" version="0.0.0"/&gt;
+    &lt;module path="/usr/lib/libwx_baseu-2.6.so.0.0.0" address="40bc7000" size="0000e000" version="0.0.0"/&gt;
+    &lt;module path="/lib/tls/libpthread-2.3.5.so" address="40be3000" size="00010000" version="2.3.5"/&gt;
+    &lt;module path="/lib/libdl-2.3.5.so" address="40bf5000" size="00004000" version="2.3.5"/&gt;
+    &lt;module path="/lib/tls/libm-2.3.5.so" address="40c1d000" size="00002000" version="2.3.5"/&gt;
+    &lt;module path="/lib/tls/libc-2.3.5.so" address="40d38000" size="00004000" version="2.3.5"/&gt;
+    &lt;module path="/opt/gnome/lib/libgdk-x11-2.0.so.0.800.3" address="40d3e000" size="00081000" version="0.800.3"/&gt;
+    &lt;module path="/lib/libz.so.1.2.3" address="40dc0000" size="00013000" version="1.2.3"/&gt;
+    &lt;module path="/opt/gnome/lib/libgtk-x11-2.0.so.0.800.3" address="40dd4000" size="002f0000" version="0.800.3"/&gt;
+    &lt;module path="/opt/gnome/lib/libatk-1.0.so.0.1010.3" address="410c7000" size="00019000" version="0.1010.3"/&gt;
+    &lt;module path="/opt/gnome/lib/libgdk_pixbuf-2.0.so.0.800.3" address="410f5000" size="00001000" version="0.800.3"/&gt;
+    &lt;module path="/opt/gnome/lib/libpangocairo-1.0.so.0.1000.0" address="410fc000" size="00001000" version="0.1000.0"/&gt;
+    &lt;module path="/opt/gnome/lib/libpango-1.0.so.0.1000.0" address="41133000" size="00002000" version="0.1000.0"/&gt;
+    &lt;module path="/usr/lib/libcairo.so.2.2.2" address="41181000" size="00001000" version="2.2.2"/&gt;
+    &lt;module path="/opt/gnome/lib/libgobject-2.0.so.0.800.1" address="41183000" size="0003a000" version="0.800.1"/&gt;
+    &lt;module path="/opt/gnome/lib/libgmodule-2.0.so.0.800.1" address="411bf000" size="00001000" version="0.800.1"/&gt;
+    &lt;module path="/usr/lib/libfreetype.so.6.3.8" address="4122b000" size="00003000" version="6.3.8"/&gt;
+    &lt;module path="/usr/lib/libfontconfig.so.1.0.4" address="41258000" size="00005000" version="1.0.4"/&gt;
+    &lt;module path="/usr/X11R6/lib/libXrender.so.1.2.2" address="4125e000" size="00008000" version="1.2.2"/&gt;
+    &lt;module path="/usr/X11R6/lib/libX11.so.6.2" address="4135b000" size="00004000" version="6.2"/&gt;
+    &lt;module path="/usr/X11R6/lib/libXext.so.6.4" address="41360000" size="0000e000" version="6.4"/&gt;
+    &lt;module path="/usr/lib/libpng12.so.0.1.2.8" address="413ac000" size="00001000" version="0.1.2.8"/&gt;
+    &lt;module path="/usr/lib/libglitz.so.1.0.0" address="413d0000" size="00001000" version="1.0.0"/&gt;
+    &lt;module path="/opt/gnome/lib/libgthread-2.0.so.0.800.1" address="413d4000" size="00001000" version="0.800.1"/&gt;
+    &lt;module path="/opt/gnome/lib/libglib-2.0.so.0.800.1" address="4145b000" size="00002000" version="0.800.1"/&gt;
+    &lt;module path="/usr/X11R6/lib/libXinerama.so.1.0" address="4145f000" size="00001000" version="1.0"/&gt;
+    &lt;module path="/usr/X11R6/lib/libXxf86vm.so.1.0" address="41461000" size="00005000" version="1.0"/&gt;
+    &lt;module path="/usr/lib/libpng.so.3.1.2.8" address="414a4000" size="00001000" version="3.1.2.8"/&gt;
+    &lt;module path="/usr/lib/libjpeg.so.62.0.0" address="414c4000" size="00001000" version="62.0.0"/&gt;
+    &lt;module path="/usr/lib/libtiff.so.3.7.3" address="41516000" size="00002000" version="3.7.3"/&gt;
+    &lt;module path="/usr/lib/libmspack.so.0.1.0" address="41524000" size="00001000" version="0.1.0"/&gt;
+    &lt;module path="/usr/lib/libSDL-1.2.so.0.7.1" address="41526000" size="00069000" version="0.7.1"/&gt;
+    &lt;module path="/usr/lib/libexpat.so.0.5.0" address="415bb000" size="00020000" version="0.5.0"/&gt;
+    &lt;module path="/usr/X11R6/lib/libXrandr.so.2.0" address="415de000" size="00001000" version="2.0"/&gt;
+    &lt;module path="/usr/X11R6/lib/libXi.so.6.0" address="415e6000" size="00001000" version="6.0"/&gt;
+    &lt;module path="/usr/X11R6/lib/libXcursor.so.1.0.2" address="415e8000" size="00009000" version="1.0.2"/&gt;
+    &lt;module path="/usr/X11R6/lib/libXfixes.so.3.0" address="415f5000" size="00001000" version="3.0"/&gt;
+    &lt;module path="/opt/gnome/lib/libpangoft2-1.0.so.0.1000.0" address="4161a000" size="00001000" version="0.1000.0"/&gt;
+    &lt;module path="/usr/lib/libaa.so.1.0.4" address="41632000" size="00002000" version="1.0.4"/&gt;
+    &lt;module path="/usr/lib/libslang-utf8.so.1.4.9" address="41636000" size="0005f000" version="1.4.9"/&gt;
+    &lt;module path="/usr/lib/libgpm.so.1.19.0" address="416ac000" size="00006000" version="1.19.0"/&gt;
+    &lt;module path="/lib/libncurses.so.5.4" address="416ee000" size="0000c000" version="5.4"/&gt;
+    &lt;module path="/usr/lib/locale/de_DE.utf8/LC_CTYPE" address="416fd000" size="0003b000"/&gt;
+    &lt;module path="/opt/gnome/share/locale/de/LC_MESSAGES/gtk20.mo" address="41810000" size="0000b000"/&gt;
+    &lt;module path="/var/run/nscd/passwd" address="41837000" size="00035000"/&gt;
+    &lt;module path="/opt/gnome/lib/gtk-2.0/2.4.0/engines/libqtengine.so" address="4188a000" size="00001000" version="2.0/2.4.0/engines/libqtengine"/&gt;
+    &lt;module path="/usr/lib/qt3/lib/libqt-mt.so.3.3.4" address="41f32000" size="00040000" version="3.3.4"/&gt;
+    &lt;module path="/opt/kde3/lib/kde3/plugins/styles/highcolor.so" address="41f76000" size="00011000"/&gt;
+    &lt;module path="/opt/gnome/lib/pango/1.4.0/modules/pango-basic-fc.so" address="41f89000" size="00001000" version="fc"/&gt;
+    &lt;module path="/usr/X11R6/lib/libXft.so.2.1.2" address="41f8d000" size="00013000" version="2.1.2"/&gt;
+    &lt;module path="/usr/X11R6/lib/libSM.so.6.0" address="41fa8000" size="00001000" version="6.0"/&gt;
+    &lt;module path="/usr/X11R6/lib/libICE.so.6.3" address="41fbe000" size="00001000" version="6.3"/&gt;
+    &lt;module path="/usr/share/locale/de/LC_MESSAGES/libc.mo" address="41fc1000" size="0001f000"/&gt;
+    &lt;module path="/opt/gnome/lib/gtk-2.0/2.4.0/loaders/libpixbufloader-xpm.so" address="41fe5000" size="00007000" version="xpm"/&gt;
+    &lt;module path="/opt/kde3/lib/libkdefx.so.4.2.0" address="41ff7000" size="0002b000" version="4.2.0"/&gt;
+    &lt;module path="/opt/gnome/lib/libgnomeprint-2-2.so.0.1.0" address="42084000" size="00002000" version="0.1.0"/&gt;
+    &lt;module path="/usr/lib/libart_lgpl_2.so.2.3.17" address="4209c000" size="00001000" version="2.3.17"/&gt;
+    &lt;module path="/usr/lib/libxml2.so.2.6.20" address="421be000" size="00009000" version="2.6.20"/&gt;
+    &lt;module path="/opt/gnome/lib/libgnomeprintui-2-2.so.0.1.0" address="421c8000" size="00038000" version="0.1.0"/&gt;
+    &lt;module path="/opt/gnome/lib/libgnomecanvas-2.so.0.1200.0" address="42229000" size="00001000" version="0.1200.0"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libSymTab.so" address="42241000" size="00001000" version="3541/share/codeblocks/plugins/libSymTab"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libRegExTestbed.so" address="4224d000" size="00001000" version="3541/share/codeblocks/plugins/libRegExTestbed"/&gt;
+    &lt;module path="/usr/X11R6/lib/X11/fonts/truetype/albwb.ttf" address="4227c000" size="0002a000"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libastyle.so" address="422d0000" size="0002c000" version="3541/share/codeblocks/plugins/libastyle"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/liblib_finder.so" address="42315000" size="00002000" version="3541/share/codeblocks/plugins/liblib_finder"/&gt;
+    &lt;module path="/opt/gnome/share/icons/hicolor/icon-theme.cache" address="42380000" size="0064c000"/&gt;
+    &lt;module path="/SYSV00000000" address="43bbf000" size="00060000"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libdebugger.so" address="43ca3000" size="00005000" version="3541/share/codeblocks/plugins/libdebugger"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libwxsmith.so" address="43ca9000" size="001d5000" version="3541/share/codeblocks/plugins/libwxsmith"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libcodestat.so" address="43e87000" size="00015000" version="3541/share/codeblocks/plugins/libcodestat"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libtodo.so" address="43eb9000" size="00002000" version="3541/share/codeblocks/plugins/libtodo"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libautosave.so" address="43ec6000" size="00001000" version="3541/share/codeblocks/plugins/libautosave"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libdefaultmimehandler.so" address="43ed7000" size="00001000" version="3541/share/codeblocks/plugins/libdefaultmimehandler"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libscriptedwizard.so" address="43f2e000" size="00005000" version="3541/share/codeblocks/plugins/libscriptedwizard"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libkeybinder.so" address="43f68000" size="00003000" version="3541/share/codeblocks/plugins/libkeybinder"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libcompiler.so" address="44047000" size="00004000" version="3541/share/codeblocks/plugins/libcompiler"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libProfiler.so" address="4404c000" size="0001b000" version="3541/share/codeblocks/plugins/libProfiler"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libdragscroll.so" address="4407d000" size="00002000" version="3541/share/codeblocks/plugins/libdragscroll"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libcodesnippets.so" address="4409f000" size="00002000" version="3541/share/codeblocks/plugins/libcodesnippets"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libexporter.so" address="44150000" size="00005000" version="3541/share/codeblocks/plugins/libexporter"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libbyogames.so" address="44183000" size="00003000" version="3541/share/codeblocks/plugins/libbyogames"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libenvvars.so" address="44193000" size="00001000" version="3541/share/codeblocks/plugins/libenvvars"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libclasswizard.so" address="441a4000" size="00001000" version="3541/share/codeblocks/plugins/libclasswizard"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libhelp_plugin.so" address="441b8000" size="00001000" version="3541/share/codeblocks/plugins/libhelp_plugin"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libcodecompletion.so" address="44258000" size="00004000" version="3541/share/codeblocks/plugins/libcodecompletion"/&gt;
+    &lt;module path="/mnt/oldsuse/local/install/codeblocks-3541/share/codeblocks/plugins/libcb_koders.so" address="44466000" size="00016000" version="3541/share/codeblocks/plugins/libcb_koders"/&gt;
+    &lt;module path="[stack]" address="bfb4c000" size="00013000"/&gt;
+  &lt;/modules&gt;
+  &lt;stack&gt;
+    &lt;frame level="2" function="wxStackWalker::Walk(unsigned int)" offset="0000002e"/&gt;
+    &lt;frame level="3" function="wxDebugReport::AddContext(wxDebugReport::Context)" offset="000009f2"/&gt;
+    &lt;frame level="4" function="wxDebugReport::AddAll(wxDebugReport::Context)" offset="00000018"/&gt;
+    &lt;frame level="5" function="CodeBlocksApp::OnFatalException()" offset="00000c9c" file="/local/source/codeblocks/3541/trunk/src/src/app.cpp" line="615"/&gt;
+  &lt;/stack&gt;
+&lt;/report&gt;
+</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2007-03-19 05:57:35</dd>
+            <dt>Assigned to</dt><dd>biplab</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">artoj 2007-02-05 08:15:16</div>
+        <div class="panel-body">
+          <p>I also get crash on exit, see bug #10040. Could you try disabling code completion plugin and see it helps.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2007-02-28 12:27:07</div>
+        <div class="panel-body">
+          <p>Does this bug still persist?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2007-03-19 05:57:35</div>
+        <div class="panel-body">
+          <p>Report is closed.</p>
+          <p>Note: This is a preformatted standard message.</p>
+          <p>Possible reasons for closing this report are:</p>
+          <p>* the developer in charge of the issue</p>
+          <p>- could not reproduce it despite trying several times</p>
+          <p>- did not get sufficient information</p>
+          <p>- got no reply to an inquiry for specific information</p>
+          <p>* the report is quite a bit dated of now, and</p>
+          <p>- no user comments have been added for several weeks</p>
+          <p>- significant changes have been made to the code</p>
+          <p>- no other developer could reproduce it either</p>
+          <p>It is assumed that the problem does not persist and the report</p>
+          <p>can be closed.</p>
+          <p>If the problem reappears in future releases, please feel free to</p>
+          <p>re-open this report and provide precise information on how to</p>
+          <p>reproduce it.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 11934 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #11934 <small>2007-09-06 09:05:20</small></h3>
+          <h4>rj-away</h4>
+          <p class="lead">wxSmith ArtProvider clients missing suffix and header</p>
+          <p>In the code generated for accessing ArtProvider resources (e.g. images for toolbar buttons), the client string is not correctly formed. According to what I've seen, client strings are meant to end in _C. This throws assertions at runtime with the debug libraries.</p>
+          <p>A simple way to do this would be to use one of the two macros defined in "wx/artprov.h" to do this mapping (probably the latter?)</p>
+          <p>#define wxART_MAKE_CLIENT_ID_FROM_STR(id)  (id + _T("_C"))</p>
+          <p>#define wxART_MAKE_CLIENT_ID(id)           _T(#id) _T("_C")</p>
+          <p>and so the wxSmith plugin generates code like</p>
+          <p>wxART_MAKE_CLIENT_ID(wxART_TOOLBAR)</p>
+          <p>rather than</p>
+          <p>_T("wxART_TOOLBAR_C")</p>
+          <p>This method (using the wxART_xxxx macros) is already used for the art id parameters.</p>
+          <p>Additionally, the "wx/artprov.h" header is not included when wxArtProvider images are used.</p>
+          <p>This behaviour was observed with the 5 Sep 2007 nightly snapshot, svn rev4425.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::wxSmith</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2007-11-12 22:08:46</dd>
+            <dt>Assigned to</dt><dd>byo</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">rj-away 2007-09-06 16:46:40</div>
+        <div class="panel-body">
+          <p>Are these useful areas?</p>
+          <p>For the code generation stuff:</p>
+          <p>src\plugins\contrib\wxSmith\wxwidgets\properties\wxsbitmapiconproperty.cpp, around lines 78-85</p>
+          <p>Header stuff (does it matter if this is included in unnecessary cases?):</p>
+          <p>src\plugins\contrib\wxSmith\wxwidgets\defitems\wxstoolbar.cpp around line 178</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">rj-away 2007-09-07 00:57:42</div>
+        <div class="panel-body">
+          <p>It was meant to be:</p>
+          <p>rather than</p>
+          <p>_T("wxART_TOOLBAR")</p>
+          <p>in the original submission.</p>
+          <p>The problem *is* the lack of _C in the output string.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">rj-away 2007-09-07 11:29:42</div>
+        <div class="panel-body">
+          <p>Patch #2166 was made to address these problems.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">byo 2007-11-12 22:08:46</div>
+        <div class="panel-body">
+          <p>This bug has been already fixed in HEAD.</p>
+          <p>Thank you.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 16143 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #16143 <small>2009-08-14 20:27:47</small></h3>
+          <h4>zaleksf</h4>
+          <p class="lead">Will not save modified .wxs file</p>
+          <pre class="pre-scrollable">Build: 5730
+OS: Windows Vista sp2
+Compiler: MinGW32-4.4.0
+Previous version of CB w/o bug: 5695???
+
+CB will save any individual file that is NOT the .wxs file. The modified .wxs file can be used for compiling, debuging, etc. However, any attempt to save the modified .wxs file results in a total crash. The original .wxs file produced by the new project wizard is retained.
+
+Debugging with a release version of CB-5730 produced the following info and bt:
+C:\Program Files\Code Blocks&gt;gdb codeblocks
+GNU gdb 6.8
+Copyright (C) 2008 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later &lt;<a href="http://gnu.org/licenses/gpl.html&gt;">http://gnu.org/licenses/gpl.html&gt;</a>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+and "show warranty" for details.
+This GDB was configured as "i686-pc-mingw32"...
+(no debugging symbols found)
+(gdb) run
+Starting program: C:\Program Files\Code Blocks/codeblocks.exe
+[New thread 5520.0x890]
+(no debugging symbols found)
+...
+(no debugging symbols found)
+[New thread 5520.0x1678]
+(no debugging symbols found)
+[New thread 5520.0xfc4]
+(no debugging symbols found)
+[New thread 5520.0x228]
+[New thread 5520.0x148c]
+[New thread 5520.0xbf8]
+[New thread 5520.0xc40]
+(no debugging symbols found)
+(no debugging symbols found)
+(no debugging symbols found)
+(no debugging symbols found)
+(no debugging symbols found)
+(no debugging symbols found)
+(no debugging symbols found)
+[New thread 5520.0x1378]
+(no debugging symbols found)
+...
+(no debugging symbols found)
+[New thread 5520.0x1370]
+[New thread 5520.0x1460]
+[New thread 5520.0x1538]
+[New thread 5520.0x1498]
+[New thread 5520.0x16ac]
+[New thread 5520.0x1230]
+(no debugging symbols found)
+[New thread 5520.0x15c0]
+[New thread 5520.0x4e8]
+[New thread 5520.0x1770]
+Error: dll starting at 0x7400000 not found.
+[New thread 5520.0x10f8]
+warning: HEAP[codeblocks.exe]:
+warning: Invalid address specified to RtlFreeHeap( 002C0000, 61A676B8 )
+
+
+Program received signal SIGTRAP, Trace/breakpoint trap.
+0x77aa8b2f in ntdll!DbgUiConvertStateChangeStructure ()
+   from C:\Windows\system32\ntdll.dll
+(gdb) bt
+#0  0x77aa8b2f in ntdll!DbgUiConvertStateChangeStructure ()
+   from C:\Windows\system32\ntdll.dll
+#1  0x77b1162b in ntdll!RtlpNtMakeTemporaryKey ()
+   from C:\Windows\system32\ntdll.dll
+#2  0x77ae2500 in ntdll!EtwpNotificationThread ()
+   from C:\Windows\system32\ntdll.dll
+#3  0x77b1267f in ntdll!RtlpNtMakeTemporaryKey ()
+   from C:\Windows\system32\ntdll.dll
+#4  0x77adb7cd in ntdll!EtwpNotificationThread ()
+   from C:\Windows\system32\ntdll.dll
+#5  0x77ac7545 in ntdll!RtlEqualLuid () from C:\Windows\system32\ntdll.dll
+#6  0x779c9a26 in KERNEL32!HeapLock () from C:\Windows\system32\kernel32.dll
+#7  0x76889c03 in msvcrt!free () from C:\Windows\system32\msvcrt.dll
+#8  0x002c0000 in ?? ()
+#9  0x00000000 in ?? ()
+(gdb)</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">zaleksf 2009-08-16 17:22:53</div>
+        <div class="panel-body">
+          <p>OK, so I can get CB's wxSmith build 5730 to run just fine (save modified .wxs files) on a different PC running Windows XP sp3. And it runs just fine on my Ubuntu 9.04 OS partition (both machines). This seems to eliminate any gross error in the wx Smith code.</p>
+          <p>So this issue is the relationship between wx Smith (any version) and ntdll, kernal32 and msvcrt on my Vista system (tested on other Vista systems?).</p>
+          <p>I have investigated troubleshooting web sites concerning ntdll issues, but I don't seem to be experiencing the typical errors for these dlls when they are corrupt.</p>
+          <p>I do find it iteresting that msvcrt.dll is being called when I'm using mingw32 and CB and wxWidgets compiled with mingw32. I'm not a Win32 OS expert, but it seems odd.</p>
+          <p>Any help or troubleshooting guidance you can provide would be helpful.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">zaleksf 2009-08-17 19:03:22</div>
+        <div class="panel-body">
+          <pre class="pre-scrollable">I can also get CB to run just fine on a different Vista OS machine - the difference is that this other machine has Vista sp1 instead of sp2. I don't know if this is an issue. The CodeBlocks version is: svn build rev 5731 (2009-08-15T03:48:58.845496Z) gcc 4.4.0 Windows/unicode
+
+Below is a typical CodeBlocks crash report generated when I try to save a modified wxSmith file:
+
+-------------------
+
+Error occured on Monday, August 17, 2009 at 13:46:03.
+
+C:\Program Files\CodeBlocks\codeblocks.exe caused an Access Violation at location 77d441e8 in module C:\Windows\system32\ntdll.dll Reading from location 61020018.
+
+Registers:
+eax=61020000 ebx=00000ecc ecx=00a50000 edx=0000c0f4 esi=61a676b0 edi=009c0000
+eip=77d441e8 esp=0022e298 ebp=0022e2c4 iopl=0         nv up ei pl nz na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010202
+
+Call stack:
+77D441E8  C:\Windows\system32\ntdll.dll:77D441E8  TpDisassociateCallback
+77D41FF9  C:\Windows\system32\ntdll.dll:77D41FF9  RtlPrefixUnicodeString
+77D6954B  C:\Windows\system32\ntdll.dll:77D6954B  RtlUnicodeToMultiByteSize
+77D67545  C:\Windows\system32\ntdll.dll:77D67545  RtlEnumerateGenericTableWithoutSplaying
+77009A26  C:\Windows\system32\kernel32.dll:77009A26  HeapFree
+77BD9D6B  C:\Windows\system32\msvcrt.dll:77BD9D6B  free
+670EFCB8  C:\Program Files\CodeBlocks\wxsmithlib.dll:670EFCB8  _ZN11TiXmlString4quitEv
+670EFD79  C:\Program Files\CodeBlocks\wxsmithlib.dll:670EFD79  _ZN11TiXmlStringD1Ev
+6708C94F  C:\Program Files\CodeBlocks\wxsmithlib.dll:6708C94F  _ZN11TiXmlString7reserveEj
+6708CB1F  C:\Program Files\CodeBlocks\wxsmithlib.dll:6708CB1F  _ZN11TiXmlString6appendEPKcj
+670EFE07  C:\Program Files\CodeBlocks\wxsmithlib.dll:670EFE07  _ZN11TiXmlStringpLEPKc
+6708B86E  C:\Program Files\CodeBlocks\wxsmithlib.dll:6708B86E  _ZNK16TiXmlDeclaration5PrintEP6_iobufiP11TiXmlString
+6193305D  C:\Program Files\CodeBlocks\codeblocks.dll:6193305D  _ZN12TiXmlPrinter5VisitERK16TiXmlDeclaration
+6708BAB7  C:\Program Files\CodeBlocks\wxsmithlib.dll:6708BAB7  _ZNK16TiXmlDeclaration6AcceptEP12TiXmlVisitor
+6708A88E  C:\Program Files\CodeBlocks\wxsmithlib.dll:6708A88E  _ZNK13TiXmlDocument6AcceptEP12TiXmlVisitor
+61818664  C:\Program Files\CodeBlocks\codeblocks.dll:61818664  _ZN7TinyXML12SaveDocumentERK8wxStringP13TiXmlDocument
+6704CBC5  C:\Program Files\CodeBlocks\wxsmithlib.dll:6704CBC5  _ZN14wxsItemResData16SaveInSourceModeEv
+6704BFD9  C:\Program Files\CodeBlocks\wxsmithlib.dll:6704BFD9  _ZN14wxsItemResData4SaveEv
+67037F1D  C:\Program Files\CodeBlocks\wxsmithlib.dll:67037F1D  _ZN13wxsItemEditor4SaveEv
+618531E6  C:\Program Files\CodeBlocks\codeblocks.dll:618531E6  _ZN13EditorManager10SaveActiveEv
+0043AC88  C:\Program Files\CodeBlocks\codeblocks.exe:0043AC88
+6279C951  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279C951  _ZN12wxEvtHandler21ProcessEventIfMatchesERK21wxEventTableEntryBasePS_R7wxEvent
+6279E28B  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E28B  _ZN16wxEventHashTable11HandleEventER7wxEventP12wxEvtHandler
+6279E35C  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E35C  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6279E2F9  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6279E2F9  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+628F4BFC  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:628F4BFC  _ZN12wxWindowBase9TryParentER7wxEvent
+628EB106  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:628EB106  _ZN13wxToolBarBase11OnLeftClickEib
+62854690  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:62854690  _ZN9wxToolBar10MSWCommandEjt
+6282A467  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6282A467  _ZN7wxFrame13MSWWindowProcEjjl
+627FAD18  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:627FAD18  _Z9wxWndProcP6HWND__jjl@16
+763CFD72  C:\Windows\system32\USER32.dll:763CFD72  GetWindowLongW
+763CFE4A  C:\Windows\system32\USER32.dll:763CFE4A  GetWindowLongW
+763D0943  C:\Windows\system32\USER32.dll:763D0943  CallMsgFilterW
+763D0B36  C:\Windows\system32\USER32.dll:763D0B36  SendMessageW
+74F8FE04  C:\Windows\WinSxS\x86_microsoft.windows.common-controls_6595b64144ccf1df_6.0.6002.18005_none_5cb72f96088b0de0\COMCTL32.DLL:74F8FE04  DPA_GetPtr
+74F8FC72  C:\Windows\WinSxS\x86_microsoft.windows.common-controls_6595b64144ccf1df_6.0.6002.18005_none_5cb72f96088b0de0\COMCTL32.DLL:74F8FC72  DPA_GetPtr
+74F8E526  C:\Windows\WinSxS\x86_microsoft.windows.common-controls_6595b64144ccf1df_6.0.6002.18005_none_5cb72f96088b0de0\COMCTL32.DLL:74F8E526  DefSubclassProc
+763CFD72  C:\Windows\system32\USER32.dll:763CFD72  GetWindowLongW
+763CFE4A  C:\Windows\system32\USER32.dll:763CFE4A  GetWindowLongW
+763D09D3  C:\Windows\system32\USER32.dll:763D09D3  CallWindowProcW
+763D0979  C:\Windows\system32\USER32.dll:763D0979  CallWindowProcW
+627FAEEC  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:627FAEEC  _ZN8wxWindow16MSWDefWindowProcEjjl
+6280422F  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6280422F  _ZN8wxWindow13MSWWindowProcEjjl
+627FAD18  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:627FAD18  _Z9wxWndProcP6HWND__jjl@16
+763CFD72  C:\Windows\system32\USER32.dll:763CFD72  GetWindowLongW
+763CFE4A  C:\Windows\system32\USER32.dll:763CFE4A  GetWindowLongW
+763D018D  C:\Windows\system32\USER32.dll:763D018D  GetMessageW
+763D022B  C:\Windows\system32\USER32.dll:763D022B  DispatchMessageW
+627DC246  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:627DC246  _ZN11wxEventLoop14ProcessMessageEP6tagMSG
+627DBF1E  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:627DBF1E  _ZN11wxEventLoop8DispatchEv
+628950DF  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:628950DF  _ZN17wxEventLoopManual3RunEv
+6286C4C5  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6286C4C5  _ZN9wxAppBase8MainLoopEv
+00405874  C:\Program Files\CodeBlocks\codeblocks.exe:00405874
+6273C036  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:6273C036  _Z12wxInitializeiPPw
+627A5977  C:\Program Files\CodeBlocks\wxmsw28u_gcc_custom.dll:627A5977  _Z7wxEntryP11HINSTANCE__S0_Pci
+00401D58  C:\Program Files\CodeBlocks\codeblocks.exe:00401D58
+00465748  C:\Program Files\CodeBlocks\codeblocks.exe:00465748
+0040124B  C:\Program Files\CodeBlocks\codeblocks.exe:0040124B
+004012B8  C:\Program Files\CodeBlocks\codeblocks.exe:004012B8
+7700D0E9  C:\Windows\system32\kernel32.dll:7700D0E9  BaseThreadInitThunk
+77D419BB  C:\Windows\system32\ntdll.dll:77D419BB  RtlInitializeExceptionChain
+77D4198E  C:\Windows\system32\ntdll.dll:77D4198E  RtlInitializeExceptionChain
+</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

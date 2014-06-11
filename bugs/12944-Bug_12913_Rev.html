@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 12944 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #12944 <small>2008-01-15 21:18:36</small></h3>
+          <h4>kvi</h4>
+          <p class="lead">[Bug #12913] Rev.4789 Not correctly fixed.</p>
+          <pre class="pre-scrollable">1. The pid child process = 0 inasmuch as output gdb not contain : // gdb: do_initial_child_stuff: process.
+
+To this fixed (Windows only), it I has modify source in a file gdb_driver.cpp  (line 716-726): 
+
+ Origin:
+---------
+   if (platform::windows &amp;&amp; want_debug_events &amp;&amp; output.Contains(_T("do_initial_child_stuff")))
+    {
+        // got the line with the PID, parse it out:
+        // e.g.
+        // gdb: do_initial_child_stuff: process 1392
+        if (reChildPid.Matches(output))
+        {
+            wxString pidStr = reChildPid.GetMatch(output, 1);
+
+Modify to:
+------------
+if (platform::windows &amp;&amp; want_debug_events &amp;&amp; output.Contains(_T("CREATE_PROCESS_DEBUG_EVENT")))
+    {
+        static wxRegEx reChildPid2(_T("gdb: kernel event for pid=([0-9]+)"));
+        // got the line with the PID, parse it out:
+        // e.g.
+        // gdb: do_initial_child_stuff: process 1392
+        if (reChildPid2.Matches(output))
+        {
+            wxString pidStr = reChildPid2.GetMatch(output, 1);
+
+
+See Debugger(debug).log : 
+----------------------------------------------------
+PATH=.;D:\Program Files (x86)\Microsoft Visual Studio 8\Common7\IDE;D:\Program Files (x86)\Microsoft Visual Studio 8\VC\BIN;D:\Program Files (x86)\Microsoft Visual Studio 8\Common7\Tools;D:\Program Files (x86)\Microsoft Visual Studio 8\Common7\Tools\bin;D:\Program Files (x86)\Microsoft Visual Studio 8\VC\PlatformSDK\bin;D:\Program Files (x86)\Microsoft Visual Studio 8\SDK\v2.0\bin;D:\WINDOWS\Microsoft.NET\Framework\v2.0.50727;D:\Program Files (x86)\Microsoft Visual Studio 8\VC\VCPackages;D:\MinGW\bin;D:\MinGW\mingw32\bin;D:\MAK\makRti3.2\bin;D:\MAK\makRti3.2\lib_;D:\WINDOWS\system32;D:\WINDOWS;D:\WINDOWS\System32\Wbem;D:\WINDOWS\MsNfs\;D:\Program Files (x86)\doxygen\bin;D:\PROGRA~2\ATT\Graphviz\bin_;D:\Program Files (x86)\VisualSVN Server\bin;d:\moz_tools\bin_;d:\cygwin\bin_
+Command-line: D:\MinGW\bin\gdb.exe -nx -fullname  -quiet -args bin/Debug/cons.exe
+Working dir : E:\CBW\cons\
+&gt; set prompt &gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+(gdb) 
+&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+&gt; show version
+GNU gdb 6.7.50.20071127
+Copyright (C) 2007 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later &lt;<a href="http://gnu.org/licenses/gpl.html&gt;">http://gnu.org/licenses/gpl.html&gt;</a>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+and "show warranty" for details.
+This GDB was configured as "i686-pc-mingw32".
+&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+&gt; set confirm off
+&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+&gt; set width 0
+&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+&gt; set height 0
+&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+&gt; set breakpoint pending on
+&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+&gt; set print asm-demangle on
+&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+&gt; set unwindonsignal on
+&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+&gt; set debugevents on
+&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+&gt; set new-console on
+&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+&gt; set disassembly-flavor att
+&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+&gt; directory E:/CBW/cons/
+&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+&gt; run
+gdb: win32_init_thread_list
+gdb: kernel event for pid=1400 tid=4388 code=CREATE_PROCESS_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=UNLOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=UNLOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=UNLOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=UNLOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=EXCEPTION_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=f70 code=CREATE_THREAD_DEBUG_EVENT)
+gdb: kernel event for pid=1400 tid=4388 code=LOAD_DLL_DEBUG_EVENT)
+----------------------------------------------------
+
+2. In Linux: message error  Unable to stop debuggin process.. The same symptoms : The pid child process =  0;
+
+3. Re: On change active threads at debugging, the context of a stack in a window of display does not change.
+
+At the first start of debugging of switching between streams work once. Then switching of contexts any more do not work without reopen displaed windows.
+
+</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Debugger</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2008-02-02 11:59:58</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2008-02-02 11:59:58</div>
+        <div class="panel-body">
+          <p>This bug is now fixed in HEAD.</p>
+          <p>Thank you for reporting it.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

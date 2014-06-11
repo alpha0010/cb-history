@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 19114 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #19114 <small>2013-09-05 07:10:57</small></h3>
+          <h4>mojca</h4>
+          <p class="lead">_rpl_malloc: Undefined symbols for architecture x86_64</p>
+          <pre class="pre-scrollable">When trying to compile the latest SVN trunk (where it is not excluded that there was some kind of failure already during the ./boostrap phase), after fixing a few other compilation problems, the problem arises pretty much at the end, a failure to find a function "_rpl_malloc":
+
+clang: warning: argument unused during compilation: '-pthread'
+Undefined symbols for architecture x86_64:
+  "_rpl_malloc", referenced from:
+      _br_strcat in prefix.o
+ld: symbol(s) not found for architecture x86_64
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+make[3]: *** [codeblocks] Error 1
+make[2]: *** [all-recursive] Error 1
+make[1]: *** [all-recursive] Error 1
+make: *** [all-recursive] Error 1
+
+The configure step says:
+
+checking malloc.h usability... no
+checking malloc.h presence... no
+checking for malloc.h... no
+checking for stdbool.h that conforms to C99... yes
+checking for _Bool... yes
+checking for an ANSI C-conforming const... yes
+checking for inline... inline
+checking for size_t... yes
+checking whether time.h and sys/time.h may both be included... yes
+checking for working volatile... yes
+checking whether closedir returns void... yes
+checking for stdlib.h... (cached) yes
+checking for GNU libc compatible malloc... no
+
+but malloc.h exists on the machine. I'm not sure about the proper use because there are *a lot* of malloc files all over the place, but if I add -I/usr/include/malloc, then malloc.h is found. My blind guess is that malloc would work without including malloc.h anyway, but I might be wrong.
+
+
+/bin/sh ../../libtool  --tag=CXX   --mode=link clang++  -O2 -ffast-math -DCB_AUTOCONF  -DCB_PRECOMP -Winvalid-pch -fPIC -DPIC -fexceptions   -o codeblocks app.o appglobals.o backtracedlg.o breakpointsdlg.o compilersettingsdlg.o cpuregistersdlg.o crashhandler.o debugger_interface_creator.o debuggermenu.o debuggersettingscommonpanel.o debuggersettingsdlg.o debuggersettingspanel.o disassemblydlg.o dlgabout.o dlgaboutplugin.o editorconfigurationdlg.o environmentsettingsdlg.o examinememorydlg.o find_replace.o infopane.o main.o notebookstyles.o prefix.o printdlg.o projectmanagerui.o projectoptionsdlg.o recentitemslist.o scriptconsole.o scriptingsettingsdlg.o splashscreen.o startherepage.o switcherdlg.o threadsdlg.o watchesdlg.o ../sdk/libcodeblocks.la -L/opt/local/Library/Frameworks/wxWidgets.framework/Versions/wxGTK/2.8/lib  -arch x86_64 -L/opt/local/lib -Wl,-headerpad_max_install_names -arch x86_64   -L/opt/local/lib -framework IOKit -framework CoreServices -framework System -framework ApplicationServices  -lwx_gtk2u_richtext-2.8 -lwx_gtk2u_aui-2.8 -lwx_gtk2u_xrc-2.8 -lwx_gtk2u_qa-2.8 -lwx_gtk2u_html-2.8 -lwx_gtk2u_adv-2.8 -lwx_gtk2u_core-2.8 -lwx_baseu_xml-2.8 -lwx_baseu_net-2.8 -lwx_baseu-2.8  -L/opt/local/lib -lgtk-x11-2.0 -lgdk-x11-2.0 -lpangocairo-1.0 -lgio-2.0 -lXrender -lXinerama -lXi -lXrandr -lXcursor -lXcomposite -lXdamage -lXfixes -lX11 -lXext -latk-1.0 -lcairo -lgdk_pixbuf-2.0 -lgio-2.0 -lpangoft2-1.0 -lpango-1.0 -lm -lgobject-2.0 -lglib-2.0 -lintl -lfontconfig -lfreetype  
+libtool: link: clang++ -O2 -ffast-math -DCB_AUTOCONF -DCB_PRECOMP -Winvalid-pch -fPIC -DPIC -fexceptions -o .libs/codeblocks app.o appglobals.o backtracedlg.o breakpointsdlg.o compilersettingsdlg.o cpuregistersdlg.o crashhandler.o debugger_interface_creator.o debuggermenu.o debuggersettingscommonpanel.o debuggersettingsdlg.o debuggersettingspanel.o disassemblydlg.o dlgabout.o dlgaboutplugin.o editorconfigurationdlg.o environmentsettingsdlg.o examinememorydlg.o find_replace.o infopane.o main.o notebookstyles.o prefix.o printdlg.o projectmanagerui.o projectoptionsdlg.o recentitemslist.o scriptconsole.o scriptingsettingsdlg.o splashscreen.o startherepage.o switcherdlg.o threadsdlg.o watchesdlg.o -arch x86_64 -Wl,-headerpad_max_install_names -arch x86_64 -Wl,-bind_at_load  ../sdk/.libs/libcodeblocks.dylib -L/opt/local/Library/Frameworks/wxWidgets.framework/Versions/wxGTK/2.8/lib -L/opt/local/lib -lwx_gtk2u_richtext-2.8 -lwx_gtk2u_aui-2.8 -lwx_gtk2u_xrc-2.8 -lwx_gtk2u_qa-2.8 -lwx_gtk2u_html-2.8 -lwx_gtk2u_adv-2.8 -lwx_gtk2u_core-2.8 -lwx_baseu_xml-2.8 -lwx_baseu_net-2.8 -lwx_baseu-2.8 /opt/local/lib/libgtk-x11-2.0.dylib /opt/local/lib/libgdk-x11-2.0.dylib /opt/local/lib/libharfbuzz.dylib /opt/local/lib/libgraphite2.dylib /opt/local/lib/libgthread-2.0.dylib /opt/local/lib/libpangocairo-1.0.dylib /opt/local/lib/libXinerama.dylib /opt/local/lib/libXi.dylib /opt/local/lib/libXrandr.dylib /opt/local/lib/libXcursor.dylib /opt/local/lib/libXcomposite.dylib /opt/local/lib/libXdamage.dylib /opt/local/lib/libXfixes.dylib /opt/local/lib/libatk-1.0.dylib /opt/local/lib/libcairo.dylib /opt/local/lib/libpixman-1.dylib /opt/local/lib/libexpat.dylib /opt/local/lib/libxcb-shm.dylib /opt/local/lib/libX11-xcb.dylib /opt/local/lib/libxcb-render.dylib /opt/local/lib/libXrender.dylib /opt/local/lib/libXext.dylib /opt/local/lib/libX11.dylib /opt/local/lib/libxcb.dylib /opt/local/lib/libXau.dylib /opt/local/lib/libXdmcp.dylib /opt/local/lib/libgdk_pixbuf-2.0.dylib /opt/local/lib/libgmodule-2.0.dylib /opt/local/lib/libffi.dylib -lresolv /opt/local/lib/libiconv.dylib -lc /opt/local/lib/libgio-2.0.dylib /opt/local/lib/libpangoft2-1.0.dylib /opt/local/lib/libpango-1.0.dylib -lm /opt/local/lib/libgobject-2.0.dylib /opt/local/lib/libglib-2.0.dylib /opt/local/lib/libintl.dylib /opt/local/lib/libfontconfig.dylib /opt/local/lib/libfreetype.dylib -lbz2 /opt/local/lib/libpng15.dylib -lz -framework CoreFoundation -pthread -framework ApplicationServices -framework System -framework CoreServices -framework IOKit
+clang: warning: argument unused during compilation: '-pthread'
+Undefined symbols for architecture x86_64:
+  "_rpl_malloc", referenced from:
+      _br_strcat in prefix.o
+ld: symbol(s) not found for architecture x86_64
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+make[3]: *** [codeblocks] Error 1
+make[2]: *** [all-recursive] Error 1
+make[1]: *** [all-recursive] Error 1
+make: *** [all-recursive] Error 1
+</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>&nbsp;</dd>
+            <dt>Group</dt><dd>Platform:Mac</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mojca 2013-09-05 07:15:02</div>
+        <div class="panel-body">
+          <p>And if I export CFLAGS=-I/usr/include/malloc, CXXFLAGS=-I/usr/include/malloc before ./configure, it ends up with the following (in case it matters):</p>
+          <p>checking malloc.h usability... yes</p>
+          <p>checking malloc.h presence... no</p>
+          <p>configure: WARNING: malloc.h: accepted by the compiler, rejected by the preprocessor!</p>
+          <p>configure: WARNING: malloc.h: proceeding with the compiler's result</p>
+          <p>checking for malloc.h... yes</p>
+          <p>checking for stdbool.h that conforms to C99... yes</p>
+          <p>checking for _Bool... yes</p>
+          <p>checking for an ANSI C-conforming const... yes</p>
+          <p>checking for inline... inline</p>
+          <p>checking for size_t... yes</p>
+          <p>checking whether time.h and sys/time.h may both be included... yes</p>
+          <p>checking for working volatile... yes</p>
+          <p>checking whether closedir returns void... yes</p>
+          <p>checking for stdlib.h... (cached) yes</p>
+          <p>checking for GNU libc compatible malloc... no</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mojca 2014-04-04 09:54:39</div>
+        <div class="panel-body">
+          <p>After applying the following fix:</p>
+          <p>--- configure.ac.orig</p>
+          <p>+++ configure.ac</p>
+          <p>@@ -36,7 +36,7 @@ AC_PROG_LIBTOOL</p>
+          <p>dnl Checks for header files.</p>
+          <p>AC_HEADER_DIRENT</p>
+          <p>AC_HEADER_STDC</p>
+          <p>-AC_CHECK_HEADERS([fcntl.h limits.h stdlib.h string.h sys/param.h unistd.h malloc.h])</p>
+          <p>+AC_CHECK_HEADERS([fcntl.h limits.h stdlib.h string.h sys/param.h unistd.h sys/malloc.h])</p>
+          <p>dnl Checks for typedefs, structures, and compiler characteristics.</p>
+          <p>AC_HEADER_STDBOOL</p>
+          <p>(and the same one to configure), I'm finally getting the expected:</p>
+          <p>checking sys/malloc.h usability... yes</p>
+          <p>checking sys/malloc.h presence... yes</p>
+          <p>checking for sys/malloc.h... yes</p>
+          <p>checking for stdbool.h that conforms to C99... yes</p>
+          <p>...</p>
+          <p>checking for GNU libc compatible malloc... yes</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

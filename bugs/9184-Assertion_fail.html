@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 9184 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #9184 <small>2006-10-18 16:58:04</small></h3>
+          <h4>kev</h4>
+          <p class="lead">Assertion failed while saving document</p>
+          <pre class="pre-scrollable">My workspace contains two projects.  I make a small change to a CPP file in the active project, and push Ctrl-S to save.  This happens with some files very often.
+
+My Code::Blocks was built from SVN on Oct 1 2006 (Linux, unicode).
+
+Here is Code::Block's stdout, captured from GDB.
+
+Cheers,
+Kevin
+
+GDB Output:
+
+[New Thread -1335891040 (LWP 4791)]
+[Thread -1335891040 (LWP 4791) exited]
+codeblocks: cairo-ft-font.c:562: _cairo_ft_unscaled_font_unlock_face: Assertion `unscaled-&gt;lock &gt; 0' failed.
+
+Program received signal SIGABRT, Aborted.
+[Switching to Thread -1208797488 (LWP 4758)]
+0x43d28410 in __kernel_vsyscall ()
+(gdb) bt
+#0  0x43d28410 in __kernel_vsyscall ()
+#1  0x43d6dee9 in raise () from /lib/libc.so.6
+#2  0x43d6f4f1 in abort () from /lib/libc.so.6
+#3  0x43d67859 in __assert_fail () from /lib/libc.so.6
+#4  0x44482782 in cairo_pattern_create_for_surface () from /usr/lib/libcairo.so.2
+#5  0x444827b0 in cairo_ft_scaled_font_unlock_face () from /usr/lib/libcairo.so.2
+#6  0x4461a6f9 in pango_cairo_fc_font_get_type () from /usr/lib/libpangocairo-1.0.so.0
+#7  0x44625425 in pango_fc_font_unlock_face () from /usr/lib/libpangoft2-1.0.so.0
+#8  0x0011e4a2 in script_engine_init () from /usr/lib/pango/1.5.0/modules/pango-basic-fc.so
+#9  0x446da73a in pango_coverage_set () from /usr/lib/libpango-1.0.so.0
+#10 0x446ea439 in pango_shape () from /usr/lib/libpango-1.0.so.0
+#11 0x446de2aa in pango_layout_set_width () from /usr/lib/libpango-1.0.so.0
+#12 0x446e0d85 in pango_layout_iter_get_char_extents () from /usr/lib/libpango-1.0.so.0
+#13 0x446e12da in pango_layout_iter_get_char_extents () from /usr/lib/libpango-1.0.so.0
+#14 0x446e1c1c in pango_layout_iter_get_char_extents () from /usr/lib/libpango-1.0.so.0
+#15 0x446e2b2a in pango_layout_get_pixel_size () from /usr/lib/libpango-1.0.so.0
+#16 0x00455fbc in wxWindowDC::DoGetTextExtent () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#17 0x00596a04 in wxGenericTreeCtrl::CalculateSize () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#18 0x00596b4c in wxGenericTreeCtrl::CalculateLevel () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#19 0x00596bd0 in wxGenericTreeCtrl::CalculateLevel () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#20 0x00598fdf in wxGenericTreeCtrl::CalculatePositions () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#21 0x0059cd41 in wxGenericTreeCtrl::OnInternalIdle () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#22 0x004f2a15 in wxAppBase::SendIdleEvents () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#23 0x004f2a4e in wxAppBase::SendIdleEvents () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#24 0x004f2a4e in wxAppBase::SendIdleEvents () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#25 0x004f2a4e in wxAppBase::SendIdleEvents () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#26 0x004f2a4e in wxAppBase::SendIdleEvents () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#27 0x004f2a4e in wxAppBase::SendIdleEvents () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#28 0x004f2e8b in wxAppBase::ProcessIdle () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#29 0x00443446 in wxApp::Initialize () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#30 0x4429a7a1 in g_list_remove_link () from /usr/lib/libglib-2.0.so.0
+#31 0x4429c15d in g_main_context_dispatch () from /usr/lib/libglib-2.0.so.0
+#32 0x4429f3ef in g_main_context_check () from /usr/lib/libglib-2.0.so.0
+#33 0x4429f799 in g_main_loop_run () from /usr/lib/libglib-2.0.so.0
+#34 0x44843634 in gtk_main () from /usr/lib/libgtk-x11-2.0.so.0
+#35 0x0045cfcb in wxEventLoop::Run () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#36 0x004f2d0c in wxAppBase::MainLoop () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#37 0x004f23f1 in wxAppBase::OnRun () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#38 0x08067e85 in CodeBlocksApp::OnRun (this=0x91c3960) at ../../../../src/codeblocks/trunk/src/src/app.cpp:514
+#39 0x43f1fd1a in wxEntry () from /usr/lib/libwx_baseu-2.6.so.0
+#40 0x43f1fdd6 in wxEntry () from /usr/lib/libwx_baseu-2.6.so.0
+#41 0x080653c0 in main (argc=Cannot access memory at address 0x1296
+) at ../../../../src/codeblocks/trunk/src/src/app.cpp:131
+(gdb)
+</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2007-04-16 10:09:11</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2007-04-16 10:09:11</div>
+        <div class="panel-body">
+          <p>Please try with a nightly build and reopen this bug report, if</p>
+          <p>needed.</p>
+          <p>See <a href="http://forums.codeblocks.org/index.php/board,20.0.html">http://forums.codeblocks.org/index.php/board,20.0.html</a></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

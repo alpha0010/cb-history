@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 12706 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #12706 <small>2007-12-13 11:32:49</small></h3>
+          <h4>oswaldmi</h4>
+          <p class="lead">Crash on startup</p>
+          <pre class="pre-scrollable">Code::Blocks SVN 4729
+System: SuSE Linux Enterprise Server 9, gcc 3.3.3
+
+A quick investigation didn't show up something, so maybe someone of the developers can have a look on this.
+
+Valgrind reports this:
+
+Passing list of files to parse
+Starting batch parsing
+==18893== Thread 6:
+==18893== Conditional jump or move depends on uninitialised value(s)
+==18893==    at 0xA23255E: Tokenizer::SkipToOneOfChars(char const*, bool) (tokenizer.h:122)
+==18893==    by 0xA232B53: Tokenizer::SkipUnwanted() (tokenizer.cpp:448)
+==18893==    by 0xA232CF8: Tokenizer::DoGetToken() (tokenizer.h:106)
+==18893==    by 0xA233721: Tokenizer::GetToken() (tokenizer.cpp:481)
+==18893==    by 0xA217F12: ParserThread::HandlePreprocessorBlocks(wxString const&amp;) (string.h:1026)
+==18893==    by 0xA21BAF7: ParserThread::DoParse() (parserthread.cpp:484)
+==18893==    by 0xA21ED1D: ParserThread::Parse() (parserthread.cpp:348)
+==18893==    by 0xA2222AB: ParserThread::Execute() (parserthread.h:70)
+==18893==    by 0x488A070: cbWorkerThread::Entry() (cbthreadpool.cpp:219)
+==18893==    by 0x5319950: wxThreadInternal::PthreadStart(wxThread*) (in /opt/gtk2/lib/libwx_base-2.8.so.0.1.1)
+==18893==    by 0x53199BB: wxPthreadStart (in /opt/gtk2/lib/libwx_base-2.8.so.0.1.1)
+==18893==    by 0x535ACF6: start_thread (in /lib/tls/libpthread.so.0)
+==18893==
+==18893== Conditional jump or move depends on uninitialised value(s)
+==18893==    at 0xA232566: Tokenizer::SkipToOneOfChars(char const*, bool) (tokenizer.h:122)
+==18893==    by 0xA232B53: Tokenizer::SkipUnwanted() (tokenizer.cpp:448)
+==18893==    by 0xA232CF8: Tokenizer::DoGetToken() (tokenizer.h:106)
+==18893==    by 0xA233721: Tokenizer::GetToken() (tokenizer.cpp:481)
+==18893==    by 0xA217F12: ParserThread::HandlePreprocessorBlocks(wxString const&amp;) (string.h:1026)
+==18893==    by 0xA21BAF7: ParserThread::DoParse() (parserthread.cpp:484)
+==18893==    by 0xA21ED1D: ParserThread::Parse() (parserthread.cpp:348)
+==18893==    by 0xA2222AB: ParserThread::Execute() (parserthread.h:70)
+==18893==    by 0x488A070: cbWorkerThread::Entry() (cbthreadpool.cpp:219)
+==18893==    by 0x5319950: wxThreadInternal::PthreadStart(wxThread*) (in /opt/gtk2/lib/libwx_base-2.8.so.0.1.1)
+==18893==    by 0x53199BB: wxPthreadStart (in /opt/gtk2/lib/libwx_base-2.8.so.0.1.1)
+==18893==    by 0x535ACF6: start_thread (in /lib/tls/libpthread.so.0)
+==18893==
+==18893== Conditional jump or move depends on uninitialised value(s)
+==18893==    at 0xA23256E: Tokenizer::SkipToOneOfChars(char const*, bool) (tokenizer.h:122)
+==18893==    by 0xA232B53: Tokenizer::SkipUnwanted() (tokenizer.cpp:448)
+==18893==    by 0xA232CF8: Tokenizer::DoGetToken() (tokenizer.h:106)
+==18893==    by 0xA233721: Tokenizer::GetToken() (tokenizer.cpp:481)
+==18893==    by 0xA217F12: ParserThread::HandlePreprocessorBlocks(wxString const&amp;) (string.h:1026)
+==18893==    by 0xA21BAF7: ParserThread::DoParse() (parserthread.cpp:484)
+==18893==    by 0xA21ED1D: ParserThread::Parse() (parserthread.cpp:348)
+==18893==    by 0xA2222AB: ParserThread::Execute() (parserthread.h:70)
+==18893==    by 0x488A070: cbWorkerThread::Entry() (cbthreadpool.cpp:219)
+==18893==    by 0x5319950: wxThreadInternal::PthreadStart(wxThread*) (in /opt/gtk2/lib/libwx_base-2.8.so.0.1.1)
+==18893==    by 0x53199BB: wxPthreadStart (in /opt/gtk2/lib/libwx_base-2.8.so.0.1.1)
+==18893==    by 0x535ACF6: start_thread (in /lib/tls/libpthread.so.0)
+Parsing stage done (6001 total parsed files, 103821 tokens in 20 minute(s), 9.908 seconds).
+</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2008-01-10 11:22:01</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2008-01-10 11:22:01</div>
+        <div class="panel-body">
+          <p>That's no crash on startup but a crash while parsing a project for symbols.</p>
+          <p>Disable code-completion plugin or pin-point which file causes it to crash and, if possible, compress it and post it here so we can see what's going wrong.</p>
+          <p>Re-open this bug report if you have helpful news to add.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

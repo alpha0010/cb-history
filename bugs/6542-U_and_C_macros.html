@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 6542 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #6542 <small>2006-02-22 08:44:55</small></h3>
+          <h4>afb</h4>
+          <p class="lead">_U and _C  macros considered harmful</p>
+          <p>The following macros from C::B src/sdk/globals.h</p>
+          <p>conflict with /usr/include/ctype.h, on Mac OS X:</p>
+          <p>// Convenience macros until we update the codebase...</p>
+          <p>// TODO (mandrav##): Remove the leading underscores from the following macros</p>
+          <p>#define _U(x) cbC2U(x)</p>
+          <p>#define _C(x) cbU2C(x)</p>
+          <p>They are already defined in the system header as:</p>
+          <p>#define	_CTYPE_C	0x00000200L		/* Control */</p>
+          <p>#define	_CTYPE_U	0x00008000L		/* Upper */</p>
+          <p>/*</p>
+          <p>* Backward compatibility</p>
+          <p>*/</p>
+          <p>#define	_C		_CTYPE_C		/* Control */</p>
+          <p>#define	_U		_CTYPE_U		/* Upper */</p>
+          <p>I believe other BSDs than Darwin have this issue, too.</p>
+          <p>Perhaps add some #undef's to C::B, in the meantime ?</p>
+          <p>#undef _U</p>
+          <p>#define _U(x) cbC2U(x)</p>
+          <p>#undef _C</p>
+          <p>#define _C(x) cbU2C(x)</p>
+          <p>It gives some strange errors in some templates otherwise :-)</p>
+          <p>"32768 is not a function"</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>&nbsp;</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2006-02-22 14:01:34</dd>
+            <dt>Assigned to</dt><dd>mandrav</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2006-02-22 13:54:35</div>
+        <div class="panel-body">
+          <p>Thanks afb.</p>
+          <p>I 've been wanting to remove them (as the comment says) but kept postponing it.</p>
+          <p>I 'm currently removing them completely. I 'll commit when I 'm done.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2006-02-22 14:01:34</div>
+        <div class="panel-body">
+          <p>This bug is now fixed in HEAD.</p>
+          <p>Thank you for reporting it.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

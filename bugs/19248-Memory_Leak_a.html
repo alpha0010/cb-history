@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 19248 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #19248 <small>2014-01-05 14:51:04</small></h3>
+          <h4>lights_joy</h4>
+          <p class="lead">Memory Leak at cbProject::VirtualFolderAdded</p>
+          <p>hello, I'm using c::b 12.11</p>
+          <p>there is a bug at the function:</p>
+          <p>bool cbProject::VirtualFolderAdded(wxTreeCtrl* tree, wxTreeItemId parent_node, const wxString&amp; virtual_folder)</p>
+          <p>{</p>
+          <p>wxString foldername = GetRelativeFolderPath(tree, parent_node);</p>
+          <p>foldername &lt;&lt; virtual_folder;</p>
+          <p>foldername.Replace(_T("/"),  wxString(wxFILE_SEP_PATH), true);</p>
+          <p>foldername.Replace(_T("\\"), wxString(wxFILE_SEP_PATH), true);</p>
+          <p>if (foldername.Last() != wxFILE_SEP_PATH)</p>
+          <p>foldername &lt;&lt; wxFILE_SEP_PATH;</p>
+          <p>for (size_t i = 0; i &lt; m_VirtualFolders.GetCount(); ++i)</p>
+          <p>{</p>
+          <p>if (m_VirtualFolders[i].StartsWith(foldername))</p>
+          <p>{</p>
+          <p>cbMessageBox(_("A virtual folder with the same name already exists."),</p>
+          <p>_("Error"), wxICON_WARNING);</p>
+          <p>return false;</p>
+          <p>}</p>
+          <p>}</p>
+          <p>m_VirtualFolders.Add(foldername);</p>
+          <p>FileTreeData* ftd = new FileTreeData(this, FileTreeData::ftdkVirtualFolder);</p>
+          <p>ftd-&gt;SetProjectFile(0);</p>
+          <p>ftd-&gt;SetFolder(foldername);</p>
+          <p>int vfldIdx = Manager::Get()-&gt;GetProjectManager()-&gt;VirtualFolderIconIndex();</p>
+          <p>AddTreeNode(tree, foldername, m_ProjectNode, true, FileTreeData::ftdkVirtualFolder, true, vfldIdx, ftd);</p>
+          <p>if (!tree-&gt;IsExpanded(parent_node))</p>
+          <p>tree-&gt;Expand(parent_node);</p>
+          <p>SetModified(true);</p>
+          <p>//    Manager::Get()-&gt;GetLogManager()-&gt;DebugLog(F(_T("VirtualFolderAdded: %s: %s"), foldername.c_str(), GetStringFromArray(m_VirtualFolders, _T(";")).c_str()));</p>
+          <p>return true;</p>
+          <p>}</p>
+          <p>the ftd pointer MUST be delete when leaved the function, is that right?</p>
+          <p>in the function AddTreeNode, it malloc a new FileTreeData and copy the content of this pointer, so there is a memory leak here.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::WrongBehaviour</dd>
+            <dt>Group</dt><dd>Platform:Windows</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2014-02-28 06:03:28</div>
+        <div class="panel-body">
+          <p>c::b 12.11 is a big old, but can you check the latest trunk code? Thanks.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

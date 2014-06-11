@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 17614 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #17614 <small>2010-10-15 22:34:14</small></h3>
+          <h4>austin_hastings</h4>
+          <p class="lead">Squirrel script '==' fails for wxStrings</p>
+          <p>In a squirrel script, I wrote:</p>
+          <p>=====</p>
+          <p>function compare_wxstrings( left, right ) {</p>
+          <p>Log( _T( "\nComparing strings |" )</p>
+          <p>+ left + _T( "| and |" ) + right +_T( "|" ) );</p>
+          <p>if( left != right ) { Log( _T( "\tdifferent" ) ); } else { Log( _T( "\t! different" ) ); }</p>
+          <p>if( left &gt; right ) { Log( _T( "\tgreater" ) ); } else { Log( _T( "\t! greater" ) ); }</p>
+          <p>if( left &lt; right ) { Log( _T( "\tlesser" ) ); } else { Log( _T( "\t! lesser" ) ); }</p>
+          <p>if( left == right ) { Log( _T( "\tsame" ) ); } else { Log( _T( "\t! same" ) ); }</p>
+          <p>}</p>
+          <p>=====</p>
+          <p>I called it with:</p>
+          <p>compare_wxstrings( _T("a"), _T("a") ); // expect same</p>
+          <p>compare_wxstrings( _T("b"), _T("c") ); // expect lesser, different</p>
+          <p>compare_wxstrings( _T("e"), _T("d") ); // expect greater, different</p>
+          <p>======</p>
+          <p>The greater/lesser compares work okay, but the == compare always fails. (!!)</p>
+          <p>I tried this:</p>
+          <p>=====</p>
+          <p>local x = _T("x");</p>
+          <p>compare_wxstrings( x, x );</p>
+          <p>=====</p>
+          <p>And it reports 'same'.</p>
+          <p>Looking at the wxString OpCmp source code, it certainly appears that if opcmp is being called, it should return the 0 that the wxString.Cmp function returns.</p>
+          <p>Looking at the squirrel VM source, it looks as though the == comparison generates an OP_EQ, which is handled differently from the .gt. and .lt. operators.</p>
+          <p>I don't know if the C::B bindings is lacking an integration function that would hook up == to wxString, or if perhaps the squirrel object model assumes value semantics and does not support using == for other than identity comparisons.</p>
+          <p>But I do know that == really ought to return true in the test cases above.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::WrongBehaviour</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2010-12-05 14:56:36</dd>
+            <dt>Assigned to</dt><dd>biplab</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2010-12-05 14:56:36</div>
+        <div class="panel-body">
+          <p>The code in Code::Blocks works perfectly. Remember that when two wxString s are compared return value is 0 if they are same.</p>
+          <p>So if you write -</p>
+          <p>if ( foo == foo)</p>
+          <p>it becomes -</p>
+          <p>if ( 0 )</p>
+          <p>and this causes your code inside if () statement to fail.</p>
+          <p>IMO you should use nested if() in your code.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

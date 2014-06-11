@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 17119 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #17119 <small>2010-04-29 08:43:09</small></h3>
+          <h4>erebadan</h4>
+          <p class="lead">wxGTK assertions failed with revision 6205</p>
+          <pre class="pre-scrollable">At startup, after displaying the following lines:
+...
+BrowseTracker: loaded
+BYOGames: loaded
+CB_Koders: loaded
+CodeSnippets: loaded
+CodeStat: loaded
+copystrings: loaded
+
+C::B sends the following message:
+
+ASSERT INFO:
+/var/tmp/portage/x11-libs/wxGTK-2.8.10.1-r5/work/wxPython-src-2.8.10.1/src/common/object.cpp(252): assert "classTable-&gt;Get(m_className) == NULL" failed in Register(): Class "DragScrollEvent" already in RTTI table - have you used IMPLEMENT_DYNAMIC_CLASS() multiple times or linked some object file twice)?
+
+The backtrace in the window is empty, but I get that from gdb:
+#9  0x00007ffff58f849f in wxOnAssert (szFile=
+    0x7ffff59cd818 L"/var/tmp/portage/x11-libs/wxGTK-2.8.10.1-r5/work/wxPython-src-2.8.10.1/src/common/object.cpp", nLine=252, 
+    szFunc=&lt;value optimized out&gt;, szCond=0x7ffff59cdf08 L"classTable-&gt;Get(m_className) == NULL", szMsg=
+    0x7fffe400d568 L"Class \"DragScrollEvent\" already in RTTI table - have you used IMPLEMENT_DYNAMIC_CLASS() multiple times or linked some object file twice)?") at /usr/src/debug/x11-libs/wxGTK-2.8.10.1-r5/wxPython-src-2.8.10.1/src/common/appbase.cpp:711
+#10 0x00007ffff594bcc5 in wxClassInfo::Register (this=0x7fffe24918e0)
+    at /usr/src/debug/x11-libs/wxGTK-2.8.10.1-r5/wxPython-src-2.8.10.1/src/common/object.cpp:252
+#11 0x00007fffe228921f in wxClassInfo () at /usr/include/wx-2.8/wx/object.h:62
+#12 __static_initialization_and_destruction_0 () at dragscrollevent.cpp:18
+#13 global constructors keyed to dragscrollevent.cpp () at dragscrollevent.cpp:111
+#14 0x00007fffe2289bb2 in ?? () from /usr/lib/codeblocks/plugins/libdragscroll.so
+#15 0x00007fffffffd018 in ?? ()
+#16 0x0000000000000002 in ?? ()
+#17 0x00007fffffffe058 in ?? ()
+#18 0x00007fffe227bfe3 in _init () from /usr/lib/codeblocks/plugins/libdragscroll.so
+#19 0x00007fffe2269000 in ?? ()
+#20 0x00007ffff7dec939 in call_init (l=0x7fffe431bf30, argc=-498537176, argv=0x7fffffffcfb0, env=0x745170) at dl-init.c:70
+#21 0x00007ffff7decabf in _dl_init (main_map=0x7fffe431bf30, argc=2, argv=0x7fffffffe058, env=0x745170) at dl-init.c:134
+#22 0x00007ffff7df0f16 in dl_open_worker (a=&lt;value optimized out&gt;) at dl-open.c:492
+#23 0x00007ffff7dec5d6 in _dl_catch_error (objname=&lt;value optimized out&gt;, errstring=&lt;value optimized out&gt;, mallocedp=&lt;value optimized out&gt;, 
+    operate=&lt;value optimized out&gt;, args=&lt;value optimized out&gt;) at dl-error.c:178
+#24 0x00007ffff7df06e7 in _dl_open (file=0x7fffe431ca80 "/usr/lib/codeblocks/plugins/libdragscroll.so", mode=-2147483646, caller_dlopen=0x7ffff598576a, 
+    nsid=-2, argc=2, argv=0xd0c, env=0x745170) at dl-open.c:583
+#25 0x00007ffff5471f76 in dlopen_doit (a=&lt;value optimized out&gt;) at dlopen.c:67
+#26 0x00007ffff7dec5d6 in _dl_catch_error (objname=&lt;value optimized out&gt;, errstring=&lt;value optimized out&gt;, mallocedp=&lt;value optimized out&gt;, 
+    operate=&lt;value optimized out&gt;, args=&lt;value optimized out&gt;) at dl-error.c:178
+#27 0x00007ffff54722fc in _dlerror_run (operate=0x7ffff5471f10 &lt;dlopen_doit&gt;, args=0x7fffffffd450) at dlerror.c:164
+#28 0x00007ffff5471ef1 in __dlopen (file=&lt;value optimized out&gt;, mode=&lt;value optimized out&gt;) at dlopen.c:88
+#29 0x00007ffff598576a in wxDynamicLibrary::RawLoad (libname=..., flags=0)
+    at /usr/src/debug/x11-libs/wxGTK-2.8.10.1-r5/wxPython-src-2.8.10.1/src/unix/dlunix.cpp:270
+#30 0x00007ffff5913bea in wxDynamicLibrary::Load (this=0x7fffe42ebfa0, libnameOrig=&lt;value optimized out&gt;, flags=2)
+    at /usr/src/debug/x11-libs/wxGTK-2.8.10.1-r5/wxPython-src-2.8.10.1/src/common/dynlib.cpp:125
+#31 0x00007ffff78ef8d8 in LibLoader::LoadLibrary (filename=...) at pluginmanager.cpp:114
+#32 0x00007ffff78f1690 in PluginManager::LoadPlugin (this=0x1310650, pluginName=...) at pluginmanager.cpp:1018
+#33 0x00007ffff78f2f03 in PluginManager::ScanForPlugins (this=0x1310650, path=&lt;value optimized out&gt;) at pluginmanager.cpp:985
+#34 0x000000000045a3e3 in MainFrame::ScanForPlugins (this=&lt;value optimized out&gt;) at main.cpp:1026
+#35 0x0000000000471675 in MainFrame (this=0xf2fc20, parent=&lt;value optimized out&gt;) at main.cpp:526
+#36 0x0000000000434a22 in CodeBlocksApp::InitFrame (this=0x7327f0) at app.cpp:401
+#37 0x0000000000435bb8 in CodeBlocksApp::OnInit (this=0x7327f0) at app.cpp:627
+#38 0x00007ffff5935e72 in wxEntry (argc=&lt;value optimized out&gt;, argv=&lt;value optimized out&gt;)
+    at /usr/src/debug/x11-libs/wxGTK-2.8.10.1-r5/wxPython-src-2.8.10.1/src/common/init.cpp:444
+#39 0x0000000000432232 in main (argc=2, argv=0x5) at app.cpp:256
+
+That message appears without and with --safe-mode.
+
+If I click on "Continue", the message will appear again after the following log:
+cbDragScroll: loaded
+EnvVars: loaded
+HelpPlugin: loaded
+HeaderFixup: loaded
+cbKeyBinder: loaded
+Profiler: loaded
+Exporter: loaded
+SymTab: loaded
+RegExTestbed: loaded
+
+
+
+Then if I click on "Continue" again, a lot of things load, including my workspace and project, but at this point:
+
+...
+Text seems to be pure ASCII!
+We use user specified encoding: Unicode 8 bit (UTF-8) (ID: 41)
+Final encoding detected: Unicode 8 bit (UTF-8) (ID: 41)
+project data set for /home/thomas/boulot/libskyline/dataset.cpp
+Top Editor: /home/thomas/boulot/libskyline/dataset.cpp
+
+With the following message:
+
+ASSERT INFO:
+/var/tmp/portage/x11-libs/wxGTK-2.8.10.1-r5/work/wxPython-src-2.8.10.1/src/generic/treectlg.cpp(1941): assert "item.IsOk()" failed in EnsureVisible(): invalid tree item
+
+BACKTRACE:
+[1] ProjectManager::SetProject(cbProject*, bool)
+[2] ProjectManager::LoadProject(wxString const&amp;, bool)
+[3] WorkspaceLoader::Open(wxString const&amp;, wxString&amp;)
+[4] cbWorkspace::Load()
+[5] cbWorkspace::cbWorkspace(wxString const&amp;)
+[6] ProjectManager::LoadWorkspace(wxString const&amp;)
+
+
+Finally by clicking on "Continue", C::B starts and seems to work correctly but these messages are a bit startling.</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Error</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 19116 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #19116 <small>2013-09-05 07:55:56</small></h3>
+          <h4>mojca</h4>
+          <p class="lead">source_exporter might need to link against fontconfig</p>
+          <p>The following is a quick workaround that was needed to make Code::Blocks compile against GTK-based wxWidgets 2.8 installation on Mac OS X. libexported had to be compiled with -lfontconfig LDFLAG, else it didn't work. I'm not sure what the proper patch should be, but one should somehow account for the need of fontconfig (if/when needed).</p>
+          <p>--- src/plugins/contrib/source_exporter/Makefile.am.orig</p>
+          <p>+++ src/plugins/contrib/source_exporter/Makefile.am</p>
+          <p>@@ -12,7 +12,7 @@ pluginlib_LTLIBRARIES = libexporter.la</p>
+          <p>libexporter_la_CPPFLAGS = -DwxPDF_USE_WXMODULE=0</p>
+          <p>-libexporter_la_LDFLAGS = -module -version-info 0:1:0 -shared -no-undefined -avoid-version</p>
+          <p>+libexporter_la_LDFLAGS = -module -version-info 0:1:0 -shared -no-undefined -avoid-version -lfontconfig</p>
+          <p>libexporter_la_LIBADD = $(PLUGIN_WX_LIBS) ../../../sdk/libcodeblocks.la \</p>
+          <p>wxPdfDocument/libwxPdfDocument.la</p>
+          <p>--- src/plugins/contrib/source_exporter/Makefile.in.orig</p>
+          <p>+++ src/plugins/contrib/source_exporter/Makefile.in</p>
+          <p>@@ -392,7 +392,7 @@ INCLUDES = $(WX_CXXFLAGS) \</p>
+          <p>pluginlibdir = $(pkglibdir)/plugins</p>
+          <p>pluginlib_LTLIBRARIES = libexporter.la</p>
+          <p>libexporter_la_CPPFLAGS = -DwxPDF_USE_WXMODULE=0</p>
+          <p>-libexporter_la_LDFLAGS = -module -version-info 0:1:0 -shared -no-undefined -avoid-version</p>
+          <p>+libexporter_la_LDFLAGS = -module -version-info 0:1:0 -shared -no-undefined -avoid-version -lfontconfig</p>
+          <p>libexporter_la_LIBADD = $(PLUGIN_WX_LIBS) ../../../sdk/libcodeblocks.la \</p>
+          <p>wxPdfDocument/libwxPdfDocument.la</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>&nbsp;</dd>
+            <dt>Group</dt><dd>Platform:Mac</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mojca 2013-09-05 14:32:15</div>
+        <div class="panel-body">
+          <p>Just a note: this might not be the appropriate solution in all cases. In particular on Carbon-based wxWidgets 2.8, fontconfig might not be installed at all. Thus a better fix is needed.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 18411 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #18411 <small>2011-11-10 11:37:22</small></h3>
+          <h4>alatar_</h4>
+          <p class="lead">CC can`t add register variable</p>
+          <p>If variable defined as</p>
+          <p>register uint8_t MyVarName asm("r2");</p>
+          <p>(for example this syntax used by avr-gcc) it don`t add  to compelion symbols list. In the symbol-&gt;Global variables it is listed as</p>
+          <p>asm : register uint8_t MyVarName</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::CodeCompletion</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>ollydbg</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-02-04 00:18:51</div>
+        <div class="panel-body">
+          <p>what does asm("r2") means?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">alatar_ 2012-02-04 09:20:17</div>
+        <div class="panel-body">
+          <p>This means that variable MyVarName will be always stored in the register r2.</p>
+          <p><a href="http://www.nongnu.org/avr-libc/user-manual/FAQ.html#faq_regbind">http://www.nongnu.org/avr-libc/user-manual/FAQ.html#faq_regbind</a></p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-02-10 03:31:56</div>
+        <div class="panel-body">
+          <p>Luckily, you can use a replacement rule:</p>
+          <p>asm   ----&gt;   NONE</p>
+          <p>This will change your code in the parser internally like (strip the "asm"):</p>
+          <p>register uint8_t MyVarName ("r2");</p>
+          <p>And now, it works OK as you expect.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-02-10 03:05:54</div>
+        <div class="panel-body">
+          <p>Hi, the code has the format:</p>
+          <p>AAA BBB CCC ();</p>
+          <p>And it will recognized as a global function. Not sure why it became a global variable. I just start a thread:</p>
+          <p><a href="http://forums.codeblocks.org/index.php/topic,15930.msg107310.html#msg107310">http://forums.codeblocks.org/index.php/topic,15930.msg107310.html#msg107310</a></p>
+          <p>Regard to your bug report, I think the best way is to define a custom replacement rule(like a macro definition)</p>
+          <p>The replacement rule should be:</p>
+          <p>asm( ) ---&gt; NONE</p>
+          <p>So, that you code can looks like:</p>
+          <p>register uint8_t MyVarName;</p>
+          <p>And this string has the format</p>
+          <p>AAA BBB CCC;</p>
+          <p>Now, the CCC part will be recognized as a global variable.</p>
+          <p>The pity is currently we don't have such replacement rule, but it is put in my TODO list.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">alatar_ 2012-02-10 03:52:38</div>
+        <div class="panel-body">
+          <p>Thanks for idea but I don`t understand why this string should be interpreted as a variable definition, not function definition?</p>
+          <p>Because  to the function definition can`t be passed string instead of argument?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-02-10 05:21:08</div>
+        <div class="panel-body">
+          <p>Answer1: In-fact, as in c/c++, a syntax parser can't disambiguate the variable definition and function declaration. It need a more semantic analysis.</p>
+          <p><a href="http://en.wikipedia.org/wiki/Semantic_analysis_%28compilers%29#Front_end">http://en.wikipedia.org/wiki/Semantic_analysis_%28compilers%29#Front_end</a></p>
+          <p>But as you know, parser in CC is quite limited, and we only have some kind of syntax analysis, because writing a full semantic parser is a too complex. (you can take gcc's source code for example).</p>
+          <p>Answer2: Function declaration should not have a single string in the parentheses, This is true. So from a syntax point of view:</p>
+          <p>AAA BBB CCC("ddd");</p>
+          <p>should not be a function declaration. So, we can further add this check, but Note: This is still not sufficient enough, because there are many special case like this.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-02-10 12:27:00</div>
+        <div class="panel-body">
+          <p>Update, When we have such code:</p>
+          <p>AAA BBB CCC("xxxx");</p>
+          <p>It should be recognized as a variable, because the arguments "xxxx" can not be used in a function declaration.</p>
+          <p>See:</p>
+          <p><a href="http://forums.codeblocks.org/index.php/topic,15930.msg107334.html#msg107334">http://forums.codeblocks.org/index.php/topic,15930.msg107334.html#msg107334</a></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

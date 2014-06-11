@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 18661 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #18661 <small>2012-07-10 19:06:57</small></h3>
+          <h4>taiki</h4>
+          <p class="lead">C::B Project in the root of a partition</p>
+          <p>I work on a encrypted Truecypt partition which only contain my project so it was directly in the root.</p>
+          <p>This situation create strange bugs like:</p>
+          <p>- modify header don't recompile files that use it</p>
+          <p>- even if nothing changed, compile the project will relink it</p>
+          <p>I can easily reproduce the bug even with a default console project without any change.</p>
+          <p>I'm sorry for my bad english, I hope that this bug isn't already submited.</p>
+          <p>Ask for details if you need any.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Compiler</dd>
+            <dt>Group</dt><dd>Platform:Windows</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">taiki 2012-08-11 07:45:56</div>
+        <div class="panel-body">
+          <p>New link for the True crypt partition: <a href="http://www.mediafire.com/?tngj5dtcfcljkwc">http://www.mediafire.com/?tngj5dtcfcljkwc</a></p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">taiki 2012-08-15 17:38:40</div>
+        <div class="panel-body">
+          <p>Okay, have I to report the bug to the vendor? If yes, can I have details on what to report? (which API)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2012-08-11 09:17:42</div>
+        <div class="panel-body">
+          <p>For the record:</p>
+          <p>- When I hit compile it always gets re-linked</p>
+          <p>- When I change main.c it becomes re-compiled (!) and then re-linked</p>
+          <p>- When I change main.h it becomes just re-linked.</p>
+          <p>What exactly do you complain on this? (Just to make sure I understand the issue.)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">taiki 2012-08-11 09:27:11</div>
+        <div class="panel-body">
+          <p>Issues are:</p>
+          <p>- relink when not needed (may be long on big project)</p>
+          <p>- edit main.h won't update defines (the example code printf the define. If you change it, the main.c won't be updated so it'll keep the old value)</p>
+          <p>Recompile when main.c is updated isn't a problem (in my point of view).</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2012-08-11 10:12:00</div>
+        <div class="panel-body">
+          <p>OK - understood and its reproducible. For now, it doesn't not happen if you just create a sub-folder. Do this as a work-around, if possible.,</p>
+          <p>I'm afraid the reason is a third party component we use (depslib)... maybe not so easy to fix and actually should be done by the vendor.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2012-08-15 18:27:11</div>
+        <div class="panel-body">
+          <p>I tried to contact the vendor myself, but found out that the library is several years old and the vendor is no more. :-(</p>
+          <p>It used from another OpenSource project called "JAM".</p>
+          <p>You can try to find out yourself - its the depslib in the compiler plugin directory. It ships with a "main" (not compiled into the plugin) which can be used to make a stand-alone version for testing.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-07-24 14:35:33</div>
+        <div class="panel-body">
+          <p>I suggest that you can supply a minimal sample project, so that we can test it. Thanks.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">taiki 2012-07-22 08:30:15</div>
+        <div class="panel-body">
+          <p>Reproductible with the build 8150</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">taiki 2012-07-10 19:14:18</div>
+        <div class="panel-body">
+          <p>Forgot configuration details:</p>
+          <p>Windows 7 ultimate 64bit</p>
+          <p>C::B 10.05 compiled May 27 2010</p>
+          <p>Truecrypt 7.1</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">taiki 2012-07-24 15:11:27</div>
+        <div class="panel-body">
+          <p>Here is a TrueCrypt partition: <a href="https://dl.dropbox.com/u/12087072/code%20blocks%20bug">https://dl.dropbox.com/u/12087072/code%20blocks%20bug</a></p>
+          <p>Password: CodeBlock</p>
+          <p>Mount it then try to compile the project. Compile it again, it'll re-link it</p>
+          <p>Now, try to modify main.h, main.c won't be recompiled.</p>
+          <p>Can you reproduce the bug?</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 13877 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #13877 <small>2008-05-25 15:00:29</small></h3>
+          <h4>jenslody</h4>
+          <p class="lead">Batch-build on linux can cause Gtk-CRITICAL</p>
+          <p>If a batch-build that was invoked from console does some "real work" (this means compiling) and not only write "Nothing to be done" to dialog and console it leads to the following error-message:</p>
+          <p>"(codeblocks:8054): Gtk-CRITICAL **: gtk_window_set_modal: assertion `GTK_IS_WINDOW (window)' failed".</p>
+          <p>The "8054" is not always the same address.</p>
+          <p>This is caused because the dialog gets ended with "EndModal(wxID_OK)", after the "EndModal" it gets destroyed immediately and is set to 0.</p>
+          <p>I think this leads to the error, because wxWidgets calls internally "gtk_window_set_modal(GTK_WINDOW(m_widget), FALSE);" after the EventLoop, but if the widget is destroyed in this moment.</p>
+          <p>If nothing has to be done "EndModal()" is reached before "ShowModal()" and destroying the dialog is the right way to close it.</p>
+          <p>I don't know if that's the real cause for this error, but it can be avoided by only calling "EndModal()" if the dialog really "IsModal()" and otherwise destroy it.</p>
+          <p>I will submit a patch that does this and is tested on linux 64-bit and does no harm on windows.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Error</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2008-07-11 15:10:26</dd>
+            <dt>Assigned to</dt><dd>mortenmacfly</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">jenslody 2008-05-25 15:02:54</div>
+        <div class="panel-body">
+          <p>Patch is #2483</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2008-07-11 15:10:26</div>
+        <div class="panel-body">
+          <p>Fixed by applying patch #2483.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

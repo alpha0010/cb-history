@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 9183 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #9183 <small>2006-10-18 16:20:53</small></h3>
+          <h4>mythor</h4>
+          <p class="lead">crash after dubble clicking on breakpont</p>
+          <p>When in debug modus, double clicking on the current breakpoint sign or double clicking (create and remove a breakpoint) on a other line will crash</p>
+          <p>Code::Blocks.</p>
+          <p>(ubuntu build 17-10-06)</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">artoj 2007-01-18 21:01:45</div>
+        <div class="panel-body">
+          <p>Confirmed with revision 3505 (Ubuntu Edgy, wxGTK 2.6.3p2).</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2007-02-11 19:58:32</div>
+        <div class="panel-body">
+          <pre class="pre-scrollable">confirmed SVN 3590 Ubuntu Edgy
+ Here is a small pgm that can reproduce the error.
+ Place a breakpoint on the strcpy statement, run the pgm to the breakpoint, then keep double clicking on on the breakpoint.
+Pgm will crash, backtrace is not consistent. Sometimes it shows a callback to a null address, sometimes corrupted memory.
+
+// ----------------------------------------------------------------
+
+
+(codeblocks:1575): GLib-WARNING **: gmain.c:1429: ref_count == 0, but source is still attached to a context!
+
+Program received signal SIGSEGV, Segmentation fault.
+[Switching to Thread -1230645584 (LWP 1575)]
+0xb6c51d67 in g_main_context_prepare () from /usr/lib/libglib-2.0.so.0
+(gdb) bt
+#0  0xb6c51d67 in g_main_context_prepare () from /usr/lib/libglib-2.0.so.0
+#1  0xb6c524a5 in g_main_context_check () from /usr/lib/libglib-2.0.so.0
+#2  0xb6c52b89 in g_main_loop_run () from /usr/lib/libglib-2.0.so.0
+#3  0xb6fc6574 in gtk_main () from /usr/lib/libgtk-x11-2.0.so.0
+#4  0xb7baef9b in wxEventLoop::Run () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#5  0xb7c482be in wxAppBase::MainLoop ()
+   from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#6  0xb7c47981 in wxAppBase::OnRun () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#7  0x080706aa in CodeBlocksApp::OnRun (this=0x81231b0)
+    at /home/pecan/devel/trunk/src/src/app.cpp:593
+#8  0xb79c4f1a in wxEntry () from /usr/lib/libwx_baseu-2.6.so.0
+#9  0xb79c4fc6 in wxEntry () from /usr/lib/libwx_baseu-2.6.so.0
+#10 0x0806fd6e in main (argc=1, argv=0xbf92f364)
+    at /home/pecan/devel/trunk/src/src/app.cpp:189
+(gdb)
+
+
+// ---------------------------------------------------------------
+Program received signal SIGSEGV, Segmentation fault.
+[Switching to Thread -1230707024 (LWP 3319)]
+0xffffffff in ?? ()
+(gdb) bt
+#0  0xffffffff in ?? ()
+#1  0xb6c3fc74 in g_source_set_callback () from /usr/lib/libglib-2.0.so.0
+#2  0xb6c40561 in g_source_unref () from /usr/lib/libglib-2.0.so.0
+#3  0xb6c4099d in g_main_context_dispatch () from /usr/lib/libglib-2.0.so.0
+#4  0xb6c437df in g_main_context_check () from /usr/lib/libglib-2.0.so.0
+#5  0xb6c43b89 in g_main_loop_run () from /usr/lib/libglib-2.0.so.0
+#6  0xb6fb7574 in gtk_main () from /usr/lib/libgtk-x11-2.0.so.0
+#7  0xb7b9ff9b in wxEventLoop::Run () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#8  0xb7c392be in wxAppBase::MainLoop ()
+   from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#9  0xb7c38981 in wxAppBase::OnRun () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#10 0x080706aa in CodeBlocksApp::OnRun (this=0x81231b0)
+    at /home/pecan/devel/trunk/src/src/app.cpp:593
+#11 0xb79b5f1a in wxEntry () from /usr/lib/libwx_baseu-2.6.so.0
+#12 0xb79b5fc6 in wxEntry () from /usr/lib/libwx_baseu-2.6.so.0
+#13 0x0806fd6e in main (argc=1, argv=0xbfe26844)
+    at /home/pecan/devel/trunk/src/src/app.cpp:189
+(
+
+// --------------------------------------------------------
+// Test program
+// --------------------------------------------------------
+#include &lt;iostream&gt;
+#include &lt;cstdlib&gt;
+#include &lt;cstring&gt;
+
+using namespace std;
+
+int upstring(char *value);
+
+
+int main()
+{
+    //asm("int3");
+	char value[81]={'\0'};
+	int upper_count;
+
+	// perform i/o operation
+	do
+    {   cout &lt;&lt; "Please type in a String (max. 80 characters): ";
+        //cin.getline(value, 80);
+        strcpy(value,"FakeReply");
+        upper_count = upstring(value);
+        cout &lt;&lt; upper_count &lt;&lt; " characters are converted" &lt;&lt; endl;
+        cout &lt;&lt; "The new string is now: " &lt;&lt; value &lt;&lt; endl;
+        if ( (strlen(value) &gt;3) &amp;&amp; (0==strncmp(value,"LOOP",4) ))
+            break;
+    }while(upper_count);
+
+    // perform infinite loop if user entered text "loop"
+    if ( (strlen(value) &gt;3) &amp;&amp; (0==strncmp(value,"LOOP",4)) )
+    {
+        int i = 0;
+        while(true){
+            cout&lt;&lt;".";cout.flush();
+            ++i;
+            sleep(1);
+        }
+    }
+  return EXIT_SUCCESS;
+}
+
+int upstring(char *value)
+{
+  int i=0;
+  while(*value)
+  {
+    if(islower(*value))
+    {
+      *value=toupper(*value);
+      i++;
+    }
+  value++;
+  }
+  return(i);
+}
+</pre>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">rickg22 2007-06-26 23:37:10</div>
+        <div class="panel-body">
+          <p>Does this bug still persist?</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

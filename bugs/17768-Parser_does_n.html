@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 17768 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #17768 <small>2010-12-04 07:22:38</small></h3>
+          <h4>jiminy</h4>
+          <p class="lead">Parser does not get all symbols in an include</p>
+          <p>Code Blocks v 10.05</p>
+          <p>Gentoo</p>
+          <p>Include file linux/videodev2.h</p>
+          <p>A section in this include file lists some #defines in the middle of a structure definition, see below.  All declarations in the include after this point did not make it into the symbol database.  By moving the semicolon up before the #defines, the include  file was able to be fully parsed.</p>
+          <p>line 457</p>
+          <p>struct v4l2_jpegcompression {</p>
+          <p>int quality;</p>
+          <p>int  APPn;              /* Number of APP segment to be written,</p>
+          <p>* must be 0..15 */</p>
+          <p>int  APP_len;           /* Length of data in JPEG APPn segment */</p>
+          <p>char APP_data[60];      /* Data in the JPEG APPn segment. */</p>
+          <p>int  COM_len;           /* Length of data in JPEG COM segment */</p>
+          <p>char COM_data[60];      /* Data in JPEG COM segment */</p>
+          <p>__u32 jpeg_markers;     /* Which markers should go into the JPEG</p>
+          <p>* output. Unless you exactly know what</p>
+          <p>* you do, leave them untouched.</p>
+          <p>* Inluding less markers will make the</p>
+          <p>* resulting code smaller, but there will</p>
+          <p>* be fewer aplications which can read it.</p>
+          <p>* The presence of the APP and COM marker</p>
+          <p>* is influenced by APP_len and COM_len</p>
+          <p>* ONLY, not by this property! */</p>
+          <p>#define V4L2_JPEG_MARKER_DHT (1&lt;&lt;3)    /* Define Huffman Tables */</p>
+          <p>#define V4L2_JPEG_MARKER_DQT (1&lt;&lt;4)    /* Define Quantization Tables */</p>
+          <p>#define V4L2_JPEG_MARKER_DRI (1&lt;&lt;5)    /* Define Restart Interval */</p>
+          <p>#define V4L2_JPEG_MARKER_COM (1&lt;&lt;6)    /* Comment segment */</p>
+          <p>#define V4L2_JPEG_MARKER_APP (1&lt;&lt;7)    /* App segment, driver will</p>
+          <p>* allways use APP0 */</p>
+          <p>};</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::CodeCompletion</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>ollydbg</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">jiminy 2010-12-04 07:24:25</div>
+        <div class="panel-body">
+          <p>I meant closing bracket and semicolon :)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2010-12-07 09:41:23</div>
+        <div class="panel-body">
+          <p>I would like to check this bug. did you mean that the member variables of the struct v4l2_jpegcompression was missing after several</p>
+          <p>#define</p>
+          <p>??</p>
+          <p>Am I right?</p>
+          <p>ollydbg</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">jiminy 2010-12-08 03:09:15</div>
+        <div class="panel-body">
+          <p>ollydbg</p>
+          <p>No, the v4l2_jpegcompression was fine.  But every symbol declared after it in the include was missing, until I moved the #defines out of the struct.  However, I was unable to recreate the behavior tonight, even after moving the defines back into the struct.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">jiminy 2010-12-23 06:58:43</div>
+        <div class="panel-body">
+          <p>I've been playing with this some more, and the issue is not whether the #defines are inside the structure or not.  The original include file looks like this at the end of v4l2_jpegcompression:</p>
+          <p>#define V4L2_JPEG_MARKER_APP (1&lt;&lt;7) /* App segment, driver will</p>
+          <p>* allways use APP0 */</p>
+          <p>};</p>
+          <p>If I insert a space after the last "*/", or insert a line before the last "};", then everything is fine.</p>
+          <p>I confirmed this with the following code:</p>
+          <p>struct test {</p>
+          <p>int a;</p>
+          <p>int b;</p>
+          <p>#define something 1 /* something */</p>
+          <p>};</p>
+          <p>struct test2 {</p>
+          <p>int c;</p>
+          <p>int d;</p>
+          <p>};</p>
+          <p>int main()</p>
+          <p>{</p>
+          <p>struct test t;</p>
+          <p>struct test2 t2;</p>
+          <p>t.</p>
+          <p>}</p>
+          <p>the code completion for t in this case will include structure test2 as well as function main as members of structure test.  If I put a space after the comment or a blank line after it, everything is ok.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2011-01-12 01:06:30</div>
+        <div class="panel-body">
+          <p>@jiminy</p>
+          <p>It seems I did not receive any notification when you reply here, so my comment was a bit late.</p>
+          <p>If you still use 10.05 version, can you try the latest nightly build version. because the CodeCompletion has improved a lot after the 10.05.</p>
+          <p>and if the problem still exist, I will check it and try to fix it.</p>
+          <p>It would be better that you can wrote a post in the Codeblocks' forum discussion.</p>
+          <p>asmwarrior</p>
+          <p>ollydbg @ Codeblocks' forum</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2011-01-12 01:12:23</div>
+        <div class="panel-body">
+          <p>@jiminy</p>
+          <p>It seems I did not receive any notification when you reply here, so my comment was a bit late.</p>
+          <p>If you still use 10.05 version, can you try the latest nightly build version. because the CodeCompletion has improved a lot after the 10.05.</p>
+          <p>and if the problem still exist, I will check it and try to fix it.</p>
+          <p>It would be better that you can wrote a post in the Codeblocks' forum discussion.</p>
+          <p>asmwarrior</p>
+          <p>ollydbg @ Codeblocks' forum</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

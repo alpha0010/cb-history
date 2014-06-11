@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 8820 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #8820 <small>2006-09-17 06:50:05</small></h3>
+          <h4>afb</h4>
+          <p class="lead">contrib plugins don't compile on wxMac</p>
+          <pre class="pre-scrollable">"dragscroll" and "keybinder" doesn't link on wxMac:
+
+ g++ -DHAVE_CONFIG_H -I. -I. -I../../../../src/sdk -I/usr/local/lib/wx/include/mac-ansi-release-2.6 -I/usr/local/include/wx-2.6 -D__WXMAC__ -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES -DNO_GCC_PRAGMA -I../../../../src/sdk -I../../../../src/sdk/wxscintilla/include -O2 -ffast-math -g -O2 -DCB_PRECOMP -Winvalid-pch -fPIC -DPIC -MT dragscrollcfg.lo -MD -MP -MF .deps/dragscrollcfg.Tpo -c dragscrollcfg.cpp  -fno-common -DPIC -o .libs/dragscrollcfg.o
+/bin/sh ../../../../libtool --mode=link g++  -O2 -ffast-math -g -O2 -DCB_PRECOMP -Winvalid-pch -fPIC -DPIC   -o libdragscroll.la -rpath /usr/local/share/codeblocks/plugins -module -version-info 0:1:0 -shared -no-undefined -avoid-version dragscroll.lo dragscrollcfg.lo -L/usr/local/lib   -framework QuickTime -framework IOKit -framework Carbon -framework Cocoa -framework System  -lwx_mac-2.6  ../../../sdk/libcodeblocks.la -lpthread -ldl 
+g++ -bundle  -Wl,-bind_at_load  -o .libs/libdragscroll.so  .libs/dragscroll.o .libs/dragscrollcfg.o  /usr/local/lib/libwx_mac-2.6.dylib -L/usr/local/lib -lwx_mac-2.6 ../../../sdk/.libs/libcodeblocks.0.0.1.dylib -lpthread -ldl
+ld: Undefined symbols:
+MyMouseEvents::OnMouseEvent(wxMouseEvent&amp;)
+make[4]: *** [libdragscroll.la] Error 1
+
+ g++ -DHAVE_CONFIG_H -I. -I. -I../../../../src/sdk -I/usr/local/lib/wx/include/mac-ansi-release-2.6 -I/usr/local/include/wx-2.6 -D__WXMAC__ -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES -DNO_GCC_PRAGMA -I../../../../src/sdk -I../../../../src/sdk/wxscintilla/include -O2 -ffast-math -g -O2 -DCB_PRECOMP -Winvalid-pch -fPIC -DPIC -MT menuutils.lo -MD -MP -MF .deps/menuutils.Tpo -c menuutils.cpp  -fno-common -DPIC -o .libs/menuutils.o
+/bin/sh ../../../../libtool --mode=link g++  -O2 -ffast-math -g -O2 -DCB_PRECOMP -Winvalid-pch -fPIC -DPIC   -o libkeybinder.la -rpath /usr/local/share/codeblocks/plugins -module -version-info 0:1:0 -shared -no-undefined -avoid-version cbkeybinder.lo keybinder.lo menuutils.lo -L/usr/local/lib   -framework QuickTime -framework IOKit -framework Carbon -framework Cocoa -framework System  -lwx_mac-2.6  ../../../sdk/libcodeblocks.la -lpthread -ldl 
+g++ -bundle  -Wl,-bind_at_load  -o .libs/libkeybinder.so  .libs/cbkeybinder.o .libs/keybinder.o .libs/menuutils.o  /usr/local/lib/libwx_mac-2.6.dylib -L/usr/local/lib -lwx_mac-2.6 ../../../sdk/.libs/libcodeblocks.0.0.1.dylib -lpthread -ldl
+ld: Undefined symbols:
+wxMenuCmd::Update(wxMenuItem*)
+make[4]: *** [libkeybinder.la] Error 1
+
+Patch:
+<a href="http://developer.berlios.de/patch/?func=detailpatch&amp;patch_id=1424&amp;group_id=5358">http://developer.berlios.de/patch/?func=detailpatch&amp;patch_id=1424&amp;group_id=5358</a></pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::Any</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2006-10-01 00:58:52</dd>
+            <dt>Assigned to</dt><dd>pecan</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">afb 2006-09-24 18:19:45</div>
+        <div class="panel-body">
+          <p>I think it should be OK now, apparently all that was needed was to make wxMac use the same version as wxGTK... ?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">killerbot 2006-09-24 07:35:26</div>
+        <div class="panel-body">
+          <p>could you try again, pecan has done some changes in svn.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">afb 2006-09-17 07:00:11</div>
+        <div class="panel-body">
+          <p>title says "compile", but it meant to say "link"... (oh well)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

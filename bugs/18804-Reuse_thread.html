@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 18804 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #18804 <small>2012-11-21 06:20:29</small></h3>
+          <h4>alatar_</h4>
+          <p class="lead">Reuse thread</p>
+          <p>In debug build I got many asserts about reuse thread:</p>
+          <p>ASSERT INFO:</p>
+          <p>/var/tmp/portage/x11-libs/wxGTK-2.9.4.1/work/wxPython-src-2.9.4.0/src/unix/threadpsx.cpp(960): assert "GetState() == STATE_NEW" failed in Run(): thread may only be started once after Create()</p>
+          <p>BACKTRACE:</p>
+          <p>[1] wxOnAssert(char const*, int, char const*, char const*, wchar_t const*)</p>
+          <p>[2] wxThread::Run()</p>
+          <p>[3] CodeCompletion::OnParserEnd(wxCommandEvent&amp;)</p>
+          <p>[4] wxAppConsoleBase::CallEventHandler(wxEvtHandler*, wxEventFunctor&amp;, wxEvent&amp;) const</p>
+          <p>[5] wxEvtHandler::ProcessEventIfMatchesId(wxEventTableEntryBase const&amp;, wxEvtHandler*, wxEvent&amp;)</p>
+          <p>[6] wxEvtHandler::SearchDynamicEventTable(wxEvent&amp;)</p>
+          <p>[7] wxEvtHandler::TryHereOnly(wxEvent&amp;)</p>
+          <p>[8] wxEvtHandler::DoTryChain(wxEvent&amp;)</p>
+          <p>[9] wxEvtHandler::ProcessEvent(wxEvent&amp;)</p>
+          <p>[10] Parser::ProcessParserEvent(ParserCommon::ParserState, int, wxString const&amp;)</p>
+          <p>[11] Parser::OnAllThreadsDone(CodeBlocksEvent&amp;)</p>
+          <p>[12] wxAppConsoleBase::CallEventHandler(wxEvtHandler*, wxEventFunctor&amp;, wxEvent&amp;) const</p>
+          <p>[13] wxEvtHandler::ProcessEventIfMatchesId(wxEventTableEntryBase const&amp;, wxEvtHandler*, wxEvent&amp;)</p>
+          <p>[14] wxEvtHandler::SearchDynamicEventTable(wxEvent&amp;)</p>
+          <p>[15] wxEvtHandler::TryHereOnly(wxEvent&amp;)</p>
+          <p>[16] wxEvtHandler::ProcessEventLocally(wxEvent&amp;)</p>
+          <p>[17] wxEvtHandler::ProcessEvent(wxEvent&amp;)</p>
+          <p>[18] wxEvtHandler::ProcessPendingEvents()</p>
+          <p>[19] wxAppConsoleBase::ProcessPendingEvents()</p>
+          <p>[20] wxApp::DoIdle()</p>
+          <p>[21] g_main_context_dispatch</p>
+          <p>[22] g_main_loop_run</p>
+          <p>[23] gtk_main</p>
+          <p>[24] wxGUIEventLoop::Run()</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::CodeCompletion</dd>
+            <dt>Group</dt><dd>Platform:Linux</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2012-11-22 11:54:54</dd>
+            <dt>Assigned to</dt><dd>mortenmacfly</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2012-11-22 11:52:50</div>
+        <div class="panel-body">
+          <p>C::B is not yet fully compatible with wx2.9.4. please use wx2.8.12.</p>
+          <p>BTW: you are also missing the most important: Version and platform information.</p>
+          <p>Also: the question is, if that's our fault, or a wx fault. See what we check before:</p>
+          <p>if (   m_CCEnableHeaders</p>
+          <p>&amp;&amp; !m_SystemHeadersThreads.empty()</p>
+          <p>&amp;&amp; !m_SystemHeadersThreads.front()-&gt;IsRunning()</p>
+          <p>&amp;&amp; m_NativeParser.Done() )</p>
+          <p>{</p>
+          <p>m_SystemHeadersThreads.front()-&gt;Run();</p>
+          <p>}</p>
+          <p>-&gt; notice the "!m_SystemHeadersThreads.front()-&gt;IsRunning()".</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">alatar_ 2012-12-03 20:38:21</div>
+        <div class="panel-body">
+          <p>&gt;&gt; -&gt; notice the "!m_SystemHeadersThreads.front()-&gt;IsRunning()".</p>
+          <p>Here is a condition that runs thread after it`s stops. So Assert is correct ("thread may only be started once after Create()", not "Thread is running").</p>
+          <p>I`m not an expert in multithread programming, but as I know threads in wxWidgets should not be reused. I can not find this in the official wx2.8 docs, but here is quote from wxBook:</p>
+          <p>"you must delete the corresponding  wxTHRead  object yourself (once used, it cannot be reused)"</p>
+          <p>Cross-Platform GUI Programming with wxWidgets</p>
+          <p>Authors: Smart J.,  Hock K.,  Csomor S</p>
+          <p>Published year: 2005</p>
+          <p><a href="http://flylib.com/books/en/3.138.1.144/1/">http://flylib.com/books/en/3.138.1.144/1/</a></p>
+          <p>And here is documentation on wx 2.9:</p>
+          <p>"Finally, note that once a thread has completed and its Entry() function returns, you cannot call Run() on it again (an assert will fail in debug builds or wxTHREAD_RUNNING will be returned in release builds)."</p>
+          <p><a href="http://docs.wxwidgets.org/trunk/classwx_thread.html#a5d894750ffaac8fc42ee85aeff8bb4c0">http://docs.wxwidgets.org/trunk/classwx_thread.html#a5d894750ffaac8fc42ee85aeff8bb4c0</a></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 13866 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #13866 <small>2008-05-24 10:22:18</small></h3>
+          <h4>u2227</h4>
+          <p class="lead">Cannot debug included files if their extension is not "cpp"</p>
+          <p>----sample.l-----</p>
+          <p>test() {</p>
+          <p>int i = 123;</p>
+          <p>}</p>
+          <p>---main.cpp---</p>
+          <p>#include "sample.l"</p>
+          <p>void main() {</p>
+          <p>test(); /// click Step-In here, got debugger frozen.</p>
+          <p>return 0;</p>
+          <p>}</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Debugger</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2011-04-09 21:44:14</dd>
+            <dt>Assigned to</dt><dd>tpetrov</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">u2227 2008-05-24 10:28:05</div>
+        <div class="panel-body">
+          <p>if you set a break point in test(), I have two variants of behavior:</p>
+          <p>1) breakpoint is never even reached, program just continues.</p>
+          <p>2) breakpoint is reached but the execution point  is not displayed, although I can see the local variable test()::asd</p>
+          <p>Run to cursor in sample.l::test() will never be reached.</p>
+          <p>I tried to fix that myself, I believe should see in plugin/contrib/gdb.. but I got no clue when I looked in there. I think I might be able to fix this if someone give me some hints where to look.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">u2227 2008-05-24 10:32:46</div>
+        <div class="panel-body">
+          <p>I use FreeBSD, GCC, GDB.</p>
+          <p>Also I believe this report might be related to this:</p>
+          <p>BUG 10443</p>
+          <p><a href="https://developer.berlios.de/bugs/?func=detailbug&amp;bug_id=10443&amp;group_id=5358">https://developer.berlios.de/bugs/?func=detailbug&amp;bug_id=10443&amp;group_id=5358</a></p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">u2227 2008-05-24 10:51:38</div>
+        <div class="panel-body">
+          <p>OK, one more thing, I found that this might be not CodeBlocks problem at all!</p>
+          <p>(gdb) break /home/sample.l:3</p>
+          <p>No source file named /home/info.l.</p>
+          <p>Make breakpoint pending on future shared library load? (y or [n]) n</p>
+          <p>needless to say, the file is actually there.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">u2227 2008-05-24 11:06:02</div>
+        <div class="panel-body">
+          <p>Even more details are coming :)</p>
+          <p>I updated GDB from 6.1.1 to 6.6</p>
+          <p>Now I can set a breakpoint in the GDB!!</p>
+          <p>But not in codeblocks.</p>
+          <p>I am sure CodeBlocks is using the new version, it outputs that in "debugger" tab.</p>
+          <p>======================</p>
+          <p>1:03 /home gdb -q -f /home/test</p>
+          <p>(gdb) b /home/sample.l:3</p>
+          <p>Breakpoint 1 at 0x804c476: file /home/sample.l, line 3.</p>
+          <p>(gdb) r</p>
+          <p>Starting program: /home/test</p>
+          <p>Breakpoint 1, test () at /home/sample.l:3</p>
+          <p>&amp;#9618;&amp;#9618;/home/sample.l:3:18:beg:0x804c476</p>
+          <p>======================</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">u2227 2008-05-24 11:16:01</div>
+        <div class="panel-body">
+          <p>Ok, with the new GDB, I think breakpoints are working, run to cursor is working.</p>
+          <p>But the execution point is not updated. So the focus doe snot switch to the included file and there fore not to the included function. But You can still debug if you manually open the given file and locate the function, theline is not highlighted, but you can even step over and see locals. This must be another bug in GDB?</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

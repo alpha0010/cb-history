@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 10077 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #10077 <small>2007-01-20 22:14:24</small></h3>
+          <h4>bjoernp</h4>
+          <p class="lead">DebuggerDriver crashes CB &lt;&lt;- Stop Debugger, close App</p>
+          <pre class="pre-scrollable">CB rev 3516, gcc 3.4.5-mingw, gdb 6.3
+
+Debug-Session, app is free running...
+When I stop the Debugger clicking the Stop-Button nothing happens (visibly), the App-Window stays active. 
+When I close the app afterwards, CB crashes (SIGSEGV).
+
+Note: this does not happen, when the debugger is in break-mode, stepping through. Stopping the debugger works as expected then, all is fine.
+
+Here's the bt from crashreport and 2 detailed bt's from inside CB:
+
+...
+
+-------------------
+
+Error occured on Saturday, January 20, 2007 at 22:48:54.
+
+C:\CodeBlocks\codeblocks.exe caused an Access Violation at location 024cc618 in module C:\CodeBlocks\share\codeblocks\plugins\debugger.dll Reading from location 00000000.
+
+Registers:
+eax=00000000 ebx=00b908c0 ecx=77bfc2e3 edx=0466b70c esi=025678d0 edi=0424f194
+eip=024cc618 esp=0022f128 ebp=0022f140 iopl=0         nv up ei pl zr na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+
+Call stack:
+024CC618  C:\CodeBlocks\share\codeblocks\plugins\debugger.dll:024CC618
+024F62A8  C:\CodeBlocks\share\codeblocks\plugins\debugger.dll:024F62A8
+024D7CB2  C:\CodeBlocks\share\codeblocks\plugins\debugger.dll:024D7CB2
+024DB07D  C:\CodeBlocks\share\codeblocks\plugins\debugger.dll:024DB07D
+6D36A9C8  C:\lib\wxmsw26u_gcc_custom.dll:6D36A9C8  _ZN12wxEvtHandler21ProcessEventIfMatchesERK21wxEventTableEntryBasePS_R7wxEvent
+6D36AD8C  C:\lib\wxmsw26u_gcc_custom.dll:6D36AD8C  _ZN16wxEventHashTable11HandleEventER7wxEventP12wxEvtHandler
+6D36BD69  C:\lib\wxmsw26u_gcc_custom.dll:6D36BD69  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6D36BBA6  C:\lib\wxmsw26u_gcc_custom.dll:6D36BBA6  _ZN12wxEvtHandler20ProcessPendingEventsEv
+6D2C1C94  C:\lib\wxmsw26u_gcc_custom.dll:6D2C1C94  _ZN12wxAppConsole20ProcessPendingEventsEv
+61877AB6  C:\CodeBlocks\codeblocks.dll:61877AB6  _ZN7Manager20ProcessPendingEventsEv
+6190BD5A  C:\CodeBlocks\codeblocks.dll:6190BD5A  _ZN13SimpleTextLog6AddLogERK8wxStringb
+6187EC87  C:\CodeBlocks\codeblocks.dll:6187EC87  _ZN14MessageManager3LogEiRK8wxString
+024D0D07  C:\CodeBlocks\share\codeblocks\plugins\debugger.dll:024D0D07
+024F626E  C:\CodeBlocks\share\codeblocks\plugins\debugger.dll:024F626E
+024D7CB2  C:\CodeBlocks\share\codeblocks\plugins\debugger.dll:024D7CB2
+024DB07D  C:\CodeBlocks\share\codeblocks\plugins\debugger.dll:024DB07D
+6D36A9C8  C:\lib\wxmsw26u_gcc_custom.dll:6D36A9C8  _ZN12wxEvtHandler21ProcessEventIfMatchesERK21wxEventTableEntryBasePS_R7wxEvent
+6D36AD8C  C:\lib\wxmsw26u_gcc_custom.dll:6D36AD8C  _ZN16wxEventHashTable11HandleEventER7wxEventP12wxEvtHandler
+6D36BD69  C:\lib\wxmsw26u_gcc_custom.dll:6D36BD69  _ZN12wxEvtHandler12ProcessEventER7wxEvent
+6D36BBA6  C:\lib\wxmsw26u_gcc_custom.dll:6D36BBA6  _ZN12wxEvtHandler20ProcessPendingEventsEv
+6D2C1C94  C:\lib\wxmsw26u_gcc_custom.dll:6D2C1C94  _ZN12wxAppConsole20ProcessPendingEventsEv
+6D719958  C:\lib\wxmsw26u_gcc_custom.dll:6D719958  _ZN18wxHtmlSearchStatus8IsActiveEv
+77D1EAF2  C:\WINDOWS\system32\USER32.dll:77D1EAF2  EnableMenuItem
+77D1EA9E  C:\WINDOWS\system32\USER32.dll:77D1EA9E  EnableMenuItem
+77D1EBF3  C:\WINDOWS\system32\USER32.dll:77D1EBF3  CallNextHookEx
+7C91EAE3  C:\WINDOWS\system32\ntdll.dll:7C91EAE3  KiUserCallbackDispatcher
+6D3AD194  C:\lib\wxmsw26u_gcc_custom.dll:6D3AD194  _ZN11wxEventLoop8DispatchEv
+6D3AD020  C:\lib\wxmsw26u_gcc_custom.dll:6D3AD020  _ZN11wxEventLoop3RunEv
+6D446D7E  C:\lib\wxmsw26u_gcc_custom.dll:6D446D7E  _ZN9wxAppBase8MainLoopEv
+00404A08  C:\CodeBlocks\codeblocks.exe:00404A08
+6D303C97  C:\lib\wxmsw26u_gcc_custom.dll:6D303C97  _Z14wxUninitializev
+6D373C9A  C:\lib\wxmsw26u_gcc_custom.dll:6D373C9A  _Z7wxEntryP11HINSTANCE__S0_Pci
+00401884  C:\CodeBlocks\codeblocks.exe:00401884
+004711EA  C:\CodeBlocks\codeblocks.exe:004711EA
+00401247  C:\CodeBlocks\codeblocks.exe:00401247
+004012B8  C:\CodeBlocks\codeblocks.exe:004012B8
+7C816FD7  C:\WINDOWS\system32\kernel32.dll:7C816FD7  RegisterWaitForInputIdle
+
+And here's a more detailed one from CB debugging itself:
+
+#0 030AC618	DebuggerDriver::CurrentCommand(this=0x61c4618) (C:/CodeBlocks/trunk/src/plugins/debuggergdb/debuggerdriver.cpp:98)
+
+#1 030D62A8	GDB_driver::ParseOutput(this=0x61c4618, output=@0x22f428) (C:/CodeBlocks/trunk/src/plugins/debuggergdb/gdb_driver.cpp:600)
+
+#2 030B7CB2	DebuggerGDB::ParseOutput(this=0x1df5898, output=@0x22f428) (C:/CodeBlocks/trunk/src/plugins/debuggergdb/debuggergdb.cpp:1543)
+
+#3 030BB07D	DebuggerGDB::OnGDBOutput(this=0x1df5898, event=@0x1cab108) (C:/CodeBlocks/trunk/src/plugins/debuggergdb/debuggergdb.cpp:1916)
+
+#4 6D36A9C8	wxEvtHandler::ProcessEventIfMatches() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#5 6D36AD8C	wxEventHashTable::HandleEvent() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#6 6D36BD69	wxEvtHandler::ProcessEvent() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#7 6D36BBA6	wxEvtHandler::ProcessPendingEvents() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#8 6D2C1C94	wxAppConsole::ProcessPendingEvents() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#9 61877AB6	Manager::ProcessPendingEvents() (C:/CodeBlocks/trunk/src/sdk/manager.cpp:108)
+
+#10 6190BD5A	SimpleTextLog::AddLog(this=0x46efed8, msg=@0x22f948, addNewLine=true) (C:/CodeBlocks/trunk/src/sdk/simpletextlog.cpp:70)
+
+#11 6187EC87	MessageManager::Log(this=0x146e0e0, id=6, msg=@0x22f948) (C:/CodeBlocks/trunk/src/sdk/messagemanager.cpp:455)
+
+#12 030B0D07	DebuggerGDB::DebugLog(this=0x1df5898, msg=@0x22f948) (C:/CodeBlocks/trunk/src/plugins/debuggergdb/debuggergdb.cpp:566)
+
+#13 030D626E	GDB_driver::ParseOutput(this=0x61c4618, output=@0x22f948) (C:/CodeBlocks/trunk/src/plugins/debuggergdb/gdb_driver.cpp:593)
+
+#14 030B7CB2	DebuggerGDB::ParseOutput(this=0x1df5898, output=@0x22f948) (C:/CodeBlocks/trunk/src/plugins/debuggergdb/debuggergdb.cpp:1543)
+
+#15 030BB07D	DebuggerGDB::OnGDBOutput(this=0x1df5898, event=@0x1cab0b4) (C:/CodeBlocks/trunk/src/plugins/debuggergdb/debuggergdb.cpp:1916)
+
+#16 6D36A9C8	wxEvtHandler::ProcessEventIfMatches() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#17 6D36AD8C	wxEventHashTable::HandleEvent() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#18 6D36BD69	wxEvtHandler::ProcessEvent() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#19 6D36BBA6	wxEvtHandler::ProcessPendingEvents() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#20 6D2C1C94	wxAppConsole::ProcessPendingEvents() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#21 6D719958	wxIdleWakeUpModule::MsgHookProc() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#22 77D1EAF2	USER32!EnableMenuItem() (C:\WINDOWS\system32\user32.dll:??)
+
+#23 00000000	??() (??:??)
+
+#24 00000001	??() (??:??)
+
+#25 0022FAEC	??() (??:??)
+
+#26 0143A118	??() (??:??)
+
+#27 0022FB90	??() (??:??)
+
+#28 0022FAA8	??() (??:??)
+
+#29 77D1EA9E	USER32!EnableMenuItem() (C:\WINDOWS\system32\user32.dll:??)
+
+and another one, this snapshot taken just after the first:
+
+#0 030D637E	GDB_driver::ParseOutput(this=0x63da238, output=@0x22f428) (C:/CodeBlocks/trunk/src/plugins/debuggergdb/gdb_driver.cpp:612)
+
+#1 030B7CB2	DebuggerGDB::ParseOutput(this=0x1e03e18, output=@0x22f428) (C:/CodeBlocks/trunk/src/plugins/debuggergdb/debuggergdb.cpp:1543)
+
+#2 030BB07D	DebuggerGDB::OnGDBOutput(this=0x1e03e18, event=@0x1cab39c) (C:/CodeBlocks/trunk/src/plugins/debuggergdb/debuggergdb.cpp:1916)
+
+#3 6D36A9C8	wxEvtHandler::ProcessEventIfMatches() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#4 6D36AD8C	wxEventHashTable::HandleEvent() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#5 6D36BD69	wxEvtHandler::ProcessEvent() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#6 6D36BBA6	wxEvtHandler::ProcessPendingEvents() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#7 6D2C1C94	wxAppConsole::ProcessPendingEvents() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#8 61877AB6	Manager::ProcessPendingEvents() (C:/CodeBlocks/trunk/src/sdk/manager.cpp:108)
+
+#9 6190BD5A	SimpleTextLog::AddLog(this=0x46efc90, msg=@0x22f948, addNewLine=true) (C:/CodeBlocks/trunk/src/sdk/simpletextlog.cpp:70)
+
+#10 6187EC87	MessageManager::Log(this=0x146d340, id=6, msg=@0x22f948) (C:/CodeBlocks/trunk/src/sdk/messagemanager.cpp:455)
+
+#11 030B0D07	DebuggerGDB::DebugLog(this=0x1e03e18, msg=@0x22f948) (C:/CodeBlocks/trunk/src/plugins/debuggergdb/debuggergdb.cpp:566)
+
+#12 030D626E	GDB_driver::ParseOutput(this=0x63da238, output=@0x22f948) (C:/CodeBlocks/trunk/src/plugins/debuggergdb/gdb_driver.cpp:593)
+
+#13 030B7CB2	DebuggerGDB::ParseOutput(this=0x1e03e18, output=@0x22f948) (C:/CodeBlocks/trunk/src/plugins/debuggergdb/debuggergdb.cpp:1543)
+
+#14 030BB07D	DebuggerGDB::OnGDBOutput(this=0x1e03e18, event=@0x1cab2a0) (C:/CodeBlocks/trunk/src/plugins/debuggergdb/debuggergdb.cpp:1916)
+
+#15 6D36A9C8	wxEvtHandler::ProcessEventIfMatches() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#16 6D36AD8C	wxEventHashTable::HandleEvent() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#17 6D36BD69	wxEvtHandler::ProcessEvent() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#18 6D36BBA6	wxEvtHandler::ProcessPendingEvents() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#19 6D2C1C94	wxAppConsole::ProcessPendingEvents() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#20 6D719958	wxIdleWakeUpModule::MsgHookProc() (C:\lib\wxmsw26u_gcc_custom.dll:??)
+
+#21 77D1EAF2	USER32!EnableMenuItem() (C:\WINDOWS\system32\user32.dll:??)
+
+#22 00000000	??() (??:??)
+
+#23 00000001	??() (??:??)
+
+#24 0022FAEC	??() (??:??)
+
+#25 0143A118	??() (??:??)
+
+#26 0022FB90	??() (??:??)
+
+#27 0022FAA8	??() (??:??)
+
+#28 77D1EA9E	USER32!EnableMenuItem() (C:\WINDOWS\system32\user32.dll:??)
+
+#29 00030000	??() (??:??)
+
+
+For my guess on it: the debugger-instance is destroyed but still used because the gdb-process is not closed/hanging and producing output.
+
+</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Debugger</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2007-03-19 14:47:28</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">artoj 2007-02-05 09:23:46</div>
+        <div class="panel-body">
+          <p>Ubuntu Edgy, wxGTK 2.6.3p2, rev 3564, gdb 6.4.90-debian</p>
+          <p>I tried to reproduce this but I got a SIGSEGV earlier, when I click the Abort button. I don't know if it's the same bug but Debugger is definitely crashing.</p>
+          <p>GDB output:</p>
+          <p><a href="http://ajonsson.kapsi.fi/bugs/codeblocks/debugger-crash.txt">http://ajonsson.kapsi.fi/bugs/codeblocks/debugger-crash.txt</a></p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2007-02-06 19:53:19</div>
+        <div class="panel-body">
+          <p>Program received signal SIGSEGV, Segmentation fault.</p>
+          <p>[Switching to Thread -1230633296 (LWP 2568)]</p>
+          <p>0xb46a4fe4 in DebuggerDriver::CurrentCommand (this=0x8cde9e8)</p>
+          <p>at plugins/debuggergdb/debuggerdriver.cpp:98</p>
+          <p>98          return m_DCmds.GetCount() ? m_DCmds[0] : 0;</p>
+          <p>(gdb) bt</p>
+          <p>#0  0xb46a4fe4 in DebuggerDriver::CurrentCommand (this=0x8cde9e8)</p>
+          <p>at plugins/debuggergdb/debuggerdriver.cpp:98</p>
+          <p>#1  0xb46caa31 in GDB_driver::ParseOutput (this=0x8cde9e8, output=@0xbfc9063c)</p>
+          <p>at /home/pecan/devel/trunk/src/plugins/debuggergdb/gdb_driver.cpp:620</p>
+          <p>#2  0xb46a8811 in DebuggerGDB::ParseOutput (this=0x8a17b90, output=@0xbfc9063c)</p>
+          <p>at plugins/debuggergdb/debuggergdb.cpp:1543</p>
+          <p>#3  0xb46aac39 in DebuggerGDB::OnGDBOutput (this=0x8a17b90, event=@0x8a2ae40)</p>
+          <p>at plugins/debuggergdb/debuggergdb.cpp:1916</p>
+          <p>#4  0xb7991655 in wxAppConsole::HandleEvent ()</p>
+          <p>from /usr/lib/libwx_baseu-2.6.so.0</p>
+          <p>#5  0xb7a20b52 in wxEvtHandler::ProcessEventIfMatches ()</p>
+          <p>from /usr/lib/libwx_baseu-2.6.so.0</p>
+          <p>#6  0xb7a20c9d in wxEventHashTable::HandleEvent ()</p>
+          <p>from /usr/lib/libwx_baseu-2.6.so.0</p>
+          <p>#7  0xb7a20e1f in wxEvtHandler::ProcessEvent ()</p>
+          <p>from /usr/lib/libwx_baseu-2.6.so.0</p>
+          <p>#8  0xb7a212d0 in wxEvtHandler::ProcessPendingEvents ()</p>
+          <p>from /usr/lib/libwx_baseu-2.6.so.0</p>
+          <p>#9  0xb7991bef in wxAppConsole::ProcessPendingEvents ()</p>
+          <p>from /usr/lib/libwx_baseu-2.6.so.0</p>
+          <p>#10 0xb776e4dd in Manager::ProcessPendingEvents () at sdk/manager.cpp:108</p>
+          <p>#11 0xb782d4cf in SimpleTextLog::AddLog (this=0x8b25b58, msg=@0xbfc909cc,</p>
+          <p>addNewLine=true) at sdk/simpletextlog.cpp:70</p>
+          <p>---Type &lt;return&gt; to continue, or q &lt;return&gt; to quit---q</p>
+          <p>Quit</p>
+          <p>(gdb) f</p>
+          <p>#0  0xb46a4fe4 in DebuggerDriver::CurrentCommand (this=0x8cde9e8)</p>
+          <p>at plugins/debuggergdb/debuggerdriver.cpp:98</p>
+          <p>98          return m_DCmds.GetCount() ? m_DCmds[0] : 0;</p>
+          <p>(gdb) p m_DCmds</p>
+          <p>$16 = {&lt;wxBaseArrayPtrVoid&gt; = {m_nSize = 21, m_nCount = 22,</p>
+          <p>m_pItems = 0x17}, &lt;No data fields&gt;}</p>
+          <p>(gdb) Quit</p>
+          <p>(gdb)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pecan 2007-02-11 19:37:45</div>
+        <div class="panel-body">
+          <p>This bug fixed by Patch 1881</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2007-03-19 14:47:28</div>
+        <div class="panel-body">
+          <p>This bug has been already fixed in HEAD.</p>
+          <p>Thank you.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

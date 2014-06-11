@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 18534 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #18534 <small>2012-03-16 05:42:38</small></h3>
+          <h4>agetian</h4>
+          <p class="lead">Functions returning T* are displayed as returning T</p>
+          <p>In SVN 7789 (the latest nightly posted on the boards), the code hint that pops up for functions that return a pointer will show that the function returns a non-pointer value instead. For instance, a function returning pointer-to-char will be identified as a function returning char. A simple test case:</p>
+          <p>char *test_func(void)</p>
+          <p>{</p>
+          <p>return NULL;</p>
+          <p>}</p>
+          <p>int main()</p>
+          <p>{</p>
+          <p>test_func(</p>
+          <p>}</p>
+          <p>The code hint that will pop up for "test_func" when the opening bracket is typed will incorrectly identify the function as "char test_func(void)".</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::CodeCompletion</dd>
+            <dt>Group</dt><dd>Platform:All</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2012-05-09 14:28:37</dd>
+            <dt>Assigned to</dt><dd>ollydbg</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-05-09 14:28:37</div>
+        <div class="panel-body">
+          <p>Fixed in rev 7957, thanks.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">agetian 2012-03-16 06:55:16</div>
+        <div class="panel-body">
+          <p>A little update on observations: this happens on both Windows on Linux. Also, in C++, functions returning T&amp; are also shown as returning T.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-03-16 11:49:35</div>
+        <div class="panel-body">
+          <p>It looks like a regression, does this works correctly in some previous version?</p>
+          <p>Thanks.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">agetian 2012-03-16 12:01:14</div>
+        <div class="panel-body">
+          <p>Yes, worked perfectly in the previous revisions. For example, it's OK in SVN 7671 (the 7th January build).</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-03-16 12:07:31</div>
+        <div class="panel-body">
+          <p>I test you code under rev 7790(debugger branch nightly release), it works OK. see the screen shot:</p>
+          <p><a href="http://i683.photobucket.com/albums/vv194/ollydbg_cb/2012-03-16200354.png">http://i683.photobucket.com/albums/vv194/ollydbg_cb/2012-03-16200354.png</a></p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">agetian 2012-03-16 12:10:33</div>
+        <div class="panel-body">
+          <p>I tested the non-debugger branch, I have no idea whether or not it works in the debugger branch. In the non-debugger branch it manifests the wrong behavior.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">agetian 2012-03-16 12:20:44</div>
+        <div class="panel-body">
+          <p>P.S. Just downloaded the debugger branch (SVN 7790) from the boards and gave it a test, still the same.</p>
+          <p>Screenshot:</p>
+          <p><a href="http://i1246.photobucket.com/albums/gg603/Michael_Kamensky/CB_BAD_BEHAVIOR1.png">http://i1246.photobucket.com/albums/gg603/Michael_Kamensky/CB_BAD_BEHAVIOR1.png</a></p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">agetian 2012-03-16 12:44:40</div>
+        <div class="panel-body">
+          <p>Oh, now I see what you mean - if I hover the mouse over test_func, it will show the correct definition in the little hint box, but the code completion hint that pops up will NOT show the correct definition and will show "char" instead of "char *" - to reproduce, just start typing:</p>
+          <p>test_func(</p>
+          <p>Then see what happens in the code completion box. Anyway, screenshot attached in my previous post.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-03-16 12:46:24</div>
+        <div class="panel-body">
+          <p>That was strange, can you please create a simple console project, and paste your test code there. and see the tip again. I'm guess that you have many functions naming "test_func" (function overloading)?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">agetian 2012-03-16 13:11:33</div>
+        <div class="panel-body">
+          <p>Of course, I tried it many times before, and here's the same thing done again - just to avoid any possibility of my error, I installed SVN 7990 from scratch, created a brand new project, and typed the same thing - still the same error, here's a screenshot:</p>
+          <p><a href="http://i1246.photobucket.com/albums/gg603/Michael_Kamensky/CB_BAD_BEHAVIOR3.png">http://i1246.photobucket.com/albums/gg603/Michael_Kamensky/CB_BAD_BEHAVIOR3.png</a></p>
+          <p>(and just to test whether it works in both C and C++ modes, this time I made a C++ project instead of a C one and it still shows the same erroroneous behavior. :(</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-03-16 13:12:55</div>
+        <div class="panel-body">
+          <p>Hi, agetian, nice catch. You are correct, I can reproduce this bug, it happened when I hit a "(", I will try to investigate this bug. Thanks.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-03-16 13:15:43</div>
+        <div class="panel-body">
+          <p>It looks like our posts get crossed. I can reproduce this bug.</p>
+          <p>BTW: We have the same parser for either C or C++ source, so they should have the same error.</p>
+          <p>Thanks for your test!</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">agetian 2012-03-16 13:17:50</div>
+        <div class="panel-body">
+          <p>Glad to hear you were able to reproduce it! Thanks! And it's my pleasure to help, I love C::B!</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-03-16 14:39:03</div>
+        <div class="panel-body">
+          <p>bool NativeParserBase::PrettyPrintToken(const TokensTree* tree,</p>
+          <p>const Token*      token,</p>
+          <p>wxString&amp;         result,</p>
+          <p>bool              isRoot)</p>
+          <p>{</p>
+          <p>// if the token has parents and the token is a container or a function,</p>
+          <p>// then pretty print the parent of the token-&gt;</p>
+          <p>if (   (token-&gt;m_ParentIndex != -1)</p>
+          <p>&amp;&amp; (token-&gt;m_TokenKind &amp; (tkAnyContainer | tkAnyFunction)) )</p>
+          <p>{</p>
+          <p>const Token* parentToken = tree-&gt;at(token-&gt;m_ParentIndex);</p>
+          <p>if (!parentToken || !PrettyPrintToken(tree, parentToken, result, false))</p>
+          <p>return false;</p>
+          <p>}</p>
+          <p>switch (token-&gt;m_TokenKind)</p>
+          <p>{</p>
+          <p>case tkConstructor:</p>
+          <p>result = result + token-&gt;m_Name + token-&gt;m_Args;</p>
+          <p>return true;</p>
+          <p>case tkFunction:</p>
+          <p>result = token-&gt;m_BaseType + wxT(" ") + result + token-&gt;m_Name + token-&gt;m_Args;</p>
+          <p>if (token-&gt;m_IsConst)</p>
+          <p>result += wxT(" const");</p>
+          <p>return true;</p>
+          <p>Here, the BaseType is used, and it does not have a "*".</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

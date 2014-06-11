@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 14177 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #14177 <small>2008-07-10 05:08:20</small></h3>
+          <h4>sdbtietz</h4>
+          <p class="lead">~ is corrupted when used in an include path</p>
+          <pre class="pre-scrollable">I have not characterized this completely, but what I know is that a source file in my project has this line:
+
+#include "bfd/bfd.h"
+
+If I add this to Project -&gt; Build Options... -&gt; Search directories -&gt; Compiler, it works:
+
+/home/&lt;me&gt;/src/binutils-2.17
+
+...then it works.  But if I add this instead:
+
+~/src/binutils-2.17
+
+Then compilation fails with this error:
+error: bfd/bfd.h: No such file or directory
+
+I know that it is not gcc that is barfing on -I~/src/binutils-2.17 because the project builds fine with this in its makefile:
+
+ifndef BINUTILS_SRC_PATH
+	BINUTILS_SRC_PATH   := ~/src/binutils-2.17
+endif
+INC_PATH       += -I $(BINUTILS_SRC_PATH)
+
+You may be asking why does this matter...  I have a not-yet-released open source project.  One of the services in the core library is an augmented assert implementation which, when an assert fires, generates a call stack in an AssertLog.txt file that can be sent back to the developer by an end user.  To generate a meaningful assert log though, I'm using parts of binutils to get the names of the functions on the call stack.  Problem: it's open source, so not only does binutils need to be present, but budemang.o, libbfd.a, and libiberty.a need to be present along with the necessary headers.  Slightly painful for coders wanting to use this library, but that's what README.TXT is for.  During development (playing with my lib under linux at work) I found that /usr/src isn't adequate because often, the user doesn't have the ability to ensure that /usr/src/binutils-2.17 is present and its contents populated with build outputs.  Wasn't there for me, and IT said no when I asked for access.  So I fell back to ~/src unless an environment variable specifies otherwise.  Best I could do.  Anyway I've been using makefiles for this project but would love to be able to code in a decent IDE on linux.  Code::Blocks looks to be just that, so I've spent the evening porting my project to that environment.  If it "just works" or the path to making it work can be clearly documented, I wouldn't mind Code::Blocks being a prerequisite for other developers using my lib on linux.
+
+Might as well report another bug too...  At least on Fedora FC7, the compiler autodetect doesn't work right.  It ends up mapping to /usr/lib.  But...
+
+$ ls /usr/lib/gcc
+.  ..  i386-redhat-linux
+$ ls /usr/lib/gcc/i386-redhat-linux/
+.  ..  4.1.2
+$ ls /usr/lib/gcc/i386-redhat-linux/4.1.2/
+.   crtbegin.o   crtbeginT.o  crtendS.o      include   libgcc_eh.a  libgcov.a  libgomp.so    libstdc++.a   libsupc++.a
+..  crtbeginS.o  crtend.o     crtfastmath.o  libgcc.a  libgcc_s.so  libgomp.a  libgomp.spec  libstdc++.so  SYSCALLS.c.X
+
+Even this gives the wrong answer:
+$ which gcc
+/usr/lib/ccache/gcc
+
+because...
+$ ls -l /usr/lib/ccache/gcc
+lrwxrwxrwx 1 root root 15 2008-03-12 21:20 /usr/lib/ccache/gcc -&gt; /usr/bin/ccache
+
+and...
+$ ls -l /usr/bin/ccache 
+-rwxr-xr-x 1 root root 40300 2007-03-15 07:08 /usr/bin/ccache
+
+The only way I got the toolchain to work at all is setting "Compiler's installation directory" to /usr/bin.
+
+Anyway...I'm giving up on Code::Blocks for now but other than these hiccups I like what I see so far.  Keep up the good work.  I hope these deficiencies can be address soon because I'd love to come back to it.
+
+</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Compiler</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

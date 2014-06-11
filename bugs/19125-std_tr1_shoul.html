@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 19125 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #19125 <small>2013-09-19 07:17:44</small></h3>
+          <h4>mojca</h4>
+          <p class="lead">std::tr1 should not be used in c++11</p>
+          <p>Please see:</p>
+          <p><a href="http://cplusplusmusings.wordpress.com/2013/06/03/whats-up-with-tr1-and-c11-and-libc/">http://cplusplusmusings.wordpress.com/2013/06/03/whats-up-with-tr1-and-c11-and-libc/</a></p>
+          <p>and the MacPorts ticket:</p>
+          <p><a href="https://trac.macports.org/ticket/40515">https://trac.macports.org/ticket/40515</a></p>
+          <p>When using c++11 the compilation may fail with</p>
+          <p>../../src/include/prep.h:409:10: fatal error: 'tr1/memory' file not found</p>
+          <p>#include &lt;tr1/memory&gt;</p>
+          <p>See the link above for explanation about the possible solutions.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>&nbsp;</dd>
+            <dt>Group</dt><dd>Platform:All</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2013-10-02 17:04:00</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-09-19 13:08:41</div>
+        <div class="panel-body">
+          <p>Basically, I think C::B support old GCC, so in case you are using a modern GCC with c++11 option enabled, those old tr1 headers should be put in some preprocessor branches.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mojca 2013-09-21 12:20:42</div>
+        <div class="panel-body">
+          <p>I didn't understand the reply. But what about the following patch?</p>
+          <p>--- src/include/prep.h.orig</p>
+          <p>+++ src/include/prep.h</p>
+          <p>@@ -406,14 +406,24 @@ template&lt;typename whatever&gt; inline ID GetID()</p>
+          <p>inline ID GetID() { return GetID&lt;void&gt;(); }</p>
+          <p>inline ID ConstructID(unsigned int i) { return ID(i); }</p>
+          <p>+#if __cplusplus &gt;= 201103L</p>
+          <p>+#include &lt;memory&gt;</p>
+          <p>+#else</p>
+          <p>#include &lt;tr1/memory&gt;</p>
+          <p>+#endif</p>
+          <p>// Add std::shared_ptr in a namespace, so different implementations can be used with different compilers</p>
+          <p>namespace cb</p>
+          <p>{</p>
+          <p>+#if __cplusplus &gt;= 201103L</p>
+          <p>+    using std::shared_ptr;</p>
+          <p>+    using std::static_pointer_cast;</p>
+          <p>+    using std::weak_ptr;</p>
+          <p>+#else</p>
+          <p>using std::tr1::shared_ptr;</p>
+          <p>using std::tr1::static_pointer_cast;</p>
+          <p>using std::tr1::weak_ptr;</p>
+          <p>+#endif</p>
+          <p>}</p>
+          <p>#if defined(__APPLE__) &amp;&amp; defined(__MACH__)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mojca 2013-10-01 09:38:52</div>
+        <div class="panel-body">
+          <p>Other Apple developers said this wasn't enough, so the revised patch seems to be:</p>
+          <p>--- src/include/prep.h	(revision 9374)</p>
+          <p>+++ src/include/prep.h	(working copy)</p>
+          <p>@@ -406,14 +406,27 @@</p>
+          <p>inline ID GetID() { return GetID&lt;void&gt;(); }</p>
+          <p>inline ID ConstructID(wxIntPtr i) { return ID(i); }</p>
+          <p>+// Just included to possibly set _LIBCPP_VERSION</p>
+          <p>+#include &lt;ciso646&gt;</p>
+          <p>+</p>
+          <p>+#if __cplusplus &gt;= 201103L || defined(_LIBCPP_VERSION)</p>
+          <p>+#include &lt;memory&gt;</p>
+          <p>+#else</p>
+          <p>#include &lt;tr1/memory&gt;</p>
+          <p>+#endif</p>
+          <p>// Add std::shared_ptr in a namespace, so different implementations can be used with different compilers</p>
+          <p>namespace cb</p>
+          <p>{</p>
+          <p>+#if __cplusplus &gt;= 201103L || defined(_LIBCPP_VERSION)</p>
+          <p>+    using std::shared_ptr;</p>
+          <p>+    using std::static_pointer_cast;</p>
+          <p>+    using std::weak_ptr;</p>
+          <p>+#else</p>
+          <p>using std::tr1::shared_ptr;</p>
+          <p>using std::tr1::static_pointer_cast;</p>
+          <p>using std::tr1::weak_ptr;</p>
+          <p>+#endif</p>
+          <p>}</p>
+          <p>#if defined(__APPLE__) &amp;&amp; defined(__MACH__)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mojca 2013-10-01 21:32:06</div>
+        <div class="panel-body">
+          <p>This may be closed as fixed (r9377). Thank you.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2013-10-01 23:43:20</div>
+        <div class="panel-body">
+          <p>This bug is now fixed in HEAD.</p>
+          <p>Thank you for reporting it.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

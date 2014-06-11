@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 19180 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #19180 <small>2013-11-05 18:58:31</small></h3>
+          <h4>beqroson</h4>
+          <p class="lead">Builtin variable not updating</p>
+          <p>This is a bug report about a low priority bug, but which is probably trivial to fix.</p>
+          <p>At least one of the builtin variables, $PROJECT_DIR, does not update correctly in some cases.</p>
+          <p>Opening a project: Works, updates as expected.</p>
+          <p>Opening yet another project: Works</p>
+          <p>Closing one opened project, then opening another: Fails, the content of the variable stays the closed project.</p>
+          <p>Closing two opened projects, then opening two other: Works</p>
+          <p>Most notably, the updating of the variable $PROJECT_DIR does not occur if you have one opened project, then closing it and opening another. So, the frequency of fail is quite high because you most often have one opened then closing that and opening another one. Now, me as a user is probably less frequent because I use the variable $PROJECT_DIR for almost every project to update some files in the project diretory when compile starts. The priority of the fix is not high, because I can still close the application, then open the application again and it updates as expected. I still like to report the bug, since I use nightlies and will take advantage of a fix. Also, I expect the fix to be more or less trivial as the event that controls the update is clear and the expected behaviour too.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::WrongBehaviour</dd>
+            <dt>Group</dt><dd>Platform:Windows</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2014-02-28 06:20:15</dd>
+            <dt>Assigned to</dt><dd>ollydbg</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">beqroson 2013-11-11 00:55:17</div>
+        <div class="panel-body">
+          <p>If you create a couple of empty projects, then go to Build Options-&gt;Pre/PostBuildSteps and add only the line "$(PROJECT_DIR)" for each project. That will try to execute the line which amounts to nothing. Nevertheless the bug appears when doing the following:</p>
+          <p>Open one of the projects, press menu-&gt;Build.</p>
+          <p>The log seems correct here.</p>
+          <p>Then close that project, open the other project, press menu-&gt;Build.</p>
+          <p>The log is then showing that two versions of the project directory is used at the same time. One version belongs to the closed project, and the other belongs to the current project.</p>
+          <p>Such as the log, that I get with rev9446:</p>
+          <p>***</p>
+          <p>Running project pre-build steps</p>
+          <p>H:\Tmpp\tset2\test2\</p>
+          <p>Execution of 'H:\Tmpp\tset2\test2\' in 'H:\Tmpp\tset\Test' failed.</p>
+          <p>***</p>
+          <p>Notice how the log says first "\tset2\" then, "in ... \tset\" instead. The proper directory should be "\tset\" for this run. So the executed line shows the wrong directory, such as "H:\Tmpp\tset2\test2\" which belonged to the closed project.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">beqroson 2013-11-11 00:58:08</div>
+        <div class="panel-body">
+          <p>But, if you cannot reproduce, that seems odd. I will try to erase the whole installation and install CodeBlocks again, and see if the error persists.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-11 01:10:35</div>
+        <div class="panel-body">
+          <p>I did it again, here is my steps:</p>
+          <p>1, create two empty project, and add "$(PROJECT_DIR)" (no quote) in the pre-build edit control.</p>
+          <p>2, close all of them.</p>
+          <p>Open the first project, press build toolbar button:</p>
+          <p>Log:</p>
+          <p>[100.0%] Running target pre-build steps</p>
+          <p>E:\code\cb\test_code\empty1\</p>
+          <p>Execution of 'E:\code\cb\test_code\empty1\' in 'E:\code\cb\test_code\empty1' failed.</p>
+          <p>Looks good.</p>
+          <p>Then I close this project, and open another one, press the build toolbar button again:</p>
+          <p>Log:</p>
+          <p>[100.0%] Running target pre-build steps</p>
+          <p>E:\code\cb\test_code\empty2\</p>
+          <p>Execution of 'E:\code\cb\test_code\empty2\' in 'E:\code\cb\test_code\empty2' failed.</p>
+          <p>Look, it works fine, I still can't reproduce this bug.</p>
+          <p>I'm using the rev 9446 nightly build on Windows XP.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">beqroson 2013-11-11 01:10:49</div>
+        <div class="panel-body">
+          <p>Yes, I installed all over again and the error is still there. Very strange that you cannot reproduce it still. Since it works in some cases in my computer, but not in all cases, then it is hard to believe that the error is elsewhere than in the application. The case could be if there is some kind of external call that fails on my computer, and that the update process differs depending on the case. Such as, do I have this or that setting before picking method to update the variables. Do want me to look on the code? (I dont know anything about the code, but four eyes may be more than just two eyes).</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">beqroson 2013-11-11 01:12:21</div>
+        <div class="panel-body">
+          <p>Yep, it definitely functions on your side. Hmm...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">beqroson 2013-11-11 01:15:59</div>
+        <div class="panel-body">
+          <p>A question, where does CodeBlocks save external data? In the registry? In some config file somewhere? Maybe if I clean just everything. I think that some configs where saved since some very old version.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">beqroson 2013-11-11 01:19:11</div>
+        <div class="panel-body">
+          <p>You run Windows XP, that is a 32-bit system, right? I run Windows 7, it is a 64-bit system. That could be the thing?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">beqroson 2013-11-11 01:30:08</div>
+        <div class="panel-body">
+          <p>One guess is that it has to do with the closing of the project. Closing a project may not clean up everything correctly on 64-bit OS.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-08 03:30:44</div>
+        <div class="panel-body">
+          <p>I just tried this by adding a custom command which is:</p>
+          <p>command name: cmd /c</p>
+          <p>command parameter: echo ${PROJECT_DIR}</p>
+          <p>In the Menu-&gt;Tools-&gt;User defined tools dialog.</p>
+          <p>Then I try to create some "Empty projects" by the project wizard-&gt;select "Empty project" in different folders.</p>
+          <p>Then I try your steps but can not reproduce this bug.</p>
+          <p>Which version of C::B do you use? I'm using the latest rev9438.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-11 01:28:25</div>
+        <div class="panel-body">
+          <p>I think you can:</p>
+          <p>Write a post about this bug on C::B forum, and ask some Windows user to test for you.</p>
+          <p>You should tell the steps to reproduce this bug.</p>
+          <p>I believe there are many Win7(64bit) users.</p>
+          <p>I only have WinXP and it works fine here, so I can't have more to help you.</p>
+          <p>C::B do not use registry to store its setting, instead, it use a configure file, see the C::B wiki page to know where the configure file locates (different OSs has different locations)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">beqroson 2013-11-11 01:31:38</div>
+        <div class="panel-body">
+          <p>I will do better. I am downloading the trunk from SVN now. I will build it and test if it occurs. I can set a breakpoint and find the problem (maybe).</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">beqroson 2013-11-11 01:55:05</div>
+        <div class="panel-body">
+          <p>So, compiling in 64-bit mode is not completed in trunk, yet?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2014-02-28 06:20:15</div>
+        <div class="panel-body">
+          <p>Close it since it is not a bug, the usage of C::B can be discussed in forum, not here.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

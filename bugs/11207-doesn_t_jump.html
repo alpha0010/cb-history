@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 11207 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #11207 <small>2007-05-29 09:43:13</small></h3>
+          <h4>jazzer</h4>
+          <p class="lead">doesn't jump to an error</p>
+          <p>I'm trying to build from C::B and just to errors from compiler output.</p>
+          <p>C::B parses the compiler's output correctly - populates the build messages grid with filenames, line numbers etc. This looks fine.</p>
+          <p>But when I double-click an error, it doesn't go the the file.</p>
+          <p>In my case the file is in $(project_base)/dir1/dir2/dir3/file.cpp, and in the build messages grid it's displayed as just file.cpp, with no path information. The file with name "file.cpp" is the only in the project, so there is no problem for C::B to find it just from the file name, even if the path info is missing.</p>
+          <p>Looks like cbProject::GetFileByFilename needs to be changed.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Compiler</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2013-02-13 05:23:54</dd>
+            <dt>Assigned to</dt><dd>biplab</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2007-05-29 16:48:52</div>
+        <div class="panel-body">
+          <p>Please provide the svn revision number (preferably the complete</p>
+          <p>build information) with *every* bug report.</p>
+          <p>The complete build information is automatically copied to the</p>
+          <p>clipboard if you click the "Report a bug" link or the revision</p>
+          <p>string on the "Start Here" page.</p>
+          <p>Without accurate information, we are unable to reproduce and</p>
+          <p>address bugs.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2007-05-30 11:54:43</div>
+        <div class="panel-body">
+          <p>I think you are using *project_base* variable which is not being expanded by C::B. Please check whether the variable is  defined or not.</p>
+          <p>You may also a sample project file with the complete source.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">jazzer 2007-05-30 02:09:01</div>
+        <div class="panel-body">
+          <p>it's "svn build rev 3988 (2007-05-22 16:45:47) gcc 3.4.5 Windows/unicode" (I took the installer from the site)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">jazzer 2007-05-30 12:16:52</div>
+        <div class="panel-body">
+          <p>*project_base* is not a variable, it's just a directory. Sorry for the confusion.</p>
+          <p>Say the project directory is /tmp, and the file is /tmp/dir1/dir2/file.cpp.</p>
+          <p>When the compiler reports errors in the form "dir1/dir2/file.cpp:11:" - everything is fine and C::B can find the source, but if it's just "file.cpp:11:" (with no path information) - it fails.</p>
+          <p>The same problem with debugger (see the bug 11208), I believe they both use the same function to find the file within the project.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2007-06-11 08:46:40</div>
+        <div class="panel-body">
+          <p>Does this bug persists?? I'm unable to reproduce it.</p>
+          <p>If it persists in your system, please upload a sample project where it fails stating the revision number that you're using.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">pauliusz 2007-06-13 21:25:39</div>
+        <div class="panel-body">
+          <p>Maybe it is the same bug as Bug #11243?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">jazzer 2007-06-14 03:44:17</div>
+        <div class="panel-body">
+          <p>&gt; Maybe it is the same bug as Bug #11243?</p>
+          <p>No, it's different.</p>
+          <p>The problem is that there is no way to open a file just by name, if the file is not in the project root directory, but in some directory inside.</p>
+          <p>So my request actually is simple.</p>
+          <p>Current C::B behaviour:</p>
+          <p>if (path is absolute) open as is</p>
+          <p>else open relative to the project root (i.e.)</p>
+          <p>I'd like to extend this with an additional branch:</p>
+          <p>if there is no such file in the project root, try to find the file in the project tree.</p>
+          <p>For example, if the file is /tmp/dir1/dir2/file.cpp and project root is /tmp, so:</p>
+          <p>"/tmp/dir1/dir2/file.cpp" - absolute path, open as is;</p>
+          <p>"dir1/dir2/file.cpp" - relative path, prepend project root (it will give "/tmp/dir1/dir2/file.cpp") and open;</p>
+          <p>"dir2/file.cpp" - relative path, prepend project root (it will give "/tmp/dir2/file.cpp") and try to open - failed, try to find this in the project tree (should be very fast, as the project tree is in memory), find in dir1 and open;</p>
+          <p>"file.cpp" - just a file name, prepend project root (it will give "file.cpp") and try to open - failed, try to find this in the project tree (again, should be very fast), find in dir1/dir2 and open.</p>
+          <p>Of course, there is a problem with duplicates, but when you have just a file name - you have no better choice. Of course, various smart techniques can be used to distinguish between different files with the same name, but it's not for the near future. For now it's enough just show the list of possibilities and let user to decide.</p>
+          <p>What do you think? Is it possible? This would be a great help to all people who use complicated build procedures and strange development tools and tries to tie them with C::B.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2013-02-13 05:23:54</div>
+        <div class="panel-body">
+          <p>Please try with a nightly build and reopen this bug report, if</p>
+          <p>needed.</p>
+          <p>See <a href="http://forums.codeblocks.org/index.php/board,20.0.html">http://forums.codeblocks.org/index.php/board,20.0.html</a></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

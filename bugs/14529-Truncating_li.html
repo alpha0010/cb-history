@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 14529 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #14529 <small>2008-09-21 05:16:13</small></h3>
+          <h4>geister</h4>
+          <p class="lead">Truncating 'lib' before linking may cause problems.</p>
+          <p>Platform: Windows (should be present on other platforms)</p>
+          <p>Version: 8.02 (SVN Revision: 5208)</p>
+          <p>Reproducible: Yes</p>
+          <p>Severity: Minor (but can cause headaches until you figure it out)</p>
+          <p>This is easily reproducible on Windows using Speex. Just add "libspeex" (along with the correct paths, so it knows where to find it) to your project, and try to build. It will refuse to link as it will look for "speex", when the correct name is "libspeex". To fix this, link to "liblibspeex", which will become "libspeex".</p>
+          <p>Speex version used: Windows binaries 1.2beta3</p>
+          <p><a href="http://downloads.xiph.org/releases/speex/speex-1.2beta3-win32.zip">http://downloads.xiph.org/releases/speex/speex-1.2beta3-win32.zip</a></p>
+          <p>Found the code that is in charge of doing that in "plugins/compilergcc/makefilegenerator.cpp" on line 405 in function "void MakefileGenerator::DoAppendLinkerLibs(wxString&amp; cmd, ProjectBuildTarget* target, bool useGlobalOptions)".</p>
+          <p>I also found the same behavior in "sdk/compilercommandgenerator.cpp" on line 748 in function "wxString CompilerCommandGenerator::FixupLinkLibraries(Compiler* compiler, const wxString&amp; lib)", which seems to be the same code.</p>
+          <p>The fix is actually to check "chkLinkerNeedsLibPrefix", but this is located in advanced compiler options and may not be accessible to all users (there isn't a warning dialog for no reason). So I am suggesting to make this option more accessible to users, or even enabled by default on Windows, so we can keep those "lib" in the library names.</p>
+          <p>If I want to link to "something", I won't write "libsomething". This may accelerate cross-platform porting of code, but it causes problems on Windows, and it should be up to the programmer to decide whether or not to remove the "lib" from the library name.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::WrongBehaviour</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2008-09-21 11:00:46</dd>
+            <dt>Assigned to</dt><dd>mortenmacfly</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

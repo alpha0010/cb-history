@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 18966 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #18966 <small>2013-04-09 21:58:16</small></h3>
+          <h4>eua</h4>
+          <p class="lead">Closing codeblocks is stalling at Deinitializing plugins...</p>
+          <p>Using openSUSE 12.3 x86_64</p>
+          <p>Opened a work space and closed Code::Blocks from close button at top right.</p>
+          <p>It looks like closed but actually it's not.</p>
+          <p>I try to see what happen and open the Code::Blocks from shell.</p>
+          <p>It looks like Code::Blocks stalled by trying deinitialization step of plugins.</p>
+          <p>Here is output:</p>
+          <p>NativeParser::GetAllPathsByFilename(): Found 2 files:</p>
+          <p>- /home/development/wxHexEditor/src/HexEditor.h</p>
+          <p>- /home/development/wxHexEditor/src/HexEditor.cpp</p>
+          <p>ClassBrowser::OnThreadEvent(): Updating class browser...</p>
+          <p>ClassBrowser::OnThreadEvent(): Class browser updated.</p>
+          <p>Removed wxHexCtrl from all deps</p>
+          <p>Removed wxHexEditor from all deps</p>
+          <p>Removed HexEditorCtrl from all deps</p>
+          <p>Deinitializing plugins...</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::WrongBehaviour</dd>
+            <dt>Group</dt><dd>Platform:Linux</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">eua 2013-04-09 22:39:13</div>
+        <div class="panel-body">
+          <p>Issue found.</p>
+          <p>I try to disable ever plug-in one by one.</p>
+          <p>"FileManager" plugin cannot be disabled if C::B start from Gnome Shell. Means, it enters dead loop somehow.</p>
+          <p>Running from command line and disabling "FileManager" plugin fix the issue.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">eua 2013-04-09 22:30:51</div>
+        <div class="panel-body">
+          <p>Bug #18935</p>
+          <p>Bug #18733</p>
+          <p>Bug #18850</p>
+          <p>are related with this if not same.</p>
+          <p>Depending my research; If C::B use %100 CPU at idle, not kill itself properly at close time.</p>
+          <p>Running CodeBlocks from the shell don't have problem, at least most of the time.</p>
+          <p>But running it from GNOME Shell menu produces issue every time.</p>
+          <p>My version is start to use %100 even if I run from console every time. I disabled plugins from "Regular expressions testbed" to "wxSmith - MIME plugin" and closed the C::B. Restart it from console and this fix the %100 CPU issue. But all disabled plugin's are enabled...</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ID_64002 2013-04-30 00:04:41</div>
+        <div class="panel-body">
+          <p>I have same problem. openSUSE 12.3 x86_64. Using build I found on the openSUSE buildservice devel:tools:ide repo.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ID_64002 2013-04-30 00:08:22</div>
+        <div class="panel-body">
+          <p>ok, as mentioned in Bug #18935, I installed gamin-server. Solved the problem.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">eua 2013-04-30 01:11:30</div>
+        <div class="panel-body">
+          <p>Do we need to install "gamin-server"?</p>
+          <p>I don't know that if gamin-server is a dependency of code::blocks.</p>
+          <p>Also codeblocks is good to detect changes even if no gamin-server (but with a libgamin installed)  I believe showing an simply error about no gamin-server is better than entering dead loop. :)</p>
+          <p>Thanks.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

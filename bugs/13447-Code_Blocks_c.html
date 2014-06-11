@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 13447 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #13447 <small>2008-03-24 23:35:11</small></h3>
+          <h4>fozzybear</h4>
+          <p class="lead">Code::Blocks crashes on wxSmith use</p>
+          <p>I work on a 64-bit Pentium HT machine with Kubuntu Gutsy.</p>
+          <p>The version of C::B is the new release: 8.02 (feb 27 2008, 23:38:00 wx2.8.7 Linux/unicode) but it happens on all versions, even self-built ones.</p>
+          <p>Every time I work some time with wxSmith and save the wxs a few times the application starts to crash when I double click or open the wxs. I checked the wxs file but saw nothing strange.</p>
+          <p>Sometimes it helps to open the wxs on my 32-bit machine and only change it there. That machine has the same config. But the wxs can never be opened on the 64-bit machine again.</p>
+          <p>I don't know if it's bit-related or something else. I've read through the whole forum and bugs but couldn't find the same problem there.</p>
+          <p>When I start C::B in the console it spits out complaints about memory and wxsmith and sums up every lib it's using before crashing.</p>
+          <p>*** glibc detected *** codeblocks: malloc(): memory corruption: 0x0000000001dfc140 ***</p>
+          <p>It's reproducible and every version of C::B had this problem on my machine. I save my work with SVN on my 32-bit machine, don't know if that's a cause but it shouldn't be.</p>
+          <p>I would really like to see this fixed because I love C::B and wxWidgets.</p>
+          <p>Need any more info, please mail me...</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::wxSmith</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2008-07-11 15:11:14</dd>
+            <dt>Assigned to</dt><dd>mortenmacfly</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">biplab 2008-03-26 16:11:14</div>
+        <div class="panel-body">
+          <p>Please set the following environment variable G_SLICE as before launching Code::Blocks-</p>
+          <p>export G_SLICE=always-malloc</p>
+          <p>This should solve your problem.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">fozzybear 2008-03-28 00:03:12</div>
+        <div class="panel-body">
+          <p>Thanks for your reply but export G_SLICE=always-malloc did not fix the problem. I did set this in Settings &gt; Environment &gt; environment settings and also tried it  from the console but it makes no difference. I looked up glibc and G_SLICE=always-malloc and it seems more applications in Linux suffer from memory leakage like problems. Is this a glibc problem and not a wxSmith problem?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">fozzybear 2008-03-30 01:12:20</div>
+        <div class="panel-body">
+          <p>I've just found out it's possibly a privileges problem. Why didn't I think of this earlier! If I simply do sudo codeblocks I can open my wxs in wxSmith without crashing and use the preview button which caused crashing also. I'm very happy, I can work again!</p>
+          <p>But seriously, Code::Blocks should work without root privileges, right?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ID_46368 2008-06-12 20:32:26</div>
+        <div class="panel-body">
+          <p>I have the same problem, and</p>
+          <p>export G_SLICE=always-malloc</p>
+          <p>doesn't help. Running C::B as root doesn't help also.</p>
+          <p>My systems - mandriva 2008.1/x86_64 and mandriva 2009.0 (unstable development)/x86_64 on two different hardware configs (Athlon 64 &amp; Core 2 Duo).</p>
+          <p>Tested versions of C::B - 8.02 and svn5093</p>
+          <p>Steps to reproduce the bug:</p>
+          <p>1. Start C::B and create new wxWidgets dialog-based project with wxSmith and all default settings.</p>
+          <p>2. Open its dialog and remove all controls and sizers (including root wxBoxSizer:BoxSizer1) - it should become just an empty square form with dotted grid.</p>
+          <p>3. Add wxSpinCtrl (without any sizers). It occupies the whole form (strange... another bug?).</p>
+          <p>4. Add another wxSpinCtrl - just put it over the firts one. Both controls become of the normal size and you can drag them to place correctly.</p>
+          <p>5. Save all files and close C::B.</p>
+          <p>6. Reopen C::B, load this project and try to open our dialog with two wxSpinCtrl controls for editing. C::B crashes. You will never be able to open this dialog again - only on 32-bit system (maybe)...</p>
+          <p>BTW I've tried to use other controls (not everyone), but they seem to work correctly - no crashes after reopening dialog for editing.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">fozzybear 2008-06-12 21:03:39</div>
+        <div class="panel-body">
+          <p>After my initial cheerful announcement that running Code::Blocks as root solved the wxSmith crash I sadly have to say the problem came back although less frequently.</p>
+          <p>Nevertheless, when a form has crashed it can't be recovered so I resorted to setting up forms in wxSmith and then editing them manually. I'm glad to see another user reported the problem.</p>
+          <p>I hope something can be done about it because I still love wxSmith, especially because it's the only good free alternative.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">jenslody 2008-07-09 15:54:46</div>
+        <div class="panel-body">
+          <p>I just submitted a patch (#2516).</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ID_46368 2008-07-09 13:31:18</div>
+        <div class="panel-body">
+          <p>I have found the problem!</p>
+          <p>wxSmith crashes on forms loading due to the stupid  bug: in some components their numeric properties are declared as 'int' while they are saved in file (and reading from file) as 'long'. On Linux/x86_64 this types interchanging causes memory overflow as sizeof(int)=4 while sizeof(long)=8.</p>
+          <p>To fix this you should go to the directory</p>
+          <p>&lt;root_cb_sources&gt;/src/plugins/contrib/wxSmith/wxwidgets/defitems , check all properties of all components - how they are declared and which macro (WXS_LONG or some other) is used to manipulate them - and fix if needed. Especially this is the case for spin button &amp; spin control, but maybe also for some other widgets.</p>
+          <p>Good luck!</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">fozzybear 2008-07-09 14:40:04</div>
+        <div class="panel-body">
+          <p>I think olelukoie struck gold. Because I use both 32 and 64-bit systems with SVN in between, I think my code gets sort of "infected" with this long/int difference after which I can't use it any more on both systems.</p>
+          <p>I'm going to try and reproduce this by only using wxSmith on my 32-bit machine and see what happens.</p>
+          <p>(I'm silently hoping this cures it and it'll be fixed in the next Ubuntu release).</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2008-07-11 15:11:14</div>
+        <div class="panel-body">
+          <p>Fixed by applying patch patch #2516, thanks!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

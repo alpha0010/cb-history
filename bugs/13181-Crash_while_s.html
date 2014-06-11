@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 13181 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #13181 <small>2008-02-22 11:25:37</small></h3>
+          <h4>henning_b</h4>
+          <p class="lead">Crash while saving template code</p>
+          <p>While testing some Boost code, I had experienced a reproducable crash:</p>
+          <p>Every time I comment in line 1 and 2 (see below) then save and then comment out line 2 or 1 again and save I get a crash. CB says nothing, just closes. Windows also gives no information about a crash. I've tried this some times and it's reproducable for me.</p>
+          <p>I'm using WinXP64.</p>
+          <p>Maybe it has to do with the heavy templated code of Boost an parsing symbols that use such code.</p>
+          <p>Code:</p>
+          <p>#include &lt;boost/statechart/state_machine.hpp&gt;</p>
+          <p>#include &lt;boost/statechart/simple_state.hpp&gt;</p>
+          <p>#include &lt;boost/statechart/event.hpp&gt;</p>
+          <p>#include &lt;iostream&gt;</p>
+          <p>namespace sc = boost::statechart;</p>
+          <p>struct EvStartStop : sc::event&lt;EvStartStop&gt; {};</p>
+          <p>struct EvReset : sc::event&lt;EvReset&gt; {};</p>
+          <p>struct Active;</p>
+          <p>struct StopWatch : sc::state_machine&lt;StopWatch, Active&gt; {};</p>
+          <p>struct Stopped;</p>
+          <p>struct Active : sc::simple_state&lt;Active, StopWatch, Stopped&gt; {};</p>
+          <p>struct Running : sc::simple_state&lt;Running, Active&gt; {};</p>
+          <p>struct Stopped : sc::simple_state&lt;Stopped, Active&gt; {};</p>
+          <p>int main()</p>
+          <p>{</p>
+          <p>//StopWatch myWatch; //1</p>
+          <p>//myWatch.initiate(); //2</p>
+          <p>return 0;</p>
+          <p>}</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">henning_b 2008-02-22 11:28:00</div>
+        <div class="panel-body">
+          <p>Forgot the version of CB:</p>
+          <p>I've experienced this bug in Nigthly 4875, the updated to 4893 an got the same result.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2009-03-13 18:07:02</div>
+        <div class="panel-body">
+          <p>Can't reproduce here :(</p>
+          <p>But I've got crashes with my template c++ files.</p>
+          <p>The crash was somewhere in the code completion plugin</p>
+          <p>gentoo linux amd64</p>
+          <p>wx:2.8.9.2</p>
+          <p>cb:5473</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2009-03-13 18:10:50</div>
+        <div class="panel-body">
+          <pre class="pre-scrollable">Here is a backtrace from the crash (It seems to be infinite recursion in the TokensTree::RemoveToken function)
+
+(gdb) bt
+#0  0x00007f17a9fdce7c in ?? () from /lib/libc.so.6
+#1  0x00007f17a9fdeea8 in malloc () from /lib/libc.so.6
+#2  0x00007f17aa81a74d in operator new () from /usr/lib/gcc/x86_64-pc-linux-gnu/4.3.3/libstdc++.so.6
+#3  0x00007f17a40d3dbb in std::_Rb_tree&lt;int, int, std::_Identity&lt;int&gt;, std::less&lt;int&gt;, std::allocator&lt;int&gt; &gt;::_M_copy () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#4  0x00007f17a40d3df8 in std::_Rb_tree&lt;int, int, std::_Identity&lt;int&gt;, std::less&lt;int&gt;, std::allocator&lt;int&gt; &gt;::_M_copy () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#5  0x00007f17a40d3df8 in std::_Rb_tree&lt;int, int, std::_Identity&lt;int&gt;, std::less&lt;int&gt;, std::allocator&lt;int&gt; &gt;::_M_copy () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#6  0x00007f17a410c77e in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#7  0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#8  0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#9  0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#10 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#11 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#12 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#13 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#14 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#15 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#16 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#17 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#18 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#19 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#20 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#21 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#22 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#23 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#24 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#25 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#26 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#27 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#28 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#29 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#30 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#31 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+#32 0x00007f17a410c7e5 in TokensTree::RemoveToken () from /usr/lib/codeblocks/plugins/libcodecompletion.so
+</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

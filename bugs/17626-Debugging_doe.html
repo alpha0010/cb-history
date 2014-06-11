@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 17626 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #17626 <small>2010-10-18 06:25:36</small></h3>
+          <h4>tfga</h4>
+          <p class="lead">Debugging doesn't work with cygwin</p>
+          <p>As already described in this topic in the forum</p>
+          <p><a href="http://forums.codeblocks.org/index.php?topic=12212.msg90788;topicseen">http://forums.codeblocks.org/index.php?topic=12212.msg90788;topicseen</a></p>
+          <p>, the debugger front-end doesn't work with cygwin. The reason is that cygwin's gdb expects UNIX paths -- and Code::Blocks is sending it Windows paths. Cygwin comes with a tool for converting between Unix and Windows paths called 'cygpath'[1]. When Code::Blocks wants to send a path '$path' to gdb, it should send instead</p>
+          <p>$(cygpath "$path")</p>
+          <p>, i.e. the output of 'cygpath "$path"' ('$path' should be between quotes because it can contain spaces).</p>
+          <p>----</p>
+          <p>[1] <a href="http://cygwin.com/cygwin-ug-net/using-utils.html#cygpath">http://cygwin.com/cygwin-ug-net/using-utils.html#cygpath</a></p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Debugger</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">ID_58103 2010-11-11 15:20:38</div>
+        <div class="panel-body">
+          <p>Yea, this is a question, and could you use the mingw gdb ( <a href="http://sourceforge.net/projects/mingw/files/MinGW/BaseSystem/GDB/GDB-7.2/">http://sourceforge.net/projects/mingw/files/MinGW/BaseSystem/GDB/GDB-7.2/</a> ) ?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ID_62861 2012-09-20 05:32:30</div>
+        <div class="panel-body">
+          <p>Made it work on 26th of august nighty + cygwin 7.15.</p>
+          <p>Somehow, it goes wrong with HKLM, You might try to add following to Your registry:</p>
+          <p>[code]</p>
+          <p>Windows Registry Editor Version 5.00</p>
+          <p>[HKEY_CURRENT_USER\SOFTWARE\Cygnus Solutions\Cygwin\mounts v2]</p>
+          <p>"cygdrive prefix"="/cygdrive"</p>
+          <p>"cygdrive flags"=dword:00000022</p>
+          <p>[/code]</p>
+          <p>- just changed root to HKCU.</p>
+          <p>If somebody continues issuing this bug - I suggest You to download ProcessMonitor and look through if it even try to read some values.</p>
+          <p>Commenting on this situation, as of some 7.15 version of cygwin, it doesn't store drive mounting details in registry anymore, the above workaround is not a solution. Neither that gaming with regstry ever was, in my opinion.</p>
+          <p>`cygpath "$path"` stays cool here, just like tfga said.</p>
+          <p>I hope on implementation of checkbox in debugger configuration - something like "Oh i'm using that cygwin's gdb" and path to cygpath prompt there.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

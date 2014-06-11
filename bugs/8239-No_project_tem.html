@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 8239 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #8239 <small>2006-07-29 12:43:58</small></h3>
+          <h4>czarny</h4>
+          <p class="lead">No project templates</p>
+          <p>When starting the CB from latest SVN builds, I get a bunch of errors of type:</p>
+          <p>SquirrelFunction&lt;&gt; call failed</p>
+          <p>AN ERROR HAS OCCURED [arith op + on between 'userdata' and 'userdata']</p>
+          <p>CALLSTACK</p>
+          <p>*FUNCTION [RegisterWizard()] /usr/share/codeblocks/templates/wizard/config.script line [56]</p>
+          <p>*FUNCTION [RegisterWizards()] /usr/share/codeblocks/templates/wizard/config.script line [11]</p>
+          <p>LOCALS</p>
+          <p>[category] USERPOINTER</p>
+          <p>[title] USERPOINTER</p>
+          <p>[folder] USERPOINTER</p>
+          <p>[type] 0</p>
+          <p>[this] TABLE</p>
+          <p>[this] TABLE</p>
+          <p>The problem is in config.script file in templetaes/wizard:</p>
+          <p>Wizard.AddWizard(type,</p>
+          <p>title,</p>
+          <p>category,</p>
+          <p>folder + _T("/wizard.script"),</p>
+          <p>folder + _T("/logo.png"),</p>
+          <p>folder + _T("/wizard.png"),</p>
+          <p>folder + _T("/wizard.xrc"));</p>
+          <p>The '+' sign between folder and string provokes the error.</p>
+          <p>But after deleting the _T() function, no error is shown at runtime, but a few of</p>
+          <p>GetInstance: Invalid argument type</p>
+          <p>errors occur, and there are no project templates present. This makes CB unusable, cause I can't make any now project!!</p>
+          <p>This is connected with all other templates - files etc..</p>
+          <p>Please fix this ASAP, cause CB is unusable with this.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Error</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2006-08-02 08:33:56</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">killerbot 2006-07-29 21:44:34</div>
+        <div class="panel-body">
+          <p>could you state your os, gcc version etc ... please ?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">czarny 2006-07-31 16:25:29</div>
+        <div class="panel-body">
+          <p>Of course, I could.</p>
+          <p>PLD Linux:</p>
+          <p>[czarny@kacper ~]$ uname -a</p>
+          <p>Linux kacper 2.6.16.27-1 #1 Mon Jul 17 15:20:17 UTC 2006 i686 Intel(R)_Pentium(R)_M_processor_1.70GHz unknown PLD Linux</p>
+          <p>[czarny@kacper ~]$ gcc -v</p>
+          <p>Reading specs from /usr/lib/gcc/i686-pld-linux/4.1.2/specs</p>
+          <p>Target: i686-pld-linux</p>
+          <p>Configured with: ../configure --prefix=/usr --with-local-prefix=/usr/local --libdir=/usr/lib --libexecdir=/usr/lib --infodir=/usr/share/info --mandir=/usr/share/man --x-libraries=/usr/lib --enable-shared --enable-threads=posix --enable-languages=c,c++,fortran,objc,obj-c++,ada,java --enable-c99 --enable-long-long --disable-multilib --enable-nls --disable-werror --with-gnu-as --with-gnu-ld --with-demangler-in-ld --with-system-zlib --with-slibdir=/lib --without-system-libunwind --enable-cmath --with-long-double-128 --with-gxx-include-dir=/usr/include/c++/4.1.2 --disable-libstdcxx-pch --enable-__cxa_atexit --enable-libstdcxx-allocator=new --with-qt4dir=/usr/lib/qt4 --disable-libjava-multilib --enable-libgcj --enable-libgcj-multifile --enable-libgcj-database --enable-gtk-cairo --enable-java-awt=qt,gtk,xlib --enable-jni --enable-xmlj --enable-alsa --enable-dssi i686-pld-linux</p>
+          <p>Thread model: posix</p>
+          <p>gcc version 4.1.2 20060712 (prerelease) (PLD-Linux)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2006-08-02 08:33:56</div>
+        <div class="panel-body">
+          <p>As you may have already read in the forums, some of our template code cannot be compiled with gcc-4.1.x. And for no good reason it seems. Seems like a gcc bug/regression because the same code compiles just fine with gcc up to 4.0.x.</p>
+          <p>Sorry.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

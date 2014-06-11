@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 18862 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #18862 <small>2013-01-06 08:26:34</small></h3>
+          <h4>raynebc</h4>
+          <p class="lead">Casting a function call to void breaks project parser</p>
+          <p>As reported here:</p>
+          <p><a href="http://forums.codeblocks.org/index.php/topic,17070.msg117061.html#msg117061">http://forums.codeblocks.org/index.php/topic,17070.msg117061.html#msg117061</a></p>
+          <p>When a function call's return value is cast to (void) in order to prevent a return value unused warning, right clicking on the name of the function in that line of code and trying to find either the declaration or the implementation of that function reveals that the type cast has broken something in Code::Blocks and neither the declaration nor the implementation can be found.</p>
+          <p>Deleting the void cast and retrying shows that both the normal and the (void) return value prototypes are offered in the "multiple matches" window, suggesting that C::B's parser incorrectly added a new prototype because of the cast, and was using that when trying to find the declaration/implementation.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Editor</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>ollydbg</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">raynebc 2013-06-14 20:55:45</div>
+        <div class="panel-body">
+          <p>It looks like this bug still occurs in the April 12 nightly build.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">p2rkw 2013-01-10 02:03:54</div>
+        <div class="panel-body">
+          <p>This may helps:</p>
+          <p>Index: src/plugins/codecompletion/parser/parserthread.cpp</p>
+          <p>===================================================================</p>
+          <p>--- src/plugins/codecompletion/parser/parserthread.cpp	(wersja 8771)</p>
+          <p>+++ src/plugins/codecompletion/parser/parserthread.cpp	(kopia robocza)</p>
+          <p>@@ -1077,7 +1079,9 @@</p>
+          <p>else if (   (peek == ParserConsts::semicolon)</p>
+          <p>|| (   (   m_Options.useBuffer</p>
+          <p>&amp;&amp; (peek.GetChar(0) == ParserConsts::opbracket_chr) )</p>
+          <p>-                             &amp;&amp; (!m_Str.Contains(ParserConsts::dcolon)) ) )</p>
+          <p>+                             &amp;&amp; (!m_Str.Contains(ParserConsts::dcolon))</p>
+          <p>+                             &amp;&amp; (!m_Str.Contains(ParserConsts::opbracket_chr))</p>
+          <p>+                             &amp;&amp; (!m_Str.Contains(ParserConsts::clbracket_chr)) ) )</p>
+          <p>{</p>
+          <p>if (   !m_Str.IsEmpty()</p>
+          <p>&amp;&amp; (    wxIsalpha(token.GetChar(0))</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-02-22 09:20:22</div>
+        <div class="panel-body">
+          <p>The patches looks good. Thanks.</p>
+          <p>Ok, it takes me several minutes to read the logic. I'd say the function of DoParse need a lot of comments.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

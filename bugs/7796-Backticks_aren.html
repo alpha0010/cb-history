@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 7796 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #7796 <small>2006-06-08 16:57:30</small></h3>
+          <h4>loicp</h4>
+          <p class="lead">Backticks aren't expanded using 2nd PCH strategy </p>
+          <p>I'm trying to compile a wxwidgets based program.</p>
+          <p>So I added to the linker options `wx-config --libs` and to the compiler options `wx-config --cppflags`</p>
+          <p>When I try to compile it, I have the folllowing error :</p>
+          <p>-------------- Build: Release in importcsv ---------------</p>
+          <p>g++ -Wall `wx-config --cppflags` -O2 -s  -I- -I.  -c importcsv.cpp -o obj/Release/importcsv.o</p>
+          <p>cc1plus: note: obsolete option -I- used, please use -iquote instead</p>
+          <p>importcsv.cpp:1:23: erreur: wx/wxprec.h : No such file or directory</p>
+          <p>Dans le fichier inclus à partir de importcsv.cpp:9:</p>
+          <p>./mainframe.h:4:19: erreur: wx/wx.h : No such file or directory</p>
+          <p>Process terminated with status 1 (0 minutes, 3 seconds)</p>
+          <p>2 errors, 0 warnings</p>
+          <p>Backticks don't seem to be expanded.</p>
+          <p>Running g++ -o foo foo.cpp `wx-config --libs --cppflags` from the command line works fine.</p>
+          <p>I found on the forum this post, which solved my problem :</p>
+          <p><a href="http://forums.codeblocks.org/index.php?topic=2323.msg18907">http://forums.codeblocks.org/index.php?topic=2323.msg18907</a>#msg18907</p>
+          <p>I had to go to "Project-&gt;Properties" and select the first option for PCH mode, and now it compiles :</p>
+          <p>g++ -Wall `wx-config --cppflags` -O2 -s   -c importcsv.cpp -o obj/Release/importcsv.o</p>
+          <p>g++ -Wall `wx-config --cppflags` -O2 -s   -c mainframe.cpp -o obj/Release/mainframe.o</p>
+          <p>g++  -o bin/Release/importcsv obj/Release/importcsv.o obj/Release/mainframe.o   `wx-config --libs`</p>
+          <p>Process terminated with status 0 (0 minutes, 9 seconds)</p>
+          <p>0 errors, 0 warnings</p>
+          <p>Only the second PCH strategy doesn't work, first and third one are working.</p>
+          <p>-Linux x86 running Ubuntu Dapper Drake</p>
+          <p>-build: Jun 5 2006, 21:13:24 - wx2.6.1 (Linux, unicode)</p>
+          <p>-libwxgtk-2.6.1</p>
+          <p>Searching on open bugs reports for PCH or backticks doesn't return me something.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Compiler</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2011-02-24 05:46:33</dd>
+            <dt>Assigned to</dt><dd>mortenmacfly</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2006-09-08 11:41:21</div>
+        <div class="panel-body">
+          <p>Does this bug still persist?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">rickg22 2007-07-20 05:26:41</div>
+        <div class="panel-body">
+          <p>Does this bug still persist?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2007-12-17 14:05:03</div>
+        <div class="panel-body">
+          <p>This bug still persists here on Ubuntu 7/10 with wxWidgets 2.8.7 / C::B SVN head from 17 Dec. 2007.</p>
+          <p>Issue is exactly as reported: For newer GCC compilers the -I- switch is wrong. This results in "earlier" include directories (the wx ones) being omitted. Thus the compilation fails.</p>
+          <p>How to resolve? Using the compiler version query API (by Biplab) the *right* -iquote switch should be used for GCC 4.x.x. for GCC 3.4.x still -I- applies (IMHO).</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2007-12-17 14:17:51</div>
+        <div class="panel-body">
+          <p>Also see Bug #12610 and Bug #10624 (they have been closed as these are duplicates).</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mortenmacfly 2009-10-24 18:28:16</div>
+        <div class="panel-body">
+          <p>This bug is now fixed in HEAD.</p>
+          <p>Thank you for reporting it.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 12098 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #12098 <small>2007-09-30 13:10:26</small></h3>
+          <h4>moonkid</h4>
+          <p class="lead">doesn't parse any link errors</p>
+          <pre class="pre-scrollable">I am using the nightlys with MinGW.
+CB doesn't parse linker output correct.
+
+That is the build log:
+[buildlog]
+-------------- Build: Dynamic Debug Unicode in blackfisk ---------------
+mingw32-g++.exe -LC:\wxWidgets\lib\gcc_dll -LC:\Programme\CodeBlocks\lib  -o .\blackfiskDud.exe .objs_debud\BFAboutDlg.o .objs_debud\BFApp.o .objs_debud\BFBackupLog.o .objs_debud\BFBackupQuestionDlg.o .objs_debud\BFBackupTree.o .objs_debud\BFCmdLine.o .objs_debud\BFCore.o .objs_debud\BFCore_traverser.o .objs_debud\BFDestinationCtrl.o .objs_debud\BFDestinationCtrl2.o .objs_debud\BFDestinationDlg.o .objs_debud\BFDirCtrl.o .objs_debud\BFHelpCtrl.o .objs_debud\BFHyperlinkCtrl.o .objs_debud\BFIconTable.o .objs_debud\BFLog.o .objs_debud\BFLogBase.o .objs_debud\BFLogViewDlg.o .objs_debud\BFMainFrame.o .objs_debud\BFMessageDlg.o .objs_debud\BFMsgObserver.o .objs_debud\BFPlaceholderButton.o .objs_debud\BFProgressCtrl.o .objs_debud\BFProjectSettings.o .objs_debud\BFProjectSettingsCtrl.o .objs_debud\BFProjectSettingsDlg.o .objs_debud\BFRootTask.o .objs_debud\BFSettings.o .objs_debud\BFSettingsDlg.o .objs_debud\BFSettingsDlg2.o .objs_debud\BFSystem.o .objs_debud\BFTask.o .objs_debud\BFTaskBase.o .objs_debud\BFTaskDlg.o .objs_debud\BFTaskProgressDlg.o .objs_debud\BFThread_ProjectRunner.o .objs_debud\BFwxLog.o .objs_debud\ObserverPattern.o .objs_debud\Progress.o .objs_debud\blackfisk.o .objs_debud\wxSerialize\src\wxSerialize.o    -lwxzlibd -lwxmsw29ud  -mwindows
+.objs_debud\BFRootTask.o: In function `ZNSt6vectorIP6BFTaskSaIS1_EEixEj':
+C:/Programme/CodeBlocks/bin/../lib/gcc/mingw32/3.4.4/../../../../include/c++/3.4.4/bits/stl_vector.h:(.bss+0x0): multiple definition of `BF_EVENT_THREAD_END'
+.objs_debud\BFMainFrame.o:C:/wxWidgets/include/wx/window.h:(.bss+0x0): first defined here
+.objs_debud\BFThread_ProjectRunner.o: In function `ZN8wxStringC1EPKw':
+C:/wxWidgets/include/wx/string.h:(.bss+0x0): multiple definition of `BF_EVENT_THREAD_END'
+.objs_debud\BFMainFrame.o:C:/wxWidgets/include/wx/window.h:(.bss+0x0): first defined here
+collect2: ld returned 1 exit status
+Process terminated with status 1 (0 minutes, 8 seconds)
+0 errors, 0 warnings
+[/buildlog]
+
+You see the 0 errors and 0 warnings?
+CB doesn't see that there is error from the linker. The binary is not build and CB wonder if the executable is not available after a "build&amp;run".
+
+That is in my "build messages"
+.objs_debud\BFRootTask.o:: In function `ZNSt6vectorIP6BFTaskSaIS1_EEixEj':
+.objs_debud\BFThread_ProjectRunner.o:: In function `ZN8wxStringC1EPKw':
+:: === Build finished: 0 errors, 0 warnings ===
+</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Compiler</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">polygon7 2007-10-11 11:18:59</div>
+        <div class="panel-body">
+          <p>Hi,</p>
+          <p>I think it is something similar to:</p>
+          <p>[ Bug #11586 ] [DJGPP] Build log don't catch error/warning messages...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

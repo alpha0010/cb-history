@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 19352 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #19352 <small>2014-04-16 13:27:58</small></h3>
+          <h4>kneo</h4>
+          <p class="lead">Debugging does not start when program arguments are set</p>
+          <p>Using Windows 7 x64 with Code::Blocks. (probleme persists in 12.11 and 13.11) Debugging with GDB.</p>
+          <p>How To Reproduce:</p>
+          <p>- Create a new "console application" project</p>
+          <p>- set a breakpoint at the "cout &lt;&lt; ..." line</p>
+          <p>- debug (which now works)</p>
+          <p>Now:</p>
+          <p>- Set following program arguments (Project -&gt; Set program' arguments):</p>
+          <p>D:\ D:\</p>
+          <p>(in the particular case I used a longer path but the effect is the same. Set two times the D:\ root directory as arguments)</p>
+          <p>- Debug (which now fails)</p>
+          <p>-&gt; the debugger simply does not run the program</p>
+          <p>-&gt; it seems to hang since nothing happens</p>
+          <p>-&gt; also clicking the red "x" will not stop debugging (killing the gdb process does the trick)</p>
+          <p>Fix: set Arguments in double Quotes.</p>
+          <p>"D:\" "D:\" worked for me.</p>
+          <p>It took me hours to find the workaround for this bug. It is quite annoying since everything works with new clean projects as well as the day before with everything set as it was.</p>
+          <p>Nobody would expect this to be the cause.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Debugger</dd>
+            <dt>Group</dt><dd>Platform:Windows</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>tpetrov</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2014-05-12 19:30:45</div>
+        <div class="panel-body">
+          <p>Can you post the full log from the debugger? (see the settings how to enable it)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kneo 2014-05-13 08:33:32</div>
+        <div class="panel-body">
+          <pre class="pre-scrollable">Of course! As a matter of fact, I checked out this with my original project again and now it worked what ever you set in the programm settings. With or without qoutes.
+
+So I used the method I described above to reproduce the problem. So the debugger still hangs, yet I can not say of it is related anyhow the the Quotes. I add the Log of the working with the Quotes as well.
+
+&gt;&gt;&gt;&gt;&gt;DEBUGGING WORKS:
+
+Building to ensure sources are up-to-date
+Selecting target: 
+Debug
+Adding source dir: C:\Users\kkrueger\Desktop\glyphy\GlyphyDev\test\
+Adding source dir: C:\Users\kkrueger\Desktop\glyphy\GlyphyDev\test\
+Adding file: C:\Users\kkrueger\Desktop\glyphy\GlyphyDev\test\bin\Debug\test.exe
+Changing directory to: C:/Users/kkrueger/Desktop/glyphy/GlyphyDev/test/.
+Set variable: PATH=.;C:\CodeBlocks\MinGW\bin;C:\CodeBlocks\MinGW;D:\android-ndk-r9d\toolchains\arm-linux-androideabi-4.8\prebuilt\windows-x86_64\bin;D:\android-ndk-r9d\toolchains\arm-linux-androideabi-4.8\prebuilt\windows-x86_64;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.0\libnvvp;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Windows\System32;C:\Windows;C:\Windows\System32\wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Program Files (x86)\ManageSoft\Common;C:\Program Files (x86)\Borland\StarTeam SDK 10.4\Lib;C:\Program Files (x86)\Borland\StarTeam SDK 10.4\bin;C:\Program Files (x86)\Microsoft SQL Server\90\Tools\Binn;C:\Program Files (x86)\Borland\StarTeam SDK Runtime for .NET 10.4\bin;C:\Program Files\Borland\StarTeam SDK 12.5\lib;C:\Program Files\Borland\StarTeam SDK 12.5\bin;C:\Program Files (x86)\MiKTeX 2.9\miktex\bin;C:\Program Files\Microsoft SQL Server\110\Tools\Binn;C:\Program Files (x86)\Windows Kits\8.0\Windows Performance Toolkit;C:\CMake 2.8\bin;D:\android-ndk-r9d;C:\cygwin\bin;C:\Program Files (x86)\ARM\Mali Developer Tools\Mali Offline Compiler v4.1.0
+
+[debug]Command-line: C:\CodeBlocks\MINGW\bin\gdb.exe -nx -fullname  -quiet  -args C:/Users/kkrueger/Desktop/glyphy/GlyphyDev/test/bin/Debug/test.exe
+[debug]Working dir : C:\Users\kkrueger\Desktop\glyphy\GlyphyDev\test
+
+Starting debugger: C:\CodeBlocks\MINGW\bin\gdb.exe -nx -fullname  -quiet  -args C:/Users/kkrueger/Desktop/glyphy/GlyphyDev/test/bin/Debug/test.exe
+done
+
+[debug]&gt; set prompt &gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+
+Registered new type: wxString
+Registered new type: STL String
+Registered new type: STL Vector
+Setting breakpoints
+
+[debug]Reading symbols from C:\Users\kkrueger\Desktop\glyphy\GlyphyDev\test\bin\Debug\test.exe...done.
+[debug](gdb) &gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; show version
+[debug]GNU gdb (GDB) 7.5
+[debug]Copyright (C) 2012 Free Software Foundation, Inc.
+[debug]License GPLv3+: GNU GPL version 3 or later &lt;<a href="http://gnu.org/licenses/gpl.html&gt;">http://gnu.org/licenses/gpl.html&gt;</a>
+[debug]This is free software: you are free to change and redistribute it.
+[debug]There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+[debug]and "show warranty" for details.
+[debug]This GDB was configured as "i686-pc-mingw32".
+[debug]For bug reporting instructions, please see:
+[debug]&lt;<a href="http://www.gnu.org/software/gdb/bugs/&gt;.">http://www.gnu.org/software/gdb/bugs/&gt;.</a>
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; set confirm off
+
+Debugger name and version: GNU gdb (GDB) 7.5
+
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; set width 0
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; set height 0
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; set breakpoint pending on
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; set print asm-demangle on
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; set unwindonsignal on
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; set print elements 0
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; set new-console on
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; set disassembly-flavor att
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; catch throw
+[debug]Catchpoint 1 (throw)
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; source C:\CodeBlocks\share\codeblocks/scripts/stl-views-1.0.3.gdb
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; directory C:/Users/kkrueger/Desktop/glyphy/GlyphyDev/test/
+[debug]Source directories searched: C:/Users/kkrueger/Desktop/glyphy/GlyphyDev/test;$cdir;$cwd
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; set args D:\ D:\
+
+Continuing...
+Continuing...
+Continuing...
+Continuing...
+
+&lt;&lt;&lt;&lt;&lt;&lt;DEBUGGING WORKS NOT
+
+&lt;Pressing continue does not work nothing actualy&gt;
+
+&gt;&gt;&gt;&gt;&gt;&gt;DEBUGGING WORKS:
+
+Building to ensure sources are up-to-date
+Selecting target: 
+Debug
+Adding source dir: C:\Users\kkrueger\Desktop\glyphy\GlyphyDev\test\
+Adding source dir: C:\Users\kkrueger\Desktop\glyphy\GlyphyDev\test\
+Adding file: C:\Users\kkrueger\Desktop\glyphy\GlyphyDev\test\bin\Debug\test.exe
+Changing directory to: C:/Users/kkrueger/Desktop/glyphy/GlyphyDev/test/.
+Set variable: PATH=.;C:\CodeBlocks\MinGW\bin;C:\CodeBlocks\MinGW;D:\android-ndk-r9d\toolchains\arm-linux-androideabi-4.8\prebuilt\windows-x86_64\bin;D:\android-ndk-r9d\toolchains\arm-linux-androideabi-4.8\prebuilt\windows-x86_64;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.0\libnvvp;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Windows\System32;C:\Windows;C:\Windows\System32\wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Program Files (x86)\ManageSoft\Common;C:\Program Files (x86)\Borland\StarTeam SDK 10.4\Lib;C:\Program Files (x86)\Borland\StarTeam SDK 10.4\bin;C:\Program Files (x86)\Microsoft SQL Server\90\Tools\Binn;C:\Program Files (x86)\Borland\StarTeam SDK Runtime for .NET 10.4\bin;C:\Program Files\Borland\StarTeam SDK 12.5\lib;C:\Program Files\Borland\StarTeam SDK 12.5\bin;C:\Program Files (x86)\MiKTeX 2.9\miktex\bin;C:\Program Files\Microsoft SQL Server\110\Tools\Binn;C:\Program Files (x86)\Windows Kits\8.0\Windows Performance Toolkit;C:\CMake 2.8\bin;D:\android-ndk-r9d;C:\cygwin\bin;C:\Program Files (x86)\ARM\Mali Developer Tools\Mali Offline Compiler v4.1.0
+
+[debug]Command-line: C:\CodeBlocks\MINGW\bin\gdb.exe -nx -fullname  -quiet  -args C:/Users/kkrueger/Desktop/glyphy/GlyphyDev/test/bin/Debug/test.exe
+[debug]Working dir : C:\Users\kkrueger\Desktop\glyphy\GlyphyDev\test
+
+Starting debugger: C:\CodeBlocks\MINGW\bin\gdb.exe -nx -fullname  -quiet  -args C:/Users/kkrueger/Desktop/glyphy/GlyphyDev/test/bin/Debug/test.exe
+done
+
+[debug]&gt; set prompt &gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+
+Registered new type: wxString
+Registered new type: STL String
+Registered new type: STL Vector
+Setting breakpoints
+
+[debug]Reading symbols from C:\Users\kkrueger\Desktop\glyphy\GlyphyDev\test\bin\Debug\test.exe...done.
+[debug](gdb) &gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; show version
+[debug]GNU gdb (GDB) 7.5
+[debug]Copyright (C) 2012 Free Software Foundation, Inc.
+[debug]License GPLv3+: GNU GPL version 3 or later &lt;<a href="http://gnu.org/licenses/gpl.html&gt;">http://gnu.org/licenses/gpl.html&gt;</a>
+[debug]This is free software: you are free to change and redistribute it.
+[debug]There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+[debug]and "show warranty" for details.
+[debug]This GDB was configured as "i686-pc-mingw32".
+[debug]For bug reporting instructions, please see:
+[debug]&lt;<a href="http://www.gnu.org/software/gdb/bugs/&gt;.">http://www.gnu.org/software/gdb/bugs/&gt;.</a>
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; set confirm off
+
+Debugger name and version: GNU gdb (GDB) 7.5
+
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; set width 0
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; set height 0
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; set breakpoint pending on
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; set print asm-demangle on
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; set unwindonsignal on
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; set print elements 0
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; set new-console on
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; set disassembly-flavor att
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; catch throw
+[debug]Catchpoint 1 (throw)
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; source C:\CodeBlocks\share\codeblocks/scripts/stl-views-1.0.3.gdb
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; directory C:/Users/kkrueger/Desktop/glyphy/GlyphyDev/test/
+[debug]Source directories searched: C:/Users/kkrueger/Desktop/glyphy/GlyphyDev/test;$cdir;$cwd
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; set args "D:\" "D:\"
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; break "C:/Users/kkrueger/Desktop/glyphy/GlyphyDev/test/main.cpp:7"
+[debug]Breakpoint 2 at 0x40134a: file C:\Users\kkrueger\Desktop\glyphy\GlyphyDev\test\main.cpp, line 7.
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; run
+[debug]Starting program: C:\Users\kkrueger\Desktop\glyphy\GlyphyDev\test\bin\Debug\test.exe "D:\" "D:\"
+
+Child process PID: 3516
+
+[debug][New Thread 3516.0x1830]
+[debug]Breakpoint 2, main () at C:\Users\kkrueger\Desktop\glyphy\GlyphyDev\test\main.cpp:7
+[debug]C:\Users\kkrueger\Desktop\glyphy\GlyphyDev\test\main.cpp:7:62:beg:0x40134a
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+
+At C:\Users\kkrueger\Desktop\glyphy\GlyphyDev\test\main.cpp:7
+
+[debug]&gt; info locals
+[debug]No locals.
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; info args
+[debug]No arguments.
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; info registers
+[debug]eax            0x2	2
+[debug]ecx            0x1	1
+[debug]edx            0x8e3b8	582584
+[debug]ebx            0x7efde000	2130567168
+[debug]esp            0x28ff00	0x28ff00
+[debug]ebp            0x28ff18	0x28ff18
+[debug]esi            0x0	0
+[debug]edi            0x0	0
+[debug]eip            0x40134a	0x40134a &lt;main()+22&gt;
+[debug]eflags         0x202	[ IF ]
+[debug]cs             0x23	35
+[debug]ss             0x2b	43
+[debug]ds             0x2b	43
+[debug]es             0x2b	43
+[debug]fs             0x53	83
+[debug]gs             0x2b	43
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; bt 30
+[debug]#0  main () at C:\Users\kkrueger\Desktop\glyphy\GlyphyDev\test\main.cpp:7
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; if 1
+disassemble 0x40134a
+info frame
+end
+[debug] &gt; &gt; &gt;Dump of assembler code for function main():
+[debug]   0x00401334 &lt;+0&gt;:	lea    0x4(%esp),%ecx
+[debug]   0x00401338 &lt;+4&gt;:	and    $0xfffffff0,%esp
+[debug]   0x0040133b &lt;+7&gt;:	pushl  -0x4(%ecx)
+[debug]   0x0040133e &lt;+10&gt;:	push   %ebp
+[debug]   0x0040133f &lt;+11&gt;:	mov    %esp,%ebp
+[debug]   0x00401341 &lt;+13&gt;:	push   %ecx
+[debug]   0x00401342 &lt;+14&gt;:	sub    $0x14,%esp
+[debug]   0x00401345 &lt;+17&gt;:	call   0x416590 &lt;__main&gt;
+[debug]=&gt; 0x0040134a &lt;+22&gt;:	movl   $0x46e024,0x4(%esp)
+[debug]   0x00401352 &lt;+30&gt;:	movl   $0x477860,(%esp)
+[debug]   0x00401359 &lt;+37&gt;:	call   0x468db8 &lt;std::basic_ostream&lt;char, std::char_traits&lt;char&gt; &gt;&amp; std::operator&lt;&lt; &lt;std::char_traits&lt;char&gt; &gt;(std::basic_ostream&lt;char, std::char_traits&lt;char&gt; &gt;&amp;, char const*)&gt;
+[debug]   0x0040135e &lt;+42&gt;:	movl   $0x467a14,(%esp)
+[debug]   0x00401365 &lt;+49&gt;:	mov    %eax,%ecx
+[debug]   0x00401367 &lt;+51&gt;:	call   0x449424 &lt;std::ostream::operator&lt;&lt;(std::ostream&amp; (*)(std::ostream&amp;))&gt;
+[debug]   0x0040136c &lt;+56&gt;:	sub    $0x4,%esp
+[debug]   0x0040136f &lt;+59&gt;:	mov    $0x0,%eax
+[debug]   0x00401374 &lt;+64&gt;:	mov    -0x4(%ebp),%ecx
+[debug]   0x00401377 &lt;+67&gt;:	leave  
+[debug]   0x00401378 &lt;+68&gt;:	lea    -0x4(%ecx),%esp
+[debug]   0x0040137b &lt;+71&gt;:	ret    
+[debug]End of assembler dump.
+[debug]Stack level 0, frame at 0x28ff30:
+[debug] eip = 0x40134a in main (C:\Users\kkrueger\Desktop\glyphy\GlyphyDev\test\main.cpp:7); saved eip 0x4010fd
+[debug] source language c++.
+[debug] Arglist at 0x28ff18, args: 
+[debug] Locals at 0x28ff18, Previous frame's sp is 0x28ff30
+[debug] Saved registers:
+[debug]  ebp at 0x28ff18, eip at 0x28ff2c
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; x/32xb 0x0
+[debug]Cannot access memory at address 0x0
+[debug]0x0:	&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; disassemble 0x0040134a
+[debug]Dump of assembler code for function main():
+[debug]   0x00401334 &lt;+0&gt;:	lea    0x4(%esp),%ecx
+[debug]   0x00401338 &lt;+4&gt;:	and    $0xfffffff0,%esp
+[debug]   0x0040133b &lt;+7&gt;:	pushl  -0x4(%ecx)
+[debug]   0x0040133e &lt;+10&gt;:	push   %ebp
+[debug]   0x0040133f &lt;+11&gt;:	mov    %esp,%ebp
+[debug]   0x00401341 &lt;+13&gt;:	push   %ecx
+[debug]   0x00401342 &lt;+14&gt;:	sub    $0x14,%esp
+[debug]   0x00401345 &lt;+17&gt;:	call   0x416590 &lt;__main&gt;
+[debug]=&gt; 0x0040134a &lt;+22&gt;:	movl   $0x46e024,0x4(%esp)
+[debug]   0x00401352 &lt;+30&gt;:	movl   $0x477860,(%esp)
+[debug]   0x00401359 &lt;+37&gt;:	call   0x468db8 &lt;std::basic_ostream&lt;char, std::char_traits&lt;char&gt; &gt;&amp; std::operator&lt;&lt; &lt;std::char_traits&lt;char&gt; &gt;(std::basic_ostream&lt;char, std::char_traits&lt;char&gt; &gt;&amp;, char const*)&gt;
+[debug]   0x0040135e &lt;+42&gt;:	movl   $0x467a14,(%esp)
+[debug]   0x00401365 &lt;+49&gt;:	mov    %eax,%ecx
+[debug]   0x00401367 &lt;+51&gt;:	call   0x449424 &lt;std::ostream::operator&lt;&lt;(std::ostream&amp; (*)(std::ostream&amp;))&gt;
+[debug]   0x0040136c &lt;+56&gt;:	sub    $0x4,%esp
+[debug]   0x0040136f &lt;+59&gt;:	mov    $0x0,%eax
+[debug]   0x00401374 &lt;+64&gt;:	mov    -0x4(%ebp),%ecx
+[debug]   0x00401377 &lt;+67&gt;:	leave  
+[debug]   0x00401378 &lt;+68&gt;:	lea    -0x4(%ecx),%esp
+[debug]   0x0040137b &lt;+71&gt;:	ret    
+[debug]End of assembler dump.
+[debug]&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+[debug]&gt; quit
+
+Debugger finished with status 0
+
+&lt;&lt;&lt;&lt;&lt;DEBUGGING WORKS</pre>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kneo 2014-05-13 08:39:32</div>
+        <div class="panel-body">
+          <p>I would gladly provide the project files as well. I don't know how to attach files to this bug.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2014-05-13 18:20:42</div>
+        <div class="panel-body">
+          <p>No need for a project, I'm able to reproduce it on linux, too.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

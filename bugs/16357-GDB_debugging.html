@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 16357 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #16357 <small>2009-10-20 21:16:29</small></h3>
+          <h4>vshader</h4>
+          <p class="lead">GDB debugging mode fails to debug</p>
+          <pre class="pre-scrollable">Platform: Fedora 11 GNU/Linux, kernel 2.6.31 built manually (#1 SMP PREEMPT), x86_64
+Version: svn r5870 (bug occured in r581? too), built manually
+What happens: I cannot run my application in debugging mode.
+Expected behaviour: normal work in debug mode
+How to reproduce: Load the project which causes problem, set breakpoint in any source code line, click Debug-&gt;Start.
+
+Details:
+When I try to run my project in debug mode, the debugger starts, but immediately closes. Often (not always) codeblocks crashes after that "failed" debugger starting. Problem exists in one of my projects, but I cannot determine any reason of the behaviour. Bug still occurs, even if I compile only the easiest code in this project. Other projects works well without any problems.
+
+Log window shows:
+(...)
+Setting breakpoints
+Debugger name and version: GNU gdb (GDB) Fedora (6.8.50.20090302-38.fc11)
+Debugger finished with status 1
+
+Additionally, often (but not always) codeblocks crashes (SIGSEGV) after displaying the last message. I ran codeblocks in gdb and got some info:
+Program received signal SIGSEGV, Segmentation fault.
+0x00007fffe35aaaa7 in DebuggerGDB::DoDebug (this=0x1362db0) at debuggergdb.cpp:1550
+1550            m_State.GetDriver()-&gt;Start(m_BreakOnEntry);
+
+m_State looks this:
+$1 = {m_pPlugin = 0x1396d60, m_pDriver = 0x0, m_Watches = {&lt;wxArrayPtrVoid&gt; = {&lt;wxBaseArrayPtrVoid&gt; = {m_nSize = 0,
+        m_nCount = 0, m_pItems = 0x0}, &lt;No data fields&gt;}, &lt;No data fields&gt;}, m_Breakpoints = {&lt;wxBaseArrayPtrVoid&gt; = {
+      m_nSize = 16, m_nCount = 1, m_pItems = 0x190c070}, &lt;No data fields&gt;}, m_BpAutoIndex = 1}
+Notice that m_pDriver is NULL and I think this is the direct reason of crash.
+
+Top of backtrace:
+#0  0x00007fffe35aaaa7 in DebuggerGDB::DoDebug (this=0x13afb60) at debuggergdb.cpp:1550                                      
+#1  0x00007ffff7b047f9 in Manager::ProcessEvent (this=&lt;value optimized out&gt;, event=@0x7fffffffc5f0) at manager.cpp:179       
+#2  0x00007fffe324df56 in CompilerGCC::NotifyJobDone (this=0x142ab60, showNothingToBeDone=&lt;value optimized out&gt;)             
+    at compilergcc.cpp:3816                                                                                                  
+#3  0x00007fffe3250fb1 in CompilerGCC::DoRunQueue (this=0x142ab60) at compilergcc.cpp:1165                                   
+#4  0x00007fffe32565b0 in CompilerGCC::DoBuild (this=0x142ab60, target=&lt;value optimized out&gt;, clean=&lt;value optimized out&gt;,   
+    build=&lt;value optimized out&gt;, clearLog=true) at compilergcc.cpp:2726                                                      
+#5  0x00007fffe3243350 in CompilerGCC::Build (this=0x142ab60, target=&lt;value optimized out&gt;) at compilergcc.cpp:2737          
+#6  0x00007fffe359b04e in DebuggerGDB::EnsureBuildUpToDate (this=0x13afb60) at debuggergdb.cpp:1194                          
+#7  0x00007fffe35ab358 in DebuggerGDB::Debug (this=0x13afb60) at debuggergdb.cpp:1238                                        
+#8  0x0000003abdaf2650 in wxEvtHandler::ProcessEventIfMatches (entry=&lt;value optimized out&gt;, handler=0x0,                     
+    event=@0x7fffffffcd50) at src/common/event.cpp:1231                                                                      
+#9  0x0000003abdaf3624 in wxEventHashTable::HandleEvent (this=&lt;value optimized out&gt;, event=@0x7fffffffcd50, self=0x13afb60)  
+    at src/common/event.cpp:906     
+(...)
+
+CBP project file looks as below:
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes" ?&gt;
+&lt;CodeBlocks_project_file&gt;
+        &lt;FileVersion major="1" minor="6" /&gt;
+        &lt;Project&gt;
+                &lt;Option title="test1" /&gt;
+                &lt;Option pch_mode="2" /&gt;
+                &lt;Option compiler="gcc" /&gt;
+                &lt;Build&gt;
+                        &lt;Target title="Debug"&gt;
+                                &lt;Option output="bin/Debug/test1" prefix_auto="1" extension_auto="1" /&gt;
+                                &lt;Option object_output="obj/Debug/" /&gt;
+                                &lt;Option type="1" /&gt;
+                                &lt;Option compiler="gcc" /&gt;
+                                &lt;Compiler&gt;
+                                        &lt;Add option="-g" /&gt;
+                                &lt;/Compiler&gt;
+                        &lt;/Target&gt;
+                        &lt;Target title="Release"&gt;
+                                &lt;Option output="bin/Release/test1" prefix_auto="1" extension_auto="1" /&gt;
+                                &lt;Option object_output="obj/Release/" /&gt;
+                                &lt;Option type="1" /&gt;
+                                &lt;Option compiler="gcc" /&gt;
+                                &lt;Compiler&gt;
+                                        &lt;Add option="-O2" /&gt;
+                                &lt;/Compiler&gt;
+                        &lt;/Target&gt;
+                &lt;/Build&gt;
+                &lt;Compiler&gt;
+                        &lt;Add option="-Wall" /&gt;
+                        &lt;Add option="-std=gnu++0x" /&gt;
+                        &lt;Add option="-fexceptions" /&gt;
+                &lt;/Compiler&gt;
+                &lt;Unit filename="main.cpp" /&gt;
+                &lt;Extensions&gt;
+                        &lt;code_completion /&gt;
+                        &lt;debugger /&gt;
+                &lt;/Extensions&gt;
+        &lt;/Project&gt;
+&lt;/CodeBlocks_project_file&gt;
+
+main.cpp is not reason of problem, I typed easiest possible code:
+int main() {
+    return 7;
+}
+but bug still occurs.</pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Debugger</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

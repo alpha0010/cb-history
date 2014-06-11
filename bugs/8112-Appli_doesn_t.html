@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 8112 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #8112 <small>2006-07-14 12:39:00</small></h3>
+          <h4>stephanecouget</h4>
+          <p class="lead">Appli doesn't stop, i kill it</p>
+          <p>When I close CodeBlocks, top command indicate that C::B is always</p>
+          <p>present in memory with a load CPU which touches the maximum</p>
+          <p>C::B version 2750</p>
+          <p>Debian etch</p>
+          <p>gcc 4.0.4</p>
+          <p>amd 3200+</p>
+          <p>ram : 1024 mo</p>
+          <p>lang : fr_FR</p>
+          <p>Good courage and very good continuation,</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>&nbsp;</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2006-09-08 11:07:36</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">dermeister 2006-07-15 09:27:26</div>
+        <div class="panel-body">
+          <p>I can confirm this with revision 2750 on gentoo (wxGTK 2.6.2 unicode, gcc 3.4.6).</p>
+          <p>gdb prints the following backtrace after killing codeblocks:</p>
+          <p>Program received signal SIGINT, Interrupt.</p>
+          <p>[Switching to Thread -1232419152 (LWP 10737)]</p>
+          <p>0xb7484361 in wxClassInfo::~wxClassInfo () from /usr/lib/libwx_baseu-2.6.so.0</p>
+          <p>(gdb) bt</p>
+          <p>#0  0xb7484361 in wxClassInfo::~wxClassInfo ()</p>
+          <p>from /usr/lib/libwx_baseu-2.6.so.0</p>
+          <p>#1  0xb7eca1a0 in __tcf_2 () at wxFlatNotebook.cpp:461</p>
+          <p>#2  0xb727988e in __cxa_finalize () from /lib/libc.so.6</p>
+          <p>#3  0xb7c48633 in __do_global_dtors_aux ()</p>
+          <p>from /opt/codeblocks-cvs/lib/libcodeblocks.so.0</p>
+          <p>#4  0xb7f084e6 in _fini () from /opt/codeblocks-cvs/lib/libcodeblocks.so.0</p>
+          <p>#5  0xb7fecf97 in _dl_fini () from /lib/ld-linux.so.2</p>
+          <p>#6  0xb72795c7 in exit () from /lib/libc.so.6</p>
+          <p>#7  0xb7263ef6 in __libc_start_main () from /lib/libc.so.6</p>
+          <p>#8  0x08063bb1 in _start ()</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">stephanecouget 2006-07-18 21:07:54</div>
+        <div class="panel-body">
+          <p>On revision 2764 :</p>
+          <p>a "strace codeblocks" displays like all last lines and wait somethings. If I make a CTRL+C, C::B stops at once.</p>
+          <p>--------------------------------------------------------------------------</p>
+          <p>read(5, "\1\2\215\257\0\0\0\0\36\0\0\2\4\0\0\0\0\0\0\0\4\0\0\0\\"..., 32) = 32</p>
+          <p>unlink("/tmp/Code::Blocks-gamma")       = 0</p>
+          <p>fcntl64(6, F_SETLK64, {type=F_UNLCK, whence=SEEK_SET, start=0, len=0}, 0xbfe274d8) = 0</p>
+          <p>close(6)                                = 0</p>
+          <p>munmap(0xb6700000, 227084)              = 0</p>
+          <p>munmap(0xb6867000, 413024)              = 0</p>
+          <p>munmap(0xb66d5000, 175392)              = 0</p>
+          <p>munmap(0xb6851000, 89208)               = 0</p>
+          <p>munmap(0xb6738000, 1150548)             = 0</p>
+          <p>munmap(0xb666f000, 208896)              = 0</p>
+          <p>time([1153255778])                      = 1153255778</p>
+          <p>gettimeofday({1153255778, 179021}, NULL) = 0</p>
+          <p>gettimeofday({1153255778, 181410}, NULL) = 0</p>
+          <p>open("/home/gamma/.codeblocks/defaultWzyYQX", O_RDWR|O_CREAT|O_EXCL|O_LARGEFILE, 0600) = 6</p>
+          <p>stat64("/home/gamma/.codeblocks/default.conf", {st_mode=S_IFREG|0640, st_size=22825, ...}) = 0</p>
+          <p>chmod("/home/gamma/.codeblocks/defaultWzyYQX", 0100640) = 0</p>
+          <p>write(6, "&lt;?xml version=\"1.0\" encoding=\"UT"..., 22825) = 22825</p>
+          <p>close(6)                                = 0</p>
+          <p>stat64("/home/gamma/.codeblocks/default.conf", {st_mode=S_IFREG|0640, st_size=22825, ...}) = 0</p>
+          <p>unlink("/home/gamma/.codeblocks/default.conf") = 0</p>
+          <p>rename("/home/gamma/.codeblocks/defaultWzyYQX", "/home/gamma/.codeblocks/default.conf") = 0</p>
+          <p>--------------------------------------------------------------------------</p>
+          <p>It seems that the instructions which follow the remove of default.conf and the rename of default.abcdef in default.conf make a bug</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">dermeister 2006-07-29 10:39:58</div>
+        <div class="panel-body">
+          <p>I have no idea what caused this bug but removing all binaries and doing a fresh checkout solved this for me.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">stephanecouget 2006-09-06 22:48:52</div>
+        <div class="panel-body">
+          <p>Ok on r2957 problem is over. You can close this incident if you want. THX</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

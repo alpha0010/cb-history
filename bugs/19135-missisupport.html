@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 19135 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #19135 <small>2013-09-29 19:37:08</small></h3>
+          <h4>mojca</h4>
+          <p class="lead">missisupport for wx_mac &amp; wx_osx in configure.in</p>
+          <p>I was confused by the fact that when compiling Code::Blocks against wxGTK (wx_gtk2u) hunspell was properly found, while it wasn't when compiling against Carbon or Cocoa-based wxWidgets.</p>
+          <p>I now realized that the following code in configure.in:</p>
+          <p>WX_BASENAME=`$WX_CONFIG_WITH_ARGS --basename`</p>
+          <p>case $WX_BASENAME in</p>
+          <p>*wx_gtk*)</p>
+          <p>...</p>
+          <p>completely misses the part for "wx_osx_cocoau" (the basename in case of Cocoa-based wxWidgets 2.9) and lacks options in case of Carbon-based wxWidgets 2.8 (I don't have that system at hand at the moment to report the exact basename, but it falls under "*wx_mac*)").</p>
+          <p>In particular I miss the test for pkg-config and the test for</p>
+          <p>PKG_CHECK_MODULES([HUNSPELL], [hunspell])</p>
+          <p>I don't know how MouseSap or NassiShneiderman works (it compiles if I enable the plugins under wx_mac or wx_osx) and I don't have the dependencies of FileManager (gamin; trying to compile with FileManager always fails, so I never try to enable it), but Hunspell fails while I see no reason why it shouldn't work when the library is available.</p>
+          <p>As far as wx_mac is concerned, personally I don't have /Developer/Tools/Rez or /Developer/Tools/SetFile available and I have no clue what those four lines do anyway.</p>
+          <p>Configuring Code::Blocks with wxWidgets 2.9 ends up with</p>
+          <p>checking for wxWidgets platform... other</p>
+          <p>See also <a href="https://trac.macports.org/ticket/40390">https://trac.macports.org/ticket/40390</a> and http://trac.macports.org/ticket/40389.</p>
+          <p>PS: configure.in should be called configure.ac</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>&nbsp;</dd>
+            <dt>Group</dt><dd>Platform:Mac</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>
