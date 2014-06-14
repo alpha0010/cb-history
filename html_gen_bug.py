@@ -151,7 +151,7 @@ bugListTemplate = r"""<!DOCTYPE html>
 
 bugEntryTemplate = r"""<tr><td>$$NUMBER$$</td><td><a href="bugs/$$SHORT_NAME$$.html">$$SUMMARY$$</a></td><td>$$CATEGORY$$</td><td>$$PLATFORM$$</td><td>$$STATUS$$</td><td>$$OPEN_DATE$$</td><td>$$ASSIGNED$$</td><td>$$AUTHOR$$</td></tr>"""
 
-urlRe = re.compile(ur'((((ht|f)tp(s?)\:\/\/)|(www\.))(([a-zA-Z0-9\-\._]+(\.[a-zA-Z0-9\-\._]+)+)|localhost)(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?([\d\w\.\/\%\+\-\=\&amp;\?\:\\\&quot;\'\,\|\~\;]*))')
+urlRe = re.compile(ur'(((ht|f)tp(s?)\:\/\/)|(www\.))(([a-zA-Z0-9\-\._]+(\.[a-zA-Z0-9\-\._]+)+)|localhost)(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?([\d\w\.\/\%\+\-\=\&amp;\?\:\\\&quot;\'\,\|\~\;]*)')
 
 categoryDict = { "100": "&nbsp;",
                  "1381": "Application::Crash",
@@ -224,7 +224,13 @@ for ticket in docTree.getroot():
 
         elif prop.tag == "details":
             if len(prop.text) > 2000:
-                para = re.sub(urlRe, r'<a href="\1">\1</a>', cgi.escape(prop.text))
+                lastIdx = 0
+                para = ""
+                for match in urlRe.finditer(prop.text):
+                    para += cgi.escape(prop.text[lastIdx:match.start()])
+                    para += '<a href="' + cgi.escape(match.group(0)) + '">' + cgi.escape(match.group(0)) + '</a>'
+                    lastIdx = match.end()
+                para += cgi.escape(prop.text[lastIdx:])
                 ticketOut["$$DETAILS$$"] = '<pre class="pre-scrollable">' + para + '</pre>'
                 continue
             ticketOut["$$DETAILS$$"] = ""
@@ -232,11 +238,14 @@ for ticket in docTree.getroot():
                 if len(para) > 0 and not para.isspace():
                     if len(ticketOut["$$DETAILS$$"]) > 0:
                         ticketOut["$$DETAILS$$"] += "\n          "
-                    para = cgi.escape(para.strip())
-                    urlMatch = re.search(urlRe, para)
-                    if urlMatch:
-                        para = para.replace(urlMatch.group(0), '<a href="' + urlMatch.group(0) + '">' + urlMatch.group(0) + '</a>')
-                    ticketOut["$$DETAILS$$"] += "<p>" + para + "</p>"
+                    lastIdx = 0
+                    lineTxt = ""
+                    for match in urlRe.finditer(para):
+                        lineTxt += cgi.escape(para[lastIdx:match.start()])
+                        lineTxt += '<a href="' + cgi.escape(match.group(0)) + '">' + cgi.escape(match.group(0)) + '</a>'
+                        lastIdx = match.end()
+                    lineTxt += cgi.escape(para[lastIdx:])
+                    ticketOut["$$DETAILS$$"] += "<p>" + lineTxt.strip() + "</p>"
 
         elif prop.tag == "date":
             ticketOut["$$OPEN_DATE$$"] = DT.datetime.utcfromtimestamp(int(prop.text)).isoformat(" ")
@@ -255,18 +264,27 @@ for ticket in docTree.getroot():
                      "$$AUTHOR$$": (cgi.escape(userIdDict[ prop[2].text ]) if prop[2].text in userIdDict else "ID_" + prop[2].text),
                      "$$TIME_STAMP$$": DT.datetime.utcfromtimestamp(int(prop[3].text)).isoformat(" ") }
             if len(prop[1].text) > 2000:
-                para = re.sub(urlRe, r'<a href="\1">\1</a>', cgi.escape(prop[1].text))
+                lastIdx = 0
+                para = ""
+                for match in urlRe.finditer(prop[1].text):
+                    para += cgi.escape(prop[1].text[lastIdx:match.start()])
+                    para += '<a href="' + cgi.escape(match.group(0)) + '">' + cgi.escape(match.group(0)) + '</a>'
+                    lastIdx = match.end()
+                para += cgi.escape(prop[1].text[lastIdx:])
                 post["$$COMMENTS$$"] = '<pre class="pre-scrollable">' + para + '</pre>'
             else:
                 for para in prop[1].text.split("\n"):
                     if len(para) > 0 and not para.isspace():
                         if len(post["$$COMMENTS$$"]) > 0:
                             post["$$COMMENTS$$"] += "\n          "
-                        para = cgi.escape(para.strip())
-                        urlMatch = re.search(urlRe, para)
-                        if urlMatch:
-                            para = para.replace(urlMatch.group(0), '<a href="' + urlMatch.group(0) + '">' + urlMatch.group(0) + '</a>')
-                        post["$$COMMENTS$$"] += "<p>" + para + "</p>"
+                        lastIdx = 0
+                        lineTxt = ""
+                        for match in urlRe.finditer(para):
+                            lineTxt += cgi.escape(para[lastIdx:match.start()])
+                            lineTxt += '<a href="' + cgi.escape(match.group(0)) + '">' + cgi.escape(match.group(0)) + '</a>'
+                            lastIdx = match.end()
+                        lineTxt += cgi.escape(para[lastIdx:])
+                        post["$$COMMENTS$$"] += "<p>" + lineTxt.strip() + "</p>"
             ticketOut["HISTORY"].append(post)
             lastMod = max(lastMod, int(prop[3].text))
 
