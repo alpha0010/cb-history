@@ -223,14 +223,17 @@ for ticket in docTree.getroot():
                     ticketOut["$$SHORT_NAME$$"] += "_"
 
         elif prop.tag == "details":
-            if len(prop.text) > 2000:
+            if len(prop.text) > 2000 or "===================================================================" in prop.text:
                 lastIdx = 0
                 para = ""
                 for match in urlRe.finditer(prop.text):
                     para += cgi.escape(prop.text[lastIdx:match.start()])
                     para += '<a href="' + cgi.escape(match.group(0)) + '">' + cgi.escape(match.group(0)) + '</a>'
                     lastIdx = match.end()
-                para += cgi.escape(prop.text[lastIdx:])
+                if ticketOut["$$NUMBER$$"] == "18988": # HACK
+                    para += prop.text[lastIdx:]
+                else:
+                    para += cgi.escape(prop.text[lastIdx:])
                 ticketOut["$$DETAILS$$"] = '<pre class="pre-scrollable">' + para + '</pre>'
                 continue
             ticketOut["$$DETAILS$$"] = ""
@@ -263,7 +266,7 @@ for ticket in docTree.getroot():
             post = { "$$COMMENTS$$": "",
                      "$$AUTHOR$$": (cgi.escape(userIdDict[ prop[2].text ]) if prop[2].text in userIdDict else "ID_" + prop[2].text),
                      "$$TIME_STAMP$$": DT.datetime.utcfromtimestamp(int(prop[3].text)).isoformat(" ") }
-            if len(prop[1].text) > 2000:
+            if len(prop[1].text) > 2000 or "===================================================================" in prop[1].text:
                 lastIdx = 0
                 para = ""
                 for match in urlRe.finditer(prop[1].text):

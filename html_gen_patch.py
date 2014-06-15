@@ -159,7 +159,8 @@ fHandle = open("old_dump/berlios.json", "r")
 lookupDb = json.load(fHandle)
 fHandle.close()
 # hardcode a few (known) values that are not in the older dump by Jens with ForgePlucker
-statusDb = { 3524: {"status": "Open", "category": "Application::Refinement"},
+statusDb = { 3523: {"status": "Accepted", "category": "Application::Bugfix"},
+             3524: {"status": "Open", "category": "Application::Refinement"},
              3529: {"status": "Open", "category": "Application::FeatureAdd"},
              3552: {"status": "Open", "category": "Plugin::Refinement"},
              3553: {"status": "Open", "category": "Lexer"},
@@ -176,7 +177,8 @@ statusDb = { 3524: {"status": "Open", "category": "Application::Refinement"},
              3565: {"status": "Open", "category": "Plugin::Refinement"},
              3566: {"status": "Open", "category": "Plugin::Bugfix"} }
 for patch in lookupDb["trackers"]["patches"]["artifacts"]:
-    statusDb[patch["id"]] = { "status": patch["status"], "category": patch["category"] }
+    categ = "&nbsp;" if patch["category"] == "None" else patch["category"]
+    statusDb[patch["id"]] = { "status": patch["status"], "category": categ }
 
 ticketsOut = []
 docTree = ET.parse('bs_patches_0.1.xml')
