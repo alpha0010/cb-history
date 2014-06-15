@@ -162,6 +162,19 @@ featureEntryTemplate = r"""<tr><td>$$NUMBER$$</td><td><a href="features/$$SHORT_
 
 urlRe = re.compile(ur'(((ht|f)tp(s?)\:\/\/)|(www\.))(([a-zA-Z0-9\-\._]+(\.[a-zA-Z0-9\-\._]+)+)|localhost)(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?([\d\w\.\/\%\+\-\=\&amp;\?\:\\\&quot;\'\,\|\~\;]*)')
 
+urlRemap = []
+for line in open("rewriteLinks.txt"):
+    urlRemap.append(line.split(" "))
+def getMappedUrl(url):
+    for pattern in urlRemap:
+        if pattern[0] in url:
+            if pattern[0].startswith("patch"):
+                return "../patches/" + pattern[1]
+            elif pattern[0].startswith("bug"):
+                return "../bugs/" + pattern[1]
+            return pattern[1]
+    return url
+
 fHandle = open("old_dump/berlios.json", "r")
 lookupDb = json.load(fHandle)
 fHandle.close()
@@ -336,12 +349,10 @@ for ticket in lookupDb["trackers"]["feature"]["artifacts"]:
         for match in urlRe.finditer(text):
             textProc += cgi.escape(text[lastIdx:match.start()])
             url = cgi.escape(match.group(0))
-            if "group_id=5358" in url:
-                print comment["comment"]
             if url.endswith(".") or url.endswith(","):
-                textProc += '<a href="' + url[:-1] + '">' + url[:-1] + '</a>' + url[-1:]
+                textProc += '<a href="' + getMappedUrl(url[:-1]) + '">' + url[:-1] + '</a>' + url[-1:]
             else:
-                textProc += '<a href="' + url+ '">' + url + '</a>'
+                textProc += '<a href="' + getMappedUrl(url) + '">' + url + '</a>'
             lastIdx = match.end()
         textProc += cgi.escape(text[lastIdx:])
         if len(text) > 2000:

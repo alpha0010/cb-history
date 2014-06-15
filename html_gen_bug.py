@@ -153,6 +153,19 @@ bugEntryTemplate = r"""<tr><td>$$NUMBER$$</td><td><a href="bugs/$$SHORT_NAME$$.h
 
 urlRe = re.compile(ur'(((ht|f)tp(s?)\:\/\/)|(www\.))(([a-zA-Z0-9\-\._]+(\.[a-zA-Z0-9\-\._]+)+)|localhost)(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?([\d\w\.\/\%\+\-\=\&amp;\?\:\\\&quot;\'\,\|\~\;]*)')
 
+urlRemap = []
+for line in open("rewriteLinks.txt"):
+    urlRemap.append(line.split(" "))
+def getMappedUrl(url):
+    for pattern in urlRemap:
+        if pattern[0] in url:
+            if pattern[0].startswith("patch"):
+                return "../patches/" + pattern[1]
+            elif pattern[0].startswith("feature"):
+                return "../features/" + pattern[1]
+            return pattern[1]
+    return url
+
 categoryDict = { "100": "&nbsp;",
                  "1381": "Application::Crash",
                  "1383": "Application::Editor",
@@ -228,7 +241,7 @@ for ticket in docTree.getroot():
                 para = ""
                 for match in urlRe.finditer(prop.text):
                     para += cgi.escape(prop.text[lastIdx:match.start()])
-                    para += '<a href="' + cgi.escape(match.group(0)) + '">' + cgi.escape(match.group(0)) + '</a>'
+                    para += '<a href="' + cgi.escape(getMappedUrl(match.group(0))) + '">' + cgi.escape(match.group(0)) + '</a>'
                     lastIdx = match.end()
                 if ticketOut["$$NUMBER$$"] == "18988": # HACK
                     para += prop.text[lastIdx:]
@@ -245,7 +258,7 @@ for ticket in docTree.getroot():
                     lineTxt = ""
                     for match in urlRe.finditer(para):
                         lineTxt += cgi.escape(para[lastIdx:match.start()])
-                        lineTxt += '<a href="' + cgi.escape(match.group(0)) + '">' + cgi.escape(match.group(0)) + '</a>'
+                        lineTxt += '<a href="' + cgi.escape(getMappedUrl(match.group(0))) + '">' + cgi.escape(match.group(0)) + '</a>'
                         lastIdx = match.end()
                     lineTxt += cgi.escape(para[lastIdx:])
                     ticketOut["$$DETAILS$$"] += "<p>" + lineTxt.strip() + "</p>"
@@ -271,7 +284,7 @@ for ticket in docTree.getroot():
                 para = ""
                 for match in urlRe.finditer(prop[1].text):
                     para += cgi.escape(prop[1].text[lastIdx:match.start()])
-                    para += '<a href="' + cgi.escape(match.group(0)) + '">' + cgi.escape(match.group(0)) + '</a>'
+                    para += '<a href="' + cgi.escape(getMappedUrl(match.group(0))) + '">' + cgi.escape(match.group(0)) + '</a>'
                     lastIdx = match.end()
                 para += cgi.escape(prop[1].text[lastIdx:])
                 post["$$COMMENTS$$"] = '<pre class="pre-scrollable">' + para + '</pre>'
@@ -284,7 +297,7 @@ for ticket in docTree.getroot():
                         lineTxt = ""
                         for match in urlRe.finditer(para):
                             lineTxt += cgi.escape(para[lastIdx:match.start()])
-                            lineTxt += '<a href="' + cgi.escape(match.group(0)) + '">' + cgi.escape(match.group(0)) + '</a>'
+                            lineTxt += '<a href="' + cgi.escape(getMappedUrl(match.group(0))) + '">' + cgi.escape(match.group(0)) + '</a>'
                             lastIdx = match.end()
                         lineTxt += cgi.escape(para[lastIdx:])
                         post["$$COMMENTS$$"] += "<p>" + lineTxt.strip() + "</p>"

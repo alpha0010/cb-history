@@ -155,6 +155,19 @@ patchEntryTemplate = r"""<tr><td>$$NUMBER$$</td><td><a href="patches/$$SHORT_NAM
 
 urlRe = re.compile(ur'(((ht|f)tp(s?)\:\/\/)|(www\.))(([a-zA-Z0-9\-\._]+(\.[a-zA-Z0-9\-\._]+)+)|localhost)(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?([\d\w\.\/\%\+\-\=\&amp;\?\:\\\&quot;\'\,\|\~\;]*)')
 
+urlRemap = []
+for line in open("rewriteLinks.txt"):
+    urlRemap.append(line.split(" "))
+def getMappedUrl(url):
+    for pattern in urlRemap:
+        if pattern[0] in url:
+            if pattern[0].startswith("bug"):
+                return "../bugs/" + pattern[1]
+            elif pattern[0].startswith("feature"):
+                return "../features/" + pattern[1]
+            return pattern[1]
+    return url
+
 fHandle = open("old_dump/berlios.json", "r")
 lookupDb = json.load(fHandle)
 fHandle.close()
@@ -166,7 +179,7 @@ statusDb = { 3523: {"status": "Accepted", "category": "Application::Bugfix"},
              3553: {"status": "Open", "category": "Lexer"},
              3554: {"status": "Open", "category": "Application::FeatureAdd"},
              3555: {"status": "Open", "category": "Application::FeatureAdd"},
-             3556: {"status": "Open", "category": "Application::Refinement"},
+             3556: {"status": "Accepted", "category": "Application::Refinement"},
              3557: {"status": "Open", "category": "Plugin::Refinement"},
              3558: {"status": "Open", "category": "Plugin::Refinement"},
              3559: {"status": "Open", "category": "Plugin::Refinement"},
@@ -248,7 +261,7 @@ for ticket in docTree.getroot():
                     para = cgi.escape(para.strip())
                     urlMatch = re.search(urlRe, para)
                     if urlMatch:
-                        para = para.replace(urlMatch.group(0), '<a href="' + urlMatch.group(0) + '">' + urlMatch.group(0) + '</a>')
+                        para = para.replace(urlMatch.group(0), '<a href="' + getMappedUrl(urlMatch.group(0)) + '">' + urlMatch.group(0) + '</a>')
                     post["$$COMMENTS$$"] += "<p>" + para + "</p>"
             ticketOut["HISTORY"].append(post)
             lastMod = max(lastMod, int(prop[3].text))
@@ -346,13 +359,3 @@ if len(patchList) > 0:
     f.write(patchList)
     f.close()
 
-"""
-urlPatchIdRe = re.compile('patch_id=([0-9]+)')
-for line in open("rewriteLinks.txt"):
-    idMatch = re.search(urlPatchIdRe, line)
-    if idMatch:
-        for ticket in ticketsOut:
-            if ticket["$$NUMBER$$"] == idMatch.group(1):
-                print line.strip() + " " + ticket["$$SHORT_NAME$$"] + ".html"
-                break
-"""
