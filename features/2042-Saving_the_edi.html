@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Feature 2042 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li class="active"><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Feature #2042 <small>2006-03-25 20:40:00</small></h3>
+          <h4>florianx</h4>
+          <p class="lead">Saving the editors font size / zoom</p>
+          <p>It's very annoying to set set the font size/zoom of the editor each time I open a file. It would be great, If the zoom is forced to be the same in all opened files and if this size would be saved when closing cb and restored the next time.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Interface</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2006-04-22 15:52:00</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">dermeister 2006-03-29 10:59:00</div>
+        <div class="panel-body">
+          <p>This already works in the current svn versions. Maybe you are still using  RC2?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">thomasdenk 2006-04-22 15:52:00</div>
+        <div class="panel-body">
+          <p>The zoom was not being saved (insofar, Florian was right). Actually, you could go as far as saying this was a bug, since you would normally expect that to happen.</p>
+          <p>Revision 2369 saves and restores zoom. It does not, however, notify already open editors.</p>
+          <p>This is because of wxScintilla's design, which uses events in a quite unreasonable way (IMO). If you try to *set* the zoom in another editor when receiving an event, you overflow the event queue in an infinite loop because wxScintilla answers that by sending you another event...</p>
+          <p>As a workaround (to make it work at all), editors poll the currently valid zoom when being created from EditorManager and update that value when the user zooms. Unluckily, we don't have an "editor pane activated" notification (or do we?), so we can't easily update the other open editors. One solution that would work would be to poll from inside  OnUpdateUI, but that would be very inefficient, as this function is called *many* times.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

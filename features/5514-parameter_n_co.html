@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Feature 5514 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li class="active"><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Feature #5514 <small>2012-04-12 15:05:00</small></h3>
+          <h4>asugix</h4>
+          <p class="lead">parameter n completion shown</p>
+          <p>Hello C::B developer,</p>
+          <p>These is feature request which i think important :</p>
+          <p>1. Can you make function parameter list keep shown when code completion list is shown? or at least params list is shown again after we deal with code completion list popped off. This should shown until the cursor moved outside parenthesis. Also this can be hidden temporary when user wants to look what behind the popup (e.g. by pressing CTRL). If this is not possible, can you make some small window shown the params list along with the docs? and updated every cursor moved to inside parenthesis of function.</p>
+          <p>2. Can you shows the docs of functions, params, and selected code completion item. If using small docs window, this can be put there. Using doxygen docs if possible, but at least shows the comment above the function ( define, constant, struct, enum, or variable). Usually this comment is the docs of the symbol. At least the comments on the header file.</p>
+          <p>3. Put menu to shows a window containing list of keyboard shortcut.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Editing</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-04-14 00:47:00</div>
+        <div class="panel-body">
+          <p>I'm not fully understand the first request. About the second, there are same request about this, but I think it was not quite simple to implement. The third one, can you see the keyboard shortcuts plugins? This show all the menu items and it's shortcut keys.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">asugix 2012-04-16 04:46:00</div>
+        <div class="panel-body">
+          <pre class="pre-scrollable">1. The example for this is visual C# studio and AVR studio 6
+Example code :
+
+long MyFunction(int param1, char param2); // declaration
+long MyFunction(int param1, short param2, long param3);
+
+long numbs = MyFunction( adder, addee);
+
+When the cursor is positioned inside parentheses (from
+'adder' until 'addee'), the popup shows the declaration plus
+up/down arrow to select the overloads along with its
+parameter. If the cursor placed before comma ',' it will
+shows (example):
+
+AV [1 of 2] MyFunction(param1, param2)
+(function summary)
+int param1 (param1 summary)
+return long (return summary)
+
+If the cursor placed after comma ',' it will shows (example):
+
+AV [1 of 2] MyFunction(param1, param2)
+(function summary)
+char param2 (param2 summary)
+return long (return summary)
+
+If user add another comma and placed the cursor after second
+comma :
+
+AV [2 of 2] MyFunction(param1, param2, param3)
+(function summary)
+long param3 (param3 summary)
+return long (return summary)
+
+AV : the up and down arrows. Scintilla have this feature.
+Current C:B doesn't use this feat, so all overloads shown at
+once and cropped if the screen not tall enough.
+
+The code completion also shows possible variables to put as
+adder / addee just like current C:B build. But the params
+pop-up still shown along with the CC. When user press CTRL,
+both CC and params pop-up becomes transparent. This useful
+if both pop-up becomes obstruction. On AVR studio (C IDE
+based on VS), it not transparent, but hidden temporary.
+
+2. Function, params, and return summaries is possible on C#
+since it has good documentation system (using XML). The AVR
+studio uses the comment above function declaration on header
+file to shown. The visual C++ uses header view window below
+the editor instead. Since C:B can extract symbol to put in
+symbol browser, I think it can extract the comment above the
+symbol. Maybe you can use SQLite to store project symbols
+along with its comment. If you do use SQLIte, maybe you can
+scan functions,constants, and variables from inherited class
+and put it on symbol browser (C:B already implement this but
+only used it for code completion)
+
+Using doxygen documentation is not easy to implement I
+think. It needs separate plugin to scan doxygen
+documentation and match it with the source code. Or maybe
+just scan for \brief, \params, \return
+
+3. Yes, now I see inside editor menu. Thanks.
+
+Thanks.
+</pre>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-04-20 08:54:00</div>
+        <div class="panel-body">
+          <p>Dear asugix, first, thanks for writing so detailed information. I just carefully read it, but I'm sorry it is still not so clear. 1a, you first example shows that the cursor in parentheses will determine the showed parameter in the tip window. 1b, Scintilla have this feature, but I have not notices this feature, I will try to find it. Or can you give me a direction? 1c, Quote"  The code completion also shows possible variables to put as adder / addee just like current C:B build. But the params pop-up still shown along with the CC. When user press CTRL, both CC and params pop-up becomes transparent. This useful if both pop-up becomes obstruction. On AVR studio (C IDE based on VS), it not transparent, but hidden temporary." I do not clear understand this, can you show some images or steps?</p>
+          <p>2a, I agree, the document(c++ comments) can be extracted we have a TokensTree to store symbols info(our own tree structure like sqlite), but comments can put before or after the symbol, how do you know which belongs to which?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">asugix 2012-04-21 01:12:00</div>
+        <div class="panel-body">
+          <pre class="pre-scrollable">This is the screenshoot : 
+<a href="https://www.box.com/s/063ebec56458dd390a2e">https://www.box.com/s/063ebec56458dd390a2e</a>
+(next time, please mention where to upload file)
+
+1a and 1c. About cursor position, please look at the VCS
+example, this is Visual C#. Look at the cursor position and
+look at the note "this becomes transparent when I press CTRL". 
+
+1b. Look at the
+<a href="http://www.scintilla.org/ScintillaDoc.html#CallTips">http://www.scintilla.org/ScintillaDoc.html#CallTips</a>.
+Please forgive me because I misunderstood this Calltips
+explanation. It is some years ago I experimenting with
+scintilla for my C# project.
+
+So this is my idea:
+1. have a variable to hold focus status (use enum), default
+"editor"
+2. When showing calltip or user click the calltip
+(SCN_CALLTIPCLICK), set the status to "calltip". At this
+status, intercept the UP and DOWN arrow. Show calltip with
+text something like "\001 1 of 3 \002". And show the first
+function overload. When user press DOWN, change the text
+"\001 2 of 3 \002". And show the second function overload.
+something like that.
+3. When showing code completion or select its item, set the
+status to "CC". Remove UP DOWN interception from calltip and
+change to CC.
+
+I don't know if calltip is always canceled upon CC showing
+up, and vice versa.
+
+2a. To make it easy, just take the comments before the symbol.
+
+Visual C#, Visual C++, Visual Basic, CSS always put
+documentation comments (sometimes a paragraph) before "the
+declaration/definition" of the symbol, extract this one.
+Otherwise, it just explanation of that line to remind the
+programmer of the algorithm. Example :
+
+-------------------------------------------------------------------------------------
+---
+//set current context (ignore because this not
+declaration/definition)
+SetCurrent(m_context);    
+
+/// change size (ignore because one paragraph away from
+clientSize)
+
+/*!
+holds size
+(extract, this should be the documentation) */ 
+int clientSize; /// declare size (ignore, this usually not
+documentation)
+
+/// ignore because this is not declaration
+clientSize = 30;   
+
+///extract because this contain declaration
+int parentSize = 50;
+
+///extract because this is declaration / definition
+bool resize (int x, int y)
+{
+    clientX = x;
+}
+
+-------------------------------------------------------------------------------------
+----
+
+In doxygen-style comments, the key is '&lt;' character after
+doxygen comment start tokens:
+1. documentation after symbol always started with: "/*!&lt;",
+"/**&lt;", or "///&lt;" example :
+
+#define PORTC   0x88 ///&lt; portc for atmega8 processor
+
+2. documentation before symbol doesn't started by "&lt;" example:
+
+/*!
+\brief resizing
+\ param x size of X
+\param y size of Y
+\return success or not
+*/
+bool resize (int x, int y)
+{
+}
+
+thankyou
+</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

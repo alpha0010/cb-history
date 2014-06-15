@@ -147,28 +147,32 @@
       <div class="panel panel-default">
         <div class="panel-heading">pecan 2006-04-04 03:32:38</div>
         <div class="panel-body">
-          <p>The following patch fixed the loop on my XP system using</p>
-          <p>SVN 2290</p>
-          <p>Index: src/src/splashscreen.cpp</p>
-          <p>===================================================================</p>
-          <p>--- src/src/splashscreen.cpp	(revision 2290)</p>
-          <p>+++ src/src/splashscreen.cpp	(working copy)</p>
-          <p>@@ -22,12 +22,16 @@</p>
-          <p>void cbSplashScreen::OnPaint(wxPaintEvent &amp;)</p>
-          <p>{</p>
-          <p>+    // an obscure statement in the wxWidgets book says to</p>
-          <p>+    // allocate the DC even if you don't paint to avoid</p>
-          <p>+    // a paint loop.    //pecan 2006/04/3</p>
-          <p>+  wxPaintDC paint_dc(this); //pecan 2006/04/3</p>
-          <p>if (m_painted)</p>
-          <p>{</p>
-          <p>return;</p>
-          <p>}</p>
-          <p>-  wxPaintDC paint_dc(this);</p>
-          <p>+  //-wxPaintDC paint_dc(this);</p>
-          <p>DoPaint(paint_dc);</p>
-          <p>m_painted = true; // paint once</p>
-          <p>}</p>
+          <pre class="pre-scrollable">The following patch fixed the loop on my XP system using
+SVN 2290
+
+Index: src/src/splashscreen.cpp
+===================================================================
+--- src/src/splashscreen.cpp	(revision 2290)
++++ src/src/splashscreen.cpp	(working copy)
+@@ -22,12 +22,16 @@
+ 
+ void cbSplashScreen::OnPaint(wxPaintEvent &amp;)
+ {
++    // an obscure statement in the wxWidgets book says to
++    // allocate the DC even if you don't paint to avoid
++    // a paint loop.    //pecan 2006/04/3
++  wxPaintDC paint_dc(this); //pecan 2006/04/3
+   if (m_painted)
+   {
+     return;
+   }
+ 
+-  wxPaintDC paint_dc(this);
++  //-wxPaintDC paint_dc(this);
+   DoPaint(paint_dc);
+   m_painted = true; // paint once
+ }
+</pre>
         </div>
       </div>
       <div class="panel panel-default">

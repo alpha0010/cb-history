@@ -81,21 +81,23 @@
       <div class="panel panel-default">
         <div class="panel-heading">tiwag 2006-05-03 09:41:12</div>
         <div class="panel-body">
-          <p>Index: src/plugins/debuggergdb/examinememorydlg.cpp</p>
-          <p>===================================================================</p>
-          <p>--- src/plugins/debuggergdb/examinememorydlg.cpp	(revision 2398)</p>
-          <p>+++ src/plugins/debuggergdb/examinememorydlg.cpp	(working copy)</p>
-          <p>@@ -90,6 +90,8 @@</p>
-          <p>m_pText-&gt;AppendText(_T('\n')); // prepend a newline</p>
-          <p>long a;</p>
-          <p>addr.ToLong(&amp;a, 16);</p>
-          <p>+        a -= 8; // actually addr holds the start-address of the 2nd 8-bytes sequence,</p>
-          <p>+                // but we want the start-address of the previous 8-bytes sequence displayed</p>
-          <p>m_pText-&gt;AppendText(wxString::Format(_T("0x%x: %s"), a, m_LineText));</p>
-          <p>for (int i = 0; i &lt; 67; ++i)</p>
-          <p>m_LineText[i] = _T(' ');</p>
-          <p>the above patch works as long as the minimal displayed bytes is not less than 16 and gdb output format of x/16xb doesn't change ( 2x 8-bytes sequence with prepended address of start-byte)</p>
-          <p>committed to svn rev 2403</p>
+          <pre class="pre-scrollable">Index: src/plugins/debuggergdb/examinememorydlg.cpp
+===================================================================
+--- src/plugins/debuggergdb/examinememorydlg.cpp	(revision 2398)
++++ src/plugins/debuggergdb/examinememorydlg.cpp	(working copy)
+@@ -90,6 +90,8 @@
+             m_pText-&gt;AppendText(_T('\n')); // prepend a newline
+         long a;
+         addr.ToLong(&amp;a, 16);
++        a -= 8; // actually addr holds the start-address of the 2nd 8-bytes sequence,
++                // but we want the start-address of the previous 8-bytes sequence displayed
+         m_pText-&gt;AppendText(wxString::Format(_T("0x%x: %s"), a, m_LineText));
+         for (int i = 0; i &lt; 67; ++i)
+             m_LineText[i] = _T(' ');
+
+the above patch works as long as the minimal displayed bytes is not less than 16 and gdb output format of x/16xb doesn't change ( 2x 8-bytes sequence with prepended address of start-byte)
+
+committed to svn rev 2403</pre>
         </div>
       </div>
       <div class="panel panel-default">

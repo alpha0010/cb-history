@@ -66,21 +66,27 @@
       <div class="panel panel-default">
         <div class="panel-heading">dermeister 2006-09-13 22:17:30</div>
         <div class="panel-body">
-          <p>This is a problem of wxFlatNotebook, thus I don't think the C::B developers will solve this as long as it is not solved in the source of wxFlatNotebook.</p>
-          <p>In fact, wxFlatNotebook already uses the system defined color for the buttons. But it only uses it for active tabs. Inactive tabs simply get "GREY" as color.</p>
-          <p>Anyway, here is a small patch that might solve your problem if you compile Code::Blocks yourself:</p>
-          <p>Index: src/sdk/wxFlatNotebook/wxFlatNotebook.cpp</p>
-          <p>===================================================================</p>
-          <p>--- src/sdk/wxFlatNotebook/wxFlatNotebook.cpp   (revision 2970)</p>
-          <p>+++ src/sdk/wxFlatNotebook/wxFlatNotebook.cpp   (working copy)</p>
-          <p>@@ -1057,7 +1057,7 @@</p>
-          <p>wxWindow::Create(parent, id, pos, size, style | wxNO_BORDER | wxNO_FULL_REPAINT_ON_RESIZE);</p>
-          <p>-       m_nonActiveTextColor = wxT("GREY");</p>
-          <p>+       m_nonActiveTextColor = wxColor(wxSystemSettings::GetColour(wxSYS_COLOUR_INACTIVECAPTIONTEXT));</p>
-          <p>m_pDropTarget = new wxFNBDropTarget&lt;wxPageContainerBase&gt;(this, &amp;wxPageContainerBase::OnDropTarget);</p>
-          <p>SetDropTarget(m_pDropTarget);</p>
-          <p>}</p>
-          <p>I'm not 100% sure if wxSYS_COLOUR_INACTIVECAPTIONTEXT is the right color - just take a look at <a href="http://www.wxwindows.org/manuals/2.6.3/wx_wxsystemsettings.html#wxsystemsettingsgetcolour">http://www.wxwindows.org/manuals/2.6.3/wx_wxsystemsettings.html#wxsystemsettingsgetcolour</a> and pick another one if it is not the correct color.</p>
+          <pre class="pre-scrollable">This is a problem of wxFlatNotebook, thus I don't think the C::B developers will solve this as long as it is not solved in the source of wxFlatNotebook.
+
+In fact, wxFlatNotebook already uses the system defined color for the buttons. But it only uses it for active tabs. Inactive tabs simply get "GREY" as color.
+
+Anyway, here is a small patch that might solve your problem if you compile Code::Blocks yourself:
+
+Index: src/sdk/wxFlatNotebook/wxFlatNotebook.cpp
+===================================================================
+--- src/sdk/wxFlatNotebook/wxFlatNotebook.cpp   (revision 2970)
++++ src/sdk/wxFlatNotebook/wxFlatNotebook.cpp   (working copy)
+@@ -1057,7 +1057,7 @@           
+                                
+        wxWindow::Create(parent, id, pos, size, style | wxNO_BORDER | wxNO_FULL_REPAINT_ON_RESIZE);
+                                
+-       m_nonActiveTextColor = wxT("GREY");
++       m_nonActiveTextColor = wxColor(wxSystemSettings::GetColour(wxSYS_COLOUR_INACTIVECAPTIONTEXT));
+        m_pDropTarget = new wxFNBDropTarget&lt;wxPageContainerBase&gt;(this, &amp;wxPageContainerBase::OnDropTarget);
+        SetDropTarget(m_pDropTarget);
+ }
+
+I'm not 100% sure if wxSYS_COLOUR_INACTIVECAPTIONTEXT is the right color - just take a look at <a href="http://www.wxwindows.org/manuals/2.6.3/wx_wxsystemsettings.html#wxsystemsettingsgetcolour">http://www.wxwindows.org/manuals/2.6.3/wx_wxsystemsettings.html#wxsystemsettingsgetcolour</a> and pick another one if it is not the correct color.</pre>
         </div>
       </div>
       <div class="panel panel-default">

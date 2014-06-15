@@ -46,19 +46,21 @@
           <h3>Bug #13679 <small>2008-04-24 10:58:19</small></h3>
           <h4>evgeny</h4>
           <p class="lead">Crash in CodeCompletion after autosave</p>
-          <p>I have a crash when autosave and code completion are enabled. It happens coz of NULL project pointer passed to NativeParser::ReparseProject. The following patch fixes this for me:</p>
-          <p>Index: src/plugins/codecompletion/codecompletion.cpp</p>
-          <p>===================================================================</p>
-          <p>--- src/plugins/codecompletion/codecompletion.cpp       (revision 5014)</p>
-          <p>+++ src/plugins/codecompletion/codecompletion.cpp       (working copy)</p>
-          <p>@@ -1102,7 +1102,7 @@</p>
-          <p>//    Manager::Get()-&gt;GetLogManager()-&gt;DebugLog(_T("CodeCompletion::OnProjectSaved"));</p>
-          <p>// reparse project (compiler search dirs might have changed)</p>
-          <p>-    if (IsAttached() &amp;&amp; m_InitDone)</p>
-          <p>+    if (IsAttached() &amp;&amp; m_InitDone &amp;&amp; event.GetProject())</p>
-          <p>{</p>
-          <p>m_NativeParsers.ReparseProject(event.GetProject());</p>
-          <p>}</p>
+          <pre class="pre-scrollable">I have a crash when autosave and code completion are enabled. It happens coz of NULL project pointer passed to NativeParser::ReparseProject. The following patch fixes this for me:
+Index: src/plugins/codecompletion/codecompletion.cpp
+===================================================================
+--- src/plugins/codecompletion/codecompletion.cpp       (revision 5014)
++++ src/plugins/codecompletion/codecompletion.cpp       (working copy)
+@@ -1102,7 +1102,7 @@
+ //    Manager::Get()-&gt;GetLogManager()-&gt;DebugLog(_T("CodeCompletion::OnProjectSaved"));
+
+     // reparse project (compiler search dirs might have changed)
+-    if (IsAttached() &amp;&amp; m_InitDone)
++    if (IsAttached() &amp;&amp; m_InitDone &amp;&amp; event.GetProject())
+     {
+        m_NativeParsers.ReparseProject(event.GetProject());
+     }
+</pre>
         </div>
         <div class="col-sm-4">
           <dl class="dl-horizontal">

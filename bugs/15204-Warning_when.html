@@ -46,24 +46,29 @@
           <h3>Bug #15204 <small>2009-02-05 10:30:27</small></h3>
           <h4>yesno</h4>
           <p class="lead">Warning when compiling DigitView.cpp</p>
-          <p>When compiling DigitView.cpp, the compiler prints this message:</p>
-          <p>C:\SRC-Extern\codeblocks\trunk\src\plugins\contrib\HexEditor\DigitView.cpp: In member function `virtual void DigitView::OnProcessChar(wxChar)':</p>
-          <p>C:\SRC-Extern\codeblocks\trunk\src\plugins\contrib\HexEditor\DigitView.cpp:206: warning: converting of negative value `-0x000000001' to `unsigned int'</p>
-          <p>I have made changes (3 lines), then the warning disappeared</p>
-          <p>Index: DigitView.cpp</p>
-          <p>===================================================================</p>
-          <p>--- DigitView.cpp       (Revision 5440)</p>
-          <p>+++ DigitView.cpp       (Arbeitskopie)</p>
-          <p>@@ -201,9 +201,9 @@</p>
-          <p>if ( GetCurrentOffset() &gt;= GetContent()-&gt;GetSize() ) return;</p>
-          <p>// Get the value of pressed character</p>
-          <p>-    int value = ( ch&gt;='0' &amp;&amp; ch&lt;='9' ) ? ( ch - '0' ) :</p>
-          <p>-                ( ch&gt;='A' &amp;&amp; ch&lt;='Z' ) ? ( ch - 'A' + 10 ) :</p>
-          <p>-                ( ch&gt;='a' &amp;&amp; ch&lt;='z' ) ? ( ch - 'a' + 10 ) : -1;</p>
-          <p>+    int value = ( ch&gt;='0' &amp;&amp; ch&lt;='9' ) ? static_cast&lt;int&gt;(( ch - '0' )) :</p>
-          <p>+                ( ch&gt;='A' &amp;&amp; ch&lt;='Z' ) ? static_cast&lt;int&gt;(( ch - 'A' + 10 )) :</p>
-          <p>+                ( ch&gt;='a' &amp;&amp; ch&lt;='z' ) ? static_cast&lt;int&gt;(( ch - 'a' + 10 )) : -1;</p>
-          <p>if ( value&lt;0 || value&gt;GetMaxDigitValue() ) return;</p>
+          <pre class="pre-scrollable">When compiling DigitView.cpp, the compiler prints this message:
+C:\SRC-Extern\codeblocks\trunk\src\plugins\contrib\HexEditor\DigitView.cpp: In member function `virtual void DigitView::OnProcessChar(wxChar)':
+C:\SRC-Extern\codeblocks\trunk\src\plugins\contrib\HexEditor\DigitView.cpp:206: warning: converting of negative value `-0x000000001' to `unsigned int'
+
+I have made changes (3 lines), then the warning disappeared
+
+Index: DigitView.cpp
+===================================================================
+--- DigitView.cpp       (Revision 5440)
++++ DigitView.cpp       (Arbeitskopie)
+@@ -201,9 +201,9 @@
+     if ( GetCurrentOffset() &gt;= GetContent()-&gt;GetSize() ) return;
+
+     // Get the value of pressed character
+-    int value = ( ch&gt;='0' &amp;&amp; ch&lt;='9' ) ? ( ch - '0' ) :
+-                ( ch&gt;='A' &amp;&amp; ch&lt;='Z' ) ? ( ch - 'A' + 10 ) :
+-                ( ch&gt;='a' &amp;&amp; ch&lt;='z' ) ? ( ch - 'a' + 10 ) : -1;
++    int value = ( ch&gt;='0' &amp;&amp; ch&lt;='9' ) ? static_cast&lt;int&gt;(( ch - '0' )) :
++                ( ch&gt;='A' &amp;&amp; ch&lt;='Z' ) ? static_cast&lt;int&gt;(( ch - 'A' + 10 )) :
++                ( ch&gt;='a' &amp;&amp; ch&lt;='z' ) ? static_cast&lt;int&gt;(( ch - 'a' + 10 )) : -1;
+
+     if ( value&lt;0 || value&gt;GetMaxDigitValue() ) return;
+</pre>
         </div>
         <div class="col-sm-4">
           <dl class="dl-horizontal">
