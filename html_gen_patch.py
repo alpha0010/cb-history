@@ -130,6 +130,21 @@ patchListTemplate = r"""<!DOCTYPE html>
     </div>
 
     <div class="container" role="main">
+      <ul class="nav nav-pills">
+        <li class="dropdown">
+          <a data-toggle="dropdown" href="#">Status: $$FILTER_STATUS$$ <b class="caret"></b></a>
+          <ul class="dropdown-menu" role="menu">
+            <li><a tabindex="-1" href="$$FILTER_STATUS_ALT_URL$$">$$FILTER_STATUS_ALT$$</a></li>
+          </ul>
+        </li>
+        <li class="dropdown">
+          <a data-toggle="dropdown" href="#">Assigned To: $$FILTER_ASSIGNED$$ <b class="caret"></b></a>
+          <ul class="dropdown-menu" role="menu">
+            $$ASSIGNED_OPTIONS$$
+          </ul>
+        </li>
+      </ul>
+
       <table class="table table-hover table-condensed">
         <thead>
           <tr><th>Patch ID</th><th>Summary</th><th>Category</th><th>Status</th><th>Date</th><th>Assigned To</th><th>Submitted By</th></tr>
@@ -152,6 +167,8 @@ patchListTemplate = r"""<!DOCTYPE html>
 """
 
 patchEntryTemplate = r"""<tr><td>$$NUMBER$$</td><td><a href="patches/$$SHORT_NAME$$.html">$$SUMMARY$$</a></td><td>$$CATEGORY$$</td><td>$$STATUS$$</td><td>$$OPEN_DATE$$</td><td>$$ASSIGNED$$</td><td>$$AUTHOR$$</td></tr>"""
+
+assignedFilterTemplate = r"""<li><a tabindex="-1" href="$$URL$$">$$NAME$$</a></li>"""
 
 urlRe = re.compile(ur'(((ht|f)tp(s?)\:\/\/)|(www\.))(([a-zA-Z0-9\-\._]+(\.[a-zA-Z0-9\-\._]+)+)|localhost)(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?([\d\w\.\/\%\+\-\=\&amp;\?\:\\\&quot;\'\,\|\~\;]*)')
 
@@ -197,12 +214,18 @@ ticketsOut = []
 docTree = ET.parse('bs_patches_0.1.xml')
 
 userIdDict = {}
+devList = {}
 for ticket in docTree.getroot():
     for prop in ticket:
         if prop.tag == "submitted_by":
             userIdDict[ prop.attrib["id"] ] = prop.attrib["name"]
         elif prop.tag == "assigned_to" and prop.attrib["name"] != "none":
+            if prop.attrib["name"] in devList:
+                devList[prop.attrib["name"]] += 1
+            else:
+                devList[prop.attrib["name"]] = 1
             userIdDict[ prop.attrib["id"] ] = prop.attrib["name"]
+openCnt = 0
 
 debugLimit = 60 # limit ticket conversion for debugging
 
@@ -247,6 +270,8 @@ for ticket in docTree.getroot():
                 if statusDb[int(ticket.attrib["id"])]["status"] != "Open": # statusDb *might* be out of date
                     ticketOut["$$STATUS$$"] = statusDb[int(ticket.attrib["id"])]["status"]
                 ticketOut["$$CATEGORY$$"] = statusDb[int(ticket.attrib["id"])]["category"]
+            if ticketOut["$$STATUS$$"] == "Open":
+                openCnt += 1
 
         elif prop.tag == "history" and prop[0].text == "details":
             if "HISTORY" not in ticketOut:
@@ -301,34 +326,66 @@ for ticket in ticketsOut:
     f.close()
 
 
-ticketsOut = sorted(ticketsOut, key=lambda tk: -int(tk["$$NUMBER$$"]))
+ticketsOut.sort(key=lambda tk: -int(tk["$$NUMBER$$"]))
 patchList = ""
 
 numPages = int(math.ceil(len(ticketsOut) / 50.0))
 numPerPage = int(math.ceil(len(ticketsOut) / (numPages + 0.0)))
 numOutput = 0
 
-def getPagination():
+def getPagination(fileBrand):
     pagination = "<li"
     if numOutput / numPerPage == 1:
         pagination += ' class="disabled"><span>&laquo;</span></li>'
     elif numOutput / numPerPage == 2:
-        pagination += '><a href="patches.html">&laquo;</a></li>'
+        pagination += '><a href="patches' + fileBrand + '.html">&laquo;</a></li>'
     else:
-        pagination += '><a href="patches' + str(numOutput / numPerPage - 1) + '.html">&laquo;</a></li>'
+        pagination += '><a href="patches' + fileBrand + str(numOutput / numPerPage - 1) + '.html">&laquo;</a></li>'
     for i in range(1, numPages + 1):
         if i == numOutput / numPerPage:
             pagination += '<li class="active"><span>' + str(i) + '</span></li>'
         elif i == 1:
-            pagination += '<li><a href="patches.html">1</a></li>'
+            pagination += '<li><a href="patches' + fileBrand + '.html">1</a></li>'
         else:
-            pagination += '<li><a href="patches' + str(i) + '.html">' + str(i) + '</a></li>'
+            pagination += '<li><a href="patches' + fileBrand + str(i) + '.html">' + str(i) + '</a></li>'
     if numOutput / numPerPage == numPages:
         pagination += '<li class="disabled"><span>&raquo;</span></li>'
     else:
-        pagination += '<li><a href="patches' + str(numOutput / numPerPage + 1) + '.html">&raquo;</a></li>'
+        pagination += '<li><a href="patches' + fileBrand + str(numOutput / numPerPage + 1) + '.html">&raquo;</a></li>'
     return pagination
 
+def getAssignedOpts(curDev):
+    opts = ""
+    if curDev != "Any":
+        opts += r"""<li><a tabindex="-1" href="patches.html">Any</a></li>
+            <li class=divider></li>"""
+    for devNm in sorted(devList):
+        if devNm == curDev:
+            continue
+        if len(opts) > 0:
+            opts += "\n            "
+        row = assignedFilterTemplate.replace("$$NAME$$", devNm)
+        opts += row.replace("$$URL$$", "patches_" + devNm + ".html")
+    return opts
+
+def writePatchList(status, statusAlt, statusAltUrl, curDev, fileBrand):
+    global patchList
+    patchList = patchListTemplate.replace("$$PATCHES$$", patchList)
+    patchList = patchList.replace("$$PAGINATION$$", getPagination(fileBrand))
+    patchList = patchList.replace("$$FILTER_STATUS$$", status)
+    patchList = patchList.replace("$$FILTER_STATUS_ALT$$", statusAlt)
+    patchList = patchList.replace("$$FILTER_STATUS_ALT_URL$$", statusAltUrl)
+    patchList = patchList.replace("$$FILTER_ASSIGNED$$", curDev)
+    patchList = patchList.replace("$$ASSIGNED_OPTIONS$$", getAssignedOpts(curDev))
+    flExt = ".html"
+    if numOutput / numPerPage > 1:
+        flExt = str(numOutput / numPerPage) + flExt
+    f = open("static_web/patches" + fileBrand + flExt, "w+")
+    f.write(patchList)
+    f.close()
+    patchList = ""
+
+# the full listing
 for ticket in ticketsOut:
     ticketHTML = patchEntryTemplate
     for key in ticket:
@@ -339,23 +396,50 @@ for ticket in ticketsOut:
     patchList += ticketHTML
     numOutput += 1
     if numOutput % numPerPage == 0:
-        patchList = patchListTemplate.replace("$$PATCHES$$", patchList)
-        patchList = patchList.replace("$$PAGINATION$$", getPagination())
-        flExt = ".html"
-        if numOutput / numPerPage > 1:
-            flExt = str(numOutput / numPerPage) + flExt
-        f = open("static_web/patches" + flExt, "w+")
-        f.write(patchList)
-        f.close()
-        patchList = ""
+        writePatchList("Any", "Open", "patches_open.html", "Any", "")
 if len(patchList) > 0:
     numOutput = numPerPage * numPages
-    patchList = patchListTemplate.replace("$$PATCHES$$", patchList)
-    patchList = patchList.replace("$$PAGINATION$$", getPagination())
-    flExt = ".html"
-    if numOutput / numPerPage > 1:
-        flExt = str(numOutput / numPerPage) + flExt
-    f = open("static_web/patches" + flExt, "w+")
-    f.write(patchList)
-    f.close()
+    writePatchList("Any", "Open", "patches_open.html", "Any", "")
 
+# only open patches
+numPages = int(math.ceil(openCnt / 50.0))
+numPerPage = int(math.ceil(openCnt / (numPages + 0.0)))
+numOutput = 0
+for ticket in ticketsOut:
+    if ticket["$$STATUS$$"] != "Open":
+        continue
+    ticketHTML = patchEntryTemplate
+    for key in ticket:
+        if key.startswith("$$"):
+            ticketHTML = ticketHTML.replace(key, ticket[key])
+    if len(patchList) > 0:
+        patchList += "\n          "
+    patchList += ticketHTML
+    numOutput += 1
+    if numOutput % numPerPage == 0:
+        writePatchList("Open", "Any", "patches.html", "Any", "_open")
+if len(patchList) > 0:
+    numOutput = numPerPage * numPages
+    writePatchList("Open", "Any", "patches.html", "Any", "_open")
+
+# only patches assigned to dev XXX
+for devNm in devList:
+    numPages = int(math.ceil(devList[devNm] / 50.0))
+    numPerPage = int(math.ceil(devList[devNm] / (numPages + 0.0)))
+    numOutput = 0
+    for ticket in ticketsOut:
+        if ticket["$$ASSIGNED$$"] != devNm:
+            continue
+        ticketHTML = patchEntryTemplate
+        for key in ticket:
+            if key.startswith("$$"):
+                ticketHTML = ticketHTML.replace(key, ticket[key])
+        if len(patchList) > 0:
+            patchList += "\n          "
+        patchList += ticketHTML
+        numOutput += 1
+        if numOutput % numPerPage == 0:
+            writePatchList("Any", "Open", "patches_open.html", devNm, "_" + devNm)
+    if len(patchList) > 0:
+        numOutput = numPerPage * numPages
+        writePatchList("Any", "Open", "patches_open.html", devNm, "_" + devNm)
