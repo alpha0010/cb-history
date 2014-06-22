@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 6697 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #6697 <small>2006-03-07 12:10:30</small></h3>
+          <h4>alexpaes</h4>
+          <p class="lead">Crash when adding files to a project</p>
+          <pre class="pre-scrollable">Hello to all,
+
+I'm running codeblocks 1.0 RC2 on a P4 Linux system. I'm having this nasty crash. Basically i can't ever add files to a project. The simplest way i get this crash is:
+
+1 - start codeblocks
+2 - create a new 'empty' project for console application
+3 - save the project
+4 - select 'add files' on the project menu
+5 - voilá a nice crash
+
+the output from the codeblocks run is:
+
+(codeblocks:28923): GLib-GObject-WARNING **: invalid cast from `GtkScrolledWindow' to `GtkWindow'
+
+(codeblocks:28923): Gtk-WARNING **: Screen for GtkWindow not set; you must always set
+a screen for a GtkWindow before using the window
+addr2line: 'codeblocks': No such file -----&gt; repeats this line about 30 times
+
+(codeblocks:28923): Gtk-WARNING **: Screen for GtkWindow not set; you must always set
+a screen for a GtkWindow before using the window
+Segmentation fault (core dumped)
+
+the output and backtrace i get running 'gdb codeblocks' is:
+
+Program received signal SIGSEGV, Segmentation fault.
+0x40d8d09b in gdk_screen_get_n_monitors () from /opt/gnome2/lib/libgdk-x11-2.0.so.0
+(gdb) bt
+#0  0x40d8d09b in gdk_screen_get_n_monitors () from /opt/gnome2/lib/libgdk-x11-2.0.so.0
+#1  0x40cc1121 in gtk_window_move () from /opt/gnome2/lib/libgtk-x11-2.0.so.0
+#2  0x40cc1bc6 in gtk_window_get_position () from /opt/gnome2/lib/libgtk-x11-2.0.so.0
+#3  0x40e5edcc in g_cclosure_marshal_VOID__VOID () from /opt/gnome2/lib/libgobject-2.0.so.0
+#4  0x40e4d79d in g_cclosure_new_swap () from /opt/gnome2/lib/libgobject-2.0.so.0
+#5  0x40e4d5dd in g_closure_invoke () from /opt/gnome2/lib/libgobject-2.0.so.0
+#6  0x40e5bff2 in g_signal_has_handler_pending () from /opt/gnome2/lib/libgobject-2.0.so.0
+#7  0x40e5e88c in g_signal_emit_valist () from /opt/gnome2/lib/libgobject-2.0.so.0
+#8  0x40e5ea9a in g_signal_emit () from /opt/gnome2/lib/libgobject-2.0.so.0
+#9  0x40cb4081 in gtk_widget_show () from /opt/gnome2/lib/libgtk-x11-2.0.so.0
+#10 0x4069b568 in wxWindow::Show () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#11 0x406e1a9b in wxDialog::Show () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#12 0x406e2b2a in wxFileDialog::Show () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#13 0x406e1b77 in wxDialog::ShowModal () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#14 0x406e2abc in wxFileDialog::ShowModal () from /usr/lib/libwx_gtk2u_core-2.6.so.0
+#15 0x40112f44 in ProjectManager::OnAddFileToProject () from /usr/lib/libcodeblocks.so.0
+#16 0x408d4317 in wxAppConsole::HandleEvent () from /usr/lib/libwx_baseu-2.6.so.0
+#17 0x409610ad in wxEvtHandler::ProcessEventIfMatches () from /usr/lib/libwx_baseu-2.6.so.0
+#18 0x40961363 in wxEventHashTable::HandleEvent () from /usr/lib/libwx_baseu-2.6.so.0
+#19 0x40961e2e in wxEvtHandler::ProcessEvent () from /usr/lib/libwx_baseu-2.6.so.0
+
+
+If i get some more results i will post here. </pre>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Crash</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2006-03-15 21:47:14</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">alexpaes 2006-03-07 13:13:12</div>
+        <div class="panel-body">
+          <p>Just tested the svn revision 2154 and the exact same thing happens.</p>
+          <p>thanks in advance for any help.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">thomasdenk 2006-03-07 13:33:19</div>
+        <div class="panel-body">
+          <p>Since you're using Linux and you are building from source anyway, would you mind trying to reproduce that behaviour in current HEAD (I can't reproduce it)?</p>
+          <p>It is likely that this problem does not exist in HEAD.</p>
+          <p>svn checkout svn://svn.berlios.de/codeblocks/trunk</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">thomasdenk 2006-03-07 13:35:50</div>
+        <div class="panel-body">
+          <p>&gt;Just tested the svn revision 2154 and the exact same thing happens.</p>
+          <p>Ah, stupid me... I did not see that, sorry.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">alexpaes 2006-03-07 14:24:16</div>
+        <div class="panel-body">
+          <p>eheheh, thanks for your readily reply thomasdenk.</p>
+          <p>I belive the bug to be directly related to wxWindows and not directly to Code::Blocks. What i ended up doing to solve this was heading into the projectmanager.cpp file and on ProjectManager::AddFileToProject() i hacked the call to wxFileDialog() to become a top-level window (since it's modal that won't be a problem i think) and now it works ok. This is a hack but atleast it is working now. Thanks for the help anyay thomasdenk.</p>
+          <p>Cheers to all and congratulations on Code::Blocks, it is great!!</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ID_24639 2006-03-08 01:53:14</div>
+        <div class="panel-body">
+          <p>I don't have Linux, but I have no idea why the parent of the dialog was the tree-control????</p>
+          <p>Anyways the parent is now the MainFrame. Check and see if this patch does the job.</p>
+          <p><a href="../patches/904.html">http://developer.berlios.de/patch/index.php?func=detailpatch&amp;patch_id=904&amp;group_id=5358</a></p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">alexpaes 2006-03-14 13:14:42</div>
+        <div class="panel-body">
+          <p>Hi to all,</p>
+          <p>Sorry for taking so long to post back.</p>
+          <p>I tried the patch (thx sethjackson) but it still works the same i discovered there's some kind of issue in the wxFileDialog() calls that make codeblocks crash here and at some of my friends machines. I had to change the call i have previously said and also a a call to wxFileDialog() on cbeditor::SaveAs() (passing "this" ptr as parent) as that one would also crack codeblocks here when i try to add create files.</p>
+          <p>i can create a patch file but it seems there aren't all that many linux users or others are not having the same issue and it's something more specific to my system... beats me :/</p>
+          <p>i found out that passing a null ptr to wxFileDialog removes the crash in my machine and so far that's good enough for me.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">alexpaes 2006-03-14 13:16:54</div>
+        <div class="panel-body">
+          <p>*NOTE*</p>
+          <p>hmmm, by "it still works the same" i meant it still crashes using the patch.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ID_24639 2006-03-14 18:22:24</div>
+        <div class="panel-body">
+          <p>What wx version and gtk version do you have? You need wx 2.6.2.......</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">alexpaes 2006-03-15 15:00:54</div>
+        <div class="panel-body">
+          <p>Hi sethjackson,</p>
+          <p>After your post i decided to re-check and noticed my wx install is only 2.6.1. Although i haven't upgraded wx just yet some friends who were having the same problem have already updated wx and  according to them the mentioned hack that we were all using is not necessary with wx 2.6.2, it seems it was a bug in filedialog.cpp which was fixed in the meantime.</p>
+          <p>Thanks for all the replies and i believe this bug report can now be closed.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ID_24639 2006-03-15 19:53:42</div>
+        <div class="panel-body">
+          <p>WOOHOO. :D</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

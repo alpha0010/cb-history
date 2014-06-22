@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 3494 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #3494 <small>2013-08-31 11:14:44</small></h3>
+          <h4>hovercraft</h4>
+          CodeCompletion: fixes UnnamedStruct in the classBrowser
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="3494-CodeCompletion.patch">3494-CodeCompletion.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::Refinement</dd>
+            <dt>Status</dt><dd>Open</dd>
+            <dt>Close date</dt><dd>&nbsp;</dd>
+            <dt>Assigned to</dt><dd>ollydbg</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-08-31 11:38:24</div>
+        <div class="panel-body">
+          <p>Current codecompletion plugin implementation expects structure definition to be in standard form: structure TAG_NAME {....} name;</p>
+          <p>However in many sources the TAG_NAME omitted, in which cases the class browser shows UnnamedStruct instead of actual structure name.</p>
+          <p>This patch proposes workaround for this issue, replacing UnnamedStruct with actual structure name prefixed with word 'struct'.</p>
+          <p>Also keyword __at added to better support SDCC compiler.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">tpetrov 2013-10-01 20:36:01</div>
+        <div class="panel-body">
+          <p>@ollydbg: Can you please look at this see if it is good for inclusion.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-10-03 08:51:35</div>
+        <div class="panel-body">
+          <p>@hovercraft</p>
+          <p>Here is my test code:</p>
+          <p>struct</p>
+          <p>{</p>
+          <p>int   x;</p>
+          <p>float y;</p>
+          <p>} abc;</p>
+          <p>I don't see your patch handle this. I can set a bp in the code between // hovercraft 2013-8-30 start and // hovercraft 2013-8-30 end, but they never hit.</p>
+          <p>What do you want to solve? I don't understand. Can you give more details? Thanks.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-10-03 08:57:12</div>
+        <div class="panel-body">
+          <p>BTW: please indent by 4 spaces (not tabs), I'm not sure whether berlios automatically does this change, thanks.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-10-03 13:45:10</div>
+        <div class="panel-body">
+          <p>Apparently it is working only with typedefs only now. Look at this:</p>
+          <p>typedef struct</p>
+          <p>{</p>
+          <p>int x;</p>
+          <p>float y;</p>
+          <p>} CBA;</p>
+          <p>struct</p>
+          <p>{</p>
+          <p>int x;</p>
+          <p>float y;</p>
+          <p>} abc;</p>
+          <p>CBA will be shown as srtuct_CBA and abc will be shown as __UnnamedStruct41 or something, whereas without the patch both cases would be shown as __UnnamedStruct.. :)</p>
+          <p>Also there should be some other place in the code for other cases (not typedefs) to fix similar way, but I personally don't know about it. Can you please point me?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-10-03 16:14:41</div>
+        <div class="panel-body">
+          <p>@hovercraft</p>
+          <p>OK, I see.</p>
+          <p>From this link: <a href="http://stackoverflow.com/questions/4082972/struct-and-typedef-in-c-versus-c?rq=1">http://stackoverflow.com/questions/4082972/struct-and-typedef-in-c-versus-c?rq=1</a></p>
+          <p>typedef struct</p>
+          <p>{</p>
+          <p>int x;</p>
+          <p>float y;</p>
+          <p>} CBA;</p>
+          <p>CBA is an alias to an unnamed structure, right? In your patch, you give the unnamed structure a name "struct_CBA", is that necessary?  In symbol browser tree, you click on "CBA", it will bring you to it's declaration, when you need code-completion, it will correctly show it's member.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-10-03 16:19:24</div>
+        <div class="panel-body">
+          <p>typedef struct</p>
+          <p>{</p>
+          <p>int x;</p>
+          <p>float y;</p>
+          <p>} CBA, ZZZ, *PPP;</p>
+          <p>struct</p>
+          <p>{</p>
+          <p>int x;</p>
+          <p>float y;</p>
+          <p>} abc;</p>
+          <p>int main()</p>
+          <p>{</p>
+          <p>ZZZ a;</p>
+          <p>CBA b;</p>
+          <p>PPP c;</p>
+          <p>return 0;</p>
+          <p>}</p>
+          <p>Now, what's the unnamed struct? "struct_CBA" or "struct_ZZZ" or "struct_*PPP"?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-10-03 17:33:08</div>
+        <div class="panel-body">
+          <p>You are writing "In your patch, you give the unnamed structure a name "struct_CBA", is that necessary?"</p>
+          <p>Answer is YES!</p>
+          <p>Why? Because without it current implementation of CC will always show __UnnamedStructXX instead of CBA  In the symbol browser tree, so user cannot have a clue what this structure actually is until him double-clicked it and opened corresponding source location.</p>
+          <p>In fact, current implementation also gives the unnamed structure a fictitious name ( it is __UnnamedStructXX) and shows it in the browser tree, but this name is absolutely non informative.</p>
+          <p>In your last example when we place mouse over variable a, b, or c we will see tooltip "ZZZ main::a", "CBA main::b" or "PPP main::c" respectively and that`s ok.</p>
+          <p>Again, if we hover for example the "ZZZ" in the "ZZZ a;" declaration string, and patch is applied, we will see "typedef struct_CBA ZZZ" and this is also ok for me, because it gives some information about what this structure is. Remember "CBA" is a structure alias which usually given some informative meaning by the author.</p>
+          <p>Instead, without a patch, we will see "__UnnamedStruct11 ZZZ" in the tooltip there - and that's not ok.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-10-03 18:28:59</div>
+        <div class="panel-body">
+          <p>Strictly speaking, in your example of unnamed structure with several aliases, we have several opportunities how represent it to the user.</p>
+          <p>Firstly  we can display all of them as sub-entities of anonymous structure. That is exactly as Eclipse CDT behave in this situation.</p>
+          <p>This is clearly the bets solution, but currently I don't see a way how to implement it in the CB.</p>
+          <p>In my opinion, the best we can do right now is to choose some of these aliases and display it in the symbol browser tree - hereof this patch.</p>
+          <p>At least this is much better than see in some projects tons of __UnnamedStruct and no more info.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-10-04 07:49:44</div>
+        <div class="panel-body">
+          <p>@hovercraft, thanks for the explanation. I understand the reason, I think this is a good improvement. But your patch does not works correctly when you are going to show the member of b, like:</p>
+          <p>int main()</p>
+          <p>{</p>
+          <p>ZZZ a;</p>
+          <p>CBA b;</p>
+          <p>PPP c;</p>
+          <p>b.               //&lt;----code completion does not work here once your patch applied.</p>
+          <p>return 0;</p>
+          <p>}</p>
+          <p>This is because you manually change the Token-&gt;m_Name, this is the search key value for the Patricia tree, so they are not allowed to be changed once it is created.</p>
+          <p>What I suggest is: delay struct_CBA Token creating, or delete the __UnnamedStruct1 Token, and create another one Token.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-10-04 09:56:41</div>
+        <div class="panel-body">
+          <p>Thank you for pointing this out. I will evaluate your suggestions and try to make corrections!</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-10-09 06:19:28</div>
+        <div class="panel-body">
+          <p>ollydbg, please advice: what do you think about this modification:</p>
+          <p>// hovercraft 2013-10-09 start</p>
+          <p>Token* parent = m_LastParent;</p>
+          <p>if (parent)</p>
+          <p>{</p>
+          <p>wxString sParrent = parent-&gt;m_Name;</p>
+          <p>if (!sParrent.Cmp(tempAncestor))</p>
+          <p>parent = m_LastParent-&gt;GetTree()-&gt;at(m_LastParent-&gt;m_ParentIndex);</p>
+          <p>};</p>
+          <p>Token* newTokenPrep = TokenExists(tempAncestor, parent, tkTypedef | tkClass);</p>
+          <p>if (newTokenPrep &amp;&amp; tempAncestor.StartsWith(_T("__Unnamed")))</p>
+          <p>{</p>
+          <p>if (tempAncestor.StartsWith(_T("__UnnamedUnion")))</p>
+          <p>tempAncestor = _T("union_") + token;</p>
+          <p>else if (tempAncestor.StartsWith(_T("__UnnamedStruct")))</p>
+          <p>tempAncestor = _T("struct_") + token;</p>
+          <p>else</p>
+          <p>tempAncestor = _T("tag_") + token;</p>
+          <p>newTokenPrep-&gt;m_Name = tempAncestor;</p>
+          <p>m_TokenTree-&gt;insert(newTokenPrep-&gt;m_Index, newTokenPrep);</p>
+          <p>m_Str = tempAncestor;</p>
+          <p>ancestor = tempAncestor;</p>
+          <p>};</p>
+          <p>// hovercraft 2013-10-09 end</p>
+          <p>The idea behind this is to update the index node without affecting the token object itself. Unfortunately, current implementation of the index classes doesn't offer an update function. So now I simply add the new node with changed name using m_TokenTree-&gt;insert and leave the old one (with the name __Unnamed..) as is. This has a disadvantage of wasting the memory with unused index entries, but still could be useful for while, because the amount of memory wasted should be relatively small.</p>
+          <p>I could try to implement kind of update method in the TokenTree and it's base classes hierarchy, because I think it's good idea to have such a functionality there, but this may require a time, so I need to know your opinion before doing this.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-10-10 14:06:34</div>
+        <div class="panel-body">
+          <p>I commit the comments in revision 9394, the TokenTree related code was written by rick22 around year 2006, so I'm not fully review all the code, in-fact I'm not fully understand the code.</p>
+          <p>There is also a wiki page you can take a reference: <a href="http://wiki.codeblocks.org/index.php?title=Code_Completion_Design.">http://wiki.codeblocks.org/index.php?title=Code_Completion_Design.</a></p>
+          <p>About the slot, I mean an element in a vector, it is referenced by the an index value.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-10-09 07:50:39</div>
+        <div class="panel-body">
+          <p>original tree: (-&gt; means one to one, -&gt;&gt; means one to many)</p>
+          <p>name -&gt; ItemIdx -&gt;TokenIdxSet -&gt;&gt; TokenIdx -&gt; Token* -&gt; Token</p>
+          <p>What you did is, Keep Token* and Token, then</p>
+          <p>new_name -&gt; newItemIdx -&gt; newTokenIdxSet -&gt;&gt; newTokenIdx -&gt; Token* -&gt; Token</p>
+          <p>So, two roads that targets to the same Token.</p>
+          <p>Normally, I think that there are many empty TokensIdxSet in the Tree, this is because some times Tokens are removed from the tree, but our searchTree can only grows (you can not remove key string in the BasicSearchTree class), so some key string point to empty TokenIdxSet.</p>
+          <p>In you case, the things becomes more complicated. You know, you have occupy two TokenIdx for one Token, the former slot is actually dead. If you manually remove a Token, these slots can be reused (see the m_FreeTokens).</p>
+          <p>From my point of view, I think the simple way is just: remove the dead slot in TokenIdxSet, so this looks like we have already delete a Token, but infact, we have never delete and new a Token, we just change its name. Then the dead slot can go to m_FreeTokens for reuse.</p>
+          <p>The best way is as you said: the basicsearchtree can reduce it self, I event don't know how to do it, if you can do this, its better.</p>
+          <p>BTW: I have some local comments about TokenTree, which I can show here or commit to svn to let you understand those classes more clear. do you?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-10-10 08:27:07</div>
+        <div class="panel-body">
+          <p>About two roads leading to single target - yes, I did it intentionally, because I think it does exactly what we need with minimal effort. I agree, it's good idea to reuse the slot, if I properly understand what is the slot. I'll try and put results here.</p>
+          <p>And yes, please commit your local comments to svn, or you can mail me at list.ru with my nickname.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-11-05 03:25:10</div>
+        <div class="panel-body">
+          <p>Hello!</p>
+          <p>Ollydbg, after further studying the sources I now believe the problem with dead slots is seriously far-fetched. Only reducing BasicSearchTree itself makes sense. Without it we cannot achieve any sensible improvement  over my last patch variant, so I'd recommend to apply it as is for a while, because altering the BasicSearchTree may be a long enough story and it goes beyond the scope of this particular patch.</p>
+          <p>1) The m_FreeTokens doesn't denote the TokenIdxSet, but rather directly specify the position of our token pointer under which it is stored in the m_Tokens. We don't have a dead slot in the m_Tokens, because it still points to our token and we does reuse it, and as such, there is nothing to put into the free token pointers list.</p>
+          <p>2) We can empty the TokenIdxSet object corresponding to the previous token name ("__Unnamed.."), or even reuse it, but this will result in little if any memory saving. Most of the wasted memory will still reside in the BasicSearchTree, and the same true for the current implementation of RemoveToken procedure. For example we can use the following method:</p>
+          <p>void TokenTree::rename(Token* token, const wxString&amp; newName)</p>
+          <p>{</p>
+          <p>if (!token)</p>
+          <p>return;</p>
+          <p>int slotNo = m_Tree.GetItemNo(token-&gt;m_Name);</p>
+          <p>if (slotNo)</p>
+          <p>{</p>
+          <p>TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(slotNo);</p>
+          <p>// The previous name index path of the token will still exist, as well as its TokenIdxSet slot,</p>
+          <p>// but this slot will be empty and as result will lead to nothing.</p>
+          <p>// This is the same sing the RemoveToken procedure dues.</p>
+          <p>curList.erase(token-&gt;m_Index);</p>
+          <p>// Actually we can save some additional memory by reusing this slot,</p>
+          <p>// this can be easily implemented on the BasicSearchTree level,</p>
+          <p>// but is it worth the efforts? Most of the memory will still be wasted by the BasicSearchTree itself.</p>
+          <p>};</p>
+          <p>token-&gt;m_Name = newName;</p>
+          <p>AddToken(token, token-&gt;m_Index);</p>
+          <p>}</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-06 06:01:30</div>
+        <div class="panel-body">
+          <p>Hi, hovercraft, I agree with you.</p>
+          <p>What I want is to let the basicsearchtree have some "delete" functions.</p>
+          <p>I have take some time to read/debug the tree related code, I see that there are many things coupled in the basic search tree.</p>
+          <p>First, tree node is reference by index, I think this is OK.</p>
+          <p>Second, all the node have an item-map, which is a map of (depth-&gt;itemno). For example, we have a tree:</p>
+          <p>*   - "" (0)</p>
+          <p>*         \- "p" (4)</p>
+          <p>*                 +- "hysi" (2)</p>
+          <p>*                 |          +- "cs" (1)</p>
+          <p>*                 |          \- "ology" (3)</p>
+          <p>*                 \- "sychic" (5)</p>
+          <p>Now, the node "hysi" (2) can have up to four elements, such as:</p>
+          <p>depth -&gt; (actually string) -&gt; itemno</p>
+          <p>5        -&gt;  "ph"                  -&gt;  3</p>
+          <p>6        -&gt;  "phy"                -&gt;  5</p>
+          <p>7        -&gt;  "phys"               -&gt;  9</p>
+          <p>8        -&gt;  "physi"               -&gt;7</p>
+          <p>Here, the itemno is type of "size_t", and itemno is in-fact an index of the m_Points in BasicSearchTree class.</p>
+          <p>Also, itemno is also the index of the general type T in std::vector&lt;T&gt; m_Items in class template &lt;class T&gt; class SearchTree.</p>
+          <p>In CC, the T is typedef std::set&lt; int,    std::less&lt;int&gt;    &gt; TokenIdxSet;</p>
+          <p>Here, I think both BasicSearchTree::m_Points and SearchTree::m_Items are useless, if we directly hold the information in SearchTreeNode::m_Items.</p>
+          <p>This means in the SearchTreeNode::m_Items (item map of each node), we can have:</p>
+          <p>depth -&gt; (actually string) -&gt; T(TokenIdxSet)</p>
+          <p>5        -&gt;  "ph"                  -&gt;  TokenIdxSet of all the Token which has the name "ph"</p>
+          <p>6        -&gt;  "phy"                -&gt;  TokenIdxSet of all the Token which has the name "phy"</p>
+          <p>7        -&gt;  "phys"              -&gt;  TokenIdxSet of all the Token which has the name "phys"</p>
+          <p>8        -&gt;  "physi"             -&gt;  TokenIdxSet of all the Token which has the name "physi"</p>
+          <p>Now, in this way, remove/delete an key(string) in the basicsearchtree is much easier.</p>
+          <p>We just remove some tree nodes, and as Nodes are stored in typedef std::vector&lt;SearchTreeNode*&gt; SearchTreeNodesArray, we may have some slot left empty in the vector, but that's not a problem, because there empty slot (node index) can be reused later.</p>
+          <p>When you want to remove a Token, you just find the T(TokenIdxSet), and remove the index of the Token in the TokenIdxSet, if the set becomes empty (e.g. index set for string "ph" becomes empty).  then there is no such Token named "ph", so there is no need to keep this element in the SearchTreeNode::m_Items, we can directly remove this element in the map.</p>
+          <p>If the SearchTreeNode::m_Items becomes empty, we know that this node can be deleted.</p>
+          <p>I'm not sure my analysis is good, comments are welcome.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-06 06:04:12</div>
+        <div class="panel-body">
+          <p>Some correction for the previous comment:</p>
+          <p>Now, the node "hysi" (2) can have up to four elements of the item-map, such as:</p>
+          <p>depth -&gt; (actually string) -&gt; itemno</p>
+          <p>2        -&gt;  "ph"                  -&gt;  3</p>
+          <p>3        -&gt;  "phy"                -&gt;  5</p>
+          <p>4        -&gt;  "phys"               -&gt;  9</p>
+          <p>5        -&gt;  "physi"              -&gt;  7</p>
+          <p>The depth is the string from "root" to the current key string.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-06 08:24:49</div>
+        <div class="panel-body">
+          <p>There is one reason that delete the key in the basicsearchtree are not a good idea when parsing.</p>
+          <p>E.g. The piece of code was parsed again and again, this is the case the CC need to parse the buffer to retrieve local information, delete and add the string key in the basicsearchtree can surely have performance issue. I will put more comments for the tree related code in the C::B trunk.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-11-07 06:28:37</div>
+        <div class="panel-body">
+          <p>Yes, I agree, deletion of the key may affect performance, if we do it often. This surely is a subject to the usual performance/memory trade-off. May be we should not do anything in this respect at all, if the memory constraints not so important.</p>
+          <p>What I did in this patch - I found a way to add aliases for some token names if we need so. In principle, anonymous tokens can benefit from it, would it be possible to display several aliases of a token in the browser tree in the future. I.e. we can refer the anonymous object both as __UnnamedStruct and as struct_blabla for example.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-07 14:51:34</div>
+        <div class="panel-body">
+          <p>Ok, two question remains:</p>
+          <p>1, void TokenTree::rename(Token* token, const wxString&amp; newName) is needed or not?</p>
+          <p>2, __at keyword improvement need some comments, in-fact, I have never see a code which use __at keyword</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-11-07 16:40:56</div>
+        <div class="panel-body">
+          <p>1) It depends on what we prefer. The TokenTree::rename method terminates an "__Unnamed.." index path, makes it point to nothing.  Whereas variant as of 2013-10-09 leave the "__Unnamed.." index path operational (implicitly produces an alias). And finally I just made an explicit void TokenTree::alias(Token* token, const wxString&amp; newName) and corresponding size_t BasicSearchTree::alias(const wxString&amp; s, size_t itemno) methods. I'd prefer the explicit method, despite it introduces more changes than others.</p>
+          <p>There was one question in the meantime: if the CC need to parse a piece of code over and over, would it be possible that it will introduce the new __UnnamedXX (where XX is a number) alias with each pass? If this is the case, it's bad. I didn't tested this yet.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-11-07 16:46:48</div>
+        <div class="panel-body">
+          <p>2) An "__at" keyword is for SDCC compiler (and possibly for other small and embedded systems). Look at this typical excerpt from the Microchip MCU (PIC18F..) related source:</p>
+          <p>extern __sfr __at (0xfb2) TMR3L;</p>
+          <p>extern __sfr __at (0xfb3) TMR3H;</p>
+          <p>extern __sfr __at (0xfba) CCP2CON;</p>
+          <p>typedef union {</p>
+          <p>struct {</p>
+          <p>unsigned CCP2M0:1;</p>
+          <p>unsigned CCP2M1:1;</p>
+          <p>unsigned CCP2M2:1;</p>
+          <p>unsigned CCP2M3:1;</p>
+          <p>unsigned DCCP2Y:1;</p>
+          <p>unsigned DCCP2X:1;</p>
+          <p>unsigned :1;</p>
+          <p>unsigned :1;</p>
+          <p>};</p>
+          <p>} __CCP2CONbits_t;</p>
+          <p>extern volatile __CCP2CONbits_t __at (0xfba) CCP2CONbits;</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-11-07 17:14:35</div>
+        <div class="panel-body">
+          <p>My "alias" methods looks as follows:</p>
+          <p>size_t BasicSearchTree::alias(const wxString&amp; s, size_t itemno)</p>
+          <p>{</p>
+          <p>SearchTreePoint resultpos = AddNode(s, 0); //the second argument 0 means the root node</p>
+          <p>// add a pair (resultpos.depth -&gt; itemno) to the result node</p>
+          <p>size_t result = m_Nodes[resultpos.n]-&gt;AddItemNo(resultpos.depth, itemno);</p>
+          <p>m_Points[result] = resultpos;</p>
+          <p>return result;</p>
+          <p>}</p>
+          <p>void TokenTree::alias(Token* token, const wxString&amp; newName)</p>
+          <p>{</p>
+          <p>if (!token)</p>
+          <p>return;</p>
+          <p>size_t slotNo = m_Tree.GetItemNo(token-&gt;m_Name);</p>
+          <p>wxString oldName = token-&gt;m_Name;</p>
+          <p>if (slotNo)</p>
+          <p>{</p>
+          <p>token-&gt;m_Name = newName;</p>
+          <p>// Actually slotNo should not change there:</p>
+          <p>slotNo = m_Tree.alias(token-&gt;m_Name, slotNo);</p>
+          <p>TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(slotNo);</p>
+          <p>curList.insert(token-&gt;m_Index);</p>
+          <p>wxString log(F(_T("TokenTree::alias() : Added alias '%s' for '%s'."), newName.c_str(), oldName.c_str()));</p>
+          <p>CCLogger::Get()-&gt;Log(log);</p>
+          <p>CCLogger::Get()-&gt;DebugLog(log);</p>
+          <p>};</p>
+          <p>}</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-08 01:11:39</div>
+        <div class="panel-body">
+          <p>Quote: There was one question in the meantime: if the CC need to parse a piece of code over and over, would it be possible that it will introduce the new __UnnamedXX (where XX is a number) alias with each pass? If this is the case, it's bad. I didn't tested this yet. Quote End.</p>
+          <p>Oh, I can confirm this is a bug.</p>
+          <p>If you have such code:</p>
+          <p>struct</p>
+          <p>{</p>
+          <p>int x;</p>
+          <p>float y;</p>
+          <p>} abc;</p>
+          <p>int main (int argc, char** argv)</p>
+          <p>{</p>
+          <p>}</p>
+          <p>Once you edit this code, and press Save button, the parser runs again, and look at the symbol tree, the __UnnamedStructXXX will increase by one. I also see the dumped basicsearchtree, and it is growing.</p>
+          <p>This is a serious bug, and should be fixed. I file a bug report here: <a href="../bugs/19186.html">http://developer.berlios.de/bugs/?func=detailbug&amp;bug_id=19186&amp;group_id=5358</a></p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-11-10 06:29:26</div>
+        <div class="panel-body">
+          <p>I currently working on the following function prototype to be used in place of simple unnamed token increment:</p>
+          <p>/**</p>
+          <p>* Until index key removal been implemented,</p>
+          <p>* uses index scan within given prefix to find first (previously generated)</p>
+          <p>* token name which can be reused (e.g. if token deleted but its name still exists).</p>
+          <p>* If that fails, generates a new unique (i.e. which not yet present in this tree) key string</p>
+          <p>* to be used as token name or alias</p>
+          <p>* based on given prefix and an integer sequence_val,</p>
+          <p>* incrementing the sequence_val by one.</p>
+          <p>*/</p>
+          <p>wxString TokenTree::GenerateUniqueName(const wxString&amp; prefix, size_t &amp;sequence_val);</p>
+          <p>It should be fast enough, but to further improve its speed making the "_Unnamed" strings to be file-related may be helpful, i.e.  _UnnamedStruct_FF_XXX,</p>
+          <p>where FF is the file index where anonymous token resides and XXX usual incremental number. This will reduce index scan to single file subtree.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-10 06:46:00</div>
+        <div class="panel-body">
+          <p>FYI:</p>
+          <p>Rev9443 and Rev9438 should fix the unnecessary increased token name problem.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-11-10 12:19:06</div>
+        <div class="panel-body">
+          <p>Ollydbg, thank you for info, I overlooked this.</p>
+          <p>I finally decided to go with variant as of 2013-Oct-09 15:19 - it involves less patching :). Should I upload revised patch?</p>
+          <p>And are you still interested in the index key removal functionality?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-10 15:49:00</div>
+        <div class="panel-body">
+          <p>QUOTE: I finally decided to go with variant as of 2013-Oct-09 15:19 - it involves less patching :). Should I upload revised patch?</p>
+          <p>I personally like the way "void TokenTree::rename(Token* token, const wxString&amp; newName)" better. See the reasons below:</p>
+          <p>Obf(another dev) has the similar option, see: <a href="http://forums.codeblocks.org/index.php/topic,18542.msg126892.html#msg126892,">http://forums.codeblocks.org/index.php/topic,18542.msg126892.html#msg126892,</a> so we expect to remove the ugly __UnnamedStructXXXXXXX names, although it looks like it's hard to remove the ugly name in the basicsearchtree.</p>
+          <p>I think people will get confused when they see two steps (in your patch of 2013-Oct-09)</p>
+          <p>1, change a Token's name.</p>
+          <p>2, re-insert the Token to the tree. (this in-fact cause two roads go to the same Token)</p>
+          <p>I think it is much clean/better that we have a explicit function named "RenameToken()", that is we break the old road as the name really changes, and construct the new road.</p>
+          <p>What's your opinion? If it is OK, would you mind to file the new patch? Thanks for the contribution.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-11-11 05:38:59</div>
+        <div class="panel-body">
+          <p>Glad to make something useful (hope). Thank you for patience. :) And decision to get rid off the __Unnamed objects is indeed good news : at least for me they were the only one really annoying thing in the C::B :).</p>
+          <p>It is possible to do something similar in the ReadVarNames() method for non-typedef structures (and I actually did it in my copy). I believe you will find a better way to do it soon. Nevertheless I can append it to this patch if you wish. What do you think?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-11-11 06:25:13</div>
+        <div class="panel-body">
+          <p>Patch updated (with non-typedef struct fix for your reference).</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-13 00:31:39</div>
+        <div class="panel-body">
+          <p>Thanks for the patch.</p>
+          <p>In the function:</p>
+          <p>void TokenTree::RenameToken(Token* token, const wxString&amp; newName)</p>
+          <p>{</p>
+          <p>if (!token)</p>
+          <p>return;</p>
+          <p>int slotNo = m_Tree.GetItemNo(token-&gt;m_Name);</p>
+          <p>if (slotNo)</p>
+          <p>{</p>
+          <p>TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(slotNo);</p>
+          <p>// Note: As we have no way to actually delete keys in the TokenSearchTree,</p>
+          <p>// the previous name index path of the token will still exist, as well as its TokenIdxSet slot,</p>
+          <p>// but this slot will be empty and as result will lead to nothing.</p>
+          <p>// This is the same thing the RemoveToken procedure does.</p>
+          <p>curList.erase(token-&gt;m_Index);</p>
+          <p>};</p>
+          <p>token-&gt;m_Name = newName;</p>
+          <p>AddToken(token, token-&gt;m_Index);</p>
+          <p>}</p>
+          <p>I think it should be: AddToken(token, token-&gt;m_FileIdx);</p>
+          <p>I still need time to test this patch.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-13 00:46:30</div>
+        <div class="panel-body">
+          <p>I found there may be a bug in the function:</p>
+          <p>int TokenTree::AddToken(Token* newToken, int fileIdx)</p>
+          <p>{</p>
+          <p>if (!newToken)</p>
+          <p>return -1;</p>
+          <p>const wxString &amp; name = newToken-&gt;m_Name;</p>
+          <p>static TokenIdxSet tmpTokens = TokenIdxSet();</p>
+          <p>// Insert the token's name and the token in the (inserted?) list</p>
+          <p>size_t tokenIdx = m_Tree.AddItem(name, tmpTokens);</p>
+          <p>TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(tokenIdx);</p>
+          <p>int newItem = AddTokenToList(newToken, fileIdx);</p>
+          <p>curList.insert(newItem);</p>
+          <p>size_t fIdx = (fileIdx&lt;0) ? newToken-&gt;m_FileIdx : (size_t)fileIdx;</p>
+          <p>m_FileMap[fIdx].insert(newItem);</p>
+          <p>// Add Token (if applicable) to the namespaces indexes</p>
+          <p>if (newToken-&gt;m_ParentIndex &lt; 0)</p>
+          <p>{</p>
+          <p>newToken-&gt;m_ParentIndex = -1;</p>
+          <p>m_GlobalNameSpaces.insert(newItem);</p>
+          <p>if (newToken-&gt;m_TokenKind == tkNamespace)</p>
+          <p>m_TopNameSpaces.insert(newItem);</p>
+          <p>}</p>
+          <p>// All done!</p>
+          <p>return newItem;</p>
+          <p>}</p>
+          <p>The line:</p>
+          <p>int newItem = AddTokenToList(newToken, fileIdx);</p>
+          <p>I think it should be:</p>
+          <p>int newItem = AddTokenToList(newToken, tokenIdx);</p>
+          <p>Since the function  AddTokenToList is just add a Token pointer to a std::vector&lt;Token*&gt;, I'm not sure why here the fileIdx is used????</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-13 02:48:14</div>
+        <div class="panel-body">
+          <p>Go back to 2006-01-11, this functions looks like below:</p>
+          <p>int TokensTree::AddToken(Token* newToken,int forceidx)</p>
+          <p>{</p>
+          <p>if (!newToken)</p>
+          <p>return -1;</p>
+          <p>const wxString &amp; name = newToken-&gt;m_Name;</p>
+          <p>static TokenIdxSet tmp_tokens = TokenIdxSet();</p>
+          <p>// tmp_tokens.clear();</p>
+          <p>// Insert the token's name and the token in the (inserted?) list</p>
+          <p>size_t idx2 = m_Tree.AddItem(name,tmp_tokens,false);</p>
+          <p>TokenIdxSet&amp; curlist = m_Tree.GetItemAtPos(idx2);</p>
+          <p>int newitem = AddTokenToList(newToken,forceidx);</p>
+          <p>curlist.insert(newitem);</p>
+          <p>m_FilesMap[newToken-&gt;m_FileIdx].insert(newitem);</p>
+          <p>// Add Token (if applicable) to the namespaces indexes</p>
+          <p>if (newToken-&gt;m_ParentIndex &lt; 0)</p>
+          <p>{</p>
+          <p>newToken-&gt;m_ParentIndex = -1;</p>
+          <p>m_GlobalNameSpace.insert(newitem);</p>
+          <p>if (newToken-&gt;m_TokenKind == tkNamespace)</p>
+          <p>m_TopNameSpaces.insert(newitem);</p>
+          <p>}</p>
+          <p>// All done!</p>
+          <p>return newitem;</p>
+          <p>}</p>
+          <p>Look, the forceidx should be a TokenIndex, not file index, right?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-13 05:41:19</div>
+        <div class="panel-body">
+          <p>I open a discussion here: <a href="http://forums.codeblocks.org/index.php/topic,18565.msg127086/topicseen.html#msg127086">http://forums.codeblocks.org/index.php/topic,18565.msg127086/topicseen.html#msg127086</a></p>
+          <p>I believe this is another bug.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-11-13 06:54:18</div>
+        <div class="panel-body">
+          <p>Yes, I also noticed that second parameter in AddToken should be indeed the Toke::m_Index, but may be somewhere mismatched with file index. I had in mind to check it more closely, but you outran me :)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-13 07:12:22</div>
+        <div class="panel-body">
+          <p>I think generally the function in your patch: RenameToken(Token* token, const wxString&amp; newName)  need to function:</p>
+          <p>AddToken(token, token-&gt;m_Index);</p>
+          <p>Here, the first argument is the Token pointer</p>
+          <p>the second argument is the forced index, which means we want to re-used the slot in the std::vector&lt;Token*&gt;. In-fact in most cases AddToken function was called like AddToken(token, -1), this means the token will take one new slot in the std::vector&lt;Token*&gt; (or an empty slot).</p>
+          <p>The more simple way is we just add the token-&gt;m_Index to a TokenIdxSet which is mapped by the newName.</p>
+          <p>I will post a patch on the C::B forum follow the discussion later.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-13 07:36:38</div>
+        <div class="panel-body">
+          <p>I think only the first half part of the AddToken() function is need. which is:</p>
+          <p>if (!newToken)</p>
+          <p>return -1;</p>
+          <p>const wxString &amp; name = newToken-&gt;m_Name;</p>
+          <p>static TokenIdxSet tmpTokens = TokenIdxSet();</p>
+          <p>// Insert the token's name and the token in the (inserted?) list</p>
+          <p>size_t tokenIdx = m_Tree.AddItem(name, tmpTokens);</p>
+          <p>TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(tokenIdx);</p>
+          <p>int newItem = AddTokenToList(newToken, forceIdx);       // No need here.</p>
+          <p>curList.insert(newItem);</p>
+          <p>We just get the curList  which is the TokenIdxSet of the the new String.</p>
+          <p>So, we just curList.insert(token-&gt;m_Index);</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-13 07:42:21</div>
+        <div class="panel-body">
+          <p>The changed function look like below:</p>
+          <p>void TokenTree::RenameToken(Token* token, const wxString&amp; newName)</p>
+          <p>{</p>
+          <p>if (!token)</p>
+          <p>return;</p>
+          <p>// remove the old token index from the TokenIdxSet mapped by old name.</p>
+          <p>int slotNo = m_Tree.GetItemNo(token-&gt;m_Name);</p>
+          <p>if (slotNo)</p>
+          <p>{</p>
+          <p>TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(slotNo);</p>
+          <p>// Note: As we have no way to actually delete keys in the TokenSearchTree,</p>
+          <p>// the previous name index path of the token will still exist, as well as its TokenIdxSet slot,</p>
+          <p>// but this slot will be empty and as result will lead to nothing.</p>
+          <p>// This is the same thing the RemoveToken procedure does.</p>
+          <p>curList.erase(token-&gt;m_Index);</p>
+          <p>};</p>
+          <p>token-&gt;m_Name = newName;</p>
+          <p>if (!newToken)</p>
+          <p>return -1;</p>
+          <p>static TokenIdxSet tmpTokens = TokenIdxSet();</p>
+          <p>size_t tokenIdx = m_Tree.AddItem(newName, tmpTokens);</p>
+          <p>TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(tokenIdx);</p>
+          <p>// add the old token index to the TokenIdxSet mapped by new name, note Token index is not changed</p>
+          <p>curList.insert(token-&gt;m_Index);</p>
+          <p>}</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-13 07:51:51</div>
+        <div class="panel-body">
+          <p><a href="http://forums.codeblocks.org/index.php/topic,18565.msg127089.html#msg127089,">http://forums.codeblocks.org/index.php/topic,18565.msg127089.html#msg127089,</a> it is the combined patch.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-14 14:05:14</div>
+        <div class="panel-body">
+          <p>my patch was in the attachment of the post, I guess only a approved C::B forum user can see it, never mind, I will send you by private email right now.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-14 14:54:32</div>
+        <div class="panel-body">
+          <p>I found the reason.</p>
+          <p>I have two cpp file in one project. Both cpp file contain such code:</p>
+          <p>struct</p>
+          <p>{</p>
+          <p>int x;</p>
+          <p>float y;</p>
+          <p>} abc;</p>
+          <p>So, originally, the token name is: __UnnamedStruct6_0 and __UnnamedStruct7_0, note 6 and 7 are file index which means they are in different source files.</p>
+          <p>But when they get renamed, we get the same token name: struct_abc. So, finally, I get abc. which show two x and two y in suggesting list.</p>
+          <p>Because abc's type is: struct_abc, but we have two tokens for both cpp files.</p>
+          <p>I don't think this is a big problem (it looks like gcc can compile such code)</p>
+          <p>Maybe, we can change the token name to "struct6_abc" and  "struct7_abc" to solve this problem?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-17 03:24:48</div>
+        <div class="panel-body">
+          <p>Quote:  I just added your suggestion about the file number inside the token name and one comment.</p>
+          <p>So, you add the only one line comment here? see below:</p>
+          <p>//This block almost certainly is a needless extra precaution, but i still not sure.</p>
+          <p>The code snippet I guess was originally extract from the common code in either ReadClsNames() and ReadVarNames() functions.</p>
+          <p>+    Token* parent = m_LastParent;</p>
+          <p>+    if (parent)</p>
+          <p>+    {</p>
+          <p>+        //This block almost certainly is a needless extra precaution, but i still not sure.</p>
+          <p>+        wxString sParrent = parent-&gt;m_Name;</p>
+          <p>+        if (!sParrent.Cmp(m_Str))</p>
+          <p>+            parent = m_LastParent-&gt;GetTree()-&gt;at(m_LastParent-&gt;m_ParentIndex);</p>
+          <p>+    };</p>
+          <p>I will look into it to see what does these code do.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-11-17 08:57:20</div>
+        <div class="panel-body">
+          <p>Quote: If they are different, you get the parent's parent.</p>
+          <p>No, If they are SAME, I get the parent's parent.</p>
+          <p>Well, in the copy of source where I originally created this patch, just passing m_LastParent to the TokenExists method surprisingly could lead to incorrect result: no token found. That's why this block was inserted. In the current sources I cannot reproduce this situation. May be the original source copy has been broken or just too outdated.</p>
+          <p>Now I think we can pass just a nullptr instead of m_LastParent to the TokenExists. Mostly It was an extra precautions due to my insufficient knowledge of the code.</p>
+          <p>Patch updated.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-17 14:54:23</div>
+        <div class="panel-body">
+          <p>I think it should be:</p>
+          <p>Token* unnamedAncestor = TokenExists(m_Str, m_LastParent, typeMask);</p>
+          <p>I post the new patch on C::B forum, the same thread as I mentioned before.</p>
+          <p>Here is the test code(works fine with my new patch, but may failed if you use nullptr in TokenExists function:</p>
+          <p>typedef struct</p>
+          <p>{</p>
+          <p>int x;</p>
+          <p>float y;</p>
+          <p>} CBA, ZZZ, *PPP;</p>
+          <p>struct</p>
+          <p>{</p>
+          <p>int x;</p>
+          <p>float y;</p>
+          <p>} abc;</p>
+          <p>class ABCD</p>
+          <p>{public:</p>
+          <p>struct</p>
+          <p>{</p>
+          <p>int x;</p>
+          <p>float y;</p>
+          <p>} abcd;</p>
+          <p>};</p>
+          <p>int main()</p>
+          <p>{</p>
+          <p>ZZZ a;</p>
+          <p>CBA b;</p>
+          <p>PPP c;</p>
+          <p>//abc.;</p>
+          <p>ABCD e;</p>
+          <p>e.</p>
+          <p>return 0;</p>
+          <p>}</p>
+          <p>Please note that an anonymous type in a class definition of ABCD.</p>
+          <p>Please help to test it and give some feedback, I hope this is the final patch before I commit to the trunk, thanks.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-13 14:51:08</div>
+        <div class="panel-body">
+          <p>Can you try the updated patch in <a href="http://forums.codeblocks.org/index.php/topic,18565.msg127089.html#msg127089">http://forums.codeblocks.org/index.php/topic,18565.msg127089.html#msg127089</a></p>
+          <p>I just did some code refactoring (create a function to do the token name change in ParserThread class)</p>
+          <p>When try to test the code below:</p>
+          <p>typedef struct</p>
+          <p>{</p>
+          <p>int x;</p>
+          <p>float y;</p>
+          <p>} CBA, ZZZ, *PPP;</p>
+          <p>struct</p>
+          <p>{</p>
+          <p>int x;</p>
+          <p>float y;</p>
+          <p>} abc;</p>
+          <p>int main()</p>
+          <p>{</p>
+          <p>ZZZ a;</p>
+          <p>CBA b;</p>
+          <p>PPP c;</p>
+          <p>abc.;</p>
+          <p>return 0;</p>
+          <p>}</p>
+          <p>I see two x and two y in suggestion list when I hit the dot after "abc", I don't know why. (quite busy now, so if you have some time, you can help me to find the reason, thanks. )</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-11-14 07:33:49</div>
+        <div class="panel-body">
+          <p>Strange enough - I see only one x and one y with this test case. My sources are 9447 checkout from svn with my only this my patch applied.</p>
+          <p>Sorry, I cannot find your updated patch at <a href="http://forums.codeblocks.org/index.php/topic,18565.msg127089.html#msg127089.">http://forums.codeblocks.org/index.php/topic,18565.msg127089.html#msg127089.</a>  The last post just says:</p>
+          <p>"Ok, a patch to fix this issue (include the &lt;REFERENCE TO THIS SAME Patch #3494&gt;) EDIT: update to version 2 of the patch".</p>
+          <p>Where the "version 2" can be found ?</p>
+          <p>By a way, I registered on that forum yesterday (hovercraft) but not received confirmation yet - "Your account is still awaiting admin approval".</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-11-14 14:16:10</div>
+        <div class="panel-body">
+          <p>Thank you i got it.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-11-15 15:12:18</div>
+        <div class="panel-body">
+          <p>Have nothing against your last variant, I just added your suggestion about the file  number inside the token name and one comment.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-17 06:10:30</div>
+        <div class="panel-body">
+          <p>Question: What does the code means?</p>
+          <p>+            if (m_Str.StartsWith(g_UnnamedSymbol))</p>
+          <p>+            {</p>
+          <p>+                Token* parent = m_LastParent;</p>
+          <p>+                if (parent)</p>
+          <p>+                {</p>
+          <p>+                    wxString sParrent = parent-&gt;m_Name;</p>
+          <p>+                    if (!sParrent.Cmp(m_Str))</p>
+          <p>+                        parent = m_LastParent-&gt;GetTree()-&gt;at(m_LastParent-&gt;m_ParentIndex);</p>
+          <p>+                };</p>
+          <p>+                Token* unnamedAncestor = TokenExists(m_Str, parent, tkUndefined); //tkTypedef | tkClass);</p>
+          <p>Why the parent's token name is needed to compare with the "m_Str"? If they are different, you get the parent's parent.</p>
+          <p>I see these code exist in your version one of the patch.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-11-17 16:31:02</div>
+        <div class="panel-body">
+          <p>I just thought anonymous object inside classes (and other nested cases) may be subject to further investigation and would be better to leave them as is for a while.</p>
+          <p>For example if we add a global</p>
+          <p>struct</p>
+          <p>{</p>
+          <p>int x;</p>
+          <p>float y;</p>
+          <p>} abcd;</p>
+          <p>somewhere in your test case, we will see duplicated CC suggestions after typing "ABCD.abcd." as you noticed before.</p>
+          <p>Also after typing "ABCD." we will see the "struct1_abcd" item in the list, which is not as good. That's why i decided substitute nullptr.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-18 00:23:10</div>
+        <div class="panel-body">
+          <p>QUOTE: I just thought anonymous object inside classes (and other nested cases) may be subject to further investigation and would be better to leave them as is for a while.</p>
+          <p>Well, I think it anonymous class inside class can be solve by such method:</p>
+          <p>Suppose we have the following code snippet in either class and global space</p>
+          <p>struct</p>
+          <p>{</p>
+          <p>int x;</p>
+          <p>float y;</p>
+          <p>} abcd;</p>
+          <p>Normally, we will get two type tokens: _UnnamedStruct2_3 (in class) and _UnnamedStruct2_3 (in global namespace)</p>
+          <p>Now, with the rename method, we will get:</p>
+          <p>_UnnamedStruct2_3_abcd (in class) and _UnnamedStruct2_3_abcd (in global namespace)</p>
+          <p>OR</p>
+          <p>struct2_3_abcd (in class) and struct2_3_abcd (in global namespace)</p>
+          <p>We put the alias after the the token index.</p>
+          <p>What do you think about this method?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-11-18 02:29:45</div>
+        <div class="panel-body">
+          <p>Ok - let's do this way.</p>
+          <p>And one more point: would it be the right idea to introduce into the Token class some flag or something to mark anonymous tokens to be able distinguish them reliably? For example in the future different gui parts (e.g. plugins) can rely on this flag if they want to change the way such objects been represented to the end user. Maybe a simple public boolean variable Token::m_IsUnnamed?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-18 07:23:28</div>
+        <div class="panel-body">
+          <p>Hi, hovercraft, thanks. Yes, it is possible to add another bool variable in the Token.</p>
+          <p>But currently there are two many bool variables in the Token class, this make Token class a lot bigger, I would think change them to bit field, something like:</p>
+          <p>class Token</p>
+          <p>{</p>
+          <p>unsigned int  isTemplate : 1;</p>
+          <p>unsigned int  isConst      : 1;</p>
+          <p>unsigned int  isUnnamed: 1;</p>
+          <p>......</p>
+          <p>};</p>
+          <p>But not easy, because there are too many places which use those bools.</p>
+          <p>I have some new idea when I read your comments, is it possible to leave the Token name unchanged (_UnnamedStructXX_YYY), and later when we want to show them, just change the string in the GUI by checking the Token's name(I mean: avoiding adding the isUnnamed bit field or bool variable, just check the name)?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-11-18 09:18:05</div>
+        <div class="panel-body">
+          <p>This is possible of course.  But having a boolean or bit field much better. This way we can avoid string compare operation every time we need to know object kind, which in turn usually should refer the g_UnnamedSymbol constant..</p>
+          <p>We can add a boolean as temporary measure and make it hidden (protected or private), but add the public interface function to read its value as boolean.</p>
+          <p>Later we can redesign the code so internally these values will be represented as bit fields without changing class interface! We can try do this with other boolean members I believe - maybe even without changing the consuming code.</p>
+          <p>I just afraid, if we will switch to redesign gui right now, wouldn't it leave us for a long period yet with what we have?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-18 15:09:00</div>
+        <div class="panel-body">
+          <p>I agree with you.</p>
+          <p>Quote: I just afraid, if we will switch to redesign gui right now, wouldn't it leave us for a long period yet with what we have?</p>
+          <p>Sorry, I don't understand this sentence, can you explain?</p>
+          <p>I just look at our Token class definition:</p>
+          <p>class Token</p>
+          <p>{</p>
+          <p>friend class TokenTree;</p>
+          <p>public:</p>
+          <p>Token(const wxString&amp; name, unsigned int file, unsigned int line, size_t ticket);</p>
+          <p>~Token();</p>
+          <p>bool AddChild(int childIdx);</p>
+          <p>bool DeleteAllChildren();</p>
+          <p>bool HasChildren() const { return !m_Children.empty(); }</p>
+          <p>wxString GetNamespace() const;</p>
+          <p>bool InheritsFrom(int idx) const;</p>
+          <p>wxString DisplayName() const;</p>
+          <p>wxString GetTokenKindString() const;</p>
+          <p>wxString GetTokenScopeString() const;</p>
+          <p>wxString GetFilename() const;</p>
+          <p>wxString GetImplFilename() const;</p>
+          <p>wxString GetFormattedArgs() const; // remove all '\n'</p>
+          <p>wxString GetStrippedArgs() const; // remove all default value</p>
+          <p>size_t GetTicket() const { return m_Ticket; }</p>
+          <p>bool MatchesFiles(const TokenFileSet&amp; files);</p>
+          <p>TokenTree* GetTree() const { return m_TokenTree; }</p>
+          <p>bool IsValidAncestor(const wxString&amp; ancestor);</p>
+          <p>wxString                     m_FullType; // this is the full return value (if any): e.g. const wxString&amp;</p>
+          <p>wxString                     m_BaseType; // this is what the parser believes is the actual return value: e.g. wxString</p>
+          <p>wxString                     m_Name;     // Token's name, it can be searched in the TokenTree</p>
+          <p>wxString                     m_Args;     // If it is a function Token, then this value is function arguments</p>
+          <p>// e.g.   (int arg1 = 10, float arg2 = 9.0)</p>
+          <p>// If it is an enumerator, then this is the assigned (inferred) value</p>
+          <p>wxString                     m_BaseArgs; // stripped arguments e.g. (int arg1, float arg2)</p>
+          <p>wxString                     m_AncestorsString; // all ancestors comma-separated list</p>
+          <p>unsigned int                 m_FileIdx;       // File index in TokenTree</p>
+          <p>unsigned int                 m_Line;          // Line index where the token was met, which is 0/1 based</p>
+          <p>unsigned int                 m_ImplFileIdx;   // function implementation file index</p>
+          <p>unsigned int                 m_ImplLine;      // function implementation line index</p>
+          <p>unsigned int                 m_ImplLineStart; // if token is impl, opening brace line</p>
+          <p>unsigned int                 m_ImplLineEnd;   // if token is impl, closing brace line</p>
+          <p>TokenScope                   m_Scope;         // public? private? protected?</p>
+          <p>TokenKind                    m_TokenKind;     // See TokenKind class</p>
+          <p>bool                         m_IsOperator;    // is operator overload function?</p>
+          <p>bool                         m_IsLocal;       // found in a local source file, otherwise in wxString</p>
+          <p>bool                         m_IsTemp;        // local (automatic) variable</p>
+          <p>bool                         m_IsConst;       // the member method is const (yes/no)</p>
+          <p>int                          m_Index;         // current Token index in the tree</p>
+          <p>int                          m_ParentIndex;   // Parent Token index</p>
+          <p>TokenIdxSet                  m_Children;      // if it is a class kind token, then it contains all the member tokens</p>
+          <p>TokenIdxSet                  m_Ancestors;     // all the ancestors in the inheritance hierarchy</p>
+          <p>TokenIdxSet                  m_DirectAncestors; //the neatest ancestors</p>
+          <p>TokenIdxSet                  m_Descendants;   // all the descendants in the inheritance hierarchy</p>
+          <p>wxArrayString                m_Aliases;       // used for namespace aliases</p>
+          <p>wxString                     m_TemplateArgument;</p>
+          <p>wxArrayString                m_TemplateType;    //for a class template, this is the formal template argument list</p>
+          <p>//but for a variable Token, this is the actual template arguments.</p>
+          <p>std::map&lt;wxString, wxString&gt; m_TemplateMap;</p>
+          <p>wxString                     m_TemplateAlias;   // alias for templates, e.g. template T1 T2;</p>
+          <p>void*                        m_UserData;        // custom user-data (the classbrowser expects it to be a pointer to a cbProject)</p>
+          <p>protected:</p>
+          <p>TokenTree*                   m_TokenTree;       // a pointer to TokenTree</p>
+          <p>size_t                       m_Ticket;          // This is used in classbrowser to avoid duplication</p>
+          <p>};</p>
+          <p>You see, there are already a lot of bool variables. Also, there are some variables which only used for special kind of Token type. For example, m_TemplateMap, which is only for a class template specification, m_IsOperator is only used for functions.</p>
+          <p>So, maybe, a better way is: create a TokenBase class, which implement all the basic interface, then any special Token kind like functions, classes, structs...... should all be derived from the TokenBase, and have their own member variables, we can still hold all the pointers in the vector like std::vector&lt;TokenBase*&gt;.</p>
+          <p>But I think it is not easy/soon to implement this.</p>
+          <p>Now, lets return to our topic, if you add a bool variable m_IsUnnamed, what should we do?</p>
+          <p>Change the code:</p>
+          <p>if (m_Str.Contains(_T("Union")))</p>
+          <p>m_Str = _T("union");</p>
+          <p>else if (m_Str.Contains(_T("Struct")))</p>
+          <p>m_Str = _T("struct");</p>
+          <p>else</p>
+          <p>m_Str = _T("tag");</p>
+          <p>to something like:</p>
+          <p>Token* typeToken= TokenExists(m_Str, m_LastParent, typeMask);</p>
+          <p>typeToken-&gt;IsUnnamed == true;</p>
+          <p>m_Str =...</p>
+          <p>???</p>
+          <p>Any other changes???</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-11-22 17:15:31</div>
+        <div class="panel-body">
+          <p>Hello, sorry for the late reply - was very busy at my work..</p>
+          <p>Quote: Sorry, I don't understand this sentence, can you explain?</p>
+          <p>Never mind. I just thought it is good idea to finish this patch first. And then we can start  re-design the user interface and related redesign of the Token class.</p>
+          <p>Adding the m_IsUnnamed member doesn't influence the way how we would rename anonymous tokens but gives us possibility to distinguish them easily afterwards.</p>
+          <p>Patch updated.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-11-23 08:51:05</div>
+        <div class="panel-body">
+          <p>One more time..</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-11-26 13:14:38</div>
+        <div class="panel-body">
+          <p>Ok, are you going to start a new branch for refactoring? Or how to arrange this work properly? Anyway I'm going to participate to the extent of my possibilities.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-26 07:28:40</div>
+        <div class="panel-body">
+          <p>I committed with a slightly modified patch in r9466. Thanks for your contribution and happy discussion with you.</p>
+          <p>I just test that a bool variable always take one byte (release build or debug build), but a bit-field variable only takes one bit, so maybe, we need to start the refactoring now.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-26 14:37:07</div>
+        <div class="panel-body">
+          <p>Hi, hovercraft, thanks.</p>
+          <p>In-fact, I'm not sure what is the way to do such refactoring.  When I was not a C::B developer, I remember that I sent several patches to Morten(C::B developer), and he maintained a SVN branch, and applied my patches on the branch. Currently I don't know how to maintain a SVN branch(my knowledge of SVN branch/merge is quite limited), maybe another approach is we can work on a git clone, OBF(C::B developer) has a git clone of C::B source on github, using git for branch works much simpler.</p>
+          <p>When I looked at the Token class, I see there are about five or six bool variables, so if we convert them to bit field, we can save about five or four bytes, this looks not much appealing. Since some member variables are only for specific kind of Tokens, such as: m_TemplateMap. I still think we can create a base class like TokenBase, and define the common interface(by virtual functions), and create many kind of specific Tokens by inheritance, what do you think about this method?  Maybe, we can discuss this on C::B forum.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">hovercraft 2013-11-27 04:41:08</div>
+        <div class="panel-body">
+          <p>I agree, subclassing is a common approach, and discuss this in the forum is also the right idea.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2013-11-27 14:19:14</div>
+        <div class="panel-body">
+          <p>Ok, see: <a href="http://forums.codeblocks.org/index.php/topic,18629.0.html">http://forums.codeblocks.org/index.php/topic,18629.0.html</a></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

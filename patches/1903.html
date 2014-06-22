@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patch 1903 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li class="active"><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Patch #1903 <small>2007-02-25 20:45:08</small></h3>
+          <h4>stahta01</h4>
+          wxSmith patch for wxW28 and wxPropertyGrid 1.2.x
+          <dl class="dl-horizontal">
+            <dt>Download</dt>
+            <dd><a href="1903-wxSmith_patch.patch">1903-wxSmith_patch.patch</a></dd>
+          </dl>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Plugin::Refinement</dd>
+            <dt>Status</dt><dd>Accepted</dd>
+            <dt>Close date</dt><dd>2007-03-23 22:48:10</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">stahta01 2007-02-25 20:47:28</div>
+        <div class="panel-body">
+          <p>This patch combines Pre-compiled Header fixes, wxWidgets 2.8 Warning Reduction and the following patches into one patch.</p>
+          <p>[ Patch #1771 ] Old wxSmith patch for wxListbook::HitTest protected wxW2.8</p>
+          <p><a href="1771.html">https://developer.berlios.de/patch/?func=detailpatch&amp;patch_id=1771&amp;group_id=5358</a></p>
+          <p>[ Patch #1766 ] NEW (experimental) wxSmith patch for wxWidgets 2.8</p>
+          <p><a href="1766.html">https://developer.berlios.de/patch/?func=detailpatch&amp;patch_id=1766&amp;group_id=5358</a></p>
+          <p>[ Patch #1702 ] patch to the old wxSmith to use wxPropertyGrid version 1.2.x</p>
+          <p><a href="1702.html">https://developer.berlios.de/patch/?func=detailpatch&amp;patch_id=1702&amp;group_id=5358</a></p>
+          <p>Tim S</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">stahta01 2007-02-26 00:42:06</div>
+        <div class="panel-body">
+          <p>Change 1: WXWIN_COMPATIBILITY_2_4 is turn off by default under wxWidgets 2.8</p>
+          <p>Problem 1: This makes wxHIDE_READONLY undefined.</p>
+          <p>Solution 1: Added #if (WXWIN_COMPATIBILITY_2_4) blocks around wxHIDE_READONLY.</p>
+          <p>Change 2: wxFontEnumerator::GetFacenames returns wxArrayString instead of wxArrayString*</p>
+          <p>Solution 2: Added code</p>
+          <p>#if wxCHECK_VERSION(2, 8, 0)</p>
+          <p>wxArrayString faceNames = Enumer.GetFacenames();</p>
+          <p>#else</p>
+          <p>wxArrayString&amp; faceNames = *Enumer.GetFacenames();</p>
+          <p>#endif</p>
+          <p>And use faceNames where GetFacenames was used.</p>
+          <p>Problem 3: wxWidgets 2.8 does NOT like WX_DEFINE_ARRAY(bool,wxArrayBool)</p>
+          <p>Solution 3: Replaced it with WX_DEFINE_ARRAY_INT(bool,wxArrayBool)</p>
+          <p>Change 4: OnCancel method removed from wxDialog.</p>
+          <p>Problem 4: wxsArrayStringEditorDlg was using it.</p>
+          <p>Solution 4: Created wxsArrayStringEditorDlg::OnCancel method,</p>
+          <p>note I am not sure if my code in the OnCancel method is correct.</p>
+          <p>Change 5: wxListbook::HitTest in protected in wx/listbook.h, Fixed in wxW2.8.2</p>
+          <p>Problem 5: The file src/plugins/contrib/wxSmith/defwidgets/wxslistbook.cpp uses it.</p>
+          <p>Solution 5: Cast to wxBookCtrlBase</p>
+          <p>Change 6: Constansts wxOPEN, wxFILE_MUST_EXIST, wxSAVE and wxOVERWRITE_PROMPT has been depreciated/obsoleted.</p>
+          <p>Change 7A: Constansts wxTHICK_FRAME and wxRESIZE_BOX has been depreciated/obsoleted.</p>
+          <p>Solution 7A: Replaced wxTHICK_FRAME with wxRESIZE_BORDER. Replaced wxRESIZE_BOX with wxMAXIMIZE_BOX.</p>
+          <p>Change 7B: Constansts wxDIALOG_MODELESS, wxNO_3D and wxDIALOG_MODAL has been depreciated/obsoleted.</p>
+          <p>Solution 7B: Removed use of Constansts.</p>
+          <p>Change 8: Method wxBitmapButton::SetLabel has been depreciated/obsoleted.</p>
+          <p>Solution 8: Replaced with wxBitmapButton::SetBitmapLabel.</p>
+          <p>Change 9: propgrid macro WX_PG_IMPLEMENT_PROPERTY_CLASS has been changed.</p>
+          <p>Solution 9: used #if/else/endif block</p>
+          <p>Change 10: Structure wxPGChoiceInfo in header propgrid.h has changed</p>
+          <p>Solution 10: if wxPG_VERSION &gt; 1099 use with m_choices.GetLabel(?) instead of m_constants-&gt;GetLabel(?)</p>
+          <p>Change 11: wxPropertyGrid 1.2.6 requires defines to compile and link right</p>
+          <p>Solution 11: Added defines for WXMAKINGLIB_PROPGRID and wxPG_COMPATIBILITY_1_0_0</p>
+          <p>Note 11: The main CB project needs an extra define of wxPG_USE_WXMODULE=0</p>
+          <p>Change 12: Constanst wxTE_LINEWRAP has been depreciated/obsoleted.</p>
+          <p>Solution 12: Replaced wxTE_LINEWRAP with wxTE_CHARWRAP.</p>
+          <p>Change 13: Constansts wxSP_FULLSASH and wxSP_SASH_AQUA has been depreciated/obsoleted.</p>
+          <p>Solution 13: Removed Constansts.</p>
+          <p>Change 14: Precompiled Headers issues.</p>
+          <p>Solution 14: Added more includes guarded by WX_PRECOMP</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">stahta01 2007-02-26 01:19:08</div>
+        <div class="panel-body">
+          <p>Thread to post about this patch</p>
+          <p><a href="http://forums.codeblocks.org/index.php?topic=4638.0">http://forums.codeblocks.org/index.php?topic=4638.0</a></p>
+          <p>Tim S</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">stahta01 2007-03-07 00:16:31</div>
+        <div class="panel-body">
+          <p>FYI:</p>
+          <p>I am re-doing the patch, wxSmith seems to have changed enough to stop my patch from working.</p>
+          <p>Tim S</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">stahta01 2007-03-07 04:13:16</div>
+        <div class="panel-body">
+          <p>Updated for SVN 3669</p>
+          <p>Tim S</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

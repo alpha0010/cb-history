@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 7393 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #7393 <small>2006-05-06 11:24:04</small></h3>
+          <h4>kkez</h4>
+          <p class="lead">CB hangs when error in a .rc file</p>
+          <p>When windres outputs a "syntax error" trying to compile a resource file, CB shows the error in the build message tab, then hangs for 3/4 seconds.</p>
+          <p>I've tried to</p>
+          <p>1) disable all the plugins</p>
+          <p>2) delete .conf file</p>
+          <p>3) compile big (400+ lines) and small (5 lines) resource files</p>
+          <p>but i always get the same delay.</p>
+          <p>4 May nightly build (rev 2411), wxwidgets 2.6.3/2.6.2</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>&nbsp;</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2006-07-06 17:51:32</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">kkez 2006-05-08 17:06:32</div>
+        <div class="panel-body">
+          <p>Revision 2272 doesn't have this issue, while revision 2288 does. The only commit that seems error-related is at revision 2284, "* Fixed compiler couldn't jump to error line for single files (without a project)."</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2006-05-09 11:47:16</div>
+        <div class="panel-body">
+          <p>Please post a small resource file for testing.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kkez 2006-05-09 15:27:18</div>
+        <div class="panel-body">
+          <p><a href="http://www.savefile.com/files.php?fid=8711018">http://www.savefile.com/files.php?fid=8711018</a></p>
+          <p>It's a winapi dialog-based CB project with a .rc file.</p>
+          <p>(You need the mingw w32api headers to compile it)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kkez 2006-05-11 11:35:59</div>
+        <div class="panel-body">
+          <p>So? No one can confirm/fix it? It's really annoying... :(</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2006-05-16 12:03:28</div>
+        <div class="panel-body">
+          <p>I just downloaded and tried your project.</p>
+          <p>Works fine here. That is it displays one error while building and does so immediately. No delays whatsoever...</p>
+          <p>windres --version</p>
+          <p>GNU windres 2.15.94 20050118</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kkez 2006-05-16 15:03:07</div>
+        <div class="panel-body">
+          <p>Well, i can't find your windres version, i have the "current" version which is 2.15.91, but i get the same delay with the candidate version (2.16.91)...</p>
+          <p>It seems indeed that it's windres.exe that is hanging, but it's weird, because the "build message" tab displays the error, but the "build log" doesn't until windres stops, and that make me think that CB is searching for the error in the .rc file...</p>
+          <p>By the way, it does not even open the file and highlight the line even if the error line is returned along with the filename..</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2006-05-25 11:30:32</div>
+        <div class="panel-body">
+          <p>Anyone else who can confirm this behaviour?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kkez 2006-05-30 10:42:40</div>
+        <div class="panel-body">
+          <p>Nobody. Well, i'll try to build C::B and see where it hangs.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kkez 2006-06-08 15:33:58</div>
+        <div class="panel-body">
+          <p>It hangs inside EditorManager::Open() with the call to NormalizePath(), because the filename passed to EditorManager::Open() is actually "windres.exe: res.rc", which is the normal windres output.</p>
+          <p>The regex used to find out if it's an error ( windres.exe[ \t]*(.*) ) could be applied to get the REAL filename... if i'm right.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kkez 2006-06-08 16:20:23</div>
+        <div class="panel-body">
+          <p>I didn't know how regexes where applied... now i've found out how to fix this nasty hang&amp;bug.</p>
+          <p>The problems were:</p>
+          <p>1) the compiler or preprocessor error regex was applied before the windres error regex</p>
+          <p>2) you need a more precise windres error regex to handle the error in a file and not just a "windres.exe: [error]"</p>
+          <p>I'll make a patch out of it, if you agree with what i've said :)</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">kkez 2006-06-08 16:57:54</div>
+        <div class="panel-body">
+          <p>Patch available here: <a href="../patches/1108.html">http://developer.berlios.de/patch/index.php?func=detailpatch&amp;patch_id=1108&amp;group_id=5358</a></p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2006-07-06 17:51:32</div>
+        <div class="panel-body">
+          <p>This bug has been already fixed in HEAD.</p>
+          <p>Thank you.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

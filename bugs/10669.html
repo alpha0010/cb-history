@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bug 10669 - Code::Blocks History</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body role="document">
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.codeblocks.org/">Code::Blocks</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="../index.html">Home</a></li>
+            <li class="active"><a href="../bugs.html">Bugs</a></li>
+            <li><a href="../features.html">Features</a></li>
+            <li><a href="../patches.html">Patches</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-sm-8">
+          <h3>Bug #10669 <small>2007-03-18 15:02:17</small></h3>
+          <h4>ondra_holub</h4>
+          <p class="lead">file global.h, function cbU2C should return const value</p>
+          <p>Function is implemented in src/sdk/global.cpp as</p>
+          <p>// Return multibyte (C string) representation of the string</p>
+          <p>wxWX2MBbuf cbU2C(const wxString&amp; str)</p>
+          <p>{</p>
+          <p>if(platform::unicode)</p>
+          <p>return str.mb_str(wxConvUTF8);</p>
+          <p>else</p>
+          <p>return str.mb_str();</p>
+          <p>}</p>
+          <p>So it tries to convert const value to non-const. Function should return const wxWX2MBbuf - then everything seems ok. Without this change I am not able to compile on SUSE Linux 10.1/64bit with gcc 4.1.0.</p>
+        </div>
+        <div class="col-sm-4">
+          <dl class="dl-horizontal">
+            <dt>Category</dt><dd>Application::Error</dd>
+            <dt>Group</dt><dd>&nbsp;</dd>
+            <dt>Status</dt><dd>Closed</dd>
+            <dt>Close date</dt><dd>2007-03-27 10:47:09</dd>
+            <dt>Assigned to</dt><dd>&nbsp;</dd>
+          </dl>
+        </div>
+      </div>
+      <h4 class="page-header">History</h4>
+      <div class="panel panel-default">
+        <div class="panel-heading">ondra_holub 2007-03-18 15:11:55</div>
+        <div class="panel-body">
+          <p>Also file src/plugins/contrib/wxSmith/wxwidgets/wxsitemresdataobject.cpp needs to be updated after update of cbU2C on lines 47 and 55 to assign result of cbU2C to const value:</p>
+          <p>bool wxsItemResDataObject::GetDataHere(const wxDataFormat&amp; format,void *buf) const</p>
+          <p>{</p>
+          <p>wxString XmlData = GetXmlData();</p>
+          <p>const wxWX2MBbuf str = cbU2C(XmlData);</p>
+          <p>memcpy(buf,str,strlen(str)+1);</p>
+          <p>return true;</p>
+          <p>}</p>
+          <p>size_t wxsItemResDataObject::GetDataSize(const wxDataFormat&amp; format) const</p>
+          <p>{</p>
+          <p>wxString XmlData = GetXmlData();</p>
+          <p>const wxWX2MBbuf str = cbU2C(XmlData);</p>
+          <p>return strlen(str)+1;</p>
+          <p>}</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ondra_holub 2007-03-22 07:47:13</div>
+        <div class="panel-body">
+          <p>Submitted patch for 3 files <a href="../patches/1929.html">https://developer.berlios.de/patch/index.php?func=detailpatch&amp;patch_id=1929&amp;group_id=5358</a></p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ondra_holub 2007-03-25 15:15:23</div>
+        <div class="panel-body">
+          <p>Added patch Patch #1929</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">mandrav 2007-03-27 10:47:09</div>
+        <div class="panel-body">
+          <p>This bug is now fixed in HEAD.</p>
+          <p>Thank you for reporting it.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  </body>
+</html>
