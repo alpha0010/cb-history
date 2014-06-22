@@ -149,21 +149,24 @@ bugListTemplate = r"""<!DOCTYPE html>
 </html>
 """
 
-bugEntryTemplate = r"""<tr><td>$$NUMBER$$</td><td><a href="bugs/$$SHORT_NAME$$.html">$$SUMMARY$$</a></td><td>$$CATEGORY$$</td><td>$$PLATFORM$$</td><td>$$STATUS$$</td><td>$$OPEN_DATE$$</td><td>$$ASSIGNED$$</td><td>$$AUTHOR$$</td></tr>"""
+bugEntryTemplate = r"""<tr><td>$$NUMBER$$</td><td><a href="bugs/$$NUMBER$$.html">$$SUMMARY$$</a></td><td>$$CATEGORY$$</td><td>$$PLATFORM$$</td><td>$$STATUS$$</td><td>$$OPEN_DATE$$</td><td>$$ASSIGNED$$</td><td>$$AUTHOR$$</td></tr>"""
 
 urlRe = re.compile(ur'(((ht|f)tp(s?)\:\/\/)|(www\.))(([a-zA-Z0-9\-\._]+(\.[a-zA-Z0-9\-\._]+)+)|localhost)(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?([\d\w\.\/\%\+\-\=\&amp;\?\:\\\&quot;\'\,\|\~\;]*)')
 
-urlRemap = []
-for line in open("rewriteLinks.txt"):
-    urlRemap.append(line.split(" "))
+bugRe     = re.compile(ur'bug_id=([0-9]+)')
+featureRe = re.compile(ur'feature_id=([0-9]+)')
+patchRe   = re.compile(ur'patch_id=([0-9]+)')
 def getMappedUrl(url):
-    for pattern in urlRemap:
-        if pattern[0] in url:
-            if pattern[0].startswith("patch"):
-                return "../patches/" + pattern[1]
-            elif pattern[0].startswith("feature"):
-                return "../features/" + pattern[1]
-            return pattern[1]
+    if "group_id=5358" in url:
+        urlMatch = re.search(bugRe, para)
+        if urlMatch:
+            return urlMatch.group(1) + ".html"
+        urlMatch = re.search(featureRe, para)
+        if urlMatch:
+            return "../features/" + urlMatch.group(1) + ".html"
+        urlMatch = re.search(patchRe, para)
+        if urlMatch:
+            return "../patches/" + urlMatch.group(1) + ".html"
     return url
 
 categoryDict = { "100": "&nbsp;",
@@ -225,15 +228,6 @@ for ticket in docTree.getroot():
 
         elif prop.tag == "summary":
             ticketOut["$$SUMMARY$$"] = cgi.escape(prop.text)
-            ticketOut["$$SHORT_NAME$$"] = ticket.attrib["id"] + "-"
-            for ch in prop.text:
-                if len(ticketOut["$$SHORT_NAME$$"]) > 18:
-                    ticketOut["$$SHORT_NAME$$"] = ticketOut["$$SHORT_NAME$$"].rstrip("_")
-                    break
-                if ch.isalnum():
-                    ticketOut["$$SHORT_NAME$$"] += ch
-                elif not ticketOut["$$SHORT_NAME$$"].endswith("_") and not ticketOut["$$SHORT_NAME$$"].endswith("-"):
-                    ticketOut["$$SHORT_NAME$$"] += "_"
 
         elif prop.tag == "details":
             if len(prop.text) > 2000 or "===================================================================" in prop.text:
@@ -337,7 +331,7 @@ for ticket in ticketsOut:
                     history += "\n      "
                 history += cmt
             ticketHTML = ticketHTML.replace("$$" + key + "$$", history)
-    f = codecs.open("static_web/bugs/" + ticket["$$SHORT_NAME$$"] + ".html", "w+", "utf-8")
+    f = codecs.open("static_web/bugs/" + ticket["$$NUMBER$$"] + ".html", "w+", "utf-8")
     f.write(ticketHTML)
     f.close()
 

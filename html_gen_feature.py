@@ -158,21 +158,24 @@ featureListTemplate = r"""<!DOCTYPE html>
 </html>
 """
 
-featureEntryTemplate = r"""<tr><td>$$NUMBER$$</td><td><a href="features/$$SHORT_NAME$$.html">$$SUMMARY$$</a></td><td>$$CATEGORY$$</td><td>$$STATUS$$</td><td>$$OPEN_DATE$$</td><td>$$ASSIGNED$$</td><td>$$AUTHOR$$</td></tr>"""
+featureEntryTemplate = r"""<tr><td>$$NUMBER$$</td><td><a href="features/$$NUMBER$$.html">$$SUMMARY$$</a></td><td>$$CATEGORY$$</td><td>$$STATUS$$</td><td>$$OPEN_DATE$$</td><td>$$ASSIGNED$$</td><td>$$AUTHOR$$</td></tr>"""
 
 urlRe = re.compile(ur'(((ht|f)tp(s?)\:\/\/)|(www\.))(([a-zA-Z0-9\-\._]+(\.[a-zA-Z0-9\-\._]+)+)|localhost)(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?([\d\w\.\/\%\+\-\=\&amp;\?\:\\\&quot;\'\,\|\~\;]*)')
 
-urlRemap = []
-for line in open("rewriteLinks.txt"):
-    urlRemap.append(line.split(" "))
+bugRe     = re.compile(ur'bug_id=([0-9]+)')
+featureRe = re.compile(ur'feature_id=([0-9]+)')
+patchRe   = re.compile(ur'patch_id=([0-9]+)')
 def getMappedUrl(url):
-    for pattern in urlRemap:
-        if pattern[0] in url:
-            if pattern[0].startswith("patch"):
-                return "../patches/" + pattern[1]
-            elif pattern[0].startswith("bug"):
-                return "../bugs/" + pattern[1]
-            return pattern[1]
+    if "group_id=5358" in url:
+        urlMatch = re.search(bugRe, para)
+        if urlMatch:
+            return "../bugs/" + urlMatch.group(1) + ".html"
+        urlMatch = re.search(featureRe, para)
+        if urlMatch:
+            return rlMatch.group(1) + ".html"
+        urlMatch = re.search(patchRe, para)
+        if urlMatch:
+            return "../patches/" + urlMatch.group(1) + ".html"
     return url
 
 fHandle = open("old_dump/berlios.json", "r")
@@ -329,15 +332,6 @@ for ticket in lookupDb["trackers"]["feature"]["artifacts"]:
         ticketOut["$$ASSIGNED$$"] = "&nbsp;"
     if ticketOut["$$CATEGORY$$"] == "None":
         ticketOut["$$CATEGORY$$"] = "&nbsp;"
-    ticketOut["$$SHORT_NAME$$"] = str(ticket["id"]) + "-"
-    for ch in ticket["summary"]:
-        if len(ticketOut["$$SHORT_NAME$$"]) > 18:
-            ticketOut["$$SHORT_NAME$$"] = ticketOut["$$SHORT_NAME$$"].rstrip("_")
-            break
-        if ch.isalnum():
-            ticketOut["$$SHORT_NAME$$"] += ch
-        elif not ticketOut["$$SHORT_NAME$$"].endswith("_") and not ticketOut["$$SHORT_NAME$$"].endswith("-"):
-            ticketOut["$$SHORT_NAME$$"] += "_"
     comments = sorted(ticket["comments"], key=lambda cm: fromisotime(cm["date"]))
     for comment in comments:
         text = comment["comment"]
@@ -407,7 +401,7 @@ for ticket in ticketsOut:
                     history += "\n      "
                 history += cmt
             ticketHTML = ticketHTML.replace("$$" + key + "$$", history)
-    f = codecs.open("static_web/features/" + ticket["$$SHORT_NAME$$"] + ".html", "w+", "utf-8")
+    f = codecs.open("static_web/features/" + ticket["$$NUMBER$$"] + ".html", "w+", "utf-8")
     f.write(ticketHTML)
     f.close()
 
