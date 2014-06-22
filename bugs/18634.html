@@ -72,156 +72,10 @@
       </div>
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
-        <div class="panel-heading">earlgrey 2012-06-11 19:02:01</div>
-        <div class="panel-body">
-          <p>Problem is Linux-only related ;</p>
-          <p>Can be :</p>
-          <p>- 64 bits glibc or compiler failure</p>
-          <p>- wx calling glibc with bad params</p>
-          <p>######################################</p>
-          <p>(gdb) backtrace</p>
-          <p>#0 0x00007ffff20a7ec5 in *__GI___xstat (vers=&lt;value optimized out&gt;, name=&lt;value optimized out&gt;, buf=0x7fffffff9f70) at ../sysdeps/unix/sysv/linux/wordsize-64/xstat.c:38</p>
-          <p>#######################################</p>
-          <p>Here is the function :</p>
-          <p>/* Get information about the file NAME in BUF.  */</p>
-          <p>34 int</p>
-          <p>35 __xstat (int vers, const char *name, struct stat *buf)</p>
-          <p>36 {</p>
-          <p>37   if (vers == _STAT_VER_KERNEL || vers == _STAT_VER_LINUX)</p>
-          <p>38     return INLINE_SYSCALL (stat, 2, name, CHECK_1 (buf));</p>
-          <p>39</p>
-          <p>40   __set_errno (EINVAL);</p>
-          <p>41   return -1;</p>
-          <p>42 }</p>
-          <p>Line 38 is IO call, so the bug is an IO lock.</p>
-        </div>
-      </div>
-      <div class="panel panel-default">
-        <div class="panel-heading">earlgrey 2012-06-17 03:51:51</div>
-        <div class="panel-body">
-          <pre class="pre-scrollable">nativeparser.cpp , line approximatively 2500
-=========================================================================================================================
-
-wxArrayString NativeParser::GetAllPathsByFilename(const wxString&amp; filename)
-{
-    TRACE(_T("NativeParser::GetAllPathsByFilename()"));
-
-    [ ...  ]
-
-        if (project)
-        {
-            const wxString prjPath = project-&gt;GetCommonTopLevelPath();                                                       [ problematic value : "/"  ( or for you, "E:\" ) ]
-            wxString priorityPath;
-            if (fn.HasExt() &amp;&amp; (fn.GetExt().StartsWith(_T("h")) || fn.GetExt().StartsWith(_T("c"))))
-            {
-                wxFileName priFn(prjPath);
-                priFn.AppendDir(fn.GetExt().StartsWith(_T("h")) ? _T("sdk") : _T("include"));
-                if (priFn.DirExists())                                                                                                                                [ m_CommonTopLevelPath/sdk or m_CommonTopLevelPath/include search ]
-                {
-
-                  [ ... ]
-
-                }
-            }
-
-            if (dirs.IsEmpty())
-            {
-                wxDir prjDir(prjPath);                                                                                                        [ prjDir is "/"  ( or for you, "E:\" ) ]
-                if (prjDir.IsOpened())
-                {
-                    wxArrayString others;
-                    NativeParserHelper::ParserDirTraverser traverser(priorityPath, others);
-                    prjDir.Traverse(traverser, filespec, wxDIR_FILES | wxDIR_DIRS);                       [ Here is the long wait, wxDIR_DIR flag implies recursive scan ]
-                    if (others.GetCount() == 1)
-                        AddPaths(dirs, others[0], fn.HasExt());
-                }
-            }
-        }
-    }
-
-    if (!files.IsEmpty())
-        AddPaths(dirs, files[0], fn.HasExt());
-
-    return dirs;
-}
-=========================================================================================================================
-</pre>
-        </div>
-      </div>
-      <div class="panel panel-default">
-        <div class="panel-heading">earlgrey 2012-06-17 04:49:39</div>
-        <div class="panel-body">
-          <p>&gt; I don't have any freeze when open the a.h file.</p>
-          <p>How many files have you under "E:\" ?</p>
-          <p>&gt;  I'm still not sure which behavior will let c::b to scan all the files under: E:\ ?</p>
-          <p>This is the right way to reproduce the bug</p>
-          <p>OK, I will look at building rev 8032 under win7.</p>
-        </div>
-      </div>
-      <div class="panel panel-default">
-        <div class="panel-heading">ollydbg 2012-06-17 05:24:34</div>
-        <div class="panel-body">
-          <p>Quote: nativeparser.cpp , line approximatively 2500 ...</p>
-          <p>This file is in the sources of Code-Completion plugin, so If you disable the Code-Completion plugin (from the plugin manager panel), I believe there is no freeze. In fact I think the freeze was caused by the header file crawler.</p>
-          <p>Quote:How many files have you under "E:\" ?</p>
-          <p>I have a lot of files under E:\, which is much much larger then C:\</p>
-          <p>I will look into this issue. (debug the NativeParser::GetAllPathsByFilename related code). Thanks you!!!</p>
-        </div>
-      </div>
-      <div class="panel panel-default">
-        <div class="panel-heading">earlgrey 2012-06-14 18:18:17</div>
-        <div class="panel-body">
-          <p>&gt; I hope some developer under Linux can help you more.</p>
-          <p>Maybe me ( C::B was easy to compile ). Can I ask you / C::B developper ( maybe mortenmacfly ) about the purpose of the</p>
-          <p>================================</p>
-          <p>"NativeParser::GetAllPathsByFilename()"</p>
-          <p>================================</p>
-          <p>method , and what is it supposed to do ?</p>
-        </div>
-      </div>
-      <div class="panel panel-default">
         <div class="panel-heading">ollydbg 2012-06-10 08:59:59</div>
         <div class="panel-body">
           <p>How do you disable the Code-Completion plugin?</p>
           <p>It should be disabled by plugin manager, Thanks.</p>
-        </div>
-      </div>
-      <div class="panel panel-default">
-        <div class="panel-heading">earlgrey 2012-06-12 18:47:38</div>
-        <div class="panel-body">
-          <p>What is doing this "//srv" on my Linux box ?</p>
-          <p>==========================================</p>
-          <p>37      in ../sysdeps/unix/sysv/linux/wordsize-64/xstat.c</p>
-          <p>(gdb) print vers</p>
-          <p>$6 = 1</p>
-          <p>(gdb) print name</p>
-          <p>$7 = 0x825cb90 "//srv"</p>
-          <p>==========================================</p>
-          <p>Could it be the reason of the freeze ?</p>
-        </div>
-      </div>
-      <div class="panel panel-default">
-        <div class="panel-heading">earlgrey 2012-06-12 19:50:21</div>
-        <div class="panel-body">
-          <p>Sorry, confusion between "//" and "\\"</p>
-        </div>
-      </div>
-      <div class="panel panel-default">
-        <div class="panel-heading">earlgrey 2012-06-12 20:28:45</div>
-        <div class="panel-body">
-          <p>Got it : seems like C::B is scanning recursively my filesystem from "/"</p>
-          <p>Hope it helps.</p>
-        </div>
-      </div>
-      <div class="panel panel-default">
-        <div class="panel-heading">earlgrey 2012-06-14 18:18:24</div>
-        <div class="panel-body">
-          <p>&gt; I hope some developer under Linux can help you more.</p>
-          <p>Maybe me ( C::B was easy to compile ). Can I ask you / C::B developper ( maybe mortenmacfly ) about the purpose of the</p>
-          <p>================================</p>
-          <p>"NativeParser::GetAllPathsByFilename()"</p>
-          <p>================================</p>
-          <p>method , and what is it supposed to do ?</p>
         </div>
       </div>
       <div class="panel panel-default">
@@ -235,29 +89,9 @@ wxArrayString NativeParser::GetAllPathsByFilename(const wxString&amp; filename)
         </div>
       </div>
       <div class="panel panel-default">
-        <div class="panel-heading">ollydbg 2012-06-12 23:56:08</div>
-        <div class="panel-body">
-          <p>QUOTE: Got it : seems like C::B is scanning recursively my filesystem from "/"</p>
-          <p>As you said, CC does not cause this issue. If I remember correct, maybe there are some bug in the path handling in C::B. But sorry I mainly works on Windows system, so I hope some developer under Linux can help you more.</p>
-        </div>
-      </div>
-      <div class="panel panel-default">
         <div class="panel-heading">earlgrey 2012-06-10 10:05:56</div>
         <div class="panel-body">
           <p>Seems that you have got an infinite loop, or more likely a thread lock, somewhere.</p>
-        </div>
-      </div>
-      <div class="panel panel-default">
-        <div class="panel-heading">earlgrey 2012-06-14 19:39:15</div>
-        <div class="panel-body">
-          <p>OK, a cbproject class has a "m_CommonTopLevelPath" member ; and in my project I have :</p>
-          <p>- files of type "/home/......." ,</p>
-          <p>- file of type "/mnt/..."  ( due of usage of some symlinks )</p>
-          <p>so logically m_CommonTopLevelPath will be "/", and unfortunately at nativeparser.cpp:2537</p>
-          <p>=================================================</p>
-          <p>prjDir.Traverse(traverser, filespec, wxDIR_FILES | wxDIR_DIRS);</p>
-          <p>=================================================</p>
-          <p>will therefore scan recursively all my filesystem.</p>
         </div>
       </div>
       <div class="panel panel-default">
@@ -724,6 +558,149 @@ The current source language is "auto; currently c".
         </div>
       </div>
       <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-11 18:30:37</div>
+        <div class="panel-body">
+          <pre class="pre-scrollable">###################################################################################################
+# I am not familar with gdb, so I forgot the rest of the call stack :)
+################################################################################################### 
+
+#56 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#57 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#58 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#59 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#60 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#61 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#62 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#63 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+---Type &lt;return&gt; to continue, or q &lt;return&gt; to quit---
+#64 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#65 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#66 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#67 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#68 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#69 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#70 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#71 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
+#72 0x00007fffdc510291 in NativeParser::GetAllPathsByFilename (this=&lt;value optimized out&gt;, filename=&lt;value optimized out&gt;) at nativeparser.cpp:2537
+#73 0x00007fffdc4da18f in ClassBrowserBuilderThread::Init (this=0x205a200, np=&lt;value optimized out&gt;, treeTop=&lt;value optimized out&gt;, treeBottom=&lt;value optimized out&gt;, active_filename=&lt;value optimized out&gt;, user_data=0x254dff0, bo=..., tt=0x7fffd40321b0, 
+    idThreadEvent=2656) at classbrowserbuilderthread.cpp:116
+#74 0x00007fffdc4d34fc in ClassBrowser::ThreadedBuildTree (this=0x2041420) at classbrowser.cpp:856
+#75 0x00007fffdc4d4fdd in ClassBrowser::UpdateClassBrowserView (this=0x2041420, checkHeaderSwap=224) at classbrowser.cpp:244
+#76 0x00007fffdc514cc2 in NativeParser::OnEditorActivated (this=0x1be8900, editor=&lt;value optimized out&gt;) at nativeparser.cpp:2408
+#77 0x00007fffdc4e6414 in CodeCompletion::OnEditorActivatedTimer (this=0x1be8880, event=&lt;value optimized out&gt;) at codecompletion.cpp:2363
+#78 0x00007ffff58b4e60 in wxEvtHandler::ProcessEventIfMatches(wxEventTableEntryBase const&amp;, wxEvtHandler*, wxEvent&amp;) () from /usr/lib/libwx_baseu-2.8.so.0
+#79 0x00007ffff58b5e24 in wxEventHashTable::HandleEvent(wxEvent&amp;, wxEvtHandler*) () from /usr/lib/libwx_baseu-2.8.so.0
+#80 0x00007ffff58b5f07 in wxEvtHandler::ProcessEvent(wxEvent&amp;) () from /usr/lib/libwx_baseu-2.8.so.0
+#81 0x00007ffff6254168 in wxTimerBase::Notify() () from /usr/lib/libwx_gtk2u_core-2.8.so.0
+#82 0x00007ffff615f5ab in ?? () from /usr/lib/libwx_gtk2u_core-2.8.so.0
+#83 0x00007ffff2f51ecb in ?? () from /lib/libglib-2.0.so.0
+#84 0x00007ffff2f516f2 in g_main_context_dispatch () from /lib/libglib-2.0.so.0
+#85 0x00007ffff2f55568 in ?? () from /lib/libglib-2.0.so.0
+#86 0x00007ffff2f55a75 in g_main_loop_run () from /lib/libglib-2.0.so.0
+#87 0x00007ffff52da6b7 in gtk_main () from /usr/lib/libgtk-x11-2.0.so.0
+#88 0x00007ffff61569f8 in wxEventLoop::Run() () from /usr/lib/libwx_gtk2u_core-2.8.so.0
+#89 0x00007ffff61dbc2b in wxAppBase::MainLoop() () from /usr/lib/libwx_gtk2u_core-2.8.so.0
+#90 0x000000000044186b in CodeBlocksApp::OnRun (this=0x56d23f0) at app.cpp:777
+#91 0x00007ffff585b855 in wxEntry(int&amp;, wchar_t**) () from /usr/lib/libwx_baseu-2.8.so.0
+#92 0x0000000000441582 in main (argc=1, argv=0x7fffffff9f70) at app.cpp:266
+</pre>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-11 19:02:01</div>
+        <div class="panel-body">
+          <p>Problem is Linux-only related ;</p>
+          <p>Can be :</p>
+          <p>- 64 bits glibc or compiler failure</p>
+          <p>- wx calling glibc with bad params</p>
+          <p>######################################</p>
+          <p>(gdb) backtrace</p>
+          <p>#0 0x00007ffff20a7ec5 in *__GI___xstat (vers=&lt;value optimized out&gt;, name=&lt;value optimized out&gt;, buf=0x7fffffff9f70) at ../sysdeps/unix/sysv/linux/wordsize-64/xstat.c:38</p>
+          <p>#######################################</p>
+          <p>Here is the function :</p>
+          <p>/* Get information about the file NAME in BUF.  */</p>
+          <p>34 int</p>
+          <p>35 __xstat (int vers, const char *name, struct stat *buf)</p>
+          <p>36 {</p>
+          <p>37   if (vers == _STAT_VER_KERNEL || vers == _STAT_VER_LINUX)</p>
+          <p>38     return INLINE_SYSCALL (stat, 2, name, CHECK_1 (buf));</p>
+          <p>39</p>
+          <p>40   __set_errno (EINVAL);</p>
+          <p>41   return -1;</p>
+          <p>42 }</p>
+          <p>Line 38 is IO call, so the bug is an IO lock.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-12 18:47:38</div>
+        <div class="panel-body">
+          <p>What is doing this "//srv" on my Linux box ?</p>
+          <p>==========================================</p>
+          <p>37      in ../sysdeps/unix/sysv/linux/wordsize-64/xstat.c</p>
+          <p>(gdb) print vers</p>
+          <p>$6 = 1</p>
+          <p>(gdb) print name</p>
+          <p>$7 = 0x825cb90 "//srv"</p>
+          <p>==========================================</p>
+          <p>Could it be the reason of the freeze ?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-12 19:50:21</div>
+        <div class="panel-body">
+          <p>Sorry, confusion between "//" and "\\"</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-12 20:28:45</div>
+        <div class="panel-body">
+          <p>Got it : seems like C::B is scanning recursively my filesystem from "/"</p>
+          <p>Hope it helps.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-06-12 23:56:08</div>
+        <div class="panel-body">
+          <p>QUOTE: Got it : seems like C::B is scanning recursively my filesystem from "/"</p>
+          <p>As you said, CC does not cause this issue. If I remember correct, maybe there are some bug in the path handling in C::B. But sorry I mainly works on Windows system, so I hope some developer under Linux can help you more.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-14 18:18:17</div>
+        <div class="panel-body">
+          <p>&gt; I hope some developer under Linux can help you more.</p>
+          <p>Maybe me ( C::B was easy to compile ). Can I ask you / C::B developper ( maybe mortenmacfly ) about the purpose of the</p>
+          <p>================================</p>
+          <p>"NativeParser::GetAllPathsByFilename()"</p>
+          <p>================================</p>
+          <p>method , and what is it supposed to do ?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-14 18:18:24</div>
+        <div class="panel-body">
+          <p>&gt; I hope some developer under Linux can help you more.</p>
+          <p>Maybe me ( C::B was easy to compile ). Can I ask you / C::B developper ( maybe mortenmacfly ) about the purpose of the</p>
+          <p>================================</p>
+          <p>"NativeParser::GetAllPathsByFilename()"</p>
+          <p>================================</p>
+          <p>method , and what is it supposed to do ?</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-14 19:39:15</div>
+        <div class="panel-body">
+          <p>OK, a cbproject class has a "m_CommonTopLevelPath" member ; and in my project I have :</p>
+          <p>- files of type "/home/......." ,</p>
+          <p>- file of type "/mnt/..."  ( due of usage of some symlinks )</p>
+          <p>so logically m_CommonTopLevelPath will be "/", and unfortunately at nativeparser.cpp:2537</p>
+          <p>=================================================</p>
+          <p>prjDir.Traverse(traverser, filespec, wxDIR_FILES | wxDIR_DIRS);</p>
+          <p>=================================================</p>
+          <p>will therefore scan recursively all my filesystem.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
         <div class="panel-heading">ollydbg 2012-06-15 02:18:03</div>
         <div class="panel-body">
           <p>QUOTE: will therefore scan recursively all my filesystem.</p>
@@ -752,6 +729,176 @@ The current source language is "auto; currently c".
         <div class="panel-heading">earlgrey 2012-06-15 18:16:31</div>
         <div class="panel-body">
           <p>I mean why search gdkkeysyms.c in my project's files, while gdkkeysyms.h does not belong to my project ? ( this is not directly related to the bug )</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-06-16 02:50:02</div>
+        <div class="panel-body">
+          <p>QUOTE- on the other side, &lt;gdkkeysyms.h&gt; does not belong to my project ( I just open it within a debug session ) so it should not have anything to do with the "CommonTopLevelPath" of my cbproject ; right ?</p>
+          <p>The gdkkeysyms.h does not belong to your project file, but this header file maybe included in your cpp files. I don't think it is related to CommonTopLevelPath.</p>
+          <p>BTW: Mostly I can't test for you because you are in Linux but I'm mainly under Windows. I hope you can create a sample project file, and attachment to our c::b forum, and some linux guys can test it.</p>
+          <p>Thanks.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-16 06:27:06</div>
+        <div class="panel-body">
+          <p>-= LAST POST =- :)</p>
+          <p>- sorry for having been verbose, but I love C::B, use it every single day since I downloaded it :)</p>
+          <p>- The bug is not Linux-related, neither unix-symlinks related, it is a side-effect of C::B assuming 2 assertions :</p>
+          <p>* "a cbProject has all of its files under the same directory"</p>
+          <p>* "this directory contains a reasonable number of files, so we can use wxDir::Traverse() on it"</p>
+          <p>- Bug should be reproducible under Windows ( unfortunately no svn installer is available, I could not test ) :</p>
+          <p>* Make a dummy workspace containing a dummy project containing 2 files :</p>
+          <p>** "/A/dummy.h"</p>
+          <p>** "/B/dummy.c"</p>
+          <p>* Open any file from your filesystem in the C::B editor</p>
+          <p>Well, under Windows, you are "encouraged" to put everything under "C:\Users\user\My Documents", but C::B is said cross-platform, so this is definitely a C::B bug.</p>
+          <p>- In fact I simply remove my 2 old bash scripts that resided in "/usr/local/bin" from one of my projects, and all is OK now.</p>
+          <p>- thank you very much for your attention</p>
+          <p>- Regards to you and all the C::B team.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-06-16 13:23:16</div>
+        <div class="panel-body">
+          <p>QUOTE:</p>
+          <p>- Bug should be reproducible under Windows ( unfortunately no svn installer is available, I could not test ) :</p>
+          <p>* Make a dummy workspace containing a dummy project containing 2 files :</p>
+          <p>** "/A/dummy.h"</p>
+          <p>** "/B/dummy.c"</p>
+          <p>* Open any file from your filesystem in the C::B editor</p>
+          <p>How can I do this under Windows?</p>
+          <p>I have a dummy cbp file: E:\code\cb\test_code\dummy\cmd.cbp</p>
+          <p>and I have two files in this project:</p>
+          <p>E:\code\A\dummy.h</p>
+          <p>E:\code\B\dummy.c</p>
+          <p>But it looks like I have no freeze issue.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-16 14:30:55</div>
+        <div class="panel-body">
+          <p>&gt; E:\code\A\dummy.h</p>
+          <p>&gt; E:\code\B\dummy.c</p>
+          <p>At this point cbProject-&gt;m_CommonTopLevelPath is "E:\code"</p>
+          <p>Add</p>
+          <p>"E:\foo.h"</p>
+          <p>to your project, so cbProject-&gt;m_CommonTopLevelPath is now "E:\"</p>
+          <p>Then open for example "E:\code\bar.h" in C::B ( bar.h must not belong to your project ), and E: should be scanned recursively.</p>
+          <p>But if you dont have many files on that partition, you wont have the "long loop" effect.</p>
+          <p>You can try with :</p>
+          <p>C:\code1\dummy.h</p>
+          <p>C:\code2\dummy.c</p>
+          <p>So cbProject-&gt;m_CommonTopLevelPath is "C:\" : in Windows many things are under C:\</p>
+          <p>And then open "C:\code3\toto.h"</p>
+          <p>You can put a breakpoint on</p>
+          <p>===================================================</p>
+          <p>wxStat(wchar_t const*, stat*) () from /usr/lib/libwx_baseu-2.8.so.0</p>
+          <p>===================================================</p>
+          <p>to verify what C::B is doing, that is what I did.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-16 15:00:23</div>
+        <div class="panel-body">
+          <p>More concisely,</p>
+          <p>&gt; E:\code\A\dummy.h</p>
+          <p>&gt; E:\code\B\dummy.c</p>
+          <p>should be :</p>
+          <p>&gt; E:\A\dummy.h</p>
+          <p>&gt; E:\B\dummy.c</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-06-17 01:22:11</div>
+        <div class="panel-body">
+          <p>QUOTE:</p>
+          <p>More concisely,</p>
+          <p>&gt; E:\code\A\dummy.h</p>
+          <p>&gt; E:\code\B\dummy.c</p>
+          <p>should be :</p>
+          <p>&gt; E:\A\dummy.h</p>
+          <p>&gt; E:\B\dummy.c</p>
+          <p>I did that, but still no freeze.</p>
+          <p>I have E:\code\cb\test_code\dummy\cmd.cbp which contains two files:</p>
+          <p>E:\A\dummy.h</p>
+          <p>E:\B\dummy.c</p>
+          <p>Now, I try to open a file which does not belong this cbp, like: E:\C\a.h</p>
+          <p>I don't have any freeze when open the a.h file. I'm still not sure which behavior will let c::b to scan all the files under: E:\ ?</p>
+          <p>Thanks.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-17 03:51:51</div>
+        <div class="panel-body">
+          <pre class="pre-scrollable">nativeparser.cpp , line approximatively 2500
+=========================================================================================================================
+
+wxArrayString NativeParser::GetAllPathsByFilename(const wxString&amp; filename)
+{
+    TRACE(_T("NativeParser::GetAllPathsByFilename()"));
+
+    [ ...  ]
+
+        if (project)
+        {
+            const wxString prjPath = project-&gt;GetCommonTopLevelPath();                                                       [ problematic value : "/"  ( or for you, "E:\" ) ]
+            wxString priorityPath;
+            if (fn.HasExt() &amp;&amp; (fn.GetExt().StartsWith(_T("h")) || fn.GetExt().StartsWith(_T("c"))))
+            {
+                wxFileName priFn(prjPath);
+                priFn.AppendDir(fn.GetExt().StartsWith(_T("h")) ? _T("sdk") : _T("include"));
+                if (priFn.DirExists())                                                                                                                                [ m_CommonTopLevelPath/sdk or m_CommonTopLevelPath/include search ]
+                {
+
+                  [ ... ]
+
+                }
+            }
+
+            if (dirs.IsEmpty())
+            {
+                wxDir prjDir(prjPath);                                                                                                        [ prjDir is "/"  ( or for you, "E:\" ) ]
+                if (prjDir.IsOpened())
+                {
+                    wxArrayString others;
+                    NativeParserHelper::ParserDirTraverser traverser(priorityPath, others);
+                    prjDir.Traverse(traverser, filespec, wxDIR_FILES | wxDIR_DIRS);                       [ Here is the long wait, wxDIR_DIR flag implies recursive scan ]
+                    if (others.GetCount() == 1)
+                        AddPaths(dirs, others[0], fn.HasExt());
+                }
+            }
+        }
+    }
+
+    if (!files.IsEmpty())
+        AddPaths(dirs, files[0], fn.HasExt());
+
+    return dirs;
+}
+=========================================================================================================================
+</pre>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">earlgrey 2012-06-17 04:49:39</div>
+        <div class="panel-body">
+          <p>&gt; I don't have any freeze when open the a.h file.</p>
+          <p>How many files have you under "E:\" ?</p>
+          <p>&gt;  I'm still not sure which behavior will let c::b to scan all the files under: E:\ ?</p>
+          <p>This is the right way to reproduce the bug</p>
+          <p>OK, I will look at building rev 8032 under win7.</p>
+        </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">ollydbg 2012-06-17 05:24:34</div>
+        <div class="panel-body">
+          <p>Quote: nativeparser.cpp , line approximatively 2500 ...</p>
+          <p>This file is in the sources of Code-Completion plugin, so If you disable the Code-Completion plugin (from the plugin manager panel), I believe there is no freeze. In fact I think the freeze was caused by the header file crawler.</p>
+          <p>Quote:How many files have you under "E:\" ?</p>
+          <p>I have a lot of files under E:\, which is much much larger then C:\</p>
+          <p>I will look into this issue. (debug the NativeParser::GetAllPathsByFilename related code). Thanks you!!!</p>
         </div>
       </div>
       <div class="panel panel-default">
@@ -811,153 +958,6 @@ The current source language is "auto; currently c".
           <p>You &gt; Its logic is OK !</p>
           <p>Anyway this is minor side effect, easy to correct. So thank you for your answers.</p>
           <p>Regards again to all the C::B Team.</p>
-        </div>
-      </div>
-      <div class="panel panel-default">
-        <div class="panel-heading">ollydbg 2012-06-16 02:50:02</div>
-        <div class="panel-body">
-          <p>QUOTE- on the other side, &lt;gdkkeysyms.h&gt; does not belong to my project ( I just open it within a debug session ) so it should not have anything to do with the "CommonTopLevelPath" of my cbproject ; right ?</p>
-          <p>The gdkkeysyms.h does not belong to your project file, but this header file maybe included in your cpp files. I don't think it is related to CommonTopLevelPath.</p>
-          <p>BTW: Mostly I can't test for you because you are in Linux but I'm mainly under Windows. I hope you can create a sample project file, and attachment to our c::b forum, and some linux guys can test it.</p>
-          <p>Thanks.</p>
-        </div>
-      </div>
-      <div class="panel panel-default">
-        <div class="panel-heading">earlgrey 2012-06-16 06:27:06</div>
-        <div class="panel-body">
-          <p>-= LAST POST =- :)</p>
-          <p>- sorry for having been verbose, but I love C::B, use it every single day since I downloaded it :)</p>
-          <p>- The bug is not Linux-related, neither unix-symlinks related, it is a side-effect of C::B assuming 2 assertions :</p>
-          <p>* "a cbProject has all of its files under the same directory"</p>
-          <p>* "this directory contains a reasonable number of files, so we can use wxDir::Traverse() on it"</p>
-          <p>- Bug should be reproducible under Windows ( unfortunately no svn installer is available, I could not test ) :</p>
-          <p>* Make a dummy workspace containing a dummy project containing 2 files :</p>
-          <p>** "/A/dummy.h"</p>
-          <p>** "/B/dummy.c"</p>
-          <p>* Open any file from your filesystem in the C::B editor</p>
-          <p>Well, under Windows, you are "encouraged" to put everything under "C:\Users\user\My Documents", but C::B is said cross-platform, so this is definitely a C::B bug.</p>
-          <p>- In fact I simply remove my 2 old bash scripts that resided in "/usr/local/bin" from one of my projects, and all is OK now.</p>
-          <p>- thank you very much for your attention</p>
-          <p>- Regards to you and all the C::B team.</p>
-        </div>
-      </div>
-      <div class="panel panel-default">
-        <div class="panel-heading">ollydbg 2012-06-16 13:23:16</div>
-        <div class="panel-body">
-          <p>QUOTE:</p>
-          <p>- Bug should be reproducible under Windows ( unfortunately no svn installer is available, I could not test ) :</p>
-          <p>* Make a dummy workspace containing a dummy project containing 2 files :</p>
-          <p>** "/A/dummy.h"</p>
-          <p>** "/B/dummy.c"</p>
-          <p>* Open any file from your filesystem in the C::B editor</p>
-          <p>How can I do this under Windows?</p>
-          <p>I have a dummy cbp file: E:\code\cb\test_code\dummy\cmd.cbp</p>
-          <p>and I have two files in this project:</p>
-          <p>E:\code\A\dummy.h</p>
-          <p>E:\code\B\dummy.c</p>
-          <p>But it looks like I have no freeze issue.</p>
-        </div>
-      </div>
-      <div class="panel panel-default">
-        <div class="panel-heading">earlgrey 2012-06-11 18:30:37</div>
-        <div class="panel-body">
-          <pre class="pre-scrollable">###################################################################################################
-# I am not familar with gdb, so I forgot the rest of the call stack :)
-################################################################################################### 
-
-#56 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
-#57 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
-#58 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
-#59 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
-#60 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
-#61 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
-#62 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
-#63 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
----Type &lt;return&gt; to continue, or q &lt;return&gt; to quit---
-#64 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
-#65 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
-#66 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
-#67 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
-#68 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
-#69 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
-#70 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
-#71 0x00007ffff5838f40 in wxDir::Traverse(wxDirTraverser&amp;, wxString const&amp;, int) const () from /usr/lib/libwx_baseu-2.8.so.0
-#72 0x00007fffdc510291 in NativeParser::GetAllPathsByFilename (this=&lt;value optimized out&gt;, filename=&lt;value optimized out&gt;) at nativeparser.cpp:2537
-#73 0x00007fffdc4da18f in ClassBrowserBuilderThread::Init (this=0x205a200, np=&lt;value optimized out&gt;, treeTop=&lt;value optimized out&gt;, treeBottom=&lt;value optimized out&gt;, active_filename=&lt;value optimized out&gt;, user_data=0x254dff0, bo=..., tt=0x7fffd40321b0, 
-    idThreadEvent=2656) at classbrowserbuilderthread.cpp:116
-#74 0x00007fffdc4d34fc in ClassBrowser::ThreadedBuildTree (this=0x2041420) at classbrowser.cpp:856
-#75 0x00007fffdc4d4fdd in ClassBrowser::UpdateClassBrowserView (this=0x2041420, checkHeaderSwap=224) at classbrowser.cpp:244
-#76 0x00007fffdc514cc2 in NativeParser::OnEditorActivated (this=0x1be8900, editor=&lt;value optimized out&gt;) at nativeparser.cpp:2408
-#77 0x00007fffdc4e6414 in CodeCompletion::OnEditorActivatedTimer (this=0x1be8880, event=&lt;value optimized out&gt;) at codecompletion.cpp:2363
-#78 0x00007ffff58b4e60 in wxEvtHandler::ProcessEventIfMatches(wxEventTableEntryBase const&amp;, wxEvtHandler*, wxEvent&amp;) () from /usr/lib/libwx_baseu-2.8.so.0
-#79 0x00007ffff58b5e24 in wxEventHashTable::HandleEvent(wxEvent&amp;, wxEvtHandler*) () from /usr/lib/libwx_baseu-2.8.so.0
-#80 0x00007ffff58b5f07 in wxEvtHandler::ProcessEvent(wxEvent&amp;) () from /usr/lib/libwx_baseu-2.8.so.0
-#81 0x00007ffff6254168 in wxTimerBase::Notify() () from /usr/lib/libwx_gtk2u_core-2.8.so.0
-#82 0x00007ffff615f5ab in ?? () from /usr/lib/libwx_gtk2u_core-2.8.so.0
-#83 0x00007ffff2f51ecb in ?? () from /lib/libglib-2.0.so.0
-#84 0x00007ffff2f516f2 in g_main_context_dispatch () from /lib/libglib-2.0.so.0
-#85 0x00007ffff2f55568 in ?? () from /lib/libglib-2.0.so.0
-#86 0x00007ffff2f55a75 in g_main_loop_run () from /lib/libglib-2.0.so.0
-#87 0x00007ffff52da6b7 in gtk_main () from /usr/lib/libgtk-x11-2.0.so.0
-#88 0x00007ffff61569f8 in wxEventLoop::Run() () from /usr/lib/libwx_gtk2u_core-2.8.so.0
-#89 0x00007ffff61dbc2b in wxAppBase::MainLoop() () from /usr/lib/libwx_gtk2u_core-2.8.so.0
-#90 0x000000000044186b in CodeBlocksApp::OnRun (this=0x56d23f0) at app.cpp:777
-#91 0x00007ffff585b855 in wxEntry(int&amp;, wchar_t**) () from /usr/lib/libwx_baseu-2.8.so.0
-#92 0x0000000000441582 in main (argc=1, argv=0x7fffffff9f70) at app.cpp:266
-</pre>
-        </div>
-      </div>
-      <div class="panel panel-default">
-        <div class="panel-heading">earlgrey 2012-06-16 14:30:55</div>
-        <div class="panel-body">
-          <p>&gt; E:\code\A\dummy.h</p>
-          <p>&gt; E:\code\B\dummy.c</p>
-          <p>At this point cbProject-&gt;m_CommonTopLevelPath is "E:\code"</p>
-          <p>Add</p>
-          <p>"E:\foo.h"</p>
-          <p>to your project, so cbProject-&gt;m_CommonTopLevelPath is now "E:\"</p>
-          <p>Then open for example "E:\code\bar.h" in C::B ( bar.h must not belong to your project ), and E: should be scanned recursively.</p>
-          <p>But if you dont have many files on that partition, you wont have the "long loop" effect.</p>
-          <p>You can try with :</p>
-          <p>C:\code1\dummy.h</p>
-          <p>C:\code2\dummy.c</p>
-          <p>So cbProject-&gt;m_CommonTopLevelPath is "C:\" : in Windows many things are under C:\</p>
-          <p>And then open "C:\code3\toto.h"</p>
-          <p>You can put a breakpoint on</p>
-          <p>===================================================</p>
-          <p>wxStat(wchar_t const*, stat*) () from /usr/lib/libwx_baseu-2.8.so.0</p>
-          <p>===================================================</p>
-          <p>to verify what C::B is doing, that is what I did.</p>
-        </div>
-      </div>
-      <div class="panel panel-default">
-        <div class="panel-heading">earlgrey 2012-06-16 15:00:23</div>
-        <div class="panel-body">
-          <p>More concisely,</p>
-          <p>&gt; E:\code\A\dummy.h</p>
-          <p>&gt; E:\code\B\dummy.c</p>
-          <p>should be :</p>
-          <p>&gt; E:\A\dummy.h</p>
-          <p>&gt; E:\B\dummy.c</p>
-        </div>
-      </div>
-      <div class="panel panel-default">
-        <div class="panel-heading">ollydbg 2012-06-17 01:22:11</div>
-        <div class="panel-body">
-          <p>QUOTE:</p>
-          <p>More concisely,</p>
-          <p>&gt; E:\code\A\dummy.h</p>
-          <p>&gt; E:\code\B\dummy.c</p>
-          <p>should be :</p>
-          <p>&gt; E:\A\dummy.h</p>
-          <p>&gt; E:\B\dummy.c</p>
-          <p>I did that, but still no freeze.</p>
-          <p>I have E:\code\cb\test_code\dummy\cmd.cbp which contains two files:</p>
-          <p>E:\A\dummy.h</p>
-          <p>E:\B\dummy.c</p>
-          <p>Now, I try to open a file which does not belong this cbp, like: E:\C\a.h</p>
-          <p>I don't have any freeze when open the a.h file. I'm still not sure which behavior will let c::b to scan all the files under: E:\ ?</p>
-          <p>Thanks.</p>
         </div>
       </div>
     </div>
