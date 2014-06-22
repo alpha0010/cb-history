@@ -323,7 +323,7 @@ for ticket in ticketsOut:
             ticketHTML = ticketHTML.replace(key, ticket[key])
         else:
             history = ""
-            for comment in ticket[key]:
+            for comment in sorted(ticket[key], key=lambda cm: cm["$$TIME_STAMP$$"]):
                 cmt = commentTemplate
                 for cmtKey in comment:
                     cmt = cmt.replace(cmtKey, comment[cmtKey])

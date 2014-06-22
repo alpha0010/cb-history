@@ -316,7 +316,7 @@ for ticket in ticketsOut:
             f.close()
         else:
             history = ""
-            for comment in ticket[key]:
+            for comment in sorted(ticket[key], key=lambda cm: cm["$$TIME_STAMP$$"]):
                 cmt = commentTemplate
                 for cmtKey in comment:
                     cmt = cmt.replace(cmtKey, comment[cmtKey])
