@@ -73,7 +73,7 @@ bugTemplate = r"""<!DOCTYPE html>
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
     <!-- Include all compiled plugins (below), or include individual files as needed -->
-    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>$$SCRIPT$$
   </body>
 </html>"""
 
@@ -156,18 +156,31 @@ urlRe = re.compile(ur'(((ht|f)tp(s?)\:\/\/)|(www\.))(([a-zA-Z0-9\-\._]+(\.[a-zA-
 bugRe     = re.compile(ur'bug_id=([0-9]+)')
 featureRe = re.compile(ur'feature_id=([0-9]+)')
 patchRe   = re.compile(ur'patch_id=([0-9]+)')
+
+linkTipDict = {}
+for line in open("linkTips.txt"):
+    parts = line.strip().split(" ", 1)
+    linkTipDict[parts[0]] = parts[1]
+
 def getMappedUrl(url):
     if "group_id=5358" in url:
-        urlMatch = re.search(bugRe, para)
+        urlMatch = re.search(bugRe, url)
         if urlMatch:
-            return urlMatch.group(1) + ".html"
-        urlMatch = re.search(featureRe, para)
+            return [urlMatch.group(1) + ".html", linkTipDict[urlMatch.group(0)]]
+        urlMatch = re.search(featureRe, url)
         if urlMatch:
-            return "../features/" + urlMatch.group(1) + ".html"
-        urlMatch = re.search(patchRe, para)
+            return ["../features/" + urlMatch.group(1) + ".html", linkTipDict[urlMatch.group(0)]]
+        urlMatch = re.search(patchRe, url)
         if urlMatch:
-            return "../patches/" + urlMatch.group(1) + ".html"
-    return url
+            return ["../patches/" + urlMatch.group(1) + ".html", linkTipDict[urlMatch.group(0)]]
+    return [url, ""]
+
+def makeLink(url):
+    urlDat = getMappedUrl(url)
+    if urlDat[1] == "":
+        return '<a href="' + cgi.escape(urlDat[0]) + '">' + cgi.escape(url) + '</a>'
+    else:
+        return '<a href="' + urlDat[0] + '" data-toggle="tooltip" title="' + urlDat[1] + '">' + cgi.escape(url) + '</a>'
 
 categoryDict = { "100": "&nbsp;",
                  "1381": "Application::Crash",
@@ -235,7 +248,7 @@ for ticket in docTree.getroot():
                 para = ""
                 for match in urlRe.finditer(prop.text):
                     para += cgi.escape(prop.text[lastIdx:match.start()])
-                    para += '<a href="' + cgi.escape(getMappedUrl(match.group(0))) + '">' + cgi.escape(match.group(0)) + '</a>'
+                    para += makeLink(match.group(0))
                     lastIdx = match.end()
                 if ticketOut["$$NUMBER$$"] == "18988": # HACK
                     para += prop.text[lastIdx:]
@@ -252,7 +265,7 @@ for ticket in docTree.getroot():
                     lineTxt = ""
                     for match in urlRe.finditer(para):
                         lineTxt += cgi.escape(para[lastIdx:match.start()])
-                        lineTxt += '<a href="' + cgi.escape(getMappedUrl(match.group(0))) + '">' + cgi.escape(match.group(0)) + '</a>'
+                        lineTxt += makeLink(match.group(0))
                         lastIdx = match.end()
                     lineTxt += cgi.escape(para[lastIdx:])
                     ticketOut["$$DETAILS$$"] += "<p>" + lineTxt.strip() + "</p>"
@@ -278,7 +291,7 @@ for ticket in docTree.getroot():
                 para = ""
                 for match in urlRe.finditer(prop[1].text):
                     para += cgi.escape(prop[1].text[lastIdx:match.start()])
-                    para += '<a href="' + cgi.escape(getMappedUrl(match.group(0))) + '">' + cgi.escape(match.group(0)) + '</a>'
+                    para += makeLink(match.group(0))
                     lastIdx = match.end()
                 para += cgi.escape(prop[1].text[lastIdx:])
                 post["$$COMMENTS$$"] = '<pre class="pre-scrollable">' + para + '</pre>'
@@ -291,7 +304,7 @@ for ticket in docTree.getroot():
                         lineTxt = ""
                         for match in urlRe.finditer(para):
                             lineTxt += cgi.escape(para[lastIdx:match.start()])
-                            lineTxt += '<a href="' + cgi.escape(getMappedUrl(match.group(0))) + '">' + cgi.escape(match.group(0)) + '</a>'
+                            lineTxt += makeLink(match.group(0))
                             lastIdx = match.end()
                         lineTxt += cgi.escape(para[lastIdx:])
                         post["$$COMMENTS$$"] += "<p>" + lineTxt.strip() + "</p>"
@@ -331,6 +344,15 @@ for ticket in ticketsOut:
                     history += "\n      "
                 history += cmt
             ticketHTML = ticketHTML.replace("$$" + key + "$$", history)
+    if "data-toggle=\"tooltip\"" in ticketHTML:
+        ticketHTML = ticketHTML.replace("$$SCRIPT$$", """
+    <script>
+      $(document).ready(function() {
+        $("body").tooltip({ selector: '[data-toggle=tooltip]' });
+      });
+    </script>""")
+    else:
+        ticketHTML = ticketHTML.replace("$$SCRIPT$$", "")
     f = codecs.open("static_web/bugs/" + ticket["$$NUMBER$$"] + ".html", "w+", "utf-8")
     f.write(ticketHTML)
     f.close()
@@ -407,4 +429,3 @@ if len(bugList) > 0:
     f = open("static_web/bugs" + flExt, "w+")
     f.write(bugList)
     f.close()
-

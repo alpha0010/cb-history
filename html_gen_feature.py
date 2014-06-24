@@ -82,7 +82,7 @@ featureTemplate = r"""<!DOCTYPE html>
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
     <!-- Include all compiled plugins (below), or include individual files as needed -->
-    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>$$SCRIPT$$
   </body>
 </html>"""
 
@@ -165,18 +165,31 @@ urlRe = re.compile(ur'(((ht|f)tp(s?)\:\/\/)|(www\.))(([a-zA-Z0-9\-\._]+(\.[a-zA-
 bugRe     = re.compile(ur'bug_id=([0-9]+)')
 featureRe = re.compile(ur'feature_id=([0-9]+)')
 patchRe   = re.compile(ur'patch_id=([0-9]+)')
+
+linkTipDict = {}
+for line in open("linkTips.txt"):
+    parts = line.strip().split(" ", 1)
+    linkTipDict[parts[0]] = parts[1]
+
 def getMappedUrl(url):
     if "group_id=5358" in url:
-        urlMatch = re.search(bugRe, para)
+        urlMatch = re.search(bugRe, url)
         if urlMatch:
-            return "../bugs/" + urlMatch.group(1) + ".html"
-        urlMatch = re.search(featureRe, para)
+            return ["../bugs/" + urlMatch.group(1) + ".html", linkTipDict[urlMatch.group(0)]]
+        urlMatch = re.search(featureRe, url)
         if urlMatch:
-            return rlMatch.group(1) + ".html"
-        urlMatch = re.search(patchRe, para)
+            return [urlMatch.group(1) + ".html", linkTipDict[urlMatch.group(0)]]
+        urlMatch = re.search(patchRe, url)
         if urlMatch:
-            return "../patches/" + urlMatch.group(1) + ".html"
-    return url
+            return ["../patches/" + urlMatch.group(1) + ".html", linkTipDict[urlMatch.group(0)]]
+    return [url, ""]
+
+def makeLink(url):
+    urlDat = getMappedUrl(url)
+    if urlDat[1] == "":
+        return '<a href="' + urlDat[0] + '">' + url + '</a>'
+    else:
+        return '<a href="' + urlDat[0] + '" data-toggle="tooltip" title="' + urlDat[1] + '">' + url + '</a>'
 
 fHandle = open("old_dump/berlios.json", "r")
 lookupDb = json.load(fHandle)
@@ -234,7 +247,7 @@ lookupDb["trackers"]["feature"]["artifacts"].append({
     "assigned_to": "None",
     "category": "Programming Languages",
     "status": "Open",
-    "comments": [ {"date": "2014-01-23T18:27:00Z", "submitter": {"nick": "jimp"}, 
+    "comments": [ {"date": "2014-01-23T18:27:00Z", "submitter": {"nick": "jimp"},
     "comment": u"Date: 2014-Jan-23 18:27\nSender: jimp\nLogged In: YES \nuser_id=24948\nBrowser: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:26.0) Gecko/20100101 Firefox/26.0\n\nSupport for Objective-C on Mac\n\nI have recently set up CodeBlocks 13.12 on Mac to work\nwith Objective-C source. No program changes were\nnecessary. With a few changes it could be done\nautomatically. Without Objective-C there is limited\ncapability on the Mac. \n\nObjective-C can also be used on Windows or Linux with\nthe addition of the GNUstep package. But it only works\nwith compilers that support Objective-C. The ones I\nknow of outside of Mac are MinGW and GCC. And the\nObjective-C compiler package must be installed on\nthese. I don\u2019t know how useful it would be outside of Mac.\n\nThe following describes the changes that were necessary\nto set up Objective-C on Mac. The LLVM Clang compiler\nwas used. I assume it would work the same with GCC.\n\nAfter creating a project containing Objective-C source\ncode, I tried to open an Objective-C file in\nCodeBlocks. It didn’t recognize the file extension of\n“.m”. I selected “Open it inside the CodeBlocks\neditor”. Then right clicked on the Objective-C file\nname and selected “Properties”. Check the “Compile\nfile” and “Link file” options. This is all that was\nneeded to compile and run the program.\n\nThe syntax highlighting needs to be changed also.\nObjective-C has an “.m” extension which is currently\nassigned to Matlib. It must be removed from Matlib and\nadded to Objective-C. Then the syntax highlighting\nseemed to be the same as C/C++ without any changes.\n\nThis is all that was necessary to use Objective-C on\nthe Mac.\n\nThere seems to be quite a few people who don\u2019t like\nXcode. It would be good to have a cross-platform IDE\nlike CodeBlocks that could be used with Objective-C on\nthe Mac. And it looks like the changes would not be\nextensive."} ],
     "history": []
 })
@@ -344,9 +357,9 @@ for ticket in lookupDb["trackers"]["feature"]["artifacts"]:
             textProc += cgi.escape(text[lastIdx:match.start()])
             url = cgi.escape(match.group(0))
             if url.endswith(".") or url.endswith(","):
-                textProc += '<a href="' + getMappedUrl(url[:-1]) + '">' + url[:-1] + '</a>' + url[-1:]
+                textProc += makeLink(url[:-1]) + url[-1:]
             else:
-                textProc += '<a href="' + getMappedUrl(url) + '">' + url + '</a>'
+                textProc += makeLink(url)
             lastIdx = match.end()
         textProc += cgi.escape(text[lastIdx:])
         if len(text) > 2000:
@@ -401,6 +414,15 @@ for ticket in ticketsOut:
                     history += "\n      "
                 history += cmt
             ticketHTML = ticketHTML.replace("$$" + key + "$$", history)
+    if "data-toggle=\"tooltip\"" in ticketHTML:
+        ticketHTML = ticketHTML.replace("$$SCRIPT$$", """
+    <script>
+      $(document).ready(function() {
+        $("body").tooltip({ selector: '[data-toggle=tooltip]' });
+      });
+    </script>""")
+    else:
+        ticketHTML = ticketHTML.replace("$$SCRIPT$$", "")
     f = codecs.open("static_web/features/" + ticket["$$NUMBER$$"] + ".html", "w+", "utf-8")
     f.write(ticketHTML)
     f.close()
@@ -477,4 +499,3 @@ if len(featureList) > 0:
     f = open("static_web/features" + flExt, "w+")
     f.write(featureList)
     f.close()
-

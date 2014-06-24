@@ -75,7 +75,7 @@ patchTemplate = r"""<!DOCTYPE html>
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
     <!-- Include all compiled plugins (below), or include individual files as needed -->
-    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>$$SCRIPT$$
   </body>
 </html>"""
 
@@ -175,18 +175,24 @@ urlRe = re.compile(ur'(((ht|f)tp(s?)\:\/\/)|(www\.))(([a-zA-Z0-9\-\._]+(\.[a-zA-
 bugRe     = re.compile(ur'bug_id=([0-9]+)')
 featureRe = re.compile(ur'feature_id=([0-9]+)')
 patchRe   = re.compile(ur'patch_id=([0-9]+)')
+
+linkTipDict = {}
+for line in open("linkTips.txt"):
+    parts = line.strip().split(" ", 1)
+    linkTipDict[parts[0]] = parts[1]
+
 def getMappedUrl(url):
     if "group_id=5358" in url:
-        urlMatch = re.search(bugRe, para)
+        urlMatch = re.search(bugRe, url)
         if urlMatch:
-            return "../bugs/" + urlMatch.group(1) + ".html"
-        urlMatch = re.search(featureRe, para)
+            return ["../bugs/" + urlMatch.group(1) + ".html", linkTipDict[urlMatch.group(0)]]
+        urlMatch = re.search(featureRe, url)
         if urlMatch:
-            return "../features/" + urlMatch.group(1) + ".html"
-        urlMatch = re.search(patchRe, para)
+            return ["../features/" + urlMatch.group(1) + ".html", linkTipDict[urlMatch.group(0)]]
+        urlMatch = re.search(patchRe, url)
         if urlMatch:
-            return urlMatch.group(1) + ".html"
-    return url
+            return [urlMatch.group(1) + ".html", linkTipDict[urlMatch.group(0)]]
+    return [url, ""]
 
 fHandle = open("old_dump/berlios.json", "r")
 lookupDb = json.load(fHandle)
@@ -289,7 +295,11 @@ for ticket in docTree.getroot():
                     para = cgi.escape(para.strip())
                     urlMatch = re.search(urlRe, para)
                     if urlMatch:
-                        para = para.replace(urlMatch.group(0), '<a href="' + getMappedUrl(urlMatch.group(0)) + '">' + urlMatch.group(0) + '</a>')
+                        urlDat = getMappedUrl(urlMatch.group(0))
+                        if urlDat[1] == "":
+                            para = para.replace(urlMatch.group(0), '<a href="' + urlDat[0] + '">' + urlMatch.group(0) + '</a>')
+                        else:
+                            para = para.replace(urlMatch.group(0), '<a href="' + urlDat[0] + '" data-toggle="tooltip" title="' + urlDat[1] + '">' + urlMatch.group(0) + '</a>')
                     post["$$COMMENTS$$"] += "<p>" + para + "</p>"
             ticketOut["HISTORY"].append(post)
             lastMod = max(lastMod, int(prop[3].text))
@@ -324,6 +334,15 @@ for ticket in ticketsOut:
                     history += "\n      "
                 history += cmt
             ticketHTML = ticketHTML.replace("$$" + key + "$$", history)
+    if "data-toggle=\"tooltip\"" in ticketHTML:
+        ticketHTML = ticketHTML.replace("$$SCRIPT$$", """
+    <script>
+      $(document).ready(function() {
+        $("body").tooltip({ selector: '[data-toggle=tooltip]' });
+      });
+    </script>""")
+    else:
+        ticketHTML = ticketHTML.replace("$$SCRIPT$$", "")
     f = codecs.open("static_web/patches/" + ticket["$$NUMBER$$"] + ".html", "w+", "utf-8")
     f.write(ticketHTML)
     f.close()
