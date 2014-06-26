@@ -330,15 +330,7 @@ lookupDb["trackers"]["feature"]["artifacts"].append({
     "history": []
 })
 
-# find the index
-#for index, ticket in enumerate(lookupDb["trackers"]["feature"]["artifacts"]):
-#    if ticket["id"] == 5639:
-#        print index
-#        break
-
-# tweak the split url; TODO: fix the un-splitter algorithm (instead of this hack)
-lookupDb["trackers"]["feature"]["artifacts"][25]["comments"][1]["comment"] = "Logged In: YES \nuser_id=59186\r\nBrowser: Mozilla/5.0 (Windows NT 5.1; rv:19.0) Gecko/20100101 Firefox/19.0\n\nSorry for the mess, I have uploaded the patch here:\nhttps://developer.berlios.de/patch/index.php?func=detailpatch&patch_id=3449&group_id=5358"
-
+lineSplitRe = re.compile(ur'(\n[^ \n\r\t]{77})\n')
 
 ticketsOut = []
 
@@ -361,6 +353,7 @@ for ticket in lookupDb["trackers"]["feature"]["artifacts"]:
         if idx != -1:
             text = text[idx + 2:]
         lastIdx = 0
+        text = lineSplitRe.sub("\\1", text)
         textProc = ""
         for match in urlRe.finditer(text):
             textProc += cgi.escape(text[lastIdx:match.start()])
