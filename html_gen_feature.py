@@ -137,6 +137,21 @@ featureListTemplate = r"""<!DOCTYPE html>
     </div>
 
     <div class="container" role="main">
+      <ul class="nav nav-pills">
+        <li class="dropdown">
+          <a data-toggle="dropdown" href="#">Status: $$FILTER_STATUS$$ <b class="caret"></b></a>
+          <ul class="dropdown-menu" role="menu">
+            <li><a tabindex="-1" href="$$FILTER_STATUS_ALT_URL$$">$$FILTER_STATUS_ALT$$</a></li>
+          </ul>
+        </li>
+        <li class="dropdown">
+          <a data-toggle="dropdown" href="#">Assigned To: $$FILTER_ASSIGNED$$ <b class="caret"></b></a>
+          <ul class="dropdown-menu" role="menu">
+            $$ASSIGNED_OPTIONS$$
+          </ul>
+        </li>
+      </ul>
+
       <table class="table table-hover table-condensed">
         <thead>
           <tr><th>Feature ID</th><th>Summary</th><th>Category</th><th>Status</th><th>Date</th><th>Assigned To</th><th>Submitted By</th></tr>
@@ -159,6 +174,8 @@ featureListTemplate = r"""<!DOCTYPE html>
 """
 
 featureEntryTemplate = r"""<tr><td>$$NUMBER$$</td><td><a href="features/$$NUMBER$$.html">$$SUMMARY$$</a></td><td>$$CATEGORY$$</td><td>$$STATUS$$</td><td>$$OPEN_DATE$$</td><td>$$ASSIGNED$$</td><td>$$AUTHOR$$</td></tr>"""
+
+assignedFilterTemplate = r"""<li><a tabindex="-1" href="$$URL$$">$$NAME$$</a></li>"""
 
 urlRe = re.compile(ur'(((ht|f)tp(s?)\:\/\/)|(www\.))(([a-zA-Z0-9\-\._]+(\.[a-zA-Z0-9\-\._]+)+)|localhost)(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?([\d\w\.\/\%\+\-\=\&amp;\?\:\\\&quot;\'\,\|\~\;]*)')
 
@@ -333,6 +350,8 @@ lookupDb["trackers"]["feature"]["artifacts"].append({
 lineSplitRe = re.compile(ur'(\n[^ \n\r\t]{77})\n')
 
 ticketsOut = []
+devList = {}
+openCnt = 0
 
 debugLimit = 5 # limit ticket conversion for debugging
 
@@ -344,6 +363,12 @@ for ticket in lookupDb["trackers"]["feature"]["artifacts"]:
                   "$$STATUS$$": cgi.escape(ticket["status"]) }
     if ticketOut["$$ASSIGNED$$"] == "None":
         ticketOut["$$ASSIGNED$$"] = "&nbsp;"
+    elif ticketOut["$$ASSIGNED$$"] in devList:
+        devList[ticketOut["$$ASSIGNED$$"]] += 1
+    else:
+        devList[ticketOut["$$ASSIGNED$$"]] = 1
+    if ticketOut["$$STATUS$$"] == "Open":
+        openCnt += 1
     if ticketOut["$$CATEGORY$$"] == "None":
         ticketOut["$$CATEGORY$$"] = "&nbsp;"
     comments = sorted(ticket["comments"], key=lambda cm: fromisotime(cm["date"]))
@@ -437,14 +462,14 @@ numPages = int(math.ceil(len(ticketsOut) / 50.0))
 numPerPage = int(math.ceil(len(ticketsOut) / (numPages + 0.0)))
 numOutput = 0
 
-def getPagination():
+def getPagination(fileBrand):
     pagination = "<li"
     if numOutput / numPerPage == 1:
         pagination += ' class="disabled"><span>&laquo;</span></li>'
     elif numOutput / numPerPage == 2:
-        pagination += '><a href="features.html">&laquo;</a></li>'
+        pagination += '><a href="features' + fileBrand + '.html">&laquo;</a></li>'
     else:
-        pagination += '><a href="features' + str(numOutput / numPerPage - 1) + '.html">&laquo;</a></li>'
+        pagination += '><a href="features' + fileBrand + str(numOutput / numPerPage - 1) + '.html">&laquo;</a></li>'
     skipMin = 0
     skipMax = 0
     if numPages > 25:
@@ -463,15 +488,47 @@ def getPagination():
         elif i == numOutput / numPerPage:
             pagination += '<li class="active"><span>' + str(i) + '</span></li>'
         elif i == 1:
-            pagination += '<li><a href="features.html">1</a></li>'
+            pagination += '<li><a href="features' + fileBrand + '.html">1</a></li>'
         else:
-            pagination += '<li><a href="features' + str(i) + '.html">' + str(i) + '</a></li>'
+            pagination += '<li><a href="features' + fileBrand + str(i) + '.html">' + str(i) + '</a></li>'
     if numOutput / numPerPage == numPages:
         pagination += '<li class="disabled"><span>&raquo;</span></li>'
     else:
-        pagination += '<li><a href="features' + str(numOutput / numPerPage + 1) + '.html">&raquo;</a></li>'
+        pagination += '<li><a href="features' + fileBrand + str(numOutput / numPerPage + 1) + '.html">&raquo;</a></li>'
     return pagination
 
+def getAssignedOpts(curDev):
+    opts = ""
+    if curDev != "Any":
+        opts += r"""<li><a tabindex="-1" href="features.html">Any</a></li>
+            <li class=divider></li>"""
+    for devNm in sorted(devList):
+        if devNm == curDev:
+            continue
+        if len(opts) > 0:
+            opts += "\n            "
+        row = assignedFilterTemplate.replace("$$NAME$$", devNm)
+        opts += row.replace("$$URL$$", "features_" + devNm + ".html")
+    return opts
+
+def writeFeatureList(status, statusAlt, statusAltUrl, curDev, fileBrand):
+    global featureList
+    featureList = featureListTemplate.replace("$$FEATURES$$", featureList)
+    featureList = featureList.replace("$$PAGINATION$$", getPagination(fileBrand))
+    featureList = featureList.replace("$$FILTER_STATUS$$", status)
+    featureList = featureList.replace("$$FILTER_STATUS_ALT$$", statusAlt)
+    featureList = featureList.replace("$$FILTER_STATUS_ALT_URL$$", statusAltUrl)
+    featureList = featureList.replace("$$FILTER_ASSIGNED$$", curDev)
+    featureList = featureList.replace("$$ASSIGNED_OPTIONS$$", getAssignedOpts(curDev))
+    flExt = ".html"
+    if numOutput / numPerPage > 1:
+        flExt = str(numOutput / numPerPage) + flExt
+    f = codecs.open("static_web/features" + fileBrand + flExt, "w+", "utf-8")
+    f.write(featureList)
+    f.close()
+    featureList = ""
+
+# the full listing
 for ticket in ticketsOut:
     ticketHTML = featureEntryTemplate
     for key in ticket:
@@ -482,22 +539,50 @@ for ticket in ticketsOut:
     featureList += ticketHTML
     numOutput += 1
     if numOutput % numPerPage == 0:
-        featureList = featureListTemplate.replace("$$FEATURES$$", featureList)
-        featureList = featureList.replace("$$PAGINATION$$", getPagination())
-        flExt = ".html"
-        if numOutput / numPerPage > 1:
-            flExt = str(numOutput / numPerPage) + flExt
-        f = codecs.open("static_web/features" + flExt, "w+", "utf-8")
-        f.write(featureList)
-        f.close()
-        featureList = ""
+        writeFeatureList("Any", "Open", "features_open.html", "Any", "")
 if len(featureList) > 0:
     numOutput = numPerPage * numPages
-    featureList = featureListTemplate.replace("$$FEATURES$$", featureList)
-    featureList = featureList.replace("$$PAGINATION$$", getPagination())
-    flExt = ".html"
-    if numOutput / numPerPage > 1:
-        flExt = str(numOutput / numPerPage) + flExt
-    f = open("static_web/features" + flExt, "w+")
-    f.write(featureList)
-    f.close()
+    writeFeatureList("Any", "Open", "features_open.html", "Any", "")
+
+# only open features
+numPages = int(math.ceil(openCnt / 50.0))
+numPerPage = int(math.ceil(openCnt / (numPages + 0.0)))
+numOutput = 0
+for ticket in ticketsOut:
+    if ticket["$$STATUS$$"] != "Open":
+        continue
+    ticketHTML = featureEntryTemplate
+    for key in ticket:
+        if key.startswith("$$"):
+            ticketHTML = ticketHTML.replace(key, ticket[key])
+    if len(featureList) > 0:
+        featureList += "\n          "
+    featureList += ticketHTML
+    numOutput += 1
+    if numOutput % numPerPage == 0:
+        writeFeatureList("Open", "Any", "features.html", "Any", "_open")
+if len(featureList) > 0:
+    numOutput = numPerPage * numPages
+    writeFeatureList("Open", "Any", "features.html", "Any", "_open")
+
+# only features assigned to dev XXX
+for devNm in devList:
+    numPages = int(math.ceil(devList[devNm] / 50.0))
+    numPerPage = int(math.ceil(devList[devNm] / (numPages + 0.0)))
+    numOutput = 0
+    for ticket in ticketsOut:
+        if ticket["$$ASSIGNED$$"] != devNm:
+            continue
+        ticketHTML = featureEntryTemplate
+        for key in ticket:
+            if key.startswith("$$"):
+                ticketHTML = ticketHTML.replace(key, ticket[key])
+        if len(featureList) > 0:
+            featureList += "\n          "
+        featureList += ticketHTML
+        numOutput += 1
+        if numOutput % numPerPage == 0:
+            writeFeatureList("Any", "Open", "features_open.html", devNm, "_" + devNm)
+    if len(featureList) > 0:
+        numOutput = numPerPage * numPages
+        writeFeatureList("Any", "Open", "features_open.html", devNm, "_" + devNm)
