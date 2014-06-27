@@ -194,6 +194,22 @@ def getMappedUrl(url):
             return [urlMatch.group(1) + ".html", linkTipDict[urlMatch.group(0)]]
     return [url, ""]
 
+ticketRe = re.compile(ur'\b(patch|bug|features? +requests?|features?|requests?) *(?::|is|fix)? *#? *(\d{3,6})\b', re.IGNORECASE)
+
+def ticketLinker(matches):
+    url = "group_id=5358"
+    if matches.group(1).lower() == "patch":
+        url += "patch"
+    elif matches.group(1).lower() == "bug":
+        url += "bug"
+    else:
+        url += "feature"
+    url += "_id=" + matches.group(2).lstrip("0")
+    if "bug_id=6607" in url: # sorry, this bug does not exist
+        return matches.group(0)
+    url = getMappedUrl(url)
+    return '<a href="' + url[0] + '" data-toggle="tooltip" title="' + url[1] + '">' + matches.group(0) + '</a>'
+
 fHandle = open("old_dump/berlios.json", "r")
 lookupDb = json.load(fHandle)
 fHandle.close()
@@ -300,6 +316,7 @@ for ticket in docTree.getroot():
                             para = para.replace(urlMatch.group(0), '<a href="' + urlDat[0] + '">' + urlMatch.group(0) + '</a>')
                         else:
                             para = para.replace(urlMatch.group(0), '<a href="' + urlDat[0] + '" data-toggle="tooltip" title="' + urlDat[1] + '">' + urlMatch.group(0) + '</a>')
+                    para = ticketRe.sub(ticketLinker, para)
                     post["$$COMMENTS$$"] += "<p>" + para + "</p>"
             ticketOut["HISTORY"].append(post)
             lastMod = max(lastMod, int(prop[3].text))
@@ -318,7 +335,9 @@ for ticket in docTree.getroot():
 for ticket in ticketsOut:
     ticketHTML = patchTemplate
     for key in ticket:
-        if key.startswith("$$"):
+        if key == "$$SUMMARY$$":
+            ticketHTML = ticketHTML.replace(key, ticketRe.sub(ticketLinker, ticket[key]))
+        elif key.startswith("$$"):
             ticketHTML = ticketHTML.replace(key, ticket[key])
         elif key == "code":
             f = codecs.open("static_web/patches/" + ticket["$$SHORT_NAME$$"] + ".patch", "w+", "utf-8")
