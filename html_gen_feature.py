@@ -6,6 +6,8 @@ import json
 import codecs
 import re
 import math
+import bz2
+import os
 
 
 timeRe = re.compile(r'([0-9]+)-([0-9]+)-([0-9]+)T([0-9]+):([0-9]+):.*')
@@ -184,7 +186,7 @@ featureRe = re.compile(ur'feature_id=([0-9]+)')
 patchRe   = re.compile(ur'patch_id=([0-9]+)')
 
 linkTipDict = {}
-for line in open("linkTips.txt"):
+for line in open("data/linkTips.txt"):
     parts = line.strip().split(" ", 1)
     linkTipDict[parts[0]] = parts[1]
 
@@ -208,7 +210,7 @@ def makeLink(url):
     else:
         return '<a href="' + urlDat[0] + '" data-toggle="tooltip" title="' + urlDat[1] + '">' + url + '</a>'
 
-fHandle = open("old_dump/berlios.json", "r")
+fHandle = bz2.BZ2File("data/berlios.json.bz2", "r")
 lookupDb = json.load(fHandle)
 fHandle.close()
 
@@ -425,6 +427,9 @@ for ticket in lookupDb["trackers"]["feature"]["artifacts"]:
     debugLimit -= 1
 #    if debugLimit <= 0:
 #        break
+
+if not os.path.isdir("static_web/features"):
+    os.mkdir("static_web/features")
 
 for ticket in ticketsOut:
     ticketHTML = featureTemplate

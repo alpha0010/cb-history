@@ -1,10 +1,11 @@
 import xml.etree.ElementTree as ET
 import datetime as DT
 import cgi
-import json
 import codecs
 import re
 import math
+import bz2
+import os
 
 bugTemplate = r"""<!DOCTYPE html>
 <html lang="en">
@@ -175,7 +176,7 @@ featureRe = re.compile(ur'feature_id=([0-9]+)')
 patchRe   = re.compile(ur'patch_id=([0-9]+)')
 
 linkTipDict = {}
-for line in open("linkTips.txt"):
+for line in open("data/linkTips.txt"):
     parts = line.strip().split(" ", 1)
     linkTipDict[parts[0]] = parts[1]
 
@@ -231,7 +232,9 @@ statusDict = { "100": "&nbsp;",
                "3": "Closed" }
 
 ticketsOut = []
-docTree = ET.parse('bs_bugs_0.1.xml')
+fHandle = bz2.BZ2File("data/bs_bugs_0.1.xml.bz2", "r")
+docTree = ET.parse(fHandle)
+fHandle.close()
 
 userIdDict = {}
 devList = {}
@@ -353,6 +356,9 @@ for ticket in docTree.getroot():
     debugLimit -= 1
     #if debugLimit <= 0:
     #    break
+
+if not os.path.isdir("static_web/bugs"):
+    os.mkdir("static_web/bugs")
 
 for ticket in ticketsOut:
     ticketHTML = bugTemplate

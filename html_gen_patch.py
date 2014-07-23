@@ -5,6 +5,8 @@ import json
 import codecs
 import re
 import math
+import bz2
+import os
 
 patchTemplate = r"""<!DOCTYPE html>
 <html lang="en">
@@ -177,7 +179,7 @@ featureRe = re.compile(ur'feature_id=([0-9]+)')
 patchRe   = re.compile(ur'patch_id=([0-9]+)')
 
 linkTipDict = {}
-for line in open("linkTips.txt"):
+for line in open("data/linkTips.txt"):
     parts = line.strip().split(" ", 1)
     linkTipDict[parts[0]] = parts[1]
 
@@ -210,7 +212,7 @@ def ticketLinker(matches):
     url = getMappedUrl(url)
     return '<a href="' + url[0] + '" data-toggle="tooltip" title="' + url[1] + '">' + matches.group(0) + '</a>'
 
-fHandle = open("old_dump/berlios.json", "r")
+fHandle = bz2.BZ2File("data/berlios.json.bz2", "r")
 lookupDb = json.load(fHandle)
 fHandle.close()
 # hardcode a few (known) values that are not in the older dump by Jens with ForgePlucker
@@ -236,7 +238,9 @@ for patch in lookupDb["trackers"]["patches"]["artifacts"]:
     statusDb[patch["id"]] = { "status": patch["status"], "category": categ }
 
 ticketsOut = []
-docTree = ET.parse('bs_patches_0.1.xml')
+fHandle = bz2.BZ2File("data/bs_patches_0.1.xml.bz2", "r")
+docTree = ET.parse(fHandle)
+fHandle.close()
 
 userIdDict = {}
 devList = {}
@@ -331,6 +335,9 @@ for ticket in docTree.getroot():
     debugLimit -= 1
 #    if debugLimit <= 0:
 #        break
+
+if not os.path.isdir("static_web/patches"):
+    os.mkdir("static_web/patches")
 
 for ticket in ticketsOut:
     ticketHTML = patchTemplate
