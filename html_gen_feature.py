@@ -8,6 +8,7 @@ import re
 import math
 import bz2
 import os
+import shutil
 
 
 timeRe = re.compile(r'([0-9]+)-([0-9]+)-([0-9]+)T([0-9]+):([0-9]+):.*')
@@ -428,8 +429,11 @@ for ticket in lookupDb["trackers"]["feature"]["artifacts"]:
 #    if debugLimit <= 0:
 #        break
 
+if not os.path.isdir("static_web"):
+    os.mkdir("static_web")
 if not os.path.isdir("static_web/features"):
     os.mkdir("static_web/features")
+shutil.copy("data/index.html", "static_web/index.html")
 
 for ticket in ticketsOut:
     ticketHTML = featureTemplate

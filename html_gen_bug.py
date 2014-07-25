@@ -6,6 +6,7 @@ import re
 import math
 import bz2
 import os
+import shutil
 
 bugTemplate = r"""<!DOCTYPE html>
 <html lang="en">
@@ -357,8 +358,11 @@ for ticket in docTree.getroot():
     #if debugLimit <= 0:
     #    break
 
+if not os.path.isdir("static_web"):
+    os.mkdir("static_web")
 if not os.path.isdir("static_web/bugs"):
     os.mkdir("static_web/bugs")
+shutil.copy("data/index.html", "static_web/index.html")
 
 for ticket in ticketsOut:
     ticketHTML = bugTemplate
