@@ -201,6 +201,26 @@ def makeLink(url):
     else:
         return '<a href="' + urlDat[0] + '" data-toggle="tooltip" title="' + urlDat[1] + '">' + cgi.escape(url) + '</a>'
 
+
+ticketRe = re.compile(ur'\b(patch|bug|features? +requests?|features?|requests?) *(?::|is|fix)? *#? *(\d{3,6})\b', re.IGNORECASE)
+
+def ticketLinker(matches):
+    url = "group_id=5358"
+    if matches.group(1).lower() == "patch":
+        url += "patch"
+    elif matches.group(1).lower() == "bug":
+        url += "bug"
+    else:
+        url += "feature"
+    url += "_id=" + matches.group(2).lstrip("0")
+    if "bug_id=5695" in url: # oops, regex found something it shouldn't
+        return matches.group(0)
+    elif "bug_id=16654" in url: # what? ... missing from data dump?
+        return matches.group(0)
+    url = getMappedUrl(url)
+    return '<a href="' + url[0] + '" data-toggle="tooltip" title="' + url[1] + '">' + matches.group(0) + '</a>'
+
+
 categoryDict = { "100": "&nbsp;",
                  "1381": "Application::Crash",
                  "1383": "Application::Editor",
@@ -274,13 +294,13 @@ for ticket in docTree.getroot():
                 lastIdx = 0
                 para = ""
                 for match in urlRe.finditer(prop.text):
-                    para += cgi.escape(prop.text[lastIdx:match.start()])
+                    para += ticketRe.sub(ticketLinker, cgi.escape(prop.text[lastIdx:match.start()]))
                     para += makeLink(match.group(0))
                     lastIdx = match.end()
                 if ticketOut["$$NUMBER$$"] == "18988": # HACK
                     para += prop.text[lastIdx:]
                 else:
-                    para += cgi.escape(prop.text[lastIdx:])
+                    para += ticketRe.sub(ticketLinker, cgi.escape(prop.text[lastIdx:]))
                 ticketOut["$$DETAILS$$"] = '<pre class="pre-scrollable">' + para + '</pre>'
                 continue
             ticketOut["$$DETAILS$$"] = ""
@@ -291,10 +311,10 @@ for ticket in docTree.getroot():
                     lastIdx = 0
                     lineTxt = ""
                     for match in urlRe.finditer(para):
-                        lineTxt += cgi.escape(para[lastIdx:match.start()])
+                        lineTxt += ticketRe.sub(ticketLinker, cgi.escape(para[lastIdx:match.start()]))
                         lineTxt += makeLink(match.group(0))
                         lastIdx = match.end()
-                    lineTxt += cgi.escape(para[lastIdx:])
+                    lineTxt += ticketRe.sub(ticketLinker, cgi.escape(para[lastIdx:]))
                     ticketOut["$$DETAILS$$"] += "<p>" + lineTxt.strip() + "</p>"
 
         elif prop.tag == "date":
@@ -317,10 +337,10 @@ for ticket in docTree.getroot():
                 lastIdx = 0
                 para = ""
                 for match in urlRe.finditer(prop[1].text):
-                    para += cgi.escape(prop[1].text[lastIdx:match.start()])
+                    para += ticketRe.sub(ticketLinker, cgi.escape(prop[1].text[lastIdx:match.start()]))
                     para += makeLink(match.group(0))
                     lastIdx = match.end()
-                para += cgi.escape(prop[1].text[lastIdx:])
+                para += ticketRe.sub(ticketLinker, cgi.escape(prop[1].text[lastIdx:]))
                 post["$$COMMENTS$$"] = '<pre class="pre-scrollable">' + para + '</pre>'
             else:
                 for para in prop[1].text.split("\n"):
@@ -330,10 +350,10 @@ for ticket in docTree.getroot():
                         lastIdx = 0
                         lineTxt = ""
                         for match in urlRe.finditer(para):
-                            lineTxt += cgi.escape(para[lastIdx:match.start()])
+                            lineTxt += ticketRe.sub(ticketLinker, cgi.escape(para[lastIdx:match.start()]))
                             lineTxt += makeLink(match.group(0))
                             lastIdx = match.end()
-                        lineTxt += cgi.escape(para[lastIdx:])
+                        lineTxt += ticketRe.sub(ticketLinker, cgi.escape(para[lastIdx:]))
                         post["$$COMMENTS$$"] += "<p>" + lineTxt.strip() + "</p>"
             ticketOut["HISTORY"].append(post)
             lastMod = max(lastMod, int(prop[3].text))

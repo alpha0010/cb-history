@@ -211,6 +211,22 @@ def makeLink(url):
     else:
         return '<a href="' + urlDat[0] + '" data-toggle="tooltip" title="' + urlDat[1] + '">' + url + '</a>'
 
+
+ticketRe = re.compile(ur'\b(patch|bug|features? +requests?|features?|requests?) *(?::|is|fix)? *#? *(\d{3,6})\b', re.IGNORECASE)
+
+def ticketLinker(matches):
+    url = "group_id=5358"
+    if matches.group(1).lower() == "patch":
+        url += "patch"
+    elif matches.group(1).lower() == "bug":
+        url += "bug"
+    else:
+        url += "feature"
+    url += "_id=" + matches.group(2).lstrip("0")
+    url = getMappedUrl(url)
+    return '<a href="' + url[0] + '" data-toggle="tooltip" title="' + url[1] + '">' + matches.group(0) + '</a>'
+
+
 fHandle = bz2.BZ2File("data/berlios.json.bz2", "r")
 lookupDb = json.load(fHandle)
 fHandle.close()
@@ -384,14 +400,14 @@ for ticket in lookupDb["trackers"]["feature"]["artifacts"]:
         text = lineSplitRe.sub("\\1", text)
         textProc = ""
         for match in urlRe.finditer(text):
-            textProc += cgi.escape(text[lastIdx:match.start()])
+            textProc += ticketRe.sub(ticketLinker, cgi.escape(text[lastIdx:match.start()]))
             url = cgi.escape(match.group(0))
             if url.endswith(".") or url.endswith(","):
                 textProc += makeLink(url[:-1]) + url[-1:]
             else:
                 textProc += makeLink(url)
             lastIdx = match.end()
-        textProc += cgi.escape(text[lastIdx:])
+        textProc += ticketRe.sub(ticketLinker, cgi.escape(text[lastIdx:]))
         if len(text) > 2000:
             textProc = '<pre class="pre-scrollable">' + textProc + '</pre>'
         else:
