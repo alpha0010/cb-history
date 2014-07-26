@@ -153,31 +153,35 @@
       <div class="panel panel-default">
         <div class="panel-heading">ollydbg 2012-03-16 14:39:03</div>
         <div class="panel-body">
-          <p>bool NativeParserBase::PrettyPrintToken(const TokensTree* tree,</p>
-          <p>const Token*      token,</p>
-          <p>wxString&amp;         result,</p>
-          <p>bool              isRoot)</p>
-          <p>{</p>
-          <p>// if the token has parents and the token is a container or a function,</p>
-          <p>// then pretty print the parent of the token-&gt;</p>
-          <p>if (   (token-&gt;m_ParentIndex != -1)</p>
-          <p>&amp;&amp; (token-&gt;m_TokenKind &amp; (tkAnyContainer | tkAnyFunction)) )</p>
-          <p>{</p>
-          <p>const Token* parentToken = tree-&gt;at(token-&gt;m_ParentIndex);</p>
-          <p>if (!parentToken || !PrettyPrintToken(tree, parentToken, result, false))</p>
-          <p>return false;</p>
-          <p>}</p>
-          <p>switch (token-&gt;m_TokenKind)</p>
-          <p>{</p>
-          <p>case tkConstructor:</p>
-          <p>result = result + token-&gt;m_Name + token-&gt;m_Args;</p>
-          <p>return true;</p>
-          <p>case tkFunction:</p>
-          <p>result = token-&gt;m_BaseType + wxT(" ") + result + token-&gt;m_Name + token-&gt;m_Args;</p>
-          <p>if (token-&gt;m_IsConst)</p>
-          <p>result += wxT(" const");</p>
-          <p>return true;</p>
-          <p>Here, the BaseType is used, and it does not have a "*".</p>
+          <pre class="pre-scrollable">bool NativeParserBase::PrettyPrintToken(const TokensTree* tree,
+                                        const Token*      token,
+                                        wxString&amp;         result,
+                                        bool              isRoot)
+{
+    // if the token has parents and the token is a container or a function,
+    // then pretty print the parent of the token-&gt;
+    if (   (token-&gt;m_ParentIndex != -1)
+        &amp;&amp; (token-&gt;m_TokenKind &amp; (tkAnyContainer | tkAnyFunction)) )
+    {
+        const Token* parentToken = tree-&gt;at(token-&gt;m_ParentIndex);
+        if (!parentToken || !PrettyPrintToken(tree, parentToken, result, false))
+            return false;
+    }
+
+    switch (token-&gt;m_TokenKind)
+    {
+        case tkConstructor:
+            result = result + token-&gt;m_Name + token-&gt;m_Args;
+            return true;
+
+        case tkFunction:
+            result = token-&gt;m_BaseType + wxT(" ") + result + token-&gt;m_Name + token-&gt;m_Args;
+            if (token-&gt;m_IsConst)
+                result += wxT(" const");
+            return true;
+
+
+Here, the BaseType is used, and it does not have a "*".</pre>
         </div>
       </div>
       <div class="panel panel-default">

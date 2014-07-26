@@ -46,42 +46,54 @@
           <h3>Bug #18695 <small>2012-08-04 23:11:28</small></h3>
           <h4>ohir</h4>
           <p class="lead">Parsing GDB output failed</p>
-          <p>Linux 2.6.32-41 i686 GNU/Linux</p>
-          <p>C::B version svn8150</p>
-          <p>GDB parser goes astray for certain kind of input (strings).</p>
-          <p>Watch head contains "Parsing GDB output failed for ..." error message.</p>
-          <p>Dereferenced struct view usually is incomplete.</p>
-          <p>Cause:</p>
-          <p>Unknown.</p>
-          <p>Seems like a bad (overeager) regexp code going into the content of the string.</p>
-          <p>How to replicate:</p>
-          <p>Watch dereferenced 't' in code below:</p>
-          <p>[code]</p>
-          <p>#include &lt;malloc.h&gt;</p>
-          <p>const char ok1[]="\"a\" .         b , c";</p>
-          <p>const char ok2[]="\"a\"           b   c";</p>
-          <p>const char ok3[]="\"a\"           b ; c";</p>
-          <p>const char ok4[]="\"a\"          b , c";</p>
-          <p>const char bad[]="\"a\"           b , c";</p>
-          <p>/* note 11: spaces between " and b. 10 spaces is ok. */</p>
-          <p>struct</p>
-          <p>test {</p>
-          <p>const char*           s;</p>
-          <p>};</p>
-          <p>int</p>
-          <p>main(void) {</p>
-          <p>struct test *t;</p>
-          <p>t = calloc(1,sizeof(struct test));</p>
-          <p>t-&gt;s = ok1;</p>
-          <p>t-&gt;s = ok2;</p>
-          <p>t-&gt;s = ok3;</p>
-          <p>t-&gt;s = ok4;</p>
-          <p>t-&gt;s = bad;</p>
-          <p>t-&gt;s = ok4;</p>
-          <p>free(t);</p>
-          <p>return 0;</p>
-          <p>}</p>
-          <p>[/code]</p>
+          <pre class="pre-scrollable">Linux 2.6.32-41 i686 GNU/Linux
+C::B version svn8150
+
+GDB parser goes astray for certain kind of input (strings).
+Watch head contains "Parsing GDB output failed for ..." error message.
+Dereferenced struct view usually is incomplete.
+
+Cause:
+Unknown.
+Seems like a bad (overeager) regexp code going into the content of the string.
+
+How to replicate:
+
+Watch dereferenced 't' in code below:
+
+[code]
+#include &lt;malloc.h&gt;
+
+const char ok1[]="\"a\" .         b , c";
+const char ok2[]="\"a\"           b   c";
+const char ok3[]="\"a\"           b ; c";
+const char ok4[]="\"a\"          b , c";
+const char bad[]="\"a\"           b , c";
+/* note 11: spaces between " and b. 10 spaces is ok. */
+struct
+test {
+    const char*           s;
+};
+
+int
+main(void) {
+
+struct test *t;
+
+t = calloc(1,sizeof(struct test));
+
+t-&gt;s = ok1;
+t-&gt;s = ok2;
+t-&gt;s = ok3;
+t-&gt;s = ok4;
+t-&gt;s = bad;
+t-&gt;s = ok4;
+
+free(t);
+
+return 0;
+}
+[/code]</pre>
         </div>
         <div class="col-sm-4">
           <dl class="dl-horizontal">
@@ -111,41 +123,49 @@
       <div class="panel panel-default">
         <div class="panel-heading">ohir 2012-08-05 12:50:31</div>
         <div class="panel-body">
-          <p>in file: src/plugins/debuggergdb/parsewatchvalue.cpp</p>
-          <p>in function: line 113: GetNextToken</p>
-          <p>Seem that tokenizer did not get account for escape</p>
-          <p>char being at the start. It just skips opening \ .</p>
-          <p>Here is obvious patch:</p>
-          <p>--- parsewatchvalue.cpp.orig</p>
-          <p>+++ parsewatchvalue.cpp</p>
-          <p>@@ -122,6 +122,7 @@</p>
-          <p>token.start = -1;</p>
-          <p>bool in_quote = false;</p>
-          <p>+    bool escape_next = false;</p>
-          <p>int open_braces = 0;</p>
-          <p>struct BraceType { enum Enum { None, Angle, Square }; };</p>
-          <p>BraceType::Enum brace_type = BraceType::None;</p>
-          <p>@@ -141,6 +142,11 @@</p>
-          <p>token = Token(pos, pos + 1, Token::CloseBrace);</p>
-          <p>return true;</p>
-          <p>+    case _T('\\'):</p>
-          <p>+        escape_next = true;</p>
-          <p>+        token.type = Token::String;</p>
-          <p>+        token.start = pos;</p>
-          <p>+        break;</p>
-          <p>case _T('"'):</p>
-          <p>in_quote = true;</p>
-          <p>token.type = Token::String;</p>
-          <p>@@ -164,7 +170,6 @@</p>
-          <p>}</p>
-          <p>++pos;</p>
-          <p>-    bool escape_next = false;</p>
-          <p>while (pos &lt; static_cast&lt;int&gt;(str.length()))</p>
-          <p>{</p>
-          <p>if (open_braces == 0)</p>
-          <p>=================</p>
-          <p>I have no time to set up env for compiling C::B by myself,</p>
-          <p>so this patch was NOT tested.</p>
+          <pre class="pre-scrollable">in file: src/plugins/debuggergdb/parsewatchvalue.cpp
+in function: line 113: GetNextToken
+
+Seem that tokenizer did not get account for escape
+char being at the start. It just skips opening \ .
+
+Here is obvious patch:
+
+--- parsewatchvalue.cpp.orig
++++ parsewatchvalue.cpp
+@@ -122,6 +122,7 @@
+
+     token.start = -1;
+     bool in_quote = false;
++    bool escape_next = false;
+     int open_braces = 0;
+     struct BraceType { enum Enum { None, Angle, Square }; };
+     BraceType::Enum brace_type = BraceType::None;
+@@ -141,6 +142,11 @@
+         token = Token(pos, pos + 1, Token::CloseBrace);
+         return true;
+
++    case _T('\\'):
++        escape_next = true;
++        token.type = Token::String;
++        token.start = pos;
++        break;
+     case _T('"'):
+         in_quote = true;
+         token.type = Token::String;
+@@ -164,7 +170,6 @@
+     }
+     ++pos;
+
+-    bool escape_next = false;
+     while (pos &lt; static_cast&lt;int&gt;(str.length()))
+     {
+         if (open_braces == 0)
+
+=================
+I have no time to set up env for compiling C::B by myself,
+so this patch was NOT tested.
+</pre>
         </div>
       </div>
       <div class="panel panel-default">
@@ -160,20 +180,27 @@
       <div class="panel panel-default">
         <div class="panel-heading">ohir 2012-08-06 10:40:36</div>
         <div class="panel-body">
-          <p>&gt;&gt;&gt;&gt;&gt;&gt; is the prompt as set by C::B.</p>
-          <p>I do not know if this is another kind of bug.</p>
-          <p>but I can tell that for parsing cited output tokenizer has another bug: It tries to check for repeated chars,</p>
-          <p>while "in_quote" state. That is wrong for output:</p>
-          <p>"\"a\"", ' ' &lt;repeats 11 times&gt;, "b , c"</p>
-          <p>because phrase &lt;repeats 11 times&gt; is NOT within if(in_quote) scope. \"a\" is in_quote, then quote closes. "b , c" again is in</p>
-          <p>quote.</p>
-          <p>184:    if (in_quote)</p>
-          <p>{</p>
-          <p>if (!escape_next)</p>
-          <p>{</p>
-          <p>int newPos = DetectRepeatingSymbols(str, pos);</p>
-          <p>Tokenizer code itself is enough convulted to have more quirks like that. Can't tell for the rest.</p>
-          <p>Someone needs to test it, um, with debugger step by step with enough sample outputs to see where and how assumptions and presumptions bent the code to fail.</p>
+          <pre class="pre-scrollable">&gt;&gt;&gt;&gt;&gt;&gt; is the prompt as set by C::B.
+I do not know if this is another kind of bug.
+
+but I can tell that for parsing cited output tokenizer has another bug: It tries to check for repeated chars,
+while "in_quote" state. That is wrong for output:
+"\"a\"", ' ' &lt;repeats 11 times&gt;, "b , c"
+
+because phrase &lt;repeats 11 times&gt; is NOT within if(in_quote) scope. \"a\" is in_quote, then quote closes. "b , c" again is in
+quote.
+
+ 184:    if (in_quote)
+                {
+                    if (!escape_next)
+                    {
+                        int newPos = DetectRepeatingSymbols(str, pos);
+
+Tokenizer code itself is enough convulted to have more quirks like that. Can't tell for the rest.
+
+Someone needs to test it, um, with debugger step by step with enough sample outputs to see where and how assumptions and presumptions bent the code to fail.
+
+</pre>
         </div>
       </div>
       <div class="panel panel-default">

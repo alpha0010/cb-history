@@ -103,18 +103,23 @@
       <div class="panel panel-default">
         <div class="panel-heading">jimp 2007-08-01 20:23:37</div>
         <div class="panel-body">
-          <p>I made a temporary patch that fixed this problem. I traced using the procedure described below on 2007-Mar-29.</p>
-          <p>The problem is in src/plugins/compilergcc/compilergcc.cpp in the function CompilerGCC::UseMake(ProjectBuildTarget* target) at line 1458.</p>
-          <p>The statement causing the problem is at line 1462, wxString idx = m_Project-&gt;GetCompilerID();</p>
-          <p>It causes the function wxFatalSignalHandler() to be executed. It implies that the pointer m_Project is invalid.</p>
-          <p>I fixed the problem by commenting out lines 2421 thru 2426 so that UseMake() is never called.</p>
-          <p>//    if (UseMake())</p>
-          <p>//    {</p>
-          <p>//        wxString cmd = GetMakeCommandFor(mcBuild, bj.project, bt);</p>
-          <p>//        m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, bj.project, bt));</p>
-          <p>//    }</p>
-          <p>//    else</p>
-          <p>It works OK but probably isn't the "ultimate" solution.</p>
+          <pre class="pre-scrollable">I made a temporary patch that fixed this problem. I traced using the procedure described below on 2007-Mar-29.
+
+The problem is in src/plugins/compilergcc/compilergcc.cpp in the function CompilerGCC::UseMake(ProjectBuildTarget* target) at line 1458.
+
+The statement causing the problem is at line 1462, wxString idx = m_Project-&gt;GetCompilerID();
+It causes the function wxFatalSignalHandler() to be executed. It implies that the pointer m_Project is invalid.
+
+I fixed the problem by commenting out lines 2421 thru 2426 so that UseMake() is never called.
+//    if (UseMake())
+//    {
+//        wxString cmd = GetMakeCommandFor(mcBuild, bj.project, bt);
+//        m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, bj.project, bt));
+//    }
+//    else
+It works OK but probably isn't the "ultimate" solution.
+
+</pre>
         </div>
       </div>
     </div>

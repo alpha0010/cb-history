@@ -77,46 +77,63 @@
       <div class="panel panel-default">
         <div class="panel-heading">stahta01 2007-02-26 00:42:06</div>
         <div class="panel-body">
-          <p>Change 1: WXWIN_COMPATIBILITY_2_4 is turn off by default under wxWidgets 2.8</p>
-          <p>Problem 1: This makes wxHIDE_READONLY undefined.</p>
-          <p>Solution 1: Added #if (WXWIN_COMPATIBILITY_2_4) blocks around wxHIDE_READONLY.</p>
-          <p>Change 2: wxFontEnumerator::GetFacenames returns wxArrayString instead of wxArrayString*</p>
-          <p>Solution 2: Added code</p>
-          <p>#if wxCHECK_VERSION(2, 8, 0)</p>
-          <p>wxArrayString faceNames = Enumer.GetFacenames();</p>
-          <p>#else</p>
-          <p>wxArrayString&amp; faceNames = *Enumer.GetFacenames();</p>
-          <p>#endif</p>
-          <p>And use faceNames where GetFacenames was used.</p>
-          <p>Problem 3: wxWidgets 2.8 does NOT like WX_DEFINE_ARRAY(bool,wxArrayBool)</p>
-          <p>Solution 3: Replaced it with WX_DEFINE_ARRAY_INT(bool,wxArrayBool)</p>
-          <p>Change 4: OnCancel method removed from wxDialog.</p>
-          <p>Problem 4: wxsArrayStringEditorDlg was using it.</p>
-          <p>Solution 4: Created wxsArrayStringEditorDlg::OnCancel method,</p>
-          <p>note I am not sure if my code in the OnCancel method is correct.</p>
-          <p>Change 5: wxListbook::HitTest in protected in wx/listbook.h, Fixed in wxW2.8.2</p>
-          <p>Problem 5: The file src/plugins/contrib/wxSmith/defwidgets/wxslistbook.cpp uses it.</p>
-          <p>Solution 5: Cast to wxBookCtrlBase</p>
-          <p>Change 6: Constansts wxOPEN, wxFILE_MUST_EXIST, wxSAVE and wxOVERWRITE_PROMPT has been depreciated/obsoleted.</p>
-          <p>Change 7A: Constansts wxTHICK_FRAME and wxRESIZE_BOX has been depreciated/obsoleted.</p>
-          <p>Solution 7A: Replaced wxTHICK_FRAME with wxRESIZE_BORDER. Replaced wxRESIZE_BOX with wxMAXIMIZE_BOX.</p>
-          <p>Change 7B: Constansts wxDIALOG_MODELESS, wxNO_3D and wxDIALOG_MODAL has been depreciated/obsoleted.</p>
-          <p>Solution 7B: Removed use of Constansts.</p>
-          <p>Change 8: Method wxBitmapButton::SetLabel has been depreciated/obsoleted.</p>
-          <p>Solution 8: Replaced with wxBitmapButton::SetBitmapLabel.</p>
-          <p>Change 9: propgrid macro WX_PG_IMPLEMENT_PROPERTY_CLASS has been changed.</p>
-          <p>Solution 9: used #if/else/endif block</p>
-          <p>Change 10: Structure wxPGChoiceInfo in header propgrid.h has changed</p>
-          <p>Solution 10: if wxPG_VERSION &gt; 1099 use with m_choices.GetLabel(?) instead of m_constants-&gt;GetLabel(?)</p>
-          <p>Change 11: wxPropertyGrid 1.2.6 requires defines to compile and link right</p>
-          <p>Solution 11: Added defines for WXMAKINGLIB_PROPGRID and wxPG_COMPATIBILITY_1_0_0</p>
-          <p>Note 11: The main CB project needs an extra define of wxPG_USE_WXMODULE=0</p>
-          <p>Change 12: Constanst wxTE_LINEWRAP has been depreciated/obsoleted.</p>
-          <p>Solution 12: Replaced wxTE_LINEWRAP with wxTE_CHARWRAP.</p>
-          <p>Change 13: Constansts wxSP_FULLSASH and wxSP_SASH_AQUA has been depreciated/obsoleted.</p>
-          <p>Solution 13: Removed Constansts.</p>
-          <p>Change 14: Precompiled Headers issues.</p>
-          <p>Solution 14: Added more includes guarded by WX_PRECOMP</p>
+          <pre class="pre-scrollable">Change 1: WXWIN_COMPATIBILITY_2_4 is turn off by default under wxWidgets 2.8
+Problem 1: This makes wxHIDE_READONLY undefined.
+Solution 1: Added #if (WXWIN_COMPATIBILITY_2_4) blocks around wxHIDE_READONLY.
+
+Change 2: wxFontEnumerator::GetFacenames returns wxArrayString instead of wxArrayString*
+
+Solution 2: Added code
+#if wxCHECK_VERSION(2, 8, 0)
+wxArrayString faceNames = Enumer.GetFacenames();
+#else
+wxArrayString&amp; faceNames = *Enumer.GetFacenames();
+#endif
+
+And use faceNames where GetFacenames was used.
+
+Problem 3: wxWidgets 2.8 does NOT like WX_DEFINE_ARRAY(bool,wxArrayBool)
+Solution 3: Replaced it with WX_DEFINE_ARRAY_INT(bool,wxArrayBool)
+
+Change 4: OnCancel method removed from wxDialog.
+Problem 4: wxsArrayStringEditorDlg was using it.
+Solution 4: Created wxsArrayStringEditorDlg::OnCancel method,
+     note I am not sure if my code in the OnCancel method is correct.
+
+Change 5: wxListbook::HitTest in protected in wx/listbook.h, Fixed in wxW2.8.2
+Problem 5: The file src/plugins/contrib/wxSmith/defwidgets/wxslistbook.cpp uses it.
+Solution 5: Cast to wxBookCtrlBase
+
+Change 6: Constansts wxOPEN, wxFILE_MUST_EXIST, wxSAVE and wxOVERWRITE_PROMPT has been depreciated/obsoleted.
+
+Change 7A: Constansts wxTHICK_FRAME and wxRESIZE_BOX has been depreciated/obsoleted.
+Solution 7A: Replaced wxTHICK_FRAME with wxRESIZE_BORDER. Replaced wxRESIZE_BOX with wxMAXIMIZE_BOX.
+
+Change 7B: Constansts wxDIALOG_MODELESS, wxNO_3D and wxDIALOG_MODAL has been depreciated/obsoleted.
+Solution 7B: Removed use of Constansts.
+
+Change 8: Method wxBitmapButton::SetLabel has been depreciated/obsoleted.
+Solution 8: Replaced with wxBitmapButton::SetBitmapLabel.
+
+Change 9: propgrid macro WX_PG_IMPLEMENT_PROPERTY_CLASS has been changed.
+Solution 9: used #if/else/endif block
+
+Change 10: Structure wxPGChoiceInfo in header propgrid.h has changed
+Solution 10: if wxPG_VERSION &gt; 1099 use with m_choices.GetLabel(?) instead of m_constants-&gt;GetLabel(?)
+
+Change 11: wxPropertyGrid 1.2.6 requires defines to compile and link right
+Solution 11: Added defines for WXMAKINGLIB_PROPGRID and wxPG_COMPATIBILITY_1_0_0
+Note 11: The main CB project needs an extra define of wxPG_USE_WXMODULE=0
+
+Change 12: Constanst wxTE_LINEWRAP has been depreciated/obsoleted.
+Solution 12: Replaced wxTE_LINEWRAP with wxTE_CHARWRAP.
+
+Change 13: Constansts wxSP_FULLSASH and wxSP_SASH_AQUA has been depreciated/obsoleted.
+Solution 13: Removed Constansts.
+
+Change 14: Precompiled Headers issues.
+Solution 14: Added more includes guarded by WX_PRECOMP
+</pre>
         </div>
       </div>
       <div class="panel panel-default">

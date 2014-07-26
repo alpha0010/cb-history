@@ -77,30 +77,36 @@
       <div class="panel panel-default">
         <div class="panel-heading">techy 2009-08-30 21:49:46</div>
         <div class="panel-body">
-          <p>Well, I'd really prefer to avoid the original way of swapping headers/sources. What you originally did was:</p>
-          <p>1. you find all directories where the sources are located</p>
-          <p>2. for each of these directories you take the current filename without the extension and append all possible header (source) extensions and test if this filename exists</p>
-          <p>Point 2 is the place where the case sensitiveness problem arises as you do this:</p>
-          <p>if (ft == ftHeader)</p>
-          <p>{</p>
-          <p>fname.SetExt(FileFilters::C_EXT);</p>
-          <p>if (fname.FileExists())</p>
-          <p>break;</p>
-          <p>fname.SetExt(FileFilters::CC_EXT);</p>
-          <p>if (fname.FileExists())</p>
-          <p>break;</p>
-          <p>fname.SetExt(FileFilters::CPP_EXT);</p>
-          <p>if (fname.FileExists())</p>
-          <p>break;</p>
-          <p>fname.SetExt(FileFilters::CXX_EXT);</p>
-          <p>if (fname.FileExists())</p>
-          <p>break;</p>
-          <p>fname.SetExt(FileFilters::INL_EXT);</p>
-          <p>if (fname.FileExists())</p>
-          <p>break;</p>
-          <p>FileFilters::C_EXT, ..., FileFilters::INL_EXT are all lowercase and when you test for the presence of these files when extensions .C or .H are used, the lowercase variants don't exist of course.</p>
-          <p>As I said before, this approach is a source of a serious performance problem when the sources are present in hundreds of directories. Suppose that the sources exist in 500 directories - then 500 * 5 = 2500 tests of file existence are needed and as the kernel has to be called each time during this test, this leads to a slow header/source swapping (3s on my machine, which is very annoying because this is something you do very frequently). Of course, if you fix the lower/upper case issue by trying to append .c, .C, .cpp, .CPP, ... you double the number of necessary tests so in the above example you get to 5000 tests of file existence, which is something I want to avoid.</p>
-          <p>Please look at the updated patch. There are only three extra lines compared to the first version. In addition I test here the case of the first letter of the extension of the tested file, which has to correspond to the case of the first letter of the extension of the active file. (I haven't tested this but the change is so small that I hope I haven't screwed up anything - anyway, I hope you got the idea.)</p>
+          <pre class="pre-scrollable">Well, I'd really prefer to avoid the original way of swapping headers/sources. What you originally did was:
+
+1. you find all directories where the sources are located
+2. for each of these directories you take the current filename without the extension and append all possible header (source) extensions and test if this filename exists
+
+Point 2 is the place where the case sensitiveness problem arises as you do this:
+
+        if (ft == ftHeader)
+        {
+            fname.SetExt(FileFilters::C_EXT);
+            if (fname.FileExists())
+                break;
+            fname.SetExt(FileFilters::CC_EXT);
+            if (fname.FileExists())
+                break;
+            fname.SetExt(FileFilters::CPP_EXT);
+            if (fname.FileExists())
+                break;
+            fname.SetExt(FileFilters::CXX_EXT);
+            if (fname.FileExists())
+                break;
+            fname.SetExt(FileFilters::INL_EXT);
+            if (fname.FileExists())
+                break;
+
+FileFilters::C_EXT, ..., FileFilters::INL_EXT are all lowercase and when you test for the presence of these files when extensions .C or .H are used, the lowercase variants don't exist of course.
+
+As I said before, this approach is a source of a serious performance problem when the sources are present in hundreds of directories. Suppose that the sources exist in 500 directories - then 500 * 5 = 2500 tests of file existence are needed and as the kernel has to be called each time during this test, this leads to a slow header/source swapping (3s on my machine, which is very annoying because this is something you do very frequently). Of course, if you fix the lower/upper case issue by trying to append .c, .C, .cpp, .CPP, ... you double the number of necessary tests so in the above example you get to 5000 tests of file existence, which is something I want to avoid.
+
+Please look at the updated patch. There are only three extra lines compared to the first version. In addition I test here the case of the first letter of the extension of the tested file, which has to correspond to the case of the first letter of the extension of the active file. (I haven't tested this but the change is so small that I hope I haven't screwed up anything - anyway, I hope you got the idea.)</pre>
         </div>
       </div>
       <div class="panel panel-default">

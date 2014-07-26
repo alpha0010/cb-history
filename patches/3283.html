@@ -83,55 +83,64 @@
       <div class="panel panel-default">
         <div class="panel-heading">mortenmacfly 2012-05-27 09:03:36</div>
         <div class="panel-body">
-          <p>Another one: It does not compile under wxWidgets 2.9.x.</p>
-          <p>I've an updated function here, that works (and is cleaned-up):</p>
-          <p>wxString GetUrl()</p>
-          <p>{</p>
-          <p>cbStyledTextCtrl* control = m_pOwner-&gt;GetControl();</p>
-          <p>if (!control)</p>
-          <p>return wxEmptyString;</p>
-          <p>wxRegEx reUrl(wxT("***:(((ht|f)tp(s?)\\:\\/\\/)|(www\\.))(([a-zA-Z0-9\\-\\._]+(\\.[a-zA-Z0-9\\-\\._]+)+)|localhost)(\\/?)([a-zA-Z0-9\\-\\.\\?\\,\\'\\/\\\\\\+&amp;amp;%\\$#_]*)?([\\d\\w\\.\\/\\%\\+\\-\\=\\&amp;amp;\\?\\:\\\\\\&amp;quot;\\'\\,\\|\\~\\;]*)"));</p>
-          <p>wxString url = control-&gt;GetSelectedText(); url.Trim(true).Trim(false);</p>
-          <p>if (url.IsEmpty())</p>
-          <p>return wxEmptyString;</p>
-          <p>if (reUrl.Matches(url))</p>
-          <p>return reUrl.GetMatch(url);</p>
-          <p>// Find out start position</p>
-          <p>int startPos = control-&gt;GetCurrentPos();</p>
-          <p>const wxString space = wxT(" \n\r\t{}");</p>
-          <p>wxChar startCh = control-&gt;GetCharAt(startPos);</p>
-          <p>while ( (startPos &gt; 0) &amp;&amp; (space.Find(startCh) == -1) )</p>
-          <p>startPos--;</p>
-          <p>// Find out end position</p>
-          <p>int endPos = control-&gt;GetCurrentPos();</p>
-          <p>int maxPos = control-&gt;GetLineEndPosition(control-&gt;GetLineCount());</p>
-          <p>wxChar endCh = control-&gt;GetCharAt(endPos);</p>
-          <p>while ( (endPos &lt; maxPos) &amp;&amp; (space.Find(endCh) == -1) )</p>
-          <p>endPos++;</p>
-          <p>url = control-&gt;GetTextRange(startPos, endPos);</p>
-          <p>if (    (control-&gt;GetLexer() == wxSCI_LEX_CPP)</p>
-          <p>&amp;&amp;  (   (control-&gt;GetStyleAt(control-&gt;GetCurrentPos()) == wxSCI_C_STRING)</p>
-          <p>|| (control-&gt;GetStyleAt(control-&gt;GetCurrentPos()) == wxSCI_C_STRINGEOL) ) )</p>
-          <p>{</p>
-          <p>url.Replace(wxT("\\n"), wxT("\n"));</p>
-          <p>url.Replace(wxT("\\r"), wxT("\r"));</p>
-          <p>url.Replace(wxT("\\t"), wxT("\t"));</p>
-          <p>}</p>
-          <p>if (reUrl.Matches(url))</p>
-          <p>{</p>
-          <p>wxString match = reUrl.GetMatch(url);</p>
-          <p>if (   (url.Find(match) + startPos                       &lt; control-&gt;GetCurrentPos())</p>
-          <p>&amp;&amp; (url.Find(match) + startPos + (int)match.Length() &gt; control-&gt;GetCurrentPos()) )</p>
-          <p>{</p>
-          <p>url = match;</p>
-          <p>}</p>
-          <p>else</p>
-          <p>url = wxEmptyString; // nope, return invalid (empty)</p>
-          <p>}</p>
-          <p>else</p>
-          <p>url = wxEmptyString; // nope, return invalid (empty)</p>
-          <p>return url;</p>
-          <p>}</p>
+          <pre class="pre-scrollable">Another one: It does not compile under wxWidgets 2.9.x.
+
+I've an updated function here, that works (and is cleaned-up):
+
+    wxString GetUrl()
+    {
+        cbStyledTextCtrl* control = m_pOwner-&gt;GetControl();
+        if (!control)
+            return wxEmptyString;
+
+        wxRegEx reUrl(wxT("***:(((ht|f)tp(s?)\\:\\/\\/)|(www\\.))(([a-zA-Z0-9\\-\\._]+(\\.[a-zA-Z0-9\\-\\._]+)+)|localhost)(\\/?)([a-zA-Z0-9\\-\\.\\?\\,\\'\\/\\\\\\+&amp;amp;%\\$#_]*)?([\\d\\w\\.\\/\\%\\+\\-\\=\\&amp;amp;\\?\\:\\\\\\&amp;quot;\\'\\,\\|\\~\\;]*)"));
+        wxString url = control-&gt;GetSelectedText(); url.Trim(true).Trim(false);
+        if (url.IsEmpty())
+            return wxEmptyString;
+        if (reUrl.Matches(url))
+            return reUrl.GetMatch(url);
+
+        // Find out start position
+        int startPos = control-&gt;GetCurrentPos();
+        const wxString space = wxT(" \n\r\t{}");
+        wxChar startCh = control-&gt;GetCharAt(startPos);
+        while ( (startPos &gt; 0) &amp;&amp; (space.Find(startCh) == -1) )
+            startPos--;
+
+        // Find out end position
+        int endPos = control-&gt;GetCurrentPos();
+        int maxPos = control-&gt;GetLineEndPosition(control-&gt;GetLineCount());
+        wxChar endCh = control-&gt;GetCharAt(endPos);
+        while ( (endPos &lt; maxPos) &amp;&amp; (space.Find(endCh) == -1) )
+            endPos++;
+
+        url = control-&gt;GetTextRange(startPos, endPos);
+        if (    (control-&gt;GetLexer() == wxSCI_LEX_CPP)
+            &amp;&amp;  (   (control-&gt;GetStyleAt(control-&gt;GetCurrentPos()) == wxSCI_C_STRING)
+                 || (control-&gt;GetStyleAt(control-&gt;GetCurrentPos()) == wxSCI_C_STRINGEOL) ) )
+        {
+            url.Replace(wxT("\\n"), wxT("\n"));
+            url.Replace(wxT("\\r"), wxT("\r"));
+            url.Replace(wxT("\\t"), wxT("\t"));
+        }
+
+        if (reUrl.Matches(url))
+        {
+            wxString match = reUrl.GetMatch(url);
+            if (   (url.Find(match) + startPos                       &lt; control-&gt;GetCurrentPos())
+                &amp;&amp; (url.Find(match) + startPos + (int)match.Length() &gt; control-&gt;GetCurrentPos()) )
+            {
+                url = match;
+            }
+            else
+                url = wxEmptyString; // nope, return invalid (empty)
+        }
+        else
+            url = wxEmptyString; // nope, return invalid (empty)
+
+        return url;
+    }
+</pre>
         </div>
       </div>
       <div class="panel panel-default">
@@ -145,13 +154,17 @@
       <div class="panel panel-default">
         <div class="panel-heading">mortenmacfly 2012-06-01 16:00:10</div>
         <div class="panel-body">
-          <p>This part:</p>
-          <p>while ( (startPos &gt; 0) &amp;&amp; (space.Find(control-&gt;GetCharAt(startPos)) == -1) )</p>
-          <p>does NOT work with wx2.9.x. I changed that on purpose to:</p>
-          <p>wxChar startCh = control-&gt;GetCharAt(startPos);</p>
-          <p>while ( (startPos &gt; 0) &amp;&amp; (space.Find(startCh) == -1) )</p>
-          <p>startPos--;</p>
-          <p>...(at two positions) in my other comment. Please leave it like that.</p>
+          <pre class="pre-scrollable">This part:
+
+        while ( (startPos &gt; 0) &amp;&amp; (space.Find(control-&gt;GetCharAt(startPos)) == -1) )
+
+does NOT work with wx2.9.x. I changed that on purpose to:
+
+        wxChar startCh = control-&gt;GetCharAt(startPos);
+        while ( (startPos &gt; 0) &amp;&amp; (space.Find(startCh) == -1) )
+            startPos--;
+
+...(at two positions) in my other comment. Please leave it like that.</pre>
         </div>
       </div>
       <div class="panel panel-default">

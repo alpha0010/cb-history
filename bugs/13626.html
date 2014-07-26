@@ -46,30 +46,37 @@
           <h3>Bug #13626 <small>2008-04-17 08:01:01</small></h3>
           <h4>filofel</h4>
           <p class="lead">watch window display garbeld</p>
-          <p>The watch window has trouble displaying certain values (of type "Undefined"), then gets confused and garbles the watch window display when it hits them.</p>
-          <p>To make matter worse, it doesn't always show the "Edit watch" option in the right click menu that would allow turning the problematic value display from "Undefined" to "Hexadecimal" to work around the issue.</p>
-          <p>Using a structure such as:</p>
-          <p>typedef struct nvd_init_s</p>
-          <p>{</p>
-          <p>uint32_t  opcode;       /*  NVD_INIT (10) */</p>
-          <p>uint32_t  seq;          /*  sequence number */</p>
-          <p>uint16_t  protocol_version;  /*  major version number of client protocol */</p>
-          <p>uint16_t  protocol_revision; /*  minor version number of client protocol */</p>
-          <p>uint8_t   mac[6] ;      /*  client MAC Address */</p>
-          <p>}  nvd_init_t ;</p>
-          <p>and local values such as:</p>
-          <p>nvd_init_t      packet;</p>
-          <p>int                 len;</p>
-          <p>char              buffer[NVD_MAX_PACKET_SIZE];</p>
-          <p>the watch display chokes on packet.mac when mac contains 0x0, 0xf, Oxb0, 0x43, 0x74, 0x63</p>
-          <p>The watch window shows:</p>
-          <p>mac="\000\017#n=288,buffer = "\000\000 (etc).</p>
-          <p>where # above is in fact a funny graphic char: A square seemingly containing 0 0 0 4, on two rows.</p>
-          <p>the following n=288 is actually the end of the display of</p>
-          <p>len = 288 that should be displayed below "packet" (rather than as a structure element) in the local variables.</p>
-          <p>Ditto for buffer, etc.</p>
-          <p>I have screenshot of the garbled display if needed.</p>
-          <p>Thanks!</p>
+          <pre class="pre-scrollable">The watch window has trouble displaying certain values (of type "Undefined"), then gets confused and garbles the watch window display when it hits them. 
+To make matter worse, it doesn't always show the "Edit watch" option in the right click menu that would allow turning the problematic value display from "Undefined" to "Hexadecimal" to work around the issue.
+
+Using a structure such as:
+
+typedef struct nvd_init_s
+  {
+    uint32_t  opcode;       /*  NVD_INIT (10) */
+    uint32_t  seq;          /*  sequence number */
+    uint16_t  protocol_version;  /*  major version number of client protocol */
+    uint16_t  protocol_revision; /*  minor version number of client protocol */
+    uint8_t   mac[6] ;      /*  client MAC Address */
+  }  nvd_init_t ;
+
+and local values such as:
+  nvd_init_t      packet;
+  int                 len;
+  char              buffer[NVD_MAX_PACKET_SIZE];
+
+the watch display chokes on packet.mac when mac contains 0x0, 0xf, Oxb0, 0x43, 0x74, 0x63
+The watch window shows:
+mac="\000\017#n=288,buffer = "\000\000 (etc).
+where # above is in fact a funny graphic char: A square seemingly containing 0 0 0 4, on two rows.
+the following n=288 is actually the end of the display of 
+len = 288 that should be displayed below "packet" (rather than as a structure element) in the local variables.
+Ditto for buffer, etc.
+
+I have screenshot of the garbled display if needed.
+
+Thanks!
+</pre>
         </div>
         <div class="col-sm-4">
           <dl class="dl-horizontal">

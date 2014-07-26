@@ -46,22 +46,24 @@
           <h3>Bug #8878 <small>2006-09-24 21:20:46</small></h3>
           <h4>afb</h4>
           <p class="lead">plugins doesn't load on wxMac, wrong zip name</p>
-          <p>It used to load happily from the share/codeblocks/dragscroll.zip file just like it does on Linux...</p>
-          <p>Now it creates the files as "dragscroll.zip", but then tries to load them as "libdragscroll.zip".</p>
-          <p>Suggestion:</p>
-          <p>-- src/sdk/pluginmanager.cpp	(revision 2994)</p>
-          <p>+++ src/sdk/pluginmanager.cpp	(arbetskopia)</p>
-          <p>@@ -144,7 +144,7 @@</p>
-          <p>wxFileName fname(pluginFilename);</p>
-          <p>fname.SetExt(_T("zip"));</p>
-          <p>wxString actual = fname.GetFullName();</p>
-          <p>-        #ifdef __WXGTK__</p>
-          <p>+        #if defined(__WXGTK__) || defined(__WXMAC__)</p>
-          <p>// remove 'lib' prefix from plugin name (if any)</p>
-          <p>if (actual.StartsWith(_T("lib")))</p>
-          <p>actual.Remove(0, 3);</p>
-          <p>This would change the filenames to be the same as on</p>
-          <p>Darwin/Linux, and without a silly "lib" prefix on Mac...</p>
+          <pre class="pre-scrollable">It used to load happily from the share/codeblocks/dragscroll.zip file just like it does on Linux...
+Now it creates the files as "dragscroll.zip", but then tries to load them as "libdragscroll.zip".
+
+Suggestion:
+-- src/sdk/pluginmanager.cpp	(revision 2994)
++++ src/sdk/pluginmanager.cpp	(arbetskopia)
+@@ -144,7 +144,7 @@
+         wxFileName fname(pluginFilename);
+         fname.SetExt(_T("zip"));
+         wxString actual = fname.GetFullName();
+-        #ifdef __WXGTK__
++        #if defined(__WXGTK__) || defined(__WXMAC__)
+         // remove 'lib' prefix from plugin name (if any)
+         if (actual.StartsWith(_T("lib")))
+             actual.Remove(0, 3);
+
+This would change the filenames to be the same as on
+Darwin/Linux, and without a silly "lib" prefix on Mac...</pre>
         </div>
         <div class="col-sm-4">
           <dl class="dl-horizontal">

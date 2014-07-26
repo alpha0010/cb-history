@@ -70,8 +70,51 @@
       <div class="panel panel-default">
         <div class="panel-heading">kalith 2013-04-01 12:10:00</div>
         <div class="panel-body">
-          <p>Untested patch, so you get the idea:</p>
-          <p>--- main_base.cpp	2013-04-01 14:01:14 +0200 +++ main.cpp	2013-04-01 14:08:03 +0200 @@ -3525,16 +3525,31 @@ void MainFrame::OnEditToggleCommentSelec                  --endLine;              }   +            bool doComment = false;              while( curLine &lt;= endLine )              { -                // For each line: If it's commented, uncomment. Otherwise, comment. +                // Check is any of the selected lines is commented                  wxString strLine = stc-&gt;GetLine( curLine );                  int commentPos = strLine.Strip( wxString::leading ).Find( comment );                    if ( -1 == commentPos || commentPos &gt; 0 ) +                { +                    // If at least one line is not commented, then comment out the whole selection, +                    // else uncomment it. +                    doComment = true; +                    break; +                } +                ++curLine; +            } + +            curLine = startLine; +            while( curLine &lt;= endLine ) +            { +                if ( doComment )                      stc-&gt;InsertText( stc-&gt;PositionFromLine( curLine ), comment );                  else                  {      // we know the comment is there (maybe preceded by white space) +                    wxString strLine = stc-&gt;GetLine( curLine );                      int Pos = strLine.Find(comment);                      int start = stc-&gt;PositionFromLine( curLine ) + Pos;                      int end = start + comment.Length();</p>
+          <pre class="pre-scrollable">Untested patch, so you get the idea:
+
+--- main_base.cpp	2013-04-01 14:01:14 +0200
++++ main.cpp	2013-04-01 14:08:03 +0200
+@@ -3525,16 +3525,31 @@ void MainFrame::OnEditToggleCommentSelec
+                 --endLine;
+             }
+
++            bool doComment = false;
+             while( curLine &lt;= endLine )
+             {
+-                // For each line: If it's commented,
+uncomment. Otherwise, comment.
++                // Check is any of the selected lines is
+commented
+                 wxString strLine = stc-&gt;GetLine( curLine );
+                 int commentPos = strLine.Strip(
+wxString::leading ).Find( comment );
+
+                 if ( -1 == commentPos || commentPos &gt; 0 )
++                {
++                    // If at least one line is not
+commented, then comment out the whole selection,
++                    // else uncomment it.
++                    doComment = true;
++                    break;
++                }
++                ++curLine;
++            }
++
++            curLine = startLine;
++            while( curLine &lt;= endLine )
++            {
++                if ( doComment )
+                     stc-&gt;InsertText( stc-&gt;PositionFromLine(
+curLine ), comment );
+                 else
+                 {      // we know the comment is there
+(maybe preceded by white space)
++                    wxString strLine = stc-&gt;GetLine( curLine );
+                     int Pos = strLine.Find(comment);
+                     int start = stc-&gt;PositionFromLine(
+curLine ) + Pos;
+                     int end = start + comment.Length();
+</pre>
         </div>
       </div>
       <div class="panel panel-default">

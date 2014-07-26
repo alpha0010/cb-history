@@ -71,23 +71,29 @@
       <div class="panel panel-default">
         <div class="panel-heading">secks 2012-05-14 18:30:39</div>
         <div class="panel-body">
-          <p>There are actually two issues here</p>
-          <p>--------------------</p>
-          <p>#1</p>
-          <p>--------------------</p>
-          <p>there is a hard coded check that has been added in cbplugin.cpp</p>
-          <p>wxString cbDebuggerPlugin::GetConsoleTty(int ConsolePid)</p>
-          <p>.. the culprit is this:</p>
-          <p>if (psCmd.Contains(wxT("-T"))) {</p>
-          <p>-T is only valid if using xterm .. also, the terminal is a setting so that if statement can't be based on a  hard coded value.  it needs to be based on whatever is in the setting:</p>
-          <p>app -&gt; /console_terminal</p>
-          <p>-------------------</p>
-          <p>#2</p>
-          <p>-------------------</p>
-          <p>this happens when app/console_terminal is set to gnome-terminal, --disable-factory is not set, and there is already an instance of gnome-terminal running that would be reused.  what happens is gnome-terminal starts, finds the previous instance that is running, sends the command to the first terminal to run.. the second gnome-terminal then stops .. the function RunNixConsole sends a kill 0 signal to that process id to see if it's really running .. BOOM! there is a comment above the kill that states:</p>
-          <p>// For some reason wxExecute returns PID&gt;0, when the command cannot be launched.</p>
-          <p>// Here we check if the process is alive and the PID is really a valid one.</p>
-          <p>i did some testing and it appears that wxExecute is returning the pid of the vforked process, which is correct if the command to be executed is valid.  i propose better parsing in GetConsoleTty() instead of requiring the pid to exist (as this bug shows, the pid can be different)</p>
+          <pre class="pre-scrollable">There are actually two issues here
+--------------------
+#1
+--------------------
+there is a hard coded check that has been added in cbplugin.cpp
+wxString cbDebuggerPlugin::GetConsoleTty(int ConsolePid)
+.. the culprit is this:
+if (psCmd.Contains(wxT("-T"))) {
+
+-T is only valid if using xterm .. also, the terminal is a setting so that if statement can't be based on a  hard coded value.  it needs to be based on whatever is in the setting:
+app -&gt; /console_terminal
+
+
+-------------------
+#2
+-------------------
+this happens when app/console_terminal is set to gnome-terminal, --disable-factory is not set, and there is already an instance of gnome-terminal running that would be reused.  what happens is gnome-terminal starts, finds the previous instance that is running, sends the command to the first terminal to run.. the second gnome-terminal then stops .. the function RunNixConsole sends a kill 0 signal to that process id to see if it's really running .. BOOM! there is a comment above the kill that states:
+        // For some reason wxExecute returns PID&gt;0, when the command cannot be launched.
+        // Here we check if the process is alive and the PID is really a valid one.
+
+i did some testing and it appears that wxExecute is returning the pid of the vforked process, which is correct if the command to be executed is valid.  i propose better parsing in GetConsoleTty() instead of requiring the pid to exist (as this bug shows, the pid can be different)
+
+</pre>
         </div>
       </div>
       <div class="panel panel-default">

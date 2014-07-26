@@ -46,38 +46,45 @@
           <h3>Bug #19139 <small>2013-10-01 09:59:15</small></h3>
           <h4>mojca</h4>
           <p class="lead">"wxIcon copycursor(...)" doesn't work with Carbon/Cocoa</p>
-          <p>The following code from src/plugins/contrib/NassiShneiderman/NassiView.cpp doesn't work on Mac (it works with wxGTK, but not with Carbon or Cocoa based wxWidgets - it fails both with wxWidgets 2.8 and 2.9):</p>
-          <p>#if defined(__WXMSW__)</p>
-          <p>wxCursor copycursor(dnd_copy_cur_xpm);</p>
-          <p>wxCursor movecursor(dnd_move_cur_xpm);</p>
-          <p>wxCursor nonecursor(dnd_none_cur_xpm);</p>
-          <p>#else</p>
-          <p>wxIcon copycursor(dnd_copy_cur_xpm);</p>
-          <p>wxIcon movecursor(dnd_move_cur_xpm);</p>
-          <p>wxIcon nonecursor(dnd_none_cur_xpm);</p>
-          <p>#endif</p>
-          <p>//wxDragResult result;</p>
-          <p>wxDropSource dndSource(m_diagramwindow, copycursor, movecursor, nonecursor);</p>
-          <p>The following quick workaround solved the problem, but a better solution is needed and I'm not exactly sure how. One option would be to use</p>
-          <p>#if defined(__WXMSW__) || defined (__WXOSX__) || ...</p>
-          <p>for the first part, but I'm not sure that this is the proper solution either.</p>
-          <p>--- src/plugins/contrib/NassiShneiderman/NassiView.cpp.orig</p>
-          <p>+++ src/plugins/contrib/NassiShneiderman/NassiView.cpp</p>
-          <p>@@ -1048,15 +1048,9 @@</p>
-          <p>if ( dataptr )</p>
-          <p>{</p>
-          <p>-        #if defined(__WXMSW__)</p>
-          <p>wxCursor copycursor(dnd_copy_cur_xpm);</p>
-          <p>wxCursor movecursor(dnd_move_cur_xpm);</p>
-          <p>wxCursor nonecursor(dnd_none_cur_xpm);</p>
-          <p>-        #else</p>
-          <p>-            wxIcon copycursor(dnd_copy_cur_xpm);</p>
-          <p>-            wxIcon movecursor(dnd_move_cur_xpm);</p>
-          <p>-            wxIcon nonecursor(dnd_none_cur_xpm);</p>
-          <p>-        #endif</p>
-          <p>//wxDragResult result;</p>
-          <p>wxDropSource dndSource(m_diagramwindow, copycursor, movecursor, nonecursor);</p>
-          <p>See also <a href="http://docs.wxwidgets.org/2.9.5/overview_bitmap.html">http://docs.wxwidgets.org/2.9.5/overview_bitmap.html</a></p>
+          <pre class="pre-scrollable">The following code from src/plugins/contrib/NassiShneiderman/NassiView.cpp doesn't work on Mac (it works with wxGTK, but not with Carbon or Cocoa based wxWidgets - it fails both with wxWidgets 2.8 and 2.9):
+
+        #if defined(__WXMSW__)
+            wxCursor copycursor(dnd_copy_cur_xpm);
+            wxCursor movecursor(dnd_move_cur_xpm);
+            wxCursor nonecursor(dnd_none_cur_xpm);
+        #else
+            wxIcon copycursor(dnd_copy_cur_xpm);
+            wxIcon movecursor(dnd_move_cur_xpm);
+            wxIcon nonecursor(dnd_none_cur_xpm);
+        #endif
+        //wxDragResult result;
+
+        wxDropSource dndSource(m_diagramwindow, copycursor, movecursor, nonecursor);
+
+The following quick workaround solved the problem, but a better solution is needed and I'm not exactly sure how. One option would be to use
+    #if defined(__WXMSW__) || defined (__WXOSX__) || ...
+for the first part, but I'm not sure that this is the proper solution either.
+
+--- src/plugins/contrib/NassiShneiderman/NassiView.cpp.orig
++++ src/plugins/contrib/NassiShneiderman/NassiView.cpp
+@@ -1048,15 +1048,9 @@
+ 
+     if ( dataptr )
+     {
+-        #if defined(__WXMSW__)
+             wxCursor copycursor(dnd_copy_cur_xpm);
+             wxCursor movecursor(dnd_move_cur_xpm);
+             wxCursor nonecursor(dnd_none_cur_xpm);
+-        #else
+-            wxIcon copycursor(dnd_copy_cur_xpm);
+-            wxIcon movecursor(dnd_move_cur_xpm);
+-            wxIcon nonecursor(dnd_none_cur_xpm);
+-        #endif
+         //wxDragResult result;
+ 
+         wxDropSource dndSource(m_diagramwindow, copycursor, movecursor, nonecursor);
+
+See also <a href="http://docs.wxwidgets.org/2.9.5/overview_bitmap.html">http://docs.wxwidgets.org/2.9.5/overview_bitmap.html</a></pre>
         </div>
         <div class="col-sm-4">
           <dl class="dl-horizontal">

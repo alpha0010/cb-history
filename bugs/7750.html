@@ -46,27 +46,39 @@
           <h3>Bug #7750 <small>2006-06-04 18:29:48</small></h3>
           <h4>ajwilkinson</h4>
           <p class="lead">Wxwidgets wizard fails on debian package of codeblocks.</p>
-          <p>In codeblocks build 28 May 2006   v1.0</p>
-          <p>Platform:  Debian sid</p>
-          <p>The wxWidgets wizard got stuck at the point where it asked</p>
-          <p>"Please select a valid path to wxWidgets...".</p>
-          <p>It would not allow me to continue if I pointed it to the correct location.  A fix is needed.</p>
-          <p>After examining the wizard.script, I could see that the wizard check would not ever work on my debian installation, because the sought wxwidgets file was located at  /usr/include/wx-2.6/wx/wx.h instead of '/usr/include/wx/wx.h' as expected by the script.</p>
-          <p>I put in an extra link in order to make the "wxWidgets wizard" work:</p>
-          <p>ln -s   /usr/include/wx-2.6/wx    /usr/include/wx</p>
-          <p>I leave the solution on how to fix the script up to you.</p>
-          <p>The relevant code segment to be fixed is below.</p>
-          <p>regards</p>
-          <p>Andrew</p>
-          <p>/usr/share/codeblocks/templates/wizard/wxwidgets/wizard.script</p>
-          <p>ShowError("Please select a valid path to wxWidgets...");</p>
-          <p>return false;</p>
-          <p>}</p>
-          <p>if (!IO.FileExists(dir + "/include/wx/wx.h"))</p>
-          <p>{</p>
-          <p>ShowError("The path you entered seems valid, but this wizard "</p>
-          <p>"can't locate wxWidgets' files in it...");</p>
-          <p>return false;</p>
+          <pre class="pre-scrollable">In codeblocks build 28 May 2006   v1.0
+
+Platform:  Debian sid
+
+The wxWidgets wizard got stuck at the point where it asked
+"Please select a valid path to wxWidgets...".
+It would not allow me to continue if I pointed it to the correct location.  A fix is needed.
+
+After examining the wizard.script, I could see that the wizard check would not ever work on my debian installation, because the sought wxwidgets file was located at  /usr/include/wx-2.6/wx/wx.h instead of '/usr/include/wx/wx.h' as expected by the script.
+
+I put in an extra link in order to make the "wxWidgets wizard" work:
+
+ln -s   /usr/include/wx-2.6/wx    /usr/include/wx
+
+I leave the solution on how to fix the script up to you.
+The relevant code segment to be fixed is below.
+
+regards
+
+Andrew
+
+
+/usr/share/codeblocks/templates/wizard/wxwidgets/wizard.script
+
+            ShowError("Please select a valid path to wxWidgets...");
+            return false;
+		}
+        if (!IO.FileExists(dir + "/include/wx/wx.h"))
+        {
+            ShowError("The path you entered seems valid, but this wizard "
+                    "can't locate wxWidgets' files in it...");
+            return false;
+</pre>
         </div>
         <div class="col-sm-4">
           <dl class="dl-horizontal">

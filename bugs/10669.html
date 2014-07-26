@@ -46,16 +46,19 @@
           <h3>Bug #10669 <small>2007-03-18 15:02:17</small></h3>
           <h4>ondra_holub</h4>
           <p class="lead">file global.h, function cbU2C should return const value</p>
-          <p>Function is implemented in src/sdk/global.cpp as</p>
-          <p>// Return multibyte (C string) representation of the string</p>
-          <p>wxWX2MBbuf cbU2C(const wxString&amp; str)</p>
-          <p>{</p>
-          <p>if(platform::unicode)</p>
-          <p>return str.mb_str(wxConvUTF8);</p>
-          <p>else</p>
-          <p>return str.mb_str();</p>
-          <p>}</p>
-          <p>So it tries to convert const value to non-const. Function should return const wxWX2MBbuf - then everything seems ok. Without this change I am not able to compile on SUSE Linux 10.1/64bit with gcc 4.1.0.</p>
+          <pre class="pre-scrollable">Function is implemented in src/sdk/global.cpp as
+
+// Return multibyte (C string) representation of the string
+wxWX2MBbuf cbU2C(const wxString&amp; str)
+{
+    if(platform::unicode)
+        return str.mb_str(wxConvUTF8);
+    else
+        return str.mb_str();
+}
+
+So it tries to convert const value to non-const. Function should return const wxWX2MBbuf - then everything seems ok. Without this change I am not able to compile on SUSE Linux 10.1/64bit with gcc 4.1.0.
+</pre>
         </div>
         <div class="col-sm-4">
           <dl class="dl-horizontal">

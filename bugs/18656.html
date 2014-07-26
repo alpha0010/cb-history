@@ -46,32 +46,32 @@
           <h3>Bug #18656 <small>2012-07-04 10:59:36</small></h3>
           <h4>titanping</h4>
           <p class="lead">stop debugger function problem</p>
-          <p>Hello:</p>
-          <p>I am debug program on codeblock , I use ARM linux and arm-linux-gdb connect  gdbserver ,when I stop debugger will can not normal stop debug .</p>
-          <p>I have see the debuggergdb.cpp , will occur "Child pid is 0, so we will terminate GDB directly" problem  .</p>
-          <p>Please check it ,Thanks .</p>
-          <p>void DebuggerGDB::Stop()</p>
-          <p>{</p>
-          <p>// m_Process is PipedProcess I/O; m_Pid is debugger pid</p>
-          <p>if (m_pProcess &amp;&amp; m_Pid)</p>
-          <p>{</p>
-          <p>if (!IsStopped())</p>
-          <p>{</p>
-          <p>// TODO (obfuscated#): Check if this can be implemented on Windows</p>
-          <p>#ifdef __WXGTK__</p>
-          <p>int childPID=m_State.GetDriver()-&gt;GetChildPID();</p>
-          <p>if (childPID == 0)</p>
-          <p>{</p>
-          <p>DebugLog(_("Child pid is 0, so we will terminate GDB directly"));</p>
-          <p>wxKill(m_Pid, wxSIGTERM);</p>
-          <p>return;</p>
-          <p>}</p>
-          <p>#endif</p>
-          <p>Break();</p>
-          <p>}</p>
-          <p>RunCommand(CMD_STOP);</p>
-          <p>}</p>
-          <p>}</p>
+          <pre class="pre-scrollable">Hello:
+  I am debug program on codeblock , I use ARM linux and arm-linux-gdb connect  gdbserver ,when I stop debugger will can not normal stop debug .
+I have see the debuggergdb.cpp , will occur "Child pid is 0, so we will terminate GDB directly" problem  .
+Please check it ,Thanks .
+void DebuggerGDB::Stop()
+{
+    // m_Process is PipedProcess I/O; m_Pid is debugger pid
+    if (m_pProcess &amp;&amp; m_Pid)
+    {
+        if (!IsStopped())
+        {
+            // TODO (obfuscated#): Check if this can be implemented on Windows
+#ifdef __WXGTK__
+            int childPID=m_State.GetDriver()-&gt;GetChildPID();
+            if (childPID == 0)
+            {
+                DebugLog(_("Child pid is 0, so we will terminate GDB directly"));
+                wxKill(m_Pid, wxSIGTERM);
+                return;
+            }
+#endif
+            Break();
+        }
+        RunCommand(CMD_STOP);
+    }
+}</pre>
         </div>
         <div class="col-sm-4">
           <dl class="dl-horizontal">

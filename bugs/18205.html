@@ -46,54 +46,56 @@
           <h3>Bug #18205 <small>2011-07-05 06:38:38</small></h3>
           <h4>wilk_gardariki</h4>
           <p class="lead">Wrong comment by TODO list plugin</p>
-          <p>There is a small bug in TODO list plugin.</p>
-          <p>If you add any kind of item and choose Doxygen C style comment (in block) you will get something like this</p>
-          <p>* TODO (Your_profile_name#1#): Your text</p>
-          <p>while it should be</p>
-          <p>/** TODO (Your_profile_name#1#): Your text */.</p>
-          <p>The reason is an error in switch in file codeblocks/trunk/src/plugins/todo/todolist.cpp.</p>
-          <p>It's necessary to make a few changes.</p>
-          <p>switch(CmtType)</p>
-          <p>{</p>
-          <p>case tdctCpp:</p>
-          <p>buffer &lt;&lt; _T("// ");</p>
-          <p>break;</p>
-          <p>case tdctDoxygenC:</p>
-          <p>- buffer &lt;&lt; _T(" * ");</p>
-          <p>+ buffer &lt;&lt; _T(" * ");</p>
-          <p>break;</p>
-          <p>case tdctDoxygenCPP:</p>
-          <p>buffer &lt;&lt; _T("/// ");</p>
-          <p>break;</p>
-          <p>case tdctWarning:</p>
-          <p>buffer &lt;&lt; _T("#warning ");</p>
-          <p>break;</p>
-          <p>case tdctError:</p>
-          <p>buffer &lt;&lt; _T("#error ");</p>
-          <p>break;</p>
-          <p>default:</p>
-          <p>buffer &lt;&lt; _T("/* ");</p>
-          <p>break;</p>
-          <p>} // end switch</p>
-          <p>Futher in the same file</p>
-          <p>- if (CmtType != tdctC)</p>
-          <p>+ if (!(  (CmtType == tdctC) ||</p>
-          <p>(CmtType == tdctDoxygenC) ) )</p>
-          <p>{</p>
-          <p>// make sure that multi-line notes, don't break the todo</p>
-          <p>if (text.Replace(_T("\r\n"), _T("\\\r\n")) == 0)</p>
-          <p>text.Replace(_T("\n"), _T("\\\n"));</p>
-          <p>// now see if there were already a backslash before newline</p>
-          <p>if (text.Replace(_T("\\\\\r\n"), _T("\\\r\n")) == 0)</p>
-          <p>text.Replace(_T("\\\\\n"), _T("\\\n"));</p>
-          <p>}</p>
-          <p>And further in this file</p>
-          <p>if (CmtType == tdctWarning || CmtType == tdctError)</p>
-          <p>buffer &lt;&lt; _T("");</p>
-          <p>- else if (CmtType == tdctC)</p>
-          <p>+ else if ( (CmtType == tdctC) ||</p>
-          <p>(CmtType == tdctDoxygenC) )</p>
-          <p>buffer &lt;&lt; _T(" */");</p>
+          <pre class="pre-scrollable">There is a small bug in TODO list plugin.
+If you add any kind of item and choose Doxygen C style comment (in block) you will get something like this
+          * TODO (Your_profile_name#1#): Your text
+while it should be
+       /** TODO (Your_profile_name#1#): Your text */.
+
+The reason is an error in switch in file codeblocks/trunk/src/plugins/todo/todolist.cpp.
+It's necessary to make a few changes.
+    switch(CmtType)
+    {
+        case tdctCpp:
+            buffer &lt;&lt; _T("// ");
+            break;
+        case tdctDoxygenC:
+           - buffer &lt;&lt; _T(" * ");
+           + buffer &lt;&lt; _T(" * ");
+            break;
+        case tdctDoxygenCPP:
+            buffer &lt;&lt; _T("/// ");
+            break;
+        case tdctWarning:
+            buffer &lt;&lt; _T("#warning ");
+            break;
+        case tdctError:
+            buffer &lt;&lt; _T("#error ");
+            break;
+        default:
+            buffer &lt;&lt; _T("/* ");
+            break;
+    } // end switch
+Futher in the same file
+   - if (CmtType != tdctC) 
+   + if (!(  (CmtType == tdctC) ||
+               (CmtType == tdctDoxygenC) ) )
+    {
+        // make sure that multi-line notes, don't break the todo
+        if (text.Replace(_T("\r\n"), _T("\\\r\n")) == 0)
+            text.Replace(_T("\n"), _T("\\\n"));
+        // now see if there were already a backslash before newline
+        if (text.Replace(_T("\\\\\r\n"), _T("\\\r\n")) == 0)
+            text.Replace(_T("\\\\\n"), _T("\\\n"));
+    }
+And further in this file
+    if (CmtType == tdctWarning || CmtType == tdctError)
+        buffer &lt;&lt; _T("");
+
+    - else if (CmtType == tdctC)
+    + else if ( (CmtType == tdctC) ||
+                   (CmtType == tdctDoxygenC) )
+        buffer &lt;&lt; _T(" */");</pre>
         </div>
         <div class="col-sm-4">
           <dl class="dl-horizontal">

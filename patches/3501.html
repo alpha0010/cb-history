@@ -91,26 +91,34 @@
       <div class="panel panel-default">
         <div class="panel-heading">mojca 2013-10-02 10:40:48</div>
         <div class="panel-body">
-          <p>From wxWidgets 2.8:</p>
-          <p>#if WXWIN_COMPATIBILITY_2_6</p>
-          <p>// deprecated, don't use</p>
-          <p>#define wxTR_MAC_BUTTONS             0</p>
-          <p>#define wxTR_AQUA_BUTTONS            0</p>
-          <p>#endif // WXWIN_COMPATIBILITY_2_6</p>
-          <p>I think it really makes sense to delete at least these two lines. I'm not sure if anyone still cares about ancient macs running wxWidgets 2.6 (when the code doesn't even compile on the latest ones ;).</p>
-          <p>--- src/plugins/contrib/wxContribItems/wxTreeList/src/treelistctrl.cpp	(revision 9378)</p>
-          <p>+++ src/plugins/contrib/wxContribItems/wxTreeList/src/treelistctrl.cpp	(working copy)</p>
-          <p>@@ -2021,8 +2021,6 @@</p>
-          <p>const wxString&amp; name) {</p>
-          <p>#ifdef __WXMAC__</p>
-          <p>-    if (style &amp; wxTR_HAS_BUTTONS) style |= wxTR_MAC_BUTTONS;</p>
-          <p>-    if (style &amp; wxTR_HAS_BUTTONS) style &amp;= ~wxTR_HAS_BUTTONS;</p>
-          <p>style &amp;= ~wxTR_LINES_AT_ROOT;</p>
-          <p>style |= wxTR_NO_LINES;</p>
-          <p>On the other hand the lines that follow are even more outdated, targetting Mac OS 8/9, so I believe they could go just as well:</p>
-          <p>int major,minor;</p>
-          <p>wxGetOsVersion( &amp;major, &amp;minor );</p>
-          <p>if (major &lt; 10) style |= wxTR_ROW_LINES;</p>
+          <pre class="pre-scrollable">From wxWidgets 2.8:
+
+#if WXWIN_COMPATIBILITY_2_6
+// deprecated, don't use
+#define wxTR_MAC_BUTTONS             0
+#define wxTR_AQUA_BUTTONS            0
+#endif // WXWIN_COMPATIBILITY_2_6
+
+I think it really makes sense to delete at least these two lines. I'm not sure if anyone still cares about ancient macs running wxWidgets 2.6 (when the code doesn't even compile on the latest ones ;).
+
+--- src/plugins/contrib/wxContribItems/wxTreeList/src/treelistctrl.cpp	(revision 9378)
++++ src/plugins/contrib/wxContribItems/wxTreeList/src/treelistctrl.cpp	(working copy)
+@@ -2021,8 +2021,6 @@
+                                    const wxString&amp; name) {
+
+ #ifdef __WXMAC__
+-    if (style &amp; wxTR_HAS_BUTTONS) style |= wxTR_MAC_BUTTONS;
+-    if (style &amp; wxTR_HAS_BUTTONS) style &amp;= ~wxTR_HAS_BUTTONS;
+     style &amp;= ~wxTR_LINES_AT_ROOT;
+     style |= wxTR_NO_LINES;
+
+On the other hand the lines that follow are even more outdated, targetting Mac OS 8/9, so I believe they could go just as well:
+
+    int major,minor;
+    wxGetOsVersion( &amp;major, &amp;minor );
+    if (major &lt; 10) style |= wxTR_ROW_LINES;
+
+</pre>
         </div>
       </div>
       <div class="panel panel-default">

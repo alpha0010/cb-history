@@ -79,71 +79,74 @@
       <div class="panel panel-default">
         <div class="panel-heading">p2rkw 2013-01-15 21:50:14</div>
         <div class="panel-body">
-          <p>Index: src/plugins/codecompletion/nativeparser_base.cpp</p>
-          <p>===================================================================</p>
-          <p>--- src/plugins/codecompletion/nativeparser_base.cpp	(wersja 8785)</p>
-          <p>+++ src/plugins/codecompletion/nativeparser_base.cpp	(kopia robocza)</p>
-          <p>@@ -1318,7 +1318,11 @@</p>
-          <p>if (!token)</p>
-          <p>continue;</p>
-          <p>if ( !AddChildrenOfUnnamed(tree, token, result) )</p>
-          <p>+                {</p>
-          <p>result.insert(*it);</p>
-          <p>+                    AddChildrenOfEnum(tree, token, result);</p>
-          <p>+                }</p>
-          <p>+</p>
-          <p>}</p>
-          <p>tree-&gt;RecalcInheritanceChain(parent);</p>
-          <p>@@ -1334,7 +1338,10 @@</p>
-          <p>if (!token)</p>
-          <p>continue;</p>
-          <p>if ( !AddChildrenOfUnnamed(tree, token, result) )</p>
-          <p>+                    {</p>
-          <p>result.insert(*it2);</p>
-          <p>+                        AddChildrenOfEnum(tree, token, result);</p>
-          <p>+                    }</p>
-          <p>}</p>
-          <p>}</p>
-          <p>}</p>
-          <p>Index: src/plugins/codecompletion/nativeparser_base.h</p>
-          <p>===================================================================</p>
-          <p>--- src/plugins/codecompletion/nativeparser_base.h	(wersja 8785)</p>
-          <p>+++ src/plugins/codecompletion/nativeparser_base.h	(kopia robocza)</p>
-          <p>@@ -396,7 +396,8 @@</p>
-          <p>// for GenerateResultSet()</p>
-          <p>bool AddChildrenOfUnnamed(TokenTree* tree, const Token* parent, TokenIdxSet&amp; result)</p>
-          <p>{</p>
-          <p>-        if (parent-&gt;m_TokenKind == tkClass &amp;&amp; parent-&gt;m_Name.StartsWith(g_UnnamedSymbol))</p>
-          <p>+        if (((parent-&gt;m_TokenKind &amp; (tkClass | tkEnum)) != 0)</p>
-          <p>+            &amp;&amp; parent-&gt;m_Name.StartsWith(g_UnnamedSymbol))</p>
-          <p>{</p>
-          <p>// add all its children</p>
-          <p>for (TokenIdxSet::const_iterator it = parent-&gt;m_Children.begin();</p>
-          <p>@@ -411,7 +412,25 @@</p>
-          <p>}</p>
-          <p>return false;</p>
-          <p>}</p>
-          <p>+</p>
-          <p>+    bool AddChildrenOfEnum(TokenTree* tree, const Token* parent, TokenIdxSet&amp; result)</p>
-          <p>+    {</p>
-          <p>+        if (parent-&gt;m_TokenKind == tkEnum)</p>
-          <p>+        {</p>
-          <p>+            // add all its children</p>
-          <p>+            for (TokenIdxSet::const_iterator it = parent-&gt;m_Children.begin();</p>
-          <p>+                                             it != parent-&gt;m_Children.end(); ++it)</p>
-          <p>+            {</p>
-          <p>+                Token* tokenChild = tree-&gt;at(*it);</p>
-          <p>+                if (tokenChild)</p>
-          <p>+                    result.insert(*it);</p>
-          <p>+            }</p>
-          <p>+            return true;</p>
-          <p>+        }</p>
-          <p>+        return false;</p>
-          <p>+    }</p>
-          <p>+</p>
-          <p>// for GenerateResultSet()</p>
-          <p>bool MatchText(const wxString&amp; text, const wxString&amp; target, bool caseSens, bool isPrefix)</p>
-          <p>{</p>
+          <pre class="pre-scrollable">Index: src/plugins/codecompletion/nativeparser_base.cpp
+===================================================================
+--- src/plugins/codecompletion/nativeparser_base.cpp	(wersja 8785)
++++ src/plugins/codecompletion/nativeparser_base.cpp	(kopia robocza)
+@@ -1318,7 +1318,11 @@
+                 if (!token)
+                     continue;
+                 if ( !AddChildrenOfUnnamed(tree, token, result) )
++                {
+                     result.insert(*it);
++                    AddChildrenOfEnum(tree, token, result);
++                }
++
+             }
+
+             tree-&gt;RecalcInheritanceChain(parent);
+@@ -1334,7 +1338,10 @@
+                     if (!token)
+                         continue;
+                     if ( !AddChildrenOfUnnamed(tree, token, result) )
++                    {
+                         result.insert(*it2);
++                        AddChildrenOfEnum(tree, token, result);
++                    }
+                 }
+             }
+         }
+Index: src/plugins/codecompletion/nativeparser_base.h
+===================================================================
+--- src/plugins/codecompletion/nativeparser_base.h	(wersja 8785)
++++ src/plugins/codecompletion/nativeparser_base.h	(kopia robocza)
+@@ -396,7 +396,8 @@
+     // for GenerateResultSet()
+     bool AddChildrenOfUnnamed(TokenTree* tree, const Token* parent, TokenIdxSet&amp; result)
+     {
+-        if (parent-&gt;m_TokenKind == tkClass &amp;&amp; parent-&gt;m_Name.StartsWith(g_UnnamedSymbol))
++        if (((parent-&gt;m_TokenKind &amp; (tkClass | tkEnum)) != 0)
++            &amp;&amp; parent-&gt;m_Name.StartsWith(g_UnnamedSymbol))
+         {
+             // add all its children
+             for (TokenIdxSet::const_iterator it = parent-&gt;m_Children.begin();
+@@ -411,7 +412,25 @@
+         }
+         return false;
+     }
++
++    bool AddChildrenOfEnum(TokenTree* tree, const Token* parent, TokenIdxSet&amp; result)
++    {
++        if (parent-&gt;m_TokenKind == tkEnum)
++        {
++            // add all its children
++            for (TokenIdxSet::const_iterator it = parent-&gt;m_Children.begin();
++                                             it != parent-&gt;m_Children.end(); ++it)
++            {
++                Token* tokenChild = tree-&gt;at(*it);
++                if (tokenChild)
++                    result.insert(*it);
++            }
+
++            return true;
++        }
++        return false;
++    }
++
+     // for GenerateResultSet()
+     bool MatchText(const wxString&amp; text, const wxString&amp; target, bool caseSens, bool isPrefix)
+     {
+</pre>
         </div>
       </div>
       <div class="panel panel-default">

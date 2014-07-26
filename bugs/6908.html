@@ -46,21 +46,31 @@
           <h3>Bug #6908 <small>2006-03-28 21:50:33</small></h3>
           <h4>jcayzac</h4>
           <p class="lead">Wrong parameter for gcc</p>
-          <p>I was wondering why the tutorials for libnoise didn't work for me, when I came across these lines in compilerMINGWgenerator.cpp:</p>
-          <p>// for gcc-4.0+, use the following:</p>
-          <p>// pch_prepend &lt;&lt; _T("-iquote") &lt;&lt; dir &lt;&lt; _T(' ');</p>
-          <p>// for earlier versions, -I- must be used</p>
-          <p>pch_prepend &lt;&lt; _T("-I- ");</p>
-          <p>count = (int)includedDirs.GetCount();</p>
-          <p>What is the motivation behind this?</p>
-          <p>According to gcc man:</p>
-          <p>"In addition, the -I- option inhibits the use of the current directory (where the current input file came from) as the first search directory for #include "file".  There is no way to override this effect of -I-.  With -I. you can specify searching the directory which was current when the compiler was invoked.  That is not exactly the same as what the preprocessor does by default, but it is often satisfactory."</p>
-          <p>It simply break the following, commonly used, header scheme:</p>
-          <p>#include &lt;foo/bar.h&gt;</p>
-          <p>... and in bar.h:</p>
-          <p>#include "moo/moo.h"</p>
-          <p>moo.h should be foo/moo/moo.h. But gcc can't find it because of -I-.</p>
-          <p>So this could at least be an option left to the user.</p>
+          <pre class="pre-scrollable">I was wondering why the tutorials for libnoise didn't work for me, when I came across these lines in compilerMINGWgenerator.cpp:
+
+        // for gcc-4.0+, use the following:
+        // pch_prepend &lt;&lt; _T("-iquote") &lt;&lt; dir &lt;&lt; _T(' ');
+        // for earlier versions, -I- must be used
+        pch_prepend &lt;&lt; _T("-I- ");
+        count = (int)includedDirs.GetCount();
+
+What is the motivation behind this?
+
+According to gcc man:
+
+"In addition, the -I- option inhibits the use of the current directory (where the current input file came from) as the first search directory for #include "file".  There is no way to override this effect of -I-.  With -I. you can specify searching the directory which was current when the compiler was invoked.  That is not exactly the same as what the preprocessor does by default, but it is often satisfactory."
+
+It simply break the following, commonly used, header scheme:
+
+#include &lt;foo/bar.h&gt;
+... and in bar.h:
+#include "moo/moo.h"
+
+moo.h should be foo/moo/moo.h. But gcc can't find it because of -I-.
+
+So this could at least be an option left to the user.
+
+</pre>
         </div>
         <div class="col-sm-4">
           <dl class="dl-horizontal">

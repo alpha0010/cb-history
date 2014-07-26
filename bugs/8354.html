@@ -46,14 +46,17 @@
           <h3>Bug #8354 <small>2006-08-12 11:56:22</small></h3>
           <h4>ondra_holub</h4>
           <p class="lead">propgrid.cpp not compilable on 64bit Linux</p>
-          <p>File: sr/sdk/propgrid/src/propgrid/propgrid.cpp</p>
-          <p>Compile error: ./src/propgrid/propgrid.cpp: In static member function 'static void wxPropertyGrid::DumpAllocatedChoiceSets()':</p>
-          <p>./src/propgrid/propgrid.cpp:1042: error: cast from 'wxPGConstants*' to 'unsigned int' loses precision</p>
-          <p>Reason: pointer is wider than unsigned int on 64 bit Linux.</p>
-          <p>Possible fix: Since it is only logging function, it may be either commented-out or line 1041-1043 should be changed to</p>
-          <p>wxLogDebug(wxT("**** Dumping 0x%X (%p labels, %i values, %i references)****"),</p>
-          <p>soc,(int)labels.GetCount(),(int)values.GetCount(),</p>
-          <p>(int)soc-&gt;GetRefCount());</p>
+          <pre class="pre-scrollable">File: sr/sdk/propgrid/src/propgrid/propgrid.cpp
+Compile error: ./src/propgrid/propgrid.cpp: In static member function 'static void wxPropertyGrid::DumpAllocatedChoiceSets()':
+./src/propgrid/propgrid.cpp:1042: error: cast from 'wxPGConstants*' to 'unsigned int' loses precision
+
+Reason: pointer is wider than unsigned int on 64 bit Linux.
+
+Possible fix: Since it is only logging function, it may be either commented-out or line 1041-1043 should be changed to
+        wxLogDebug(wxT("**** Dumping 0x%X (%p labels, %i values, %i references)****"),
+            soc,(int)labels.GetCount(),(int)values.GetCount(),
+            (int)soc-&gt;GetRefCount());
+</pre>
         </div>
         <div class="col-sm-4">
           <dl class="dl-horizontal">
@@ -69,10 +72,12 @@
       <div class="panel panel-default">
         <div class="panel-heading">ondra_holub 2006-08-12 12:46:47</div>
         <div class="panel-body">
-          <p>Better modification of above mentioned command would be</p>
-          <p>wxLogDebug(wxT("**** Dumping 0x%lX (%i labels, %i values, %i references)****"),</p>
-          <p>(unsigned long)soc,(int)labels.GetCount(),(int)values.GetCount(),</p>
-          <p>(int)soc-&gt;GetRefCount());</p>
+          <pre class="pre-scrollable">Better modification of above mentioned command would be 
+
+        wxLogDebug(wxT("**** Dumping 0x%lX (%i labels, %i values, %i references)****"),
+            (unsigned long)soc,(int)labels.GetCount(),(int)values.GetCount(),
+            (int)soc-&gt;GetRefCount());
+</pre>
         </div>
       </div>
       <div class="panel panel-default">

@@ -97,28 +97,35 @@
       <div class="panel panel-default">
         <div class="panel-heading">nix_bb 2006-10-11 07:58:26</div>
         <div class="panel-body">
-          <p>Sorry, I've done something horribly wrong somewhere- hope you can forgive the noob :)</p>
-          <p>Apart from the upgrade to wxFNB 2.0 my patch should only add the following to the specified files.</p>
-          <p>src/src/resources/envsettings.xrc</p>
-          <p>(add a checkbox to pblNotebooks)</p>
-          <p>+                                &lt;object class="sizeritem"&gt;</p>
-          <p>+                                   &lt;border&gt;8&lt;/border&gt;</p>
-          <p>+                                    &lt;flag&gt;wxALL|wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;</p>
-          <p>+                                    &lt;object class="wxCheckBox" name="chkSmartTabs"&gt;</p>
-          <p>+                                        &lt;label&gt;Use Smart Tab-switching scheme&lt;/label&gt;</p>
-          <p>+                                    &lt;/object&gt;</p>
-          <p>+                                &lt;/object&gt;</p>
-          <p>src/src/environmentsettingsdlg.cpp</p>
-          <p>XRCCTRL(*this, "cmbEditorTabs", wxComboBox)-&gt;SetSelection(cfg-&gt;ReadInt(_T("/environment/tabs_style"), 0));</p>
-          <p>+    XRCCTRL(*this, "chkSmartTabs", wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T("/environment/tabs_smart"), 0));</p>
-          <p>cfg-&gt;Write(_T("/environment/tabs_style"),           (int)XRCCTRL(*this, "cmbEditorTabs", wxComboBox)-&gt;GetSelection());</p>
-          <p>+        cfg-&gt;Write(_T("/environment/tabs_smart"),           (bool)XRCCTRL(*this, "chkSmartTabs", wxCheckBox)-&gt;GetValue());</p>
-          <p>src/src/main.cpp</p>
-          <p>if (cfg-&gt;ReadBool(_T("/environment/") + prefix + _T("_tabs_bottom")))</p>
-          <p>nbstyle |= wxFNB_BOTTOM;</p>
-          <p>+    if (cfg-&gt;ReadBool(_T("/environment/tabs_smart")))</p>
-          <p>+        nbstyle |= wxFNB_SMART_TABS;</p>
-          <p>+</p>
+          <pre class="pre-scrollable">Sorry, I've done something horribly wrong somewhere- hope you can forgive the noob :)
+
+Apart from the upgrade to wxFNB 2.0 my patch should only add the following to the specified files.
+
+src/src/resources/envsettings.xrc
+(add a checkbox to pblNotebooks)
++                                &lt;object class="sizeritem"&gt;
++                                   &lt;border&gt;8&lt;/border&gt;
++                                    &lt;flag&gt;wxALL|wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;
++                                    &lt;object class="wxCheckBox" name="chkSmartTabs"&gt;
++                                        &lt;label&gt;Use Smart Tab-switching scheme&lt;/label&gt;
++                                    &lt;/object&gt;
++                                &lt;/object&gt;
+
+
+src/src/environmentsettingsdlg.cpp
+     XRCCTRL(*this, "cmbEditorTabs", wxComboBox)-&gt;SetSelection(cfg-&gt;ReadInt(_T("/environment/tabs_style"), 0));
++    XRCCTRL(*this, "chkSmartTabs", wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T("/environment/tabs_smart"), 0));
+
+         cfg-&gt;Write(_T("/environment/tabs_style"),           (int)XRCCTRL(*this, "cmbEditorTabs", wxComboBox)-&gt;GetSelection());
++        cfg-&gt;Write(_T("/environment/tabs_smart"),           (bool)XRCCTRL(*this, "chkSmartTabs", wxCheckBox)-&gt;GetValue());
+
+src/src/main.cpp
+     if (cfg-&gt;ReadBool(_T("/environment/") + prefix + _T("_tabs_bottom")))
+         nbstyle |= wxFNB_BOTTOM;
+
++    if (cfg-&gt;ReadBool(_T("/environment/tabs_smart")))
++        nbstyle |= wxFNB_SMART_TABS;
++</pre>
         </div>
       </div>
       <div class="panel panel-default">

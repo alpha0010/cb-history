@@ -198,32 +198,33 @@
       <div class="panel panel-default">
         <div class="panel-heading">hovercraft 2013-10-09 06:19:28</div>
         <div class="panel-body">
-          <p>ollydbg, please advice: what do you think about this modification:</p>
-          <p>// hovercraft 2013-10-09 start</p>
-          <p>Token* parent = m_LastParent;</p>
-          <p>if (parent)</p>
-          <p>{</p>
-          <p>wxString sParrent = parent-&gt;m_Name;</p>
-          <p>if (!sParrent.Cmp(tempAncestor))</p>
-          <p>parent = m_LastParent-&gt;GetTree()-&gt;at(m_LastParent-&gt;m_ParentIndex);</p>
-          <p>};</p>
-          <p>Token* newTokenPrep = TokenExists(tempAncestor, parent, tkTypedef | tkClass);</p>
-          <p>if (newTokenPrep &amp;&amp; tempAncestor.StartsWith(_T("__Unnamed")))</p>
-          <p>{</p>
-          <p>if (tempAncestor.StartsWith(_T("__UnnamedUnion")))</p>
-          <p>tempAncestor = _T("union_") + token;</p>
-          <p>else if (tempAncestor.StartsWith(_T("__UnnamedStruct")))</p>
-          <p>tempAncestor = _T("struct_") + token;</p>
-          <p>else</p>
-          <p>tempAncestor = _T("tag_") + token;</p>
-          <p>newTokenPrep-&gt;m_Name = tempAncestor;</p>
-          <p>m_TokenTree-&gt;insert(newTokenPrep-&gt;m_Index, newTokenPrep);</p>
-          <p>m_Str = tempAncestor;</p>
-          <p>ancestor = tempAncestor;</p>
-          <p>};</p>
-          <p>// hovercraft 2013-10-09 end</p>
-          <p>The idea behind this is to update the index node without affecting the token object itself. Unfortunately, current implementation of the index classes doesn't offer an update function. So now I simply add the new node with changed name using m_TokenTree-&gt;insert and leave the old one (with the name __Unnamed..) as is. This has a disadvantage of wasting the memory with unused index entries, but still could be useful for while, because the amount of memory wasted should be relatively small.</p>
-          <p>I could try to implement kind of update method in the TokenTree and it's base classes hierarchy, because I think it's good idea to have such a functionality there, but this may require a time, so I need to know your opinion before doing this.</p>
+          <pre class="pre-scrollable">ollydbg, please advice: what do you think about this modification:
+            // hovercraft 2013-10-09 start
+            Token* parent = m_LastParent;
+            if (parent)
+            {
+                wxString sParrent = parent-&gt;m_Name;
+                if (!sParrent.Cmp(tempAncestor))
+                    parent = m_LastParent-&gt;GetTree()-&gt;at(m_LastParent-&gt;m_ParentIndex);
+            };
+            Token* newTokenPrep = TokenExists(tempAncestor, parent, tkTypedef | tkClass);
+            if (newTokenPrep &amp;&amp; tempAncestor.StartsWith(_T("__Unnamed")))
+            {
+                if (tempAncestor.StartsWith(_T("__UnnamedUnion")))
+                    tempAncestor = _T("union_") + token;
+                else if (tempAncestor.StartsWith(_T("__UnnamedStruct")))
+                    tempAncestor = _T("struct_") + token;
+                else
+                    tempAncestor = _T("tag_") + token;
+                newTokenPrep-&gt;m_Name = tempAncestor;
+                m_TokenTree-&gt;insert(newTokenPrep-&gt;m_Index, newTokenPrep);
+                m_Str = tempAncestor;
+                ancestor = tempAncestor;
+            };
+            // hovercraft 2013-10-09 end
+
+The idea behind this is to update the index node without affecting the token object itself. Unfortunately, current implementation of the index classes doesn't offer an update function. So now I simply add the new node with changed name using m_TokenTree-&gt;insert and leave the old one (with the name __Unnamed..) as is. This has a disadvantage of wasting the memory with unused index entries, but still could be useful for while, because the amount of memory wasted should be relatively small.
+I could try to implement kind of update method in the TokenTree and it's base classes hierarchy, because I think it's good idea to have such a functionality there, but this may require a time, so I need to know your opinion before doing this.</pre>
         </div>
       </div>
       <div class="panel panel-default">
@@ -259,79 +260,99 @@
       <div class="panel panel-default">
         <div class="panel-heading">hovercraft 2013-11-05 03:25:10</div>
         <div class="panel-body">
-          <p>Hello!</p>
-          <p>Ollydbg, after further studying the sources I now believe the problem with dead slots is seriously far-fetched. Only reducing BasicSearchTree itself makes sense. Without it we cannot achieve any sensible improvement  over my last patch variant, so I'd recommend to apply it as is for a while, because altering the BasicSearchTree may be a long enough story and it goes beyond the scope of this particular patch.</p>
-          <p>1) The m_FreeTokens doesn't denote the TokenIdxSet, but rather directly specify the position of our token pointer under which it is stored in the m_Tokens. We don't have a dead slot in the m_Tokens, because it still points to our token and we does reuse it, and as such, there is nothing to put into the free token pointers list.</p>
-          <p>2) We can empty the TokenIdxSet object corresponding to the previous token name ("__Unnamed.."), or even reuse it, but this will result in little if any memory saving. Most of the wasted memory will still reside in the BasicSearchTree, and the same true for the current implementation of RemoveToken procedure. For example we can use the following method:</p>
-          <p>void TokenTree::rename(Token* token, const wxString&amp; newName)</p>
-          <p>{</p>
-          <p>if (!token)</p>
-          <p>return;</p>
-          <p>int slotNo = m_Tree.GetItemNo(token-&gt;m_Name);</p>
-          <p>if (slotNo)</p>
-          <p>{</p>
-          <p>TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(slotNo);</p>
-          <p>// The previous name index path of the token will still exist, as well as its TokenIdxSet slot,</p>
-          <p>// but this slot will be empty and as result will lead to nothing.</p>
-          <p>// This is the same sing the RemoveToken procedure dues.</p>
-          <p>curList.erase(token-&gt;m_Index);</p>
-          <p>// Actually we can save some additional memory by reusing this slot,</p>
-          <p>// this can be easily implemented on the BasicSearchTree level,</p>
-          <p>// but is it worth the efforts? Most of the memory will still be wasted by the BasicSearchTree itself.</p>
-          <p>};</p>
-          <p>token-&gt;m_Name = newName;</p>
-          <p>AddToken(token, token-&gt;m_Index);</p>
-          <p>}</p>
+          <pre class="pre-scrollable">Hello!
+
+Ollydbg, after further studying the sources I now believe the problem with dead slots is seriously far-fetched. Only reducing BasicSearchTree itself makes sense. Without it we cannot achieve any sensible improvement  over my last patch variant, so I'd recommend to apply it as is for a while, because altering the BasicSearchTree may be a long enough story and it goes beyond the scope of this particular patch.
+1) The m_FreeTokens doesn't denote the TokenIdxSet, but rather directly specify the position of our token pointer under which it is stored in the m_Tokens. We don't have a dead slot in the m_Tokens, because it still points to our token and we does reuse it, and as such, there is nothing to put into the free token pointers list.
+2) We can empty the TokenIdxSet object corresponding to the previous token name ("__Unnamed.."), or even reuse it, but this will result in little if any memory saving. Most of the wasted memory will still reside in the BasicSearchTree, and the same true for the current implementation of RemoveToken procedure. For example we can use the following method:
+void TokenTree::rename(Token* token, const wxString&amp; newName)
+{
+    if (!token)
+        return;
+    int slotNo = m_Tree.GetItemNo(token-&gt;m_Name);
+    if (slotNo)
+    {
+        TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(slotNo);
+        // The previous name index path of the token will still exist, as well as its TokenIdxSet slot,
+        // but this slot will be empty and as result will lead to nothing.
+        // This is the same sing the RemoveToken procedure dues.
+        curList.erase(token-&gt;m_Index);
+        // Actually we can save some additional memory by reusing this slot,
+        // this can be easily implemented on the BasicSearchTree level,
+        // but is it worth the efforts? Most of the memory will still be wasted by the BasicSearchTree itself.
+    };
+    token-&gt;m_Name = newName;
+    AddToken(token, token-&gt;m_Index);
+
+}
+</pre>
         </div>
       </div>
       <div class="panel panel-default">
         <div class="panel-heading">ollydbg 2013-11-06 06:01:30</div>
         <div class="panel-body">
-          <p>Hi, hovercraft, I agree with you.</p>
-          <p>What I want is to let the basicsearchtree have some "delete" functions.</p>
-          <p>I have take some time to read/debug the tree related code, I see that there are many things coupled in the basic search tree.</p>
-          <p>First, tree node is reference by index, I think this is OK.</p>
-          <p>Second, all the node have an item-map, which is a map of (depth-&gt;itemno). For example, we have a tree:</p>
-          <p>*   - "" (0)</p>
-          <p>*         \- "p" (4)</p>
-          <p>*                 +- "hysi" (2)</p>
-          <p>*                 |          +- "cs" (1)</p>
-          <p>*                 |          \- "ology" (3)</p>
-          <p>*                 \- "sychic" (5)</p>
-          <p>Now, the node "hysi" (2) can have up to four elements, such as:</p>
-          <p>depth -&gt; (actually string) -&gt; itemno</p>
-          <p>5        -&gt;  "ph"                  -&gt;  3</p>
-          <p>6        -&gt;  "phy"                -&gt;  5</p>
-          <p>7        -&gt;  "phys"               -&gt;  9</p>
-          <p>8        -&gt;  "physi"               -&gt;7</p>
-          <p>Here, the itemno is type of "size_t", and itemno is in-fact an index of the m_Points in BasicSearchTree class.</p>
-          <p>Also, itemno is also the index of the general type T in std::vector&lt;T&gt; m_Items in class template &lt;class T&gt; class SearchTree.</p>
-          <p>In CC, the T is typedef std::set&lt; int,    std::less&lt;int&gt;    &gt; TokenIdxSet;</p>
-          <p>Here, I think both BasicSearchTree::m_Points and SearchTree::m_Items are useless, if we directly hold the information in SearchTreeNode::m_Items.</p>
-          <p>This means in the SearchTreeNode::m_Items (item map of each node), we can have:</p>
-          <p>depth -&gt; (actually string) -&gt; T(TokenIdxSet)</p>
-          <p>5        -&gt;  "ph"                  -&gt;  TokenIdxSet of all the Token which has the name "ph"</p>
-          <p>6        -&gt;  "phy"                -&gt;  TokenIdxSet of all the Token which has the name "phy"</p>
-          <p>7        -&gt;  "phys"              -&gt;  TokenIdxSet of all the Token which has the name "phys"</p>
-          <p>8        -&gt;  "physi"             -&gt;  TokenIdxSet of all the Token which has the name "physi"</p>
-          <p>Now, in this way, remove/delete an key(string) in the basicsearchtree is much easier.</p>
-          <p>We just remove some tree nodes, and as Nodes are stored in typedef std::vector&lt;SearchTreeNode*&gt; SearchTreeNodesArray, we may have some slot left empty in the vector, but that's not a problem, because there empty slot (node index) can be reused later.</p>
-          <p>When you want to remove a Token, you just find the T(TokenIdxSet), and remove the index of the Token in the TokenIdxSet, if the set becomes empty (e.g. index set for string "ph" becomes empty).  then there is no such Token named "ph", so there is no need to keep this element in the SearchTreeNode::m_Items, we can directly remove this element in the map.</p>
-          <p>If the SearchTreeNode::m_Items becomes empty, we know that this node can be deleted.</p>
-          <p>I'm not sure my analysis is good, comments are welcome.</p>
+          <pre class="pre-scrollable">Hi, hovercraft, I agree with you.
+What I want is to let the basicsearchtree have some "delete" functions.
+I have take some time to read/debug the tree related code, I see that there are many things coupled in the basic search tree.
+
+First, tree node is reference by index, I think this is OK.
+Second, all the node have an item-map, which is a map of (depth-&gt;itemno). For example, we have a tree:
+ *   - "" (0)
+ *         \- "p" (4)
+ *                 +- "hysi" (2)
+ *                 |          +- "cs" (1)
+ *                 |          \- "ology" (3)
+ *                 \- "sychic" (5)
+Now, the node "hysi" (2) can have up to four elements, such as:
+depth -&gt; (actually string) -&gt; itemno
+5        -&gt;  "ph"                  -&gt;  3
+6        -&gt;  "phy"                -&gt;  5
+7        -&gt;  "phys"               -&gt;  9
+8        -&gt;  "physi"               -&gt;7
+
+Here, the itemno is type of "size_t", and itemno is in-fact an index of the m_Points in BasicSearchTree class.
+Also, itemno is also the index of the general type T in std::vector&lt;T&gt; m_Items in class template &lt;class T&gt; class SearchTree.
+
+In CC, the T is typedef std::set&lt; int,    std::less&lt;int&gt;    &gt; TokenIdxSet;
+
+Here, I think both BasicSearchTree::m_Points and SearchTree::m_Items are useless, if we directly hold the information in SearchTreeNode::m_Items.
+
+This means in the SearchTreeNode::m_Items (item map of each node), we can have:
+
+depth -&gt; (actually string) -&gt; T(TokenIdxSet)
+5        -&gt;  "ph"                  -&gt;  TokenIdxSet of all the Token which has the name "ph"
+6        -&gt;  "phy"                -&gt;  TokenIdxSet of all the Token which has the name "phy"
+7        -&gt;  "phys"              -&gt;  TokenIdxSet of all the Token which has the name "phys"
+8        -&gt;  "physi"             -&gt;  TokenIdxSet of all the Token which has the name "physi"
+
+Now, in this way, remove/delete an key(string) in the basicsearchtree is much easier.
+We just remove some tree nodes, and as Nodes are stored in typedef std::vector&lt;SearchTreeNode*&gt; SearchTreeNodesArray, we may have some slot left empty in the vector, but that's not a problem, because there empty slot (node index) can be reused later.
+
+When you want to remove a Token, you just find the T(TokenIdxSet), and remove the index of the Token in the TokenIdxSet, if the set becomes empty (e.g. index set for string "ph" becomes empty).  then there is no such Token named "ph", so there is no need to keep this element in the SearchTreeNode::m_Items, we can directly remove this element in the map.
+
+If the SearchTreeNode::m_Items becomes empty, we know that this node can be deleted.
+
+I'm not sure my analysis is good, comments are welcome.
+
+
+</pre>
         </div>
       </div>
       <div class="panel panel-default">
         <div class="panel-heading">ollydbg 2013-11-06 06:04:12</div>
         <div class="panel-body">
-          <p>Some correction for the previous comment:</p>
-          <p>Now, the node "hysi" (2) can have up to four elements of the item-map, such as:</p>
-          <p>depth -&gt; (actually string) -&gt; itemno</p>
-          <p>2        -&gt;  "ph"                  -&gt;  3</p>
-          <p>3        -&gt;  "phy"                -&gt;  5</p>
-          <p>4        -&gt;  "phys"               -&gt;  9</p>
-          <p>5        -&gt;  "physi"              -&gt;  7</p>
-          <p>The depth is the string from "root" to the current key string.</p>
+          <pre class="pre-scrollable">Some correction for the previous comment:
+
+Now, the node "hysi" (2) can have up to four elements of the item-map, such as:
+depth -&gt; (actually string) -&gt; itemno
+2        -&gt;  "ph"                  -&gt;  3
+3        -&gt;  "phy"                -&gt;  5
+4        -&gt;  "phys"               -&gt;  9
+5        -&gt;  "physi"              -&gt;  7
+
+The depth is the string from "root" to the current key string.
+
+</pre>
         </div>
       </div>
       <div class="panel panel-default">
@@ -388,33 +409,35 @@
       <div class="panel panel-default">
         <div class="panel-heading">hovercraft 2013-11-07 17:14:35</div>
         <div class="panel-body">
-          <p>My "alias" methods looks as follows:</p>
-          <p>size_t BasicSearchTree::alias(const wxString&amp; s, size_t itemno)</p>
-          <p>{</p>
-          <p>SearchTreePoint resultpos = AddNode(s, 0); //the second argument 0 means the root node</p>
-          <p>// add a pair (resultpos.depth -&gt; itemno) to the result node</p>
-          <p>size_t result = m_Nodes[resultpos.n]-&gt;AddItemNo(resultpos.depth, itemno);</p>
-          <p>m_Points[result] = resultpos;</p>
-          <p>return result;</p>
-          <p>}</p>
-          <p>void TokenTree::alias(Token* token, const wxString&amp; newName)</p>
-          <p>{</p>
-          <p>if (!token)</p>
-          <p>return;</p>
-          <p>size_t slotNo = m_Tree.GetItemNo(token-&gt;m_Name);</p>
-          <p>wxString oldName = token-&gt;m_Name;</p>
-          <p>if (slotNo)</p>
-          <p>{</p>
-          <p>token-&gt;m_Name = newName;</p>
-          <p>// Actually slotNo should not change there:</p>
-          <p>slotNo = m_Tree.alias(token-&gt;m_Name, slotNo);</p>
-          <p>TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(slotNo);</p>
-          <p>curList.insert(token-&gt;m_Index);</p>
-          <p>wxString log(F(_T("TokenTree::alias() : Added alias '%s' for '%s'."), newName.c_str(), oldName.c_str()));</p>
-          <p>CCLogger::Get()-&gt;Log(log);</p>
-          <p>CCLogger::Get()-&gt;DebugLog(log);</p>
-          <p>};</p>
-          <p>}</p>
+          <pre class="pre-scrollable">My "alias" methods looks as follows:
+size_t BasicSearchTree::alias(const wxString&amp; s, size_t itemno)
+{
+    SearchTreePoint resultpos = AddNode(s, 0); //the second argument 0 means the root node
+    // add a pair (resultpos.depth -&gt; itemno) to the result node
+    size_t result = m_Nodes[resultpos.n]-&gt;AddItemNo(resultpos.depth, itemno);
+    m_Points[result] = resultpos;
+    return result;
+}
+
+void TokenTree::alias(Token* token, const wxString&amp; newName)
+{
+    if (!token)
+        return;
+    size_t slotNo = m_Tree.GetItemNo(token-&gt;m_Name);
+    wxString oldName = token-&gt;m_Name;
+    if (slotNo)
+    {
+        token-&gt;m_Name = newName;
+        // Actually slotNo should not change there:
+        slotNo = m_Tree.alias(token-&gt;m_Name, slotNo);
+        TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(slotNo);
+        curList.insert(token-&gt;m_Index);
+        wxString log(F(_T("TokenTree::alias() : Added alias '%s' for '%s'."), newName.c_str(), oldName.c_str()));
+        CCLogger::Get()-&gt;Log(log);
+        CCLogger::Get()-&gt;DebugLog(log);
+    };
+}
+</pre>
         </div>
       </div>
       <div class="panel panel-default">
@@ -497,93 +520,115 @@
       <div class="panel panel-default">
         <div class="panel-heading">ollydbg 2013-11-13 00:31:39</div>
         <div class="panel-body">
-          <p>Thanks for the patch.</p>
-          <p>In the function:</p>
-          <p>void TokenTree::RenameToken(Token* token, const wxString&amp; newName)</p>
-          <p>{</p>
-          <p>if (!token)</p>
-          <p>return;</p>
-          <p>int slotNo = m_Tree.GetItemNo(token-&gt;m_Name);</p>
-          <p>if (slotNo)</p>
-          <p>{</p>
-          <p>TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(slotNo);</p>
-          <p>// Note: As we have no way to actually delete keys in the TokenSearchTree,</p>
-          <p>// the previous name index path of the token will still exist, as well as its TokenIdxSet slot,</p>
-          <p>// but this slot will be empty and as result will lead to nothing.</p>
-          <p>// This is the same thing the RemoveToken procedure does.</p>
-          <p>curList.erase(token-&gt;m_Index);</p>
-          <p>};</p>
-          <p>token-&gt;m_Name = newName;</p>
-          <p>AddToken(token, token-&gt;m_Index);</p>
-          <p>}</p>
-          <p>I think it should be: AddToken(token, token-&gt;m_FileIdx);</p>
-          <p>I still need time to test this patch.</p>
+          <pre class="pre-scrollable">Thanks for the patch.
+
+In the function:
+void TokenTree::RenameToken(Token* token, const wxString&amp; newName)
+{
+    if (!token)
+        return;
+    int slotNo = m_Tree.GetItemNo(token-&gt;m_Name);
+    if (slotNo)
+    {
+        TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(slotNo);
+    // Note: As we have no way to actually delete keys in the TokenSearchTree,
+    // the previous name index path of the token will still exist, as well as its TokenIdxSet slot,
+    // but this slot will be empty and as result will lead to nothing.
+    // This is the same thing the RemoveToken procedure does.
+        curList.erase(token-&gt;m_Index);
+    };
+    token-&gt;m_Name = newName;
+    AddToken(token, token-&gt;m_Index);
+}
+
+I think it should be: AddToken(token, token-&gt;m_FileIdx);
+I still need time to test this patch.
+</pre>
         </div>
       </div>
       <div class="panel panel-default">
         <div class="panel-heading">ollydbg 2013-11-13 00:46:30</div>
         <div class="panel-body">
-          <p>I found there may be a bug in the function:</p>
-          <p>int TokenTree::AddToken(Token* newToken, int fileIdx)</p>
-          <p>{</p>
-          <p>if (!newToken)</p>
-          <p>return -1;</p>
-          <p>const wxString &amp; name = newToken-&gt;m_Name;</p>
-          <p>static TokenIdxSet tmpTokens = TokenIdxSet();</p>
-          <p>// Insert the token's name and the token in the (inserted?) list</p>
-          <p>size_t tokenIdx = m_Tree.AddItem(name, tmpTokens);</p>
-          <p>TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(tokenIdx);</p>
-          <p>int newItem = AddTokenToList(newToken, fileIdx);</p>
-          <p>curList.insert(newItem);</p>
-          <p>size_t fIdx = (fileIdx&lt;0) ? newToken-&gt;m_FileIdx : (size_t)fileIdx;</p>
-          <p>m_FileMap[fIdx].insert(newItem);</p>
-          <p>// Add Token (if applicable) to the namespaces indexes</p>
-          <p>if (newToken-&gt;m_ParentIndex &lt; 0)</p>
-          <p>{</p>
-          <p>newToken-&gt;m_ParentIndex = -1;</p>
-          <p>m_GlobalNameSpaces.insert(newItem);</p>
-          <p>if (newToken-&gt;m_TokenKind == tkNamespace)</p>
-          <p>m_TopNameSpaces.insert(newItem);</p>
-          <p>}</p>
-          <p>// All done!</p>
-          <p>return newItem;</p>
-          <p>}</p>
-          <p>The line:</p>
-          <p>int newItem = AddTokenToList(newToken, fileIdx);</p>
-          <p>I think it should be:</p>
-          <p>int newItem = AddTokenToList(newToken, tokenIdx);</p>
-          <p>Since the function  AddTokenToList is just add a Token pointer to a std::vector&lt;Token*&gt;, I'm not sure why here the fileIdx is used????</p>
+          <pre class="pre-scrollable">I found there may be a bug in the function:
+int TokenTree::AddToken(Token* newToken, int fileIdx)
+{
+    if (!newToken)
+        return -1;
+
+    const wxString &amp; name = newToken-&gt;m_Name;
+
+    static TokenIdxSet tmpTokens = TokenIdxSet();
+
+    // Insert the token's name and the token in the (inserted?) list
+    size_t tokenIdx = m_Tree.AddItem(name, tmpTokens);
+    TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(tokenIdx);
+
+    int newItem = AddTokenToList(newToken, fileIdx);
+    curList.insert(newItem);
+
+    size_t fIdx = (fileIdx&lt;0) ? newToken-&gt;m_FileIdx : (size_t)fileIdx;
+    m_FileMap[fIdx].insert(newItem);
+
+    // Add Token (if applicable) to the namespaces indexes
+    if (newToken-&gt;m_ParentIndex &lt; 0)
+    {
+        newToken-&gt;m_ParentIndex = -1;
+        m_GlobalNameSpaces.insert(newItem);
+        if (newToken-&gt;m_TokenKind == tkNamespace)
+            m_TopNameSpaces.insert(newItem);
+    }
+
+    // All done!
+    return newItem;
+}
+
+The line:
+int newItem = AddTokenToList(newToken, fileIdx);
+I think it should be:
+int newItem = AddTokenToList(newToken, tokenIdx);
+
+Since the function  AddTokenToList is just add a Token pointer to a std::vector&lt;Token*&gt;, I'm not sure why here the fileIdx is used????
+
+
+</pre>
         </div>
       </div>
       <div class="panel panel-default">
         <div class="panel-heading">ollydbg 2013-11-13 02:48:14</div>
         <div class="panel-body">
-          <p>Go back to 2006-01-11, this functions looks like below:</p>
-          <p>int TokensTree::AddToken(Token* newToken,int forceidx)</p>
-          <p>{</p>
-          <p>if (!newToken)</p>
-          <p>return -1;</p>
-          <p>const wxString &amp; name = newToken-&gt;m_Name;</p>
-          <p>static TokenIdxSet tmp_tokens = TokenIdxSet();</p>
-          <p>// tmp_tokens.clear();</p>
-          <p>// Insert the token's name and the token in the (inserted?) list</p>
-          <p>size_t idx2 = m_Tree.AddItem(name,tmp_tokens,false);</p>
-          <p>TokenIdxSet&amp; curlist = m_Tree.GetItemAtPos(idx2);</p>
-          <p>int newitem = AddTokenToList(newToken,forceidx);</p>
-          <p>curlist.insert(newitem);</p>
-          <p>m_FilesMap[newToken-&gt;m_FileIdx].insert(newitem);</p>
-          <p>// Add Token (if applicable) to the namespaces indexes</p>
-          <p>if (newToken-&gt;m_ParentIndex &lt; 0)</p>
-          <p>{</p>
-          <p>newToken-&gt;m_ParentIndex = -1;</p>
-          <p>m_GlobalNameSpace.insert(newitem);</p>
-          <p>if (newToken-&gt;m_TokenKind == tkNamespace)</p>
-          <p>m_TopNameSpaces.insert(newitem);</p>
-          <p>}</p>
-          <p>// All done!</p>
-          <p>return newitem;</p>
-          <p>}</p>
-          <p>Look, the forceidx should be a TokenIndex, not file index, right?</p>
+          <pre class="pre-scrollable">Go back to 2006-01-11, this functions looks like below:
+int TokensTree::AddToken(Token* newToken,int forceidx)
+{
+    if (!newToken)
+        return -1;
+
+    const wxString &amp; name = newToken-&gt;m_Name;
+
+    static TokenIdxSet tmp_tokens = TokenIdxSet();
+    // tmp_tokens.clear();
+
+    // Insert the token's name and the token in the (inserted?) list
+    size_t idx2 = m_Tree.AddItem(name,tmp_tokens,false);
+    TokenIdxSet&amp; curlist = m_Tree.GetItemAtPos(idx2);
+
+    int newitem = AddTokenToList(newToken,forceidx);
+    curlist.insert(newitem);
+    m_FilesMap[newToken-&gt;m_FileIdx].insert(newitem);
+
+    // Add Token (if applicable) to the namespaces indexes
+    if (newToken-&gt;m_ParentIndex &lt; 0)
+    {
+        newToken-&gt;m_ParentIndex = -1;
+        m_GlobalNameSpace.insert(newitem);
+        if (newToken-&gt;m_TokenKind == tkNamespace)
+            m_TopNameSpaces.insert(newitem);
+    }
+
+    // All done!
+    return newitem;
+}
+Look, the forceidx should be a TokenIndex, not file index, right?
+</pre>
         </div>
       </div>
       <div class="panel panel-default">
@@ -630,31 +675,36 @@
       <div class="panel panel-default">
         <div class="panel-heading">ollydbg 2013-11-13 07:42:21</div>
         <div class="panel-body">
-          <p>The changed function look like below:</p>
-          <p>void TokenTree::RenameToken(Token* token, const wxString&amp; newName)</p>
-          <p>{</p>
-          <p>if (!token)</p>
-          <p>return;</p>
-          <p>// remove the old token index from the TokenIdxSet mapped by old name.</p>
-          <p>int slotNo = m_Tree.GetItemNo(token-&gt;m_Name);</p>
-          <p>if (slotNo)</p>
-          <p>{</p>
-          <p>TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(slotNo);</p>
-          <p>// Note: As we have no way to actually delete keys in the TokenSearchTree,</p>
-          <p>// the previous name index path of the token will still exist, as well as its TokenIdxSet slot,</p>
-          <p>// but this slot will be empty and as result will lead to nothing.</p>
-          <p>// This is the same thing the RemoveToken procedure does.</p>
-          <p>curList.erase(token-&gt;m_Index);</p>
-          <p>};</p>
-          <p>token-&gt;m_Name = newName;</p>
-          <p>if (!newToken)</p>
-          <p>return -1;</p>
-          <p>static TokenIdxSet tmpTokens = TokenIdxSet();</p>
-          <p>size_t tokenIdx = m_Tree.AddItem(newName, tmpTokens);</p>
-          <p>TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(tokenIdx);</p>
-          <p>// add the old token index to the TokenIdxSet mapped by new name, note Token index is not changed</p>
-          <p>curList.insert(token-&gt;m_Index);</p>
-          <p>}</p>
+          <pre class="pre-scrollable">The changed function look like below:
+
+void TokenTree::RenameToken(Token* token, const wxString&amp; newName)
+{
+    if (!token)
+        return;
+    // remove the old token index from the TokenIdxSet mapped by old name.
+    int slotNo = m_Tree.GetItemNo(token-&gt;m_Name);
+    if (slotNo)
+    {
+        TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(slotNo);
+    // Note: As we have no way to actually delete keys in the TokenSearchTree,
+    // the previous name index path of the token will still exist, as well as its TokenIdxSet slot,
+    // but this slot will be empty and as result will lead to nothing.
+    // This is the same thing the RemoveToken procedure does.
+        curList.erase(token-&gt;m_Index);
+    };
+    token-&gt;m_Name = newName;
+    if (!newToken)
+        return -1;
+
+    static TokenIdxSet tmpTokens = TokenIdxSet();
+
+    size_t tokenIdx = m_Tree.AddItem(newName, tmpTokens);
+    TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(tokenIdx);
+
+    // add the old token index to the TokenIdxSet mapped by new name, note Token index is not changed
+    curList.insert(token-&gt;m_Index);
+}
+</pre>
         </div>
       </div>
       <div class="panel panel-default">
@@ -738,37 +788,50 @@
       <div class="panel panel-default">
         <div class="panel-heading">ollydbg 2013-11-17 03:24:48</div>
         <div class="panel-body">
-          <p>Quote:  I just added your suggestion about the file number inside the token name and one comment.</p>
-          <p>So, you add the only one line comment here? see below:</p>
-          <p>//This block almost certainly is a needless extra precaution, but i still not sure.</p>
-          <p>The code snippet I guess was originally extract from the common code in either ReadClsNames() and ReadVarNames() functions.</p>
-          <p>+    Token* parent = m_LastParent;</p>
-          <p>+    if (parent)</p>
-          <p>+    {</p>
-          <p>+        //This block almost certainly is a needless extra precaution, but i still not sure.</p>
-          <p>+        wxString sParrent = parent-&gt;m_Name;</p>
-          <p>+        if (!sParrent.Cmp(m_Str))</p>
-          <p>+            parent = m_LastParent-&gt;GetTree()-&gt;at(m_LastParent-&gt;m_ParentIndex);</p>
-          <p>+    };</p>
-          <p>I will look into it to see what does these code do.</p>
+          <pre class="pre-scrollable">Quote:  I just added your suggestion about the file number inside the token name and one comment.
+
+So, you add the only one line comment here? see below:
+
+//This block almost certainly is a needless extra precaution, but i still not sure.
+
+
+The code snippet I guess was originally extract from the common code in either ReadClsNames() and ReadVarNames() functions.
++    Token* parent = m_LastParent;
++    if (parent)
++    {
++        //This block almost certainly is a needless extra precaution, but i still not sure.
++        wxString sParrent = parent-&gt;m_Name;
++        if (!sParrent.Cmp(m_Str))
++            parent = m_LastParent-&gt;GetTree()-&gt;at(m_LastParent-&gt;m_ParentIndex);
++    };
+
+I will look into it to see what does these code do.
+
+
+</pre>
         </div>
       </div>
       <div class="panel panel-default">
         <div class="panel-heading">ollydbg 2013-11-17 06:10:30</div>
         <div class="panel-body">
-          <p>Question: What does the code means?</p>
-          <p>+            if (m_Str.StartsWith(g_UnnamedSymbol))</p>
-          <p>+            {</p>
-          <p>+                Token* parent = m_LastParent;</p>
-          <p>+                if (parent)</p>
-          <p>+                {</p>
-          <p>+                    wxString sParrent = parent-&gt;m_Name;</p>
-          <p>+                    if (!sParrent.Cmp(m_Str))</p>
-          <p>+                        parent = m_LastParent-&gt;GetTree()-&gt;at(m_LastParent-&gt;m_ParentIndex);</p>
-          <p>+                };</p>
-          <p>+                Token* unnamedAncestor = TokenExists(m_Str, parent, tkUndefined); //tkTypedef | tkClass);</p>
-          <p>Why the parent's token name is needed to compare with the "m_Str"? If they are different, you get the parent's parent.</p>
-          <p>I see these code exist in your version one of the patch.</p>
+          <pre class="pre-scrollable">Question: What does the code means?
+
++            if (m_Str.StartsWith(g_UnnamedSymbol))
++            {
++                Token* parent = m_LastParent;
++                if (parent)
++                {
++                    wxString sParrent = parent-&gt;m_Name;
++                    if (!sParrent.Cmp(m_Str))
++                        parent = m_LastParent-&gt;GetTree()-&gt;at(m_LastParent-&gt;m_ParentIndex);
++                };
++                Token* unnamedAncestor = TokenExists(m_Str, parent, tkUndefined); //tkTypedef | tkClass);
+
+Why the parent's token name is needed to compare with the "m_Str"? If they are different, you get the parent's parent.
+
+I see these code exist in your version one of the patch.
+
+</pre>
         </div>
       </div>
       <div class="panel panel-default">
@@ -889,86 +952,114 @@
       <div class="panel panel-default">
         <div class="panel-heading">ollydbg 2013-11-18 15:09:00</div>
         <div class="panel-body">
-          <p>I agree with you.</p>
-          <p>Quote: I just afraid, if we will switch to redesign gui right now, wouldn't it leave us for a long period yet with what we have?</p>
-          <p>Sorry, I don't understand this sentence, can you explain?</p>
-          <p>I just look at our Token class definition:</p>
-          <p>class Token</p>
-          <p>{</p>
-          <p>friend class TokenTree;</p>
-          <p>public:</p>
-          <p>Token(const wxString&amp; name, unsigned int file, unsigned int line, size_t ticket);</p>
-          <p>~Token();</p>
-          <p>bool AddChild(int childIdx);</p>
-          <p>bool DeleteAllChildren();</p>
-          <p>bool HasChildren() const { return !m_Children.empty(); }</p>
-          <p>wxString GetNamespace() const;</p>
-          <p>bool InheritsFrom(int idx) const;</p>
-          <p>wxString DisplayName() const;</p>
-          <p>wxString GetTokenKindString() const;</p>
-          <p>wxString GetTokenScopeString() const;</p>
-          <p>wxString GetFilename() const;</p>
-          <p>wxString GetImplFilename() const;</p>
-          <p>wxString GetFormattedArgs() const; // remove all '\n'</p>
-          <p>wxString GetStrippedArgs() const; // remove all default value</p>
-          <p>size_t GetTicket() const { return m_Ticket; }</p>
-          <p>bool MatchesFiles(const TokenFileSet&amp; files);</p>
-          <p>TokenTree* GetTree() const { return m_TokenTree; }</p>
-          <p>bool IsValidAncestor(const wxString&amp; ancestor);</p>
-          <p>wxString                     m_FullType; // this is the full return value (if any): e.g. const wxString&amp;</p>
-          <p>wxString                     m_BaseType; // this is what the parser believes is the actual return value: e.g. wxString</p>
-          <p>wxString                     m_Name;     // Token's name, it can be searched in the TokenTree</p>
-          <p>wxString                     m_Args;     // If it is a function Token, then this value is function arguments</p>
-          <p>// e.g.   (int arg1 = 10, float arg2 = 9.0)</p>
-          <p>// If it is an enumerator, then this is the assigned (inferred) value</p>
-          <p>wxString                     m_BaseArgs; // stripped arguments e.g. (int arg1, float arg2)</p>
-          <p>wxString                     m_AncestorsString; // all ancestors comma-separated list</p>
-          <p>unsigned int                 m_FileIdx;       // File index in TokenTree</p>
-          <p>unsigned int                 m_Line;          // Line index where the token was met, which is 0/1 based</p>
-          <p>unsigned int                 m_ImplFileIdx;   // function implementation file index</p>
-          <p>unsigned int                 m_ImplLine;      // function implementation line index</p>
-          <p>unsigned int                 m_ImplLineStart; // if token is impl, opening brace line</p>
-          <p>unsigned int                 m_ImplLineEnd;   // if token is impl, closing brace line</p>
-          <p>TokenScope                   m_Scope;         // public? private? protected?</p>
-          <p>TokenKind                    m_TokenKind;     // See TokenKind class</p>
-          <p>bool                         m_IsOperator;    // is operator overload function?</p>
-          <p>bool                         m_IsLocal;       // found in a local source file, otherwise in wxString</p>
-          <p>bool                         m_IsTemp;        // local (automatic) variable</p>
-          <p>bool                         m_IsConst;       // the member method is const (yes/no)</p>
-          <p>int                          m_Index;         // current Token index in the tree</p>
-          <p>int                          m_ParentIndex;   // Parent Token index</p>
-          <p>TokenIdxSet                  m_Children;      // if it is a class kind token, then it contains all the member tokens</p>
-          <p>TokenIdxSet                  m_Ancestors;     // all the ancestors in the inheritance hierarchy</p>
-          <p>TokenIdxSet                  m_DirectAncestors; //the neatest ancestors</p>
-          <p>TokenIdxSet                  m_Descendants;   // all the descendants in the inheritance hierarchy</p>
-          <p>wxArrayString                m_Aliases;       // used for namespace aliases</p>
-          <p>wxString                     m_TemplateArgument;</p>
-          <p>wxArrayString                m_TemplateType;    //for a class template, this is the formal template argument list</p>
-          <p>//but for a variable Token, this is the actual template arguments.</p>
-          <p>std::map&lt;wxString, wxString&gt; m_TemplateMap;</p>
-          <p>wxString                     m_TemplateAlias;   // alias for templates, e.g. template T1 T2;</p>
-          <p>void*                        m_UserData;        // custom user-data (the classbrowser expects it to be a pointer to a cbProject)</p>
-          <p>protected:</p>
-          <p>TokenTree*                   m_TokenTree;       // a pointer to TokenTree</p>
-          <p>size_t                       m_Ticket;          // This is used in classbrowser to avoid duplication</p>
-          <p>};</p>
-          <p>You see, there are already a lot of bool variables. Also, there are some variables which only used for special kind of Token type. For example, m_TemplateMap, which is only for a class template specification, m_IsOperator is only used for functions.</p>
-          <p>So, maybe, a better way is: create a TokenBase class, which implement all the basic interface, then any special Token kind like functions, classes, structs...... should all be derived from the TokenBase, and have their own member variables, we can still hold all the pointers in the vector like std::vector&lt;TokenBase*&gt;.</p>
-          <p>But I think it is not easy/soon to implement this.</p>
-          <p>Now, lets return to our topic, if you add a bool variable m_IsUnnamed, what should we do?</p>
-          <p>Change the code:</p>
-          <p>if (m_Str.Contains(_T("Union")))</p>
-          <p>m_Str = _T("union");</p>
-          <p>else if (m_Str.Contains(_T("Struct")))</p>
-          <p>m_Str = _T("struct");</p>
-          <p>else</p>
-          <p>m_Str = _T("tag");</p>
-          <p>to something like:</p>
-          <p>Token* typeToken= TokenExists(m_Str, m_LastParent, typeMask);</p>
-          <p>typeToken-&gt;IsUnnamed == true;</p>
-          <p>m_Str =...</p>
-          <p>???</p>
-          <p>Any other changes???</p>
+          <pre class="pre-scrollable">I agree with you.
+Quote: I just afraid, if we will switch to redesign gui right now, wouldn't it leave us for a long period yet with what we have?
+
+Sorry, I don't understand this sentence, can you explain?
+
+I just look at our Token class definition:
+
+class Token
+{
+friend class TokenTree;
+public:
+    Token(const wxString&amp; name, unsigned int file, unsigned int line, size_t ticket);
+    ~Token();
+
+    bool AddChild(int childIdx);
+    bool DeleteAllChildren();
+    bool HasChildren() const { return !m_Children.empty(); }
+    wxString GetNamespace() const;
+    bool InheritsFrom(int idx) const;
+    wxString DisplayName() const;
+    wxString GetTokenKindString() const;
+    wxString GetTokenScopeString() const;
+    wxString GetFilename() const;
+    wxString GetImplFilename() const;
+    wxString GetFormattedArgs() const; // remove all '\n'
+    wxString GetStrippedArgs() const; // remove all default value
+    size_t GetTicket() const { return m_Ticket; }
+    bool MatchesFiles(const TokenFileSet&amp; files);
+
+    TokenTree* GetTree() const { return m_TokenTree; }
+    bool IsValidAncestor(const wxString&amp; ancestor);
+
+    wxString                     m_FullType; // this is the full return value (if any): e.g. const wxString&amp;
+    wxString                     m_BaseType; // this is what the parser believes is the actual return value: e.g. wxString
+    wxString                     m_Name;     // Token's name, it can be searched in the TokenTree
+    wxString                     m_Args;     // If it is a function Token, then this value is function arguments
+                                             // e.g.   (int arg1 = 10, float arg2 = 9.0)
+                                             // If it is an enumerator, then this is the assigned (inferred) value
+    wxString                     m_BaseArgs; // stripped arguments e.g. (int arg1, float arg2)
+
+    wxString                     m_AncestorsString; // all ancestors comma-separated list
+
+    unsigned int                 m_FileIdx;       // File index in TokenTree
+    unsigned int                 m_Line;          // Line index where the token was met, which is 0/1 based
+    unsigned int                 m_ImplFileIdx;   // function implementation file index
+    unsigned int                 m_ImplLine;      // function implementation line index
+    unsigned int                 m_ImplLineStart; // if token is impl, opening brace line
+    unsigned int                 m_ImplLineEnd;   // if token is impl, closing brace line
+
+    TokenScope                   m_Scope;         // public? private? protected?
+    TokenKind                    m_TokenKind;     // See TokenKind class
+    bool                         m_IsOperator;    // is operator overload function?
+    bool                         m_IsLocal;       // found in a local source file, otherwise in wxString
+    bool                         m_IsTemp;        // local (automatic) variable
+    bool                         m_IsConst;       // the member method is const (yes/no)
+
+    int                          m_Index;         // current Token index in the tree
+    int                          m_ParentIndex;   // Parent Token index
+    TokenIdxSet                  m_Children;      // if it is a class kind token, then it contains all the member tokens
+    TokenIdxSet                  m_Ancestors;     // all the ancestors in the inheritance hierarchy
+    TokenIdxSet                  m_DirectAncestors; //the neatest ancestors
+    TokenIdxSet                  m_Descendants;   // all the descendants in the inheritance hierarchy
+
+    wxArrayString                m_Aliases;       // used for namespace aliases
+
+    wxString                     m_TemplateArgument;
+    wxArrayString                m_TemplateType;    //for a class template, this is the formal template argument list
+                                                    //but for a variable Token, this is the actual template arguments.
+    std::map&lt;wxString, wxString&gt; m_TemplateMap;
+
+    wxString                     m_TemplateAlias;   // alias for templates, e.g. template T1 T2;
+    void*                        m_UserData;        // custom user-data (the classbrowser expects it to be a pointer to a cbProject)
+
+protected:
+    TokenTree*                   m_TokenTree;       // a pointer to TokenTree
+    size_t                       m_Ticket;          // This is used in classbrowser to avoid duplication
+};
+
+You see, there are already a lot of bool variables. Also, there are some variables which only used for special kind of Token type. For example, m_TemplateMap, which is only for a class template specification, m_IsOperator is only used for functions.
+
+So, maybe, a better way is: create a TokenBase class, which implement all the basic interface, then any special Token kind like functions, classes, structs...... should all be derived from the TokenBase, and have their own member variables, we can still hold all the pointers in the vector like std::vector&lt;TokenBase*&gt;.
+
+But I think it is not easy/soon to implement this.
+
+Now, lets return to our topic, if you add a bool variable m_IsUnnamed, what should we do?
+
+Change the code:
+        if (m_Str.Contains(_T("Union")))
+            m_Str = _T("union");
+        else if (m_Str.Contains(_T("Struct")))
+            m_Str = _T("struct");
+        else
+            m_Str = _T("tag");
+
+to something like:
+Token* typeToken= TokenExists(m_Str, m_LastParent, typeMask);
+typeToken-&gt;IsUnnamed == true;
+m_Str =...
+
+???
+
+Any other changes???
+
+
+
+
+
+</pre>
         </div>
       </div>
       <div class="panel panel-default">
