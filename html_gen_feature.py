@@ -180,6 +180,8 @@ featureEntryTemplate = r"""<tr><td>$$NUMBER$$</td><td><a href="features/$$NUMBER
 
 assignedFilterTemplate = r"""<li><a tabindex="-1" href="$$URL$$">$$NAME$$</a></li>"""
 
+spaceRe = re.compile(ur'        .*\n.*        ', re.DOTALL)
+
 urlRe = re.compile(ur'(((ht|f)tp(s?)\:\/\/)|(www\.))(([a-zA-Z0-9\-\._]+(\.[a-zA-Z0-9\-\._]+)+)|localhost)(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?([\d\w\.\/\%\+\-\=\&amp;\?\:\\\&quot;\'\,\|\~\;]*)')
 
 bugRe     = re.compile(ur'bug_id=([0-9]+)')
@@ -212,7 +214,7 @@ def makeLink(url):
         return '<a href="' + urlDat[0] + '" data-toggle="tooltip" title="' + urlDat[1] + '">' + url + '</a>'
 
 
-ticketRe = re.compile(ur'\b(patch|bug|features? +requests?|features?|requests?) *(?::|is|fix)? *#? *(\d{3,6})\b', re.IGNORECASE)
+ticketRe = re.compile(ur'\b(patch|bug|features? +requests?|features?|requests?) *(?::|is|fix)? *#? *(0?\d{3,6})\b', re.IGNORECASE)
 
 def ticketLinker(matches):
     url = "group_id=5358"
@@ -408,7 +410,7 @@ for ticket in lookupDb["trackers"]["feature"]["artifacts"]:
                 textProc += makeLink(url)
             lastIdx = match.end()
         textProc += ticketRe.sub(ticketLinker, cgi.escape(text[lastIdx:]))
-        if len(text) > 2000:
+        if len(text) > 2000 or "=============================================" in text or spaceRe.search(text):
             textProc = '<pre class="pre-scrollable">' + textProc + '</pre>'
         else:
             textProc = textProc.replace("\n\n", "\r")

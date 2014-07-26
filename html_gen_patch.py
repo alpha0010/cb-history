@@ -173,6 +173,8 @@ patchEntryTemplate = r"""<tr><td>$$NUMBER$$</td><td><a href="patches/$$NUMBER$$.
 
 assignedFilterTemplate = r"""<li><a tabindex="-1" href="$$URL$$">$$NAME$$</a></li>"""
 
+spaceRe = re.compile(ur'        .*\n.*        ', re.DOTALL)
+
 urlRe = re.compile(ur'(((ht|f)tp(s?)\:\/\/)|(www\.))(([a-zA-Z0-9\-\._]+(\.[a-zA-Z0-9\-\._]+)+)|localhost)(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?([\d\w\.\/\%\+\-\=\&amp;\?\:\\\&quot;\'\,\|\~\;]*)')
 
 bugRe     = re.compile(ur'bug_id=([0-9]+)')
@@ -309,20 +311,35 @@ for ticket in docTree.getroot():
             post = { "$$COMMENTS$$": "",
                      "$$AUTHOR$$": (cgi.escape(userIdDict[ prop[2].text ]) if prop[2].text in userIdDict else "ID_" + prop[2].text),
                      "$$TIME_STAMP$$": DT.datetime.utcfromtimestamp(int(prop[3].text)).isoformat(" ") }
-            for para in prop[1].text.split("\n"):
-                if len(para) > 0 and not para.isspace():
-                    if len(post["$$COMMENTS$$"]) > 0:
-                        post["$$COMMENTS$$"] += "\n          "
-                    para = cgi.escape(para.strip())
-                    urlMatch = re.search(urlRe, para)
-                    if urlMatch:
-                        urlDat = getMappedUrl(urlMatch.group(0))
-                        if urlDat[1] == "":
-                            para = para.replace(urlMatch.group(0), '<a href="' + urlDat[0] + '">' + urlMatch.group(0) + '</a>')
-                        else:
-                            para = para.replace(urlMatch.group(0), '<a href="' + urlDat[0] + '" data-toggle="tooltip" title="' + urlDat[1] + '">' + urlMatch.group(0) + '</a>')
-                    para = ticketRe.sub(ticketLinker, para)
-                    post["$$COMMENTS$$"] += "<p>" + para + "</p>"
+            if "===================================================================" in prop[1].text or spaceRe.search(prop[1].text) or (len(prop[1].text) > 2000 and len(max(prop[1].text.split("\n"), key=len)) < 500):
+                lastIdx = 0
+                para = ""
+                for match in urlRe.finditer(prop[1].text):
+                    para += ticketRe.sub(ticketLinker, cgi.escape(prop[1].text[lastIdx:match.start()]))
+                    urlDat = getMappedUrl(match.group(0))
+                    if urlDat[1] == "":
+                        para += '<a href="' + urlDat[0] + '">' + match.group(0) + '</a>'
+                    else:
+                        para += '<a href="' + urlDat[0] + '" data-toggle="tooltip" title="' + urlDat[1] + '">' + match.group(0) + '</a>'
+                    lastIdx = match.end()
+                para += ticketRe.sub(ticketLinker, cgi.escape(prop[1].text[lastIdx:]))
+                para = re.sub(" +\n", "\n", para)
+                post["$$COMMENTS$$"] = '<pre class="pre-scrollable">' + para + '</pre>'
+            else:
+                for para in prop[1].text.split("\n"):
+                    if len(para) > 0 and not para.isspace():
+                        if len(post["$$COMMENTS$$"]) > 0:
+                            post["$$COMMENTS$$"] += "\n          "
+                        para = cgi.escape(para.strip())
+                        urlMatch = re.search(urlRe, para)
+                        if urlMatch:
+                            urlDat = getMappedUrl(urlMatch.group(0))
+                            if urlDat[1] == "":
+                                para = para.replace(urlMatch.group(0), '<a href="' + urlDat[0] + '">' + urlMatch.group(0) + '</a>')
+                            else:
+                                para = para.replace(urlMatch.group(0), '<a href="' + urlDat[0] + '" data-toggle="tooltip" title="' + urlDat[1] + '">' + urlMatch.group(0) + '</a>')
+                        para = ticketRe.sub(ticketLinker, para)
+                        post["$$COMMENTS$$"] += "<p>" + para + "</p>"
             ticketOut["HISTORY"].append(post)
             lastMod = max(lastMod, int(prop[3].text))
 

@@ -170,6 +170,8 @@ bugEntryTemplate = r"""<tr><td>$$NUMBER$$</td><td><a href="bugs/$$NUMBER$$.html"
 
 assignedFilterTemplate = r"""<li><a tabindex="-1" href="$$URL$$">$$NAME$$</a></li>"""
 
+spaceRe = re.compile(ur'        .*\n.*        ', re.DOTALL)
+
 urlRe = re.compile(ur'(((ht|f)tp(s?)\:\/\/)|(www\.))(([a-zA-Z0-9\-\._]+(\.[a-zA-Z0-9\-\._]+)+)|localhost)(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?([\d\w\.\/\%\+\-\=\&amp;\?\:\\\&quot;\'\,\|\~\;]*)')
 
 bugRe     = re.compile(ur'bug_id=([0-9]+)')
@@ -290,7 +292,7 @@ for ticket in docTree.getroot():
             ticketOut["$$SUMMARY$$"] = cgi.escape(prop.text)
 
         elif prop.tag == "details":
-            if len(prop.text) > 2000 or "===================================================================" in prop.text:
+            if len(prop.text) > 2000 or "===================================================================" in prop.text or spaceRe.search(prop.text):
                 lastIdx = 0
                 para = ""
                 for match in urlRe.finditer(prop.text):
@@ -333,7 +335,7 @@ for ticket in docTree.getroot():
             post = { "$$COMMENTS$$": "",
                      "$$AUTHOR$$": (cgi.escape(userIdDict[ prop[2].text ]) if prop[2].text in userIdDict else "ID_" + prop[2].text),
                      "$$TIME_STAMP$$": DT.datetime.utcfromtimestamp(int(prop[3].text)).isoformat(" ") }
-            if len(prop[1].text) > 2000 or "===================================================================" in prop[1].text:
+            if len(prop[1].text) > 2000 or "===================================================================" in prop[1].text or spaceRe.search(prop[1].text):
                 lastIdx = 0
                 para = ""
                 for match in urlRe.finditer(prop[1].text):
