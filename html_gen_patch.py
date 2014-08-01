@@ -9,6 +9,10 @@ import bz2
 import os
 import shutil
 
+from pygments import highlight
+from pygments.lexers import DiffLexer
+from pygments.formatters import HtmlFormatter
+
 patchTemplate = r"""<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -19,7 +23,7 @@ patchTemplate = r"""<!DOCTYPE html>
 
     <!-- Bootstrap -->
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">$$PYGMENTS$$
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -71,6 +75,7 @@ patchTemplate = r"""<!DOCTYPE html>
           </dl>
         </div>
       </div>
+      $$PATCH$$
       <h4 class="page-header">History</h4>
       $$HISTORY$$
     </div>
@@ -345,6 +350,15 @@ for ticket in docTree.getroot():
 
         elif prop.tag == "code": #and prop.text != "InvalidBinaryFile":
             ticketOut["code"] = prop.text
+            if prop.text == "InvalidBinaryFile":
+                ticketOut["$$PATCH$$"] = "<em>Patch is corrupt.</em>"
+                ticketOut["$$PYGMENTS$$"] = ""
+            else:
+                hlCode = prop.text.replace("\t", "    ")
+                if len(hlCode) > 5200:
+                    hlCode = hlCode[:5000].rstrip() + "\nfile truncated..."
+                ticketOut["$$PATCH$$"] = highlight(hlCode, DiffLexer(), HtmlFormatter().replace('<pre', '<pre class="pre-scrollable"', 1).replace('file truncated...', '<em><strong>file truncated...</strong></em>')
+                ticketOut["$$PYGMENTS$$"] = '\n\n    <link rel="stylesheet" href="../pygments.css">'
 
     if "HISTORY" not in ticketOut:
         ticketOut["$$HISTORY$$"] = ""
@@ -359,6 +373,7 @@ if not os.path.isdir("static_web"):
 if not os.path.isdir("static_web/patches"):
     os.mkdir("static_web/patches")
 shutil.copy("data/index.html", "static_web/index.html")
+shutil.copy("data/pygments.css", "static_web/pygments.css")
 
 for ticket in ticketsOut:
     ticketHTML = patchTemplate
