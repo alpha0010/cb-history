@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,75 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: include/sdk_events.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- include/sdk_events.h    (revision 4693)</span>
+<span class="gi">+++ include/sdk_events.h    (working copy)</span>
+<span class="gu">@@ -59,7 +59,7 @@</span>
+         // for some editor events
+         int m_X;
+         int m_Y;
+<span class="gd">-        </span>
+<span class="gi">+</span>
+         wxString m_TargetName;
+         wxString m_OldTargetName;
+     private:
+<span class="gu">@@ -237,6 +237,10 @@</span>
+ #define EVT_PROJECT_ACTIVATE(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_PROJECT_ACTIVATE, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&amp;fn, (wxObject *) NULL ),
+ extern EVTIMPORT const wxEventType cbEVT_PROJECT_FILE_ADDED;
+ #define EVT_PROJECT_FILE_ADDED(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_PROJECT_FILE_ADDED, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&amp;fn, (wxObject *) NULL ),
+<span class="gi">+extern EVTIMPORT const wxEventType cbEVT_PROJECT_FILES_ADDED_BEGIN;</span>
+<span class="gi">+#define cbEVT_PROJECT_FILES_ADDED_BEGIN(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_PROJECT_FILES_ADDED_BEGIN, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&amp;fn, (wxObject *) NULL ),</span>
+<span class="gi">+extern EVTIMPORT const wxEventType cbEVT_PROJECT_FILES_ADDED_END;</span>
+<span class="gi">+#define cbEVT_PROJECT_FILES_ADDED_END(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_PROJECT_FILES_ADDED_END, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&amp;fn, (wxObject *) NULL ),</span>
+ extern EVTIMPORT const wxEventType cbEVT_PROJECT_FILE_REMOVED;
+ #define EVT_PROJECT_FILE_REMOVED(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_PROJECT_FILE_REMOVED, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&amp;fn, (wxObject *) NULL ),
+ extern EVTIMPORT const wxEventType cbEVT_PROJECT_POPUP_MENU;
+<span class="gh">Index: sdk/projectmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- sdk/projectmanager.cpp    (revision 4693)</span>
+<span class="gi">+++ sdk/projectmanager.cpp    (working copy)</span>
+<span class="gu">@@ -1380,6 +1380,12 @@</span>
+ 
+     if (addedFiles.GetCount() != 0)
+     {
+<span class="gi">+        // send the event indicating files are going to be added</span>
+<span class="gi">+        CodeBlocksEvent begin_event(cbEVT_PROJECT_FILES_ADDED_BEGIN);</span>
+<span class="gi">+        begin_event.SetProject(project);</span>
+<span class="gi">+        begin_event.SetInt(addedFiles.GetCount());</span>
+<span class="gi">+        Manager::Get()-&gt;GetPluginManager()-&gt;NotifyPlugins(begin_event);</span>
+<span class="gi">+</span>
+         for (unsigned int i = 0; i &lt; addedFiles.GetCount(); ++i)
+         {
+             CodeBlocksEvent event(cbEVT_PROJECT_FILE_ADDED);
+<span class="gu">@@ -1387,6 +1393,12 @@</span>
+             event.SetString(addedFiles[i]);
+             Manager::Get()-&gt;GetPluginManager()-&gt;NotifyPlugins(event);
+         }
+<span class="gi">+</span>
+<span class="gi">+        // send the event indicating the end of files addition</span>
+<span class="gi">+        CodeBlocksEvent end_event(cbEVT_PROJECT_FILES_ADDED_END);</span>
+<span class="gi">+        end_event.SetProject(project);</span>
+<span class="gi">+        end_event.SetInt(addedFiles.GetCount());</span>
+<span class="gi">+        Manager::Get()-&gt;GetPluginManager()-&gt;NotifyPlugins(end_event);</span>
+     }
+     return targets.GetCount();
+ }
+<span class="gh">Index: sdk/sdk_events.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- sdk/sdk_events.cpp    (revision 4693)</span>
+<span class="gi">+++ sdk/sdk_events.cpp    (working copy)</span>
+<span class="gu">@@ -109,6 +109,8 @@</span>
+ const wxEventType cbEVT_PROJECT_SAVE = wxNewEventType();
+ const wxEventType cbEVT_PROJECT_ACTIVATE = wxNewEventType();
+ const wxEventType cbEVT_PROJECT_FILE_ADDED = wxNewEventType();
+<span class="gi">+const wxEventType cbEVT_PROJECT_FILES_ADDED_BEGIN = wxNewEventType();</span>
+<span class="gi">+const wxEventType cbEVT_PROJECT_FILES_ADDED_END = wxNewEventType();</span>
+ const wxEventType cbEVT_PROJECT_FILE_REMOVED = wxNewEventType();
+ const wxEventType cbEVT_PROJECT_POPUP_MENU = wxNewEventType();
+ const wxEventType cbEVT_PROJECT_TARGETS_MODIFIED = wxNewEventType();
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mandrav 2007-12-12 14:28:24</div>

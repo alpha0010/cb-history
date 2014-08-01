@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,78 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/compilergcc/compilergcc.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilergcc.cpp    (revision 6571)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilergcc.cpp    (working copy)</span>
+<span class="gu">@@ -623,8 +623,11 @@</span>
+     if (!data || data-&gt;GetKind() == FileTreeData::ftdkUndefined)
+     {
+         // popup menu in empty space in ProjectManager
+<span class="gi">+        if (menu-&gt;GetMenuItemCount() &gt; 0)</span>
+<span class="gi">+            menu-&gt;AppendSeparator();</span>
+         menu-&gt;Append(idMenuCompileAll, _(&quot;Build workspace&quot;));
+         menu-&gt;Append(idMenuRebuildAll, _(&quot;Rebuild workspace&quot;));
+<span class="gi">+        menu-&gt;Append(idMenuCleanAll, _(&quot;Clean workspace&quot;));</span>
+     }
+     else if (data &amp;&amp; data-&gt;GetKind() == FileTreeData::ftdkProject)
+     {
+<span class="gh">Index: src/plugins/contrib/wxSmith/wxsmith.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/wxsmith.cpp    (revision 6571)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/wxsmith.cpp    (working copy)</span>
+<span class="gu">@@ -310,7 +310,7 @@</span>
+     }
+ }
+ 
+<span class="gd">-void wxSmith::BuildModuleMenu(const ModuleType type, wxMenu* menu, const FileTreeData* data)</span>
+<span class="gi">+void wxSmith::BuildModuleMenu(const ModuleType type, wxMenu* menu, const FileTreeData* /*data*/)</span>
+ {
+ }
+ 
+<span class="gh">Index: src/plugins/contrib/ThreadSearch/ThreadSearch.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/ThreadSearch/ThreadSearch.cpp    (revision 6571)</span>
+<span class="gi">+++ src/plugins/contrib/ThreadSearch/ThreadSearch.cpp    (working copy)</span>
+<span class="gu">@@ -409,7 +409,7 @@</span>
+ }
+ 
+ 
+<span class="gd">-void ThreadSearch::BuildModuleMenu(const ModuleType type, wxMenu* pMenu, const FileTreeData* data)</span>
+<span class="gi">+void ThreadSearch::BuildModuleMenu(const ModuleType type, wxMenu* pMenu, const FileTreeData* /*data*/)</span>
+ {
+     wxMenuItem* pMenuItem = NULL;
+     if (!pMenu || !IsAttached())
+<span class="gh">Index: src/plugins/codecompletion/codecompletion.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/codecompletion.cpp    (revision 6571)</span>
+<span class="gi">+++ src/plugins/codecompletion/codecompletion.cpp    (working copy)</span>
+<span class="gu">@@ -370,7 +370,7 @@</span>
+     return ReturnValue;
+ }
+ 
+<span class="gd">-void CodeCompletion::BuildModuleMenu(const ModuleType type, wxMenu* menu, const FileTreeData* data)</span>
+<span class="gi">+void CodeCompletion::BuildModuleMenu(const ModuleType type, wxMenu* menu, const FileTreeData* /*data*/)</span>
+ {
+     // if not attached, exit
+     if (!menu || !IsAttached() || !m_InitDone)
+<span class="gh">Index: src/sdk/projectmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/projectmanager.cpp    (revision 6571)</span>
+<span class="gi">+++ src/sdk/projectmanager.cpp    (working copy)</span>
+<span class="gu">@@ -692,6 +692,10 @@</span>
+         menu.Append(idMenuTreeSaveAsWorkspace, _(&quot;Save workspace as...&quot;));
+         menu.AppendSeparator();
+         menu.Append(idMenuFindFile, _(&quot;Find file...&quot;));
+<span class="gi">+</span>
+<span class="gi">+        // ask any plugins to add items in this menu</span>
+<span class="gi">+        Manager::Get()-&gt;GetPluginManager()-&gt;AskPluginsForModuleMenu(mtProjectManager, &amp;menu, NULL);</span>
+<span class="gi">+</span>
+         menu.AppendSeparator();
+         menu.Append(idMenuTreeCloseWorkspace, _(&quot;Close workspace&quot;));
+     }
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

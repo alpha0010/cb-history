@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,43 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/editormanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editormanager.cpp    (revision 4010)</span>
+<span class="gi">+++ src/sdk/editormanager.cpp    (working copy)</span>
+<span class="gu">@@ -2304,11 +2304,11 @@</span>
+ 
+         // make the filename relative
+         wxString filename = filesList[i];
+<span class="gd">-        if (filename.StartsWith(data-&gt;searchPath))</span>
+<span class="gi">+        if(data-&gt;scope==2) //for &quot;search path&quot; produce relative paths</span>
+         {
+             wxFileName fname(filename);
+<span class="gd">-            fname.MakeRelativeTo(data-&gt;searchPath);</span>
+<span class="gd">-            filename = fname.GetFullPath();</span>
+<span class="gi">+            if(fname.MakeRelativeTo(data-&gt;searchPath))</span>
+<span class="gi">+                filename=fname.GetFullPath();</span>
+         }
+ 
+         // log it
+<span class="gh">Index: src/sdk/searchresultslog.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/searchresultslog.cpp    (revision 4010)</span>
+<span class="gi">+++ src/sdk/searchresultslog.cpp    (working copy)</span>
+<span class="gu">@@ -57,9 +57,8 @@</span>
+     wxFileName filename(m_pList-&gt;GetItemText(selIndex));
+     wxString file;
+     if (!filename.IsAbsolute())
+<span class="gd">-        file = m_Base + wxFILE_SEP_PATH + filename.GetFullPath();</span>
+<span class="gd">-    else</span>
+<span class="gd">-        file = filename.GetFullPath();</span>
+<span class="gi">+        filename.MakeRelativeTo(m_Base);</span>
+<span class="gi">+    file = filename.GetFullPath();</span>
+ 
+     wxListItem li;
+     li.m_itemId = selIndex;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">dmoore 2007-05-29 22:50:53</div>

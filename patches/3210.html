@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,61 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: AutoVersioning.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- AutoVersioning.cpp    (revision 7386)</span>
+<span class="gi">+++ AutoVersioning.cpp    (working copy)</span>
+<span class="gu">@@ -759,18 +759,32 @@</span>
+             {
+                 ++GetVersionState().Values.Build;
+             }
+<span class="gd">-            else if(GetVersionState().Values.Build &gt;= GetConfig().Scheme.BuildMax)</span>
+<span class="gi">+            else if(!GetConfig().Settings.Autoincrement &amp;&amp; (GetVersionState().Values.Build &gt;= GetConfig().Scheme.BuildMax))</span>
+             {
+                 GetVersionState().Values.Build = 0;
+             }
+<span class="gd">-            else</span>
+<span class="gi">+            else if(!GetConfig().Settings.Autoincrement)</span>
+             {
+                 ++GetVersionState().Values.Build;
+             }
+<span class="gi">+</span>
+             if(GetConfig().Settings.Autoincrement)
+             {
+<span class="gi">+                if((GetConfig().Scheme.BuildMax != 0) &amp;&amp; (GetVersionState().Values.Build &gt;= GetConfig().Scheme.BuildMax))</span>
+<span class="gi">+                {</span>
+<span class="gi">+                    GetVersionState().Values.Build = 0;</span>
+<span class="gi">+                    if(GetConfig().Scheme.BuildTimesToIncrementMinor == 0)</span>
+<span class="gi">+                    {</span>
+<span class="gi">+                        ++GetVersionState().Values.Minor;</span>
+<span class="gi">+                    }</span>
+<span class="gi">+                }</span>
+<span class="gi">+                else if(GetConfig().Scheme.BuildMax!=0)</span>
+<span class="gi">+                {</span>
+<span class="gi">+                    ++GetVersionState().Values.Build;</span>
+<span class="gi">+                }</span>
+<span class="gi">+</span>
+                 ++GetVersionState().BuildHistory;
+<span class="gd">-                if(GetVersionState().BuildHistory &gt;= GetConfig().Scheme.BuildTimesToIncrementMinor)</span>
+<span class="gi">+                if((GetConfig().Scheme.BuildTimesToIncrementMinor != 0) &amp;&amp; (GetVersionState().BuildHistory &gt;= GetConfig().Scheme.BuildTimesToIncrementMinor))</span>
+                 {
+                     GetVersionState().BuildHistory = 0;
+                     ++GetVersionState().Values.Minor;
+<span class="gh">Index: avVersionEditorDlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- avVersionEditorDlg.cpp    (revision 7386)</span>
+<span class="gi">+++ avVersionEditorDlg.cpp    (working copy)</span>
+<span class="gu">@@ -756,7 +756,7 @@</span>
+             else if(l_FocusedControl-&gt;GetName() == _T(&quot;ID_BUILDTIMES_TEXT&quot;))
+             {
+                 ifBlank = _T(&quot;100&quot;);
+<span class="gd">-                ifZero = _T(&quot;1&quot;);</span>
+<span class="gi">+                ifZero = _T(&quot;0&quot;);</span>
+             }
+             else if(l_FocusedControl-&gt;GetName() == _T(&quot;ID_REVISIONRANDOM_TEXT&quot;))
+             {
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">scarphin 2011-09-17 15:19:14</div>

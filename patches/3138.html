@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,65 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: /home/emp002660/prog/sourceforge/codeblocks3/src/plugins/contrib/keybinder/keybinder.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- /home/emp002660/prog/sourceforge/codeblocks3/src/plugins/contrib/keybinder/keybinder.h    (Revision 7038)</span>
+<span class="gi">+++ /home/emp002660/prog/sourceforge/codeblocks3/src/plugins/contrib/keybinder/keybinder.h    (Arbeitskopie)</span>
+<span class="gu">@@ -97,7 +97,12 @@</span>
+ 
+     wxKeyBind(const wxString &amp;key) {
+         m_nFlags = StringToKeyModifier(key);
+<span class="gd">-        m_nKeyCode = StringToKeyCode(key.AfterLast(&#39;+&#39;).AfterLast(&#39;-&#39;));</span>
+<span class="gi">+        if (key.Last() == &#39;-&#39;)</span>
+<span class="gi">+            m_nKeyCode = &#39;-&#39;;</span>
+<span class="gi">+        else if (key.Last() == &#39;+&#39;)</span>
+<span class="gi">+            m_nKeyCode = &#39;+&#39;;</span>
+<span class="gi">+        else</span>
+<span class="gi">+            m_nKeyCode = StringToKeyCode(key.AfterLast(&#39;+&#39;).AfterLast(&#39;-&#39;));</span>
+     }
+ 
+     virtual void DeepCopy(const wxKeyBind &amp;p) {
+<span class="gu">@@ -730,9 +735,9 @@</span>
+ public:
+ 
+     wxKeyBinder() {}
+<span class="gd">-    wxKeyBinder(const wxKeyBinder &amp;tocopy) : wxObject(tocopy)</span>
+<span class="gd">-    {</span>
+<span class="gd">-        DeepCopy(tocopy);</span>
+<span class="gi">+    wxKeyBinder(const wxKeyBinder &amp;tocopy) : wxObject(tocopy)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        DeepCopy(tocopy);</span>
+     }
+ 
+ 
+<span class="gu">@@ -951,8 +956,8 @@</span>
+         : wxKeyBinder(), m_strName(name), m_strDescription(desc) {}
+ 
+     wxKeyProfile(const wxKeyProfile &amp;tocopy) : wxKeyBinder(tocopy)
+<span class="gd">-    {</span>
+<span class="gd">-        DeepCopy(tocopy);</span>
+<span class="gi">+    {</span>
+<span class="gi">+        DeepCopy(tocopy);</span>
+     }
+ 
+     virtual ~wxKeyProfile() {}
+<span class="gu">@@ -1189,7 +1194,13 @@</span>
+     //! Returns TRUE if this window is containing a valid key combination.
+     bool IsValidKeyComb() const {
+         //-return !GetValue().IsEmpty() &amp;&amp; GetValue().Last() != &#39;+&#39;;
+<span class="gd">-        return !GetValue().IsEmpty() &amp;&amp; GetValue().Last() != &#39;-&#39;;</span>
+<span class="gi">+        if (GetValue().IsEmpty())</span>
+<span class="gi">+            return false;</span>
+<span class="gi">+</span>
+<span class="gi">+        if( (GetValue().Last() == &#39;-&#39;) &amp;&amp; (GetValue()[GetValue().Length() - 2] != &#39;-&#39;) )</span>
+<span class="gi">+            return false;</span>
+<span class="gi">+</span>
+<span class="gi">+        return true;</span>
+     }
+ 
+ private:
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">weiti83 2011-03-10 08:29:02</div>

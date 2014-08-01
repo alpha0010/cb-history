@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,94 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/help_plugin/HelpConfigDialog.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/help_plugin/HelpConfigDialog.cpp    (revision 4649)</span>
+<span class="gi">+++ src/plugins/contrib/help_plugin/HelpConfigDialog.cpp    (working copy)</span>
+<span class="gu">@@ -34,6 +34,9 @@</span>
+   EVT_CHECKBOX(XRCID(&quot;chkDefault&quot;), HelpConfigDialog::OnCheckbox)
+   EVT_CHECKBOX(XRCID(&quot;chkExecute&quot;), HelpConfigDialog::OnCheckboxExecute)
+   EVT_CHECKBOX(XRCID(&quot;chkEmbeddedViewer&quot;), HelpConfigDialog::OnCheckboxEmbeddedViewer)
+<span class="gi">+  // Patch by Yorgos Pagles: Add new gui elements&#39; events for setting the new attributes</span>
+<span class="gi">+  EVT_CHOICE(XRCID(&quot;chkCase&quot;), HelpConfigDialog::OnCaseChoice)</span>
+<span class="gi">+  EVT_TEXT(XRCID(&quot;textDefaultKeyword&quot;), HelpConfigDialog::OnDefaultKeywordEntry)</span>
+ END_EVENT_TABLE()
+ 
+ 
+<span class="gu">@@ -61,6 +64,9 @@</span>
+     XRCCTRL(*this, &quot;chkExecute&quot;, wxCheckBox)-&gt;SetValue(m_Vector[0].second.isExecutable);
+     XRCCTRL(*this, &quot;chkEmbeddedViewer&quot;, wxCheckBox)-&gt;SetValue(m_Vector[0].second.openEmbeddedViewer);
+     XRCCTRL(*this, &quot;chkDefault&quot;, wxCheckBox)-&gt;SetValue(HelpCommon::getDefaultHelpIndex() == 0);
+<span class="gi">+    // Patch by Yorgos Pagles: Show the new attributes</span>
+<span class="gi">+    XRCCTRL(*this, &quot;chkCase&quot;, wxChoice)-&gt;SetSelection(m_Vector[0].second.keywordCase);</span>
+<span class="gi">+    XRCCTRL(*this, &quot;textDefaultKeyword&quot;, wxTextCtrl)-&gt;SetValue(m_Vector[0].second.defaultKeyword);</span>
+   }
+ }
+ 
+<span class="gu">@@ -83,6 +89,9 @@</span>
+       m_Vector[index].second.name = XRCCTRL(*this, &quot;txtHelp&quot;, wxTextCtrl)-&gt;GetValue();
+       m_Vector[index].second.isExecutable = XRCCTRL(*this, &quot;chkExecute&quot;, wxCheckBox)-&gt;IsChecked();
+       m_Vector[index].second.openEmbeddedViewer = XRCCTRL(*this, &quot;chkEmbeddedViewer&quot;, wxCheckBox)-&gt;IsChecked();
+<span class="gi">+    // Patch by Yorgos Pagles: Write the new attributes</span>
+<span class="gi">+    m_Vector[lst-&gt;GetSelection()].second.keywordCase = static_cast&lt;HelpCommon::StringCase&gt;(XRCCTRL(*this, &quot;chkCase&quot;, wxChoice)-&gt;GetSelection());</span>
+<span class="gi">+    m_Vector[lst-&gt;GetSelection()].second.defaultKeyword = XRCCTRL(*this, &quot;textDefaultKeyword&quot;, wxTextCtrl)-&gt;GetValue();</span>
+   }
+   else
+   {
+<span class="gu">@@ -90,6 +99,9 @@</span>
+     hfa.name = XRCCTRL(*this, &quot;txtHelp&quot;, wxTextCtrl)-&gt;GetValue();
+     hfa.isExecutable = XRCCTRL(*this, &quot;chkExecute&quot;, wxCheckBox)-&gt;IsChecked();
+     hfa.openEmbeddedViewer = XRCCTRL(*this, &quot;chkEmbeddedViewer&quot;, wxCheckBox)-&gt;IsChecked();
+<span class="gi">+      // Patch by Yorgos Pagles: Write the new attributes</span>
+<span class="gi">+    hfa.keywordCase = static_cast&lt;HelpCommon::StringCase&gt;(XRCCTRL(*this, &quot;chkCase&quot;, wxChoice)-&gt;GetSelection());</span>
+<span class="gi">+    hfa.defaultKeyword = XRCCTRL(*this, &quot;textDefaultKeyword&quot;, wxTextCtrl)-&gt;GetValue();</span>
+       m_Vector.push_back(make_pair(lst-&gt;GetString(index), hfa));
+   }
+ }
+<span class="gu">@@ -133,12 +145,18 @@</span>
+     XRCCTRL(*this, &quot;chkExecute&quot;, wxCheckBox)-&gt;SetValue(m_Vector[lst-&gt;GetSelection()].second.isExecutable);
+     XRCCTRL(*this, &quot;chkEmbeddedViewer&quot;, wxCheckBox)-&gt;SetValue(m_Vector[lst-&gt;GetSelection()].second.openEmbeddedViewer);
+     XRCCTRL(*this, &quot;chkDefault&quot;, wxCheckBox)-&gt;SetValue(HelpCommon::getDefaultHelpIndex() == lst-&gt;GetSelection());
+<span class="gi">+    // Patch by Yorgos Pagles: Show the new attributes</span>
+<span class="gi">+    XRCCTRL(*this, &quot;chkCase&quot;, wxChoice)-&gt;SetSelection(m_Vector[lst-&gt;GetSelection()].second.keywordCase);</span>
+<span class="gi">+    XRCCTRL(*this, &quot;textDefaultKeyword&quot;, wxTextCtrl)-&gt;SetValue(m_Vector[lst-&gt;GetSelection()].second.defaultKeyword);</span>
+   }
+   else
+   {
+       XRCCTRL(*this, &quot;chkDefault&quot;, wxCheckBox)-&gt;SetValue(false);
+       XRCCTRL(*this, &quot;chkExecute&quot;, wxCheckBox)-&gt;SetValue(false);
+       XRCCTRL(*this, &quot;chkEmbeddedViewer&quot;, wxCheckBox)-&gt;SetValue(false);
+<span class="gi">+    // Patch by Yorgos Pagles: Show the new attributes</span>
+<span class="gi">+    XRCCTRL(*this, &quot;chkCase&quot;, wxChoice)-&gt;SetSelection(0);</span>
+<span class="gi">+    XRCCTRL(*this, &quot;textDefaultKeyword&quot;, wxTextCtrl)-&gt;SetValue(_T(&quot;&quot;));</span>
+   }
+ }
+ 
+<span class="gu">@@ -175,6 +193,9 @@</span>
+     XRCCTRL(*this, &quot;chkExecute&quot;, wxCheckBox)-&gt;SetValue(false);
+     XRCCTRL(*this, &quot;chkEmbeddedViewer&quot;, wxCheckBox)-&gt;SetValue(false);
+     XRCCTRL(*this, &quot;txtHelp&quot;, wxTextCtrl)-&gt;SetValue(_T(&quot;&quot;));
+<span class="gi">+    // Patch by Yorgos Pagles: Show the new attributes</span>
+<span class="gi">+    XRCCTRL(*this, &quot;chkCase&quot;, wxChoice)-&gt;SetSelection(0);</span>
+<span class="gi">+    XRCCTRL(*this, &quot;textDefaultKeyword&quot;, wxTextCtrl)-&gt;SetValue(_T(&quot;&quot;));</span>
+ 
+     if (cbMessageBox(_(&quot;Would you like to browse for the help file?\n(Check \&quot;Help-&gt;Plugins-&gt;Help plugin\&quot; for a reason you would like to choose No)&quot;), _(&quot;Browse&quot;), wxICON_QUESTION | wxYES_NO) == wxID_YES)
+     {
+<span class="gu">@@ -235,6 +256,9 @@</span>
+     XRCCTRL(*this, &quot;txtHelp&quot;, wxTextCtrl)-&gt;SetValue(m_Vector[lst-&gt;GetSelection()].first);
+     XRCCTRL(*this, &quot;chkExecute&quot;, wxCheckBox)-&gt;SetValue(m_Vector[lst-&gt;GetSelection()].second.isExecutable);
+     XRCCTRL(*this, &quot;chkEmbeddedViewer&quot;, wxCheckBox)-&gt;SetValue(m_Vector[lst-&gt;GetSelection()].second.openEmbeddedViewer);
+<span class="gi">+    // Patch by Yorgos Pagles: Show the new attributes</span>
+<span class="gi">+    XRCCTRL(*this, &quot;chkCase&quot;, wxChoice)-&gt;SetSelection(m_Vector[lst-&gt;GetSelection()].second.keywordCase);</span>
+<span class="gi">+    XRCCTRL(*this, &quot;textDefaultKeyword&quot;, wxTextCtrl)-&gt;SetValue(m_Vector[lst-&gt;GetSelection()].second.defaultKeyword);</span>
+   }
+   else
+   {
+<span class="gu">@@ -242,6 +266,9 @@</span>
+     XRCCTRL(*this, &quot;chkExecute&quot;, wxCheckBox)-&gt;SetValue(
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">yop 2007-07-29 19:55:45</div>

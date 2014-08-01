@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,77 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 4067)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -941,6 +941,20 @@</span>
+     control-&gt;SetCaretLineVisible(mgr-&gt;ReadBool(_T(&quot;/highlight_caret_line&quot;), false));
+     control-&gt;SetCaretLineBackground(GetOptionColour(_T(&quot;/highlight_caret_line_colour&quot;), wxColour(0xFF, 0xFF, 0x00)));
+ 
+<span class="gi">+    // if user wants &quot;Home&quot; key to set cursor to the very beginning of line</span>
+<span class="gi">+    if (mgr-&gt;ReadBool(_T(&quot;/simplified_home&quot;), false))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME, wxSCI_SCMOD_NULL, wxSCI_CMD_HOME);</span>
+<span class="gi">+        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME, wxSCI_SCMOD_SHIFT, wxSCI_CMD_HOMEEXTEND);</span>
+<span class="gi">+        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME, wxSCI_SCMOD_ALT | wxSCI_SCMOD_SHIFT, wxSCI_CMD_HOMERECTEXTEND);</span>
+<span class="gi">+    }</span>
+<span class="gi">+    else // else set default &quot;Home&quot; key behavior</span>
+<span class="gi">+    {</span>
+<span class="gi">+        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME, wxSCI_SCMOD_NULL, wxSCI_CMD_VCHOME);</span>
+<span class="gi">+        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME, wxSCI_SCMOD_SHIFT, wxSCI_CMD_VCHOMEEXTEND);</span>
+<span class="gi">+        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME, wxSCI_SCMOD_ALT | wxSCI_SCMOD_SHIFT, wxSCI_CMD_VCHOMERECTEXTEND);</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+     control-&gt;SetUseTabs(mgr-&gt;ReadBool(_T(&quot;/use_tab&quot;), false));
+     control-&gt;SetIndentationGuides(mgr-&gt;ReadBool(_T(&quot;/show_indent_guides&quot;), false));
+     control-&gt;SetTabIndents(mgr-&gt;ReadBool(_T(&quot;/tab_indents&quot;), true));
+<span class="gh">Index: src/sdk/editorconfigurationdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorconfigurationdlg.cpp    (revision 4067)</span>
+<span class="gi">+++ src/sdk/editorconfigurationdlg.cpp    (working copy)</span>
+<span class="gu">@@ -128,6 +128,7 @@</span>
+        XRCCTRL(*this, &quot;chkAdvancedRegex&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/use_advanced_regexes&quot;), false));
+        XRCCTRL(*this, &quot;chkShowLineNumbers&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/show_line_numbers&quot;), true));
+        XRCCTRL(*this, &quot;chkHighlightCaretLine&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/highlight_caret_line&quot;), false));
+<span class="gi">+       XRCCTRL(*this, &quot;chkSimplifiedHome&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/simplified_home&quot;), false));</span>
+        XRCCTRL(*this, &quot;spnTabSize&quot;, wxSpinCtrl)-&gt;SetValue(cfg-&gt;ReadInt(_T(&quot;/tab_size&quot;), 4));
+        XRCCTRL(*this, &quot;cmbViewWS&quot;, wxComboBox)-&gt;SetSelection(cfg-&gt;ReadInt(_T(&quot;/view_whitespace&quot;), 0));
+        XRCCTRL(*this, &quot;rbTabText&quot;, wxRadioBox)-&gt;SetSelection(cfg-&gt;ReadBool(_T(&quot;/tab_text_relative&quot;), true) ? 1 : 0);
+<span class="gu">@@ -844,6 +845,7 @@</span>
+ 
+         cfg-&gt;Write(_T(&quot;/show_line_numbers&quot;),     XRCCTRL(*this, &quot;chkShowLineNumbers&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/highlight_caret_line&quot;), XRCCTRL(*this, &quot;chkHighlightCaretLine&quot;, wxCheckBox)-&gt;GetValue());
+<span class="gi">+        cfg-&gt;Write(_T(&quot;/simplified_home&quot;),      XRCCTRL(*this, &quot;chkSimplifiedHome&quot;, wxCheckBox)-&gt;GetValue());</span>
+         cfg-&gt;Write(_T(&quot;/tab_size&quot;),             XRCCTRL(*this, &quot;spnTabSize&quot;, wxSpinCtrl)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/view_whitespace&quot;),      XRCCTRL(*this, &quot;cmbViewWS&quot;, wxComboBox)-&gt;GetSelection());
+         cfg-&gt;Write(_T(&quot;/tab_text_relative&quot;),    XRCCTRL(*this, &quot;rbTabText&quot;, wxRadioBox)-&gt;GetSelection() ? true : false);
+<span class="gh">Index: src/sdk/resources/editor_configuration.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/editor_configuration.xrc    (revision 4067)</span>
+<span class="gi">+++ src/sdk/resources/editor_configuration.xrc    (working copy)</span>
+<span class="gu">@@ -1,4 +1,4 @@</span>
+<span class="gd">-ï»¿&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot; ?&gt;</span>
+<span class="gi">+&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot; ?&gt;</span>
+ &lt;resource&gt;
+     &lt;object class=&quot;wxDialog&quot; name=&quot;dlgConfigureEditor&quot;&gt;
+         &lt;title&gt;Configure editor&lt;/title&gt;
+<span class="gu">@@ -323,6 +323,13 @@</span>
+                                                             &lt;/object&gt;
+                                                             &lt;flag&gt;wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;
+                                                         &lt;/object&gt;
+<span class="gi">+                                                        &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gi">+                                                            &lt;object class=&quot;wxCheckBox&quot; name=&quot;chkSimplifiedHome&quot;&gt;</span>
+<span class="gi">+                                                                &lt;label&gt;Home key always moves caret to first column&lt;/label&gt;</span>
+<span class="gi">+                                                                &lt;checked&gt;1&lt;/checked&gt;</span>
+<span class="gi">+                                                            &lt;/object&gt;</span>
+<span class="gi">+                                                            &lt;flag&gt;wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;</span>
+<span class="gi">+                                                        &lt;/object&gt;</span>
+                                                     &lt;/object&gt;
+                                                     &lt;flag&gt;wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;
+                                                     &lt;border&gt;8&lt;/border&gt;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">rickg22 2007-07-18 14:18:41</div>

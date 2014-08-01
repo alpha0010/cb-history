@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,70 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/editormanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editormanager.cpp   (revision 9363)</span>
+<span class="gi">+++ src/sdk/editormanager.cpp   (working copy)</span>
+<span class="gu">@@ -1195,6 +1195,20 @@</span>
+     CodeBlocksEvent evt2(cbEVT_EDITOR_ACTIVATED, -1, 0, eb);
+     Manager::Get()-&gt;GetPluginManager()-&gt;NotifyPlugins(evt2);
+ 
+<span class="gi">+   ConfigManager* cfgEditor = Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;));</span>
+<span class="gi">+    if (cfgEditor-&gt;ReadBool(_T(&quot;/sync_editor_with_project_manager&quot;), false))</span>
+<span class="gi">+   {</span>
+<span class="gi">+       cbEditor* ed = GetBuiltinActiveEditor();</span>
+<span class="gi">+       if (ed)</span>
+<span class="gi">+       {</span>
+<span class="gi">+           ProjectFile* pf = ed-&gt;GetProjectFile();</span>
+<span class="gi">+           if (pf)</span>
+<span class="gi">+           {</span>
+<span class="gi">+               Manager::Get()-&gt;GetProjectManager()-&gt;GetUI().ShowFileInTree(*pf);</span>
+<span class="gi">+           }</span>
+<span class="gi">+       }</span>
+<span class="gi">+   }</span>
+<span class="gi">+</span>
+     if (Manager::Get()-&gt;GetConfigManager(_T(&quot;app&quot;))-&gt;ReadBool(_T(&quot;/environment/tabs_stacked_based_switching&quot;)))
+     {
+         wxWindow*        wnd;
+<span class="gh">Index: src/src/editorconfigurationdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/editorconfigurationdlg.cpp  (revision 9363)</span>
+<span class="gi">+++ src/src/editorconfigurationdlg.cpp  (working copy)</span>
+<span class="gu">@@ -138,6 +138,7 @@</span>
+     XRCCTRL(*this, &quot;chkCamelCase&quot;,                wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/camel_case&quot;),                 false));
+     XRCCTRL(*this, &quot;chkResetZoom&quot;,                wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/reset_zoom&quot;),                 false));
+     XRCCTRL(*this, &quot;chkZoomAll&quot;,                  wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/zoom_all&quot;),                   false));
+<span class="gi">+    XRCCTRL(*this, &quot;chkSyncEditorWithProjectManager&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/sync_editor_with_project_manager&quot;), false));</span>
+     XRCCTRL(*this, &quot;spnTabSize&quot;,                  wxSpinCtrl)-&gt;SetValue(cfg-&gt;ReadInt(_T(&quot;/tab_size&quot;),                    4));
+     XRCCTRL(*this, &quot;cmbViewWS&quot;,                   wxChoice)-&gt;SetSelection(cfg-&gt;ReadInt(_T(&quot;/view_whitespace&quot;),           0));
+     XRCCTRL(*this, &quot;rbTabText&quot;,                   wxRadioBox)-&gt;SetSelection(cfg-&gt;ReadBool(_T(&quot;/tab_text_relative&quot;),      true)? 1 : 0);
+<span class="gu">@@ -981,6 +982,7 @@</span>
+         }
+         cfg-&gt;Write(_T(&quot;/reset_zoom&quot;),                          resetZoom);
+         cfg-&gt;Write(_T(&quot;/zoom_all&quot;),                            zoomAll);
+<span class="gi">+        cfg-&gt;Write(_T(&quot;/sync_editor_with_project_manager&quot;),    XRCCTRL(*this, &quot;chkSyncEditorWithProjectManager&quot;, wxCheckBox)-&gt;GetValue());</span>
+ 
+         cfg-&gt;Write(_T(&quot;/tab_size&quot;),                            XRCCTRL(*this, &quot;spnTabSize&quot;,                           wxSpinCtrl)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/view_whitespace&quot;),                     XRCCTRL(*this, &quot;cmbViewWS&quot;,                            wxChoice)-&gt;GetSelection());
+<span class="gh">Index: src/src/resources/editor_configuration.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/resources/editor_configuration.xrc  (revision 9363)</span>
+<span class="gi">+++ src/src/resources/editor_configuration.xrc  (working copy)</span>
+<span class="gu">@@ -357,6 +357,12 @@</span>
+                                                                        &lt;object class=&quot;wxCheckBox&quot; name=&quot;chkZoomAll&quot;&gt;
+                                                                            &lt;label&gt;Zooming resizes all editors&lt;/label&gt;
+                                                                        &lt;/object&gt;
+<span class="gi">+                                                                       &lt;flag&gt;wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;</span>
+<span class="gi">+                                                                   &lt;/object&gt;</span>
+<span class="gi">+                                                                   &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gi">+                                                                       &lt;object class=&quot;wxCheckBox&quot; name=&quot;chkSyncEditorWithProjectManager&quot;&gt;</span>
+<span class="gi">+                                                                           &lt;label&gt;S&amp;amp;ynchronise Editor with Project Manager&lt;/label&gt;</span>
+<span class="gi">+                                                                       &lt;/object&gt;</span>
+                                                                        &lt;flag&gt;wxALL|wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;
+                                                                    &lt;/object&gt;
+                                                                &lt;/object&gt;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">davidallen 2013-10-11 18:50:56</div>

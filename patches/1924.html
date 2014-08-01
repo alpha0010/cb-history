@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,28 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/src/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/main.cpp    (revision 3704)</span>
+<span class="gi">+++ src/src/main.cpp    (working copy)</span>
+<span class="gu">@@ -1373,8 +1373,14 @@</span>
+         default:
+         {
+             cbMimePlugin* plugin = Manager::Get()-&gt;GetPluginManager()-&gt;GetMIMEHandlerForFile(filename);
+<span class="gd">-            if (plugin &amp;&amp; plugin-&gt;OpenFile(filename) == 0)</span>
+<span class="gi">+            // warn user that &quot;Files extension handler&quot; is disabled</span>
+<span class="gi">+            if (!plugin)</span>
+             {
+<span class="gi">+                cbMessageBox(_(&quot;Could not open file &quot;) + filename + _(&quot;,\nbecause \&quot;Files extention handler\&quot; plugin is disabled.&quot;), _(&quot;Error&quot;), wxICON_ERROR);</span>
+<span class="gi">+                return false;</span>
+<span class="gi">+            }</span>
+<span class="gi">+            if (plugin-&gt;OpenFile(filename) == 0)</span>
+<span class="gi">+            {</span>
+                 AddToRecentFilesHistory(filename);
+                 return true;
+             }
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mandrav 2007-03-27 10:50:32</div>

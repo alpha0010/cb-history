@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,131 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/manager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/manager.cpp    (revision 2174)</span>
+<span class="gi">+++ src/sdk/manager.cpp    (working copy)</span>
+<span class="gu">@@ -50,6 +50,11 @@</span>
+ 
+ #include &lt;wx/toolbar.h&gt;
+ 
+<span class="gi">+int idEditUndo = XRCID(&quot;idEditUndo&quot;);</span>
+<span class="gi">+int idEditRedo = XRCID(&quot;idEditRedo&quot;);</span>
+<span class="gi">+int idEditCopy = XRCID(&quot;idEditCopy&quot;);</span>
+<span class="gi">+int idEditCut = XRCID(&quot;idEditCut&quot;);</span>
+<span class="gi">+int idEditPaste = XRCID(&quot;idEditPaste&quot;);</span>
+ 
+ 
+ 
+<span class="gu">@@ -281,7 +286,80 @@</span>
+     return CfgMgrBldr::GetConfigManager(name_space);
+ }
+ 
+<span class="gi">+// Allow others to request to disable/enable items on the main toolbar      //pecan 2006/03/13</span>
+<span class="gi">+void Manager::SetMainMenuRequest(bool Enable, int MenuItem )            //pecan 2006/03/13</span>
+<span class="gi">+{</span>
+<span class="gi">+    if (Enable)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        if (MenuItem == idEditUndo)  ++MenuUndoSetRequests;</span>
+<span class="gi">+        if (MenuItem == idEditRedo)  ++MenuRedoSetRequests;</span>
+<span class="gi">+        if (MenuItem == idEditCopy)  ++MenuCopySetRequests;</span>
+<span class="gi">+        if (MenuItem == idEditCut )  ++MenuCutSetRequests;</span>
+<span class="gi">+        if (MenuItem == idEditPaste) ++MenuPasteSetRequests;</span>
+<span class="gi">+    }</span>
+<span class="gi">+    else</span>
+<span class="gi">+    {</span>
+<span class="gi">+        if (MenuItem == idEditUndo)  {if (MenuUndoSetRequests)  --MenuUndoSetRequests;  }</span>
+<span class="gi">+        if (MenuItem == idEditRedo)  {if (MenuRedoSetRequests)  --MenuRedoSetRequests;  }</span>
+<span class="gi">+        if (MenuItem == idEditCopy)  {if (MenuCopySetRequests)  --MenuCopySetRequests;  }</span>
+<span class="gi">+        if (MenuItem == idEditCut )  {if (MenuCutSetRequests)   --MenuCutSetRequests;   }</span>
+<span class="gi">+        if (MenuItem == idEditPaste) {if (MenuPasteSetRequests) --MenuPasteSetRequests; }</span>
+<span class="gi">+    }</span>
+<span class="gi">+}</span>
+<span class="gi">+void Manager::SetMainToolbarRequest(bool Enable, int ToolbarItem )      //pecan 2006/03/13</span>
+<span class="gi">+{</span>
+<span class="gi">+    if (Enable)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        if (ToolbarItem == idEditUndo)  ++ToolbarUndoSetRequests;</span>
+<span class="gi">+        if (ToolbarItem == idEditRedo)  ++ToolbarRedoSetRequests;</span>
+<span class="gi">+        if (ToolbarItem == idEditCopy)  ++ToolbarCopySetRequests;</span>
+<span class="gi">+        if (ToolbarItem == idEditCut )  ++ToolbarCutSetRequests;</span>
+<span class="gi">+        if (ToolbarItem == idEditPaste) ++ToolbarPasteSetRequests;</span>
+<span class="gi">+    }</span>
+<span class="gi">+    else</span>
+<span class="gi">+    {</span>
+<span class="gi">+        if (ToolbarItem == idEditUndo)  {if (ToolbarUndoSetRequests)  --ToolbarUndoSetRequests;  }</span>
+<span class="gi">+        if (ToolbarItem == idEditRedo)  {if (ToolbarRedoSetRequests)  --ToolbarRedoSetRequests;  }</span>
+<span class="gi">+        if (ToolbarItem == idEditCopy)  {if (ToolbarCopySetRequests)  --ToolbarCopySetRequests;  }</span>
+<span class="gi">+        if (ToolbarItem == idEditCut )  {if (ToolbarCutSetRequests)   --ToolbarCutSetRequests;   }</span>
+<span class="gi">+        if (ToolbarItem == idEditPaste) {if (ToolbarPasteSetRequests) --ToolbarPasteSetRequests; }</span>
+<span class="gi">+    }</span>
+<span class="gi">+}</span>
+ 
+<span class="gi">+// Return count of disable/enable request for the main toolbar              //pecan 2006/03/13</span>
+<span class="gi">+int  Manager::GetMainMenuSetRequests(int MenuItem)                          //pecan 2006/03/13</span>
+<span class="gi">+{</span>
+<span class="gi">+    if (MenuItem == idEditUndo)  return MenuUndoSetRequests;</span>
+<span class="gi">+    if (MenuItem == idEditRedo)  return MenuRedoSetRequests;</span>
+<span class="gi">+    if (MenuItem == idEditCopy)  return MenuCopySetRequests;</span>
+<span class="gi">+    if (MenuItem == idEditCut )  return MenuCutSetRequests;</span>
+<span class="gi">+    if (MenuItem == idEditPaste) return MenuPasteSetRequests;</span>
+<span class="gi">+    return 0;</span>
+<span class="gi">+}</span>
+<span class="gi">+int  Manager::GetMainToolbarSetRequests(int ToolbarItem)                    //pecan 2006/03/13</span>
+<span class="gi">+{</span>
+<span class="gi">+    if (ToolbarItem == idEditUndo)  return ToolbarUndoSetRequests;</span>
+<span class="gi">+    if (ToolbarItem == idEditRedo)  return ToolbarRedoSetRequests;</span>
+<span class="gi">+    if (ToolbarItem == idEditCopy)  return ToolbarCopySetRequests;</span>
+<span class="gi">+    if (ToolbarItem == idEditCut )  return ToolbarCutSetRequests;</span>
+<span class="gi">+    if (ToolbarItem == idEditPaste) return ToolbarPasteSetRequests;</span>
+<span class="gi">+    return 0;</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ bool Manager::appShuttingDown = false;
+ bool Manager::blockYields = false;
+ bool Manager::isBatch = false;
+<span class="gi">+</span>
+<span class="gi">+// Reference counts of requests to set Menu/Tool items</span>
+<span class="gi">+// from plugins and other windows</span>
+<span class="gi">+int  Manager::MenuUndoSetRequests     = 0;</span>
+<span class="gi">+int  Manager::MenuRedoSetRequests     = 0;</span>
+<span class="gi">+int  Manager::MenuCutSetRequests      = 0;</span>
+<span class="gi">+int  Manager::MenuCopySetRequests     = 0;</span>
+<span class="gi">+int  Manager::MenuPasteSetRequests    = 0;</span>
+<span class="gi">+</span>
+<span class="gi">+int  Manager::ToolbarUndoSetRequests  = 0;</span>
+<span class="gi">+int  Manager::ToolbarRedoSetRequests  = 0;</span>
+<span class="gi">+int  Manager::ToolbarCutSetRequests   = 0;</span>
+<span class="gi">+int  Manager::ToolbarCopySetRequests  = 0;</span>
+<span class="gi">+int  Manager::ToolbarPasteSetRequests = 0;</span>
+<span class="gh">Index: src/sdk/manager.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/manager.h    (revision 2174)</span>
+<span class="gi">+++ src/sdk/manager.h    (working copy)</span>
+<span class="gu">@@ -39,7 +39,19 @@</span>
+     static bool appShuttingDown;
+     static bool blockYields;
+     static bool isBatch;
+<span class="gi">+    static int  Manager::MenuUndoSetRequests;                  //pecan 2006/03/13</span>
+<span class="gi">+    static int  Manager::MenuRedoSetRequests;</span>
+<span class="gi">+    static int  Manager::MenuCutSetRequests;</span>
+<span class="gi">+    static int  Manager::MenuCopySetRequests;</span>
+<span class="gi">+    static int  Manager::MenuPasteSetRequests;</span>
+ 
+<span class="gi">+    static int  Manager::ToolbarUndoSetRequests;</span>
+<span class="gi">+    static int  Manager::ToolbarRedoSetRequests;</span>
+<span class="gi">+    static int  Manager::ToolbarCutSetRequests;</span>
+<span class="gi">+    static int  Manager::ToolbarCopySetRequests;</span>
+<span class="gi">+    static int  Manager::ToolbarPasteSetRequests;</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+     Manager();
+     ~Manager();
+ 
+<span class="gu">@@ -115,6 +127,13 @@</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">pecan 2006-03-12 17:01:54</div>

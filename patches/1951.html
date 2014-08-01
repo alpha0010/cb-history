@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,80 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">diff U3 T:/TEMP/update-revBASE.svn003.tmp D:/devroot/codeblocks/src/update</span>
+<span class="gd">--- T:/TEMP/update-revBASE.svn003.tmp    Mon Apr 09 13:28:48 2007</span>
+<span class="gi">+++ D:/devroot/codeblocks/src/update    Mon Apr 09 13:27:10 2007</span>
+<span class="gu">@@ -1,5 +1,13 @@</span>
+ #!/bin/sh
+ 
+<span class="gi">+if [ &quot;x$MSYSTEM&quot; != &quot;x&quot; ] ; then</span>
+<span class="gi">+  EXEEXT=&quot;.exe&quot;</span>
+<span class="gi">+  LIBEXT=&quot;dll&quot;</span>
+<span class="gi">+else</span>
+<span class="gi">+  EXEEXT=&quot;&quot;</span>
+<span class="gi">+  LIBEXT=&quot;so&quot;</span>
+<span class="gi">+fi</span>
+<span class="gi">+</span>
+ echo Creating output directory tree
+ 
+ mkdir -p output/share/codeblocks/lexers
+<span class="gu">@@ -69,29 +77,32 @@</span>
+ cp -f scripts/*.script output/share/codeblocks/scripts &gt; /dev/null
+ cp -f tips.txt devel/share/codeblocks &gt; /dev/null
+ cp -f tips.txt output/share/codeblocks &gt; /dev/null
+<span class="gd">-cp -f tools/ConsoleRunner/cb_console_runner output &gt; /dev/null</span>
+<span class="gd">-cp -f tools/ConsoleRunner/cb_console_runner devel &gt; /dev/null</span>
+<span class="gd">-cp -f devel/codeblocks output &gt; /dev/null</span>
+<span class="gd">-cp -f devel/*.so output &gt; /dev/null</span>
+<span class="gd">-cp -f ${RESDIR}/plugins/*.so output/share/codeblocks/plugins &gt; /dev/null</span>
+<span class="gd">-echo Stripping debug info from output tree</span>
+<span class="gd">-#strip output/codeblocks</span>
+<span class="gd">-#strip output/*.so</span>
+<span class="gd">-#strip output/share/codeblocks/plugins/*.so</span>
+<span class="gi">+cp -f tools/ConsoleRunner/cb_console_runner${EXEEXT} output &gt; /dev/null</span>
+<span class="gi">+cp -f tools/ConsoleRunner/cb_console_runner${EXEEXT} devel &gt; /dev/null</span>
+<span class="gi">+cp -f devel/codeblocks${EXEEXT} output &gt; /dev/null</span>
+<span class="gi">+cp -f devel/*.${LIBEXT} output &gt; /dev/null</span>
+<span class="gi">+cp -f ${RESDIR}/plugins/*.${LIBEXT} output/share/codeblocks/plugins &gt; /dev/null</span>
+ 
+<span class="gd">-echo Creating launch-scripts</span>
+<span class="gd">-echo &quot;#!/bin/sh&quot; &gt; output/run.sh</span>
+<span class="gd">-echo -n &quot;APP_DIR=&quot; &gt;&gt; output/run.sh</span>
+<span class="gd">-echo `pwd`/output &gt;&gt; output/run.sh</span>
+<span class="gd">-echo &quot;export LD_LIBRARY_PATH=\$APP_DIR:\$LD_LIBRARY_PATH&quot; &gt;&gt; output/run.sh</span>
+<span class="gd">-echo &quot;\$APP_DIR/codeblocks \$@&quot; &gt;&gt; output/run.sh</span>
+<span class="gd">-chmod +x output/run.sh</span>
+<span class="gd">-echo &quot;#!/bin/sh&quot; &gt; devel/run.sh</span>
+<span class="gd">-echo -n &quot;APP_DIR=&quot; &gt;&gt; devel/run.sh</span>
+<span class="gd">-echo `pwd`/devel &gt;&gt; devel/run.sh</span>
+<span class="gd">-echo &quot;export LD_LIBRARY_PATH=\$APP_DIR:\$LD_LIBRARY_PATH&quot; &gt;&gt; devel/run.sh</span>
+<span class="gd">-echo &quot;\$APP_DIR/codeblocks \$@&quot; &gt;&gt; devel/run.sh</span>
+<span class="gd">-chmod +x devel/run.sh</span>
+<span class="gi">+if [ &quot;x$MSYSTEM&quot; != &quot;x&quot; ] ; then</span>
+<span class="gi">+  echo Stripping debug info from output tree</span>
+<span class="gi">+  strip output/codeblocks${EXEEXT}</span>
+<span class="gi">+  strip output/*.${LIBEXT}</span>
+<span class="gi">+  strip output/share/codeblocks/plugins/*.${LIBEXT}</span>
+<span class="gi">+else</span>
+<span class="gi">+  echo Creating launch-scripts</span>
+<span class="gi">+  echo &quot;#!/bin/sh&quot; &gt; output/run.sh</span>
+<span class="gi">+  echo -n &quot;APP_DIR=&quot; &gt;&gt; output/run.sh</span>
+<span class="gi">+  echo `pwd`/output &gt;&gt; output/run.sh</span>
+<span class="gi">+  echo &quot;export LD_LIBRARY_PATH=\$APP_DIR:\$LD_LIBRARY_PATH&quot; &gt;&gt; output/run.sh</span>
+<span class="gi">+  echo &quot;\$APP_DIR/codeblocks \$@&quot; &gt;&gt; output/run.sh</span>
+<span class="gi">+  chmod +x output/run.sh</span>
+<span class="gi">+  echo &quot;#!/bin/sh&quot; &gt; devel/run.sh</span>
+<span class="gi">+  echo -n &quot;APP_DIR=&quot; &gt;&gt; devel/run.sh</span>
+<span class="gi">+  echo `pwd`/devel &gt;&gt; devel/run.sh</span>
+<span class="gi">+  echo &quot;export LD_LIBRARY_PATH=\$APP_DIR:\$LD_LIBRARY_PATH&quot; &gt;&gt; devel/run.sh</span>
+<span class="gi">+  echo &quot;\$APP_DIR/codeblocks \$@&quot; &gt;&gt; devel/run.sh</span>
+<span class="gi">+  chmod +x devel/run.sh</span>
+<span class="gi">+fi</span>
+ 
+ ZIPCMD=
+ RESDIR=
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mandrav 2007-04-12 10:01:31</div>

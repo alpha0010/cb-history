@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,130 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: plugins/contrib/wxSmith/properties/wxsstringproperty.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/contrib/wxSmith/properties/wxsstringproperty.h    (revision 4044)</span>
+<span class="gi">+++ plugins/contrib/wxSmith/properties/wxsstringproperty.h    (working copy)</span>
+<span class="gu">@@ -54,7 +54,7 @@</span>
+     { static wxsStringProperty _Property(PGName,DataName,wxsOFFSET(ClassName,VarName),false,XmlStoreEmpty,Default); \
+       Property(_Property); }
+ 
+<span class="gd">-/** \brief Macro automatically declaring multiline wxString property with custom priority</span>
+<span class="gi">+/** \brief Macro automatically declaring multiline wxString property</span>
+  *  \param ClassName name of class holding this property
+  *  \param VarName name of variable inside class
+  *  \param PGName name used in property grid
+<span class="gh">Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsdialog.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/contrib/wxSmith/wxwidgets/defitems/wxsdialog.cpp    (revision 4044)</span>
+<span class="gi">+++ plugins/contrib/wxSmith/wxwidgets/defitems/wxsdialog.cpp    (working copy)</span>
+<span class="gu">@@ -67,7 +67,8 @@</span>
+         Data,
+         &amp;Reg.Info,
+         wxsDialogEvents,
+<span class="gd">-        wxsDialogStyles),</span>
+<span class="gi">+        wxsDialogStyles,</span>
+<span class="gi">+        flContainer&amp;~flExtraCode),</span>
+     Title(_(&quot;Dialog&quot;)),
+     Centered(true)
+ {}
+<span class="gh">Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsframe.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/contrib/wxSmith/wxwidgets/defitems/wxsframe.cpp    (revision 4044)</span>
+<span class="gi">+++ plugins/contrib/wxSmith/wxwidgets/defitems/wxsframe.cpp    (working copy)</span>
+<span class="gu">@@ -74,7 +74,8 @@</span>
+         Data,
+         &amp;Reg.Info,
+         wxsFrameEvents,
+<span class="gd">-        wxsFrameStyles),</span>
+<span class="gi">+        wxsFrameStyles,</span>
+<span class="gi">+        flContainer&amp;~flExtraCode),</span>
+     Title(_(&quot;Frame&quot;)),
+     Centered(false)
+ {}
+<span class="gh">Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenu.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenu.cpp    (revision 4044)</span>
+<span class="gi">+++ plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenu.cpp    (working copy)</span>
+<span class="gu">@@ -63,7 +63,7 @@</span>
+ }
+ 
+ wxsMenu::wxsMenu(wxsItemResData* Data):
+<span class="gd">-    wxsTool(Data,&amp;Reg.Info,NULL,NULL,flVariable|flSubclass)</span>
+<span class="gi">+    wxsTool(Data,&amp;Reg.Info,NULL,NULL,flVariable|flSubclass|flExtraCode)</span>
+ {
+ }
+ 
+<span class="gu">@@ -220,6 +220,7 @@</span>
+                     GetVarName().c_str(),
+                     m_Label.c_str());
+             }
+<span class="gi">+            BuildSetupWindowCode(Code, WindowParent, Language);</span>
+             break;
+ 
+         default:
+<span class="gh">Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenubar.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenubar.cpp    (revision 4044)</span>
+<span class="gi">+++ plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenubar.cpp    (working copy)</span>
+<span class="gu">@@ -67,7 +67,7 @@</span>
+         &amp;Reg.Info,
+         NULL,
+         NULL,
+<span class="gd">-        flVariable|flSubclass)</span>
+<span class="gi">+        flVariable|flSubclass|flExtraCode)</span>
+ {
+ }
+ 
+<span class="gu">@@ -82,6 +82,7 @@</span>
+                 GetChild(i)-&gt;BuildCreatingCode(Code,WindowParent,Language);
+             }
+             Code &lt;&lt; Codef(Language,_T(&quot;SetMenuBar(%v);\n&quot;),GetVarName().c_str());
+<span class="gi">+            BuildSetupWindowCode(Code, WindowParent, Language);</span>
+             break;
+ 
+         default:
+<span class="gh">Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.cpp    (revision 4044)</span>
+<span class="gi">+++ plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.cpp    (working copy)</span>
+<span class="gu">@@ -248,6 +248,7 @@</span>
+         ChildItem-&gt;m_Type = wxsMenuItem::Normal;
+         ChildItem-&gt;m_Variable = ChildMenu-&gt;GetVarName();
+         ChildItem-&gt;m_IsMember = ChildMenu-&gt;GetIsMember();
+<span class="gi">+        ChildItem-&gt;m_ExtraCode = ChildMenu-&gt;GetExtraCode();</span>
+         ChildItem-&gt;m_Label = ChildMenu-&gt;m_Label;
+         ChildItem-&gt;m_Enabled = true;
+         ChildItem-&gt;m_Checked = false;
+<span class="gu">@@ -272,6 +273,7 @@</span>
+     Parent-&gt;m_Type = Menu-&gt;m_Type;
+     Parent-&gt;m_Variable = Menu-&gt;GetVarName();
+     Parent-&gt;m_IsMember = Menu-&gt;GetIsMember();
+<span class="gi">+    Parent-&gt;m_ExtraCode = Menu-&gt;GetExtraCode();</span>
+     Parent-&gt;m_Id = Menu-&gt;GetIdName();
+     Parent-&gt;m_Label = Menu-&gt;m_Label;
+     Parent-&gt;m_Accelerator = Menu-&gt;m_Accelerator;
+<span class="gu">@@ -515,6 +517,7 @@</span>
+                 NewMenu-&gt;m_Label = Item-&gt;m_Label;
+                 NewMenu-&gt;SetVarName(Item-&gt;m_Variable);
+                 NewMenu-&gt;SetIsMember(Item-&gt;m_IsMember);
+<span class="gi">+                NewMenu-&gt;SetExtraCode(Item-&gt;m_ExtraCode);</span>
+                 m_MenuBar-&gt;AddChild(NewMenu);
+                 StoreDataCopyReq(NewMenu,Item-&gt;m_Child);
+             }
+<span class="gu">@@ -549,6 +552,7 @@</span>
+ 
+         Menu-&gt;SetVarName(Item-&gt;m_Variable);
+         Menu-&gt;SetIsMember(Item-&gt;m_IsMember);
+<span class="gi">+        Menu-&gt;SetExtraCode(Item-&gt;m_ExtraCode);</span>
+         Menu-&gt;SetIdName(_T(&quot;&quot;));
+         Menu-&gt;m_Label.Clear();
+         Menu-&gt;m_Accelerator.Clear();
+<span class="gh">Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.h</span>
+<span class="gh">===================================================================</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

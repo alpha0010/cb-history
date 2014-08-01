@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,29 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/templatemanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/templatemanager.cpp    (revision 3618)</span>
+<span class="gi">+++ src/sdk/templatemanager.cpp    (working copy)</span>
+<span class="gu">@@ -182,6 +182,16 @@</span>
+ //        Manager::Get()-&gt;GetMessageManager()-&gt;DebugLog(&quot;dst=%s, dstname=%s&quot;, dst.c_str(), dstname.GetFullPath().c_str());
+         if (!CreateDirRecursively(dst))
+             Manager::Get()-&gt;GetMessageManager()-&gt;DebugLog(_T(&quot;Failed creating directory for %s&quot;), dst.c_str());
+<span class="gi">+        if (wxFileExists(dst))</span>
+<span class="gi">+        {</span>
+<span class="gi">+            if(cbMessageBox(dst + _(&quot; already exists.\nDo you want to replace it?&quot;), _(&quot;File exists&quot;), wxICON_EXCLAMATION | wxYES_NO | wxNO_DEFAULT) != wxID_YES)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                if (FileTypeOf(dst) == ftCodeBlocksProject)</span>
+<span class="gi">+                    project_filename = dst;</span>
+<span class="gi">+                ++count;</span>
+<span class="gi">+                continue;</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+         if (wxCopyFile(src, dst, true))
+         {
+             if (FileTypeOf(dst) == ftCodeBlocksProject)
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">pauliusz 2007-02-23 10:19:46</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,118 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/debuggergdb/debuggergdb.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/debuggergdb/debuggergdb.cpp    (revision 5649)</span>
+<span class="gi">+++ src/plugins/debuggergdb/debuggergdb.cpp    (working copy)</span>
+<span class="gu">@@ -204,6 +204,164 @@</span>
+     EVT_COMMAND(-1, DEBUGGER_SHOW_FILE_LINE, DebuggerGDB::OnShowFile)
+ END_EVENT_TABLE()
+ 
+<span class="gi">+</span>
+<span class="gi">+class DebugTextCtrlLogger : public TextCtrlLogger</span>
+<span class="gi">+{</span>
+<span class="gi">+public:</span>
+<span class="gi">+    DebugTextCtrlLogger(DebuggerState &amp;state,</span>
+<span class="gi">+                        bool fixedPitchFont = false) :</span>
+<span class="gi">+        TextCtrlLogger(fixedPitchFont),</span>
+<span class="gi">+        m_state(state),</span>
+<span class="gi">+        m_panel(NULL)</span>
+<span class="gi">+    {</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+<span class="gi">+    wxWindow* CreateTextCtrl(wxWindow *parent)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        return TextCtrlLogger::CreateControl(parent);</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+<span class="gi">+    virtual wxWindow* CreateControl(wxWindow* parent);</span>
+<span class="gi">+</span>
+<span class="gi">+private:</span>
+<span class="gi">+    DebuggerState &amp;m_state;</span>
+<span class="gi">+    wxPanel     *m_panel;</span>
+<span class="gi">+};</span>
+<span class="gi">+</span>
+<span class="gi">+class DebugLogPanel : public wxPanel</span>
+<span class="gi">+{</span>
+<span class="gi">+public:</span>
+<span class="gi">+    DebugLogPanel(wxWindow *parent, DebugTextCtrlLogger *text_control_logger, DebuggerState &amp;debugger_state) :</span>
+<span class="gi">+        wxPanel(parent),</span>
+<span class="gi">+        m_text_control_logger(text_control_logger),</span>
+<span class="gi">+        m_debugger_state(debugger_state)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        int idDebug_LogEntryControl = wxNewId();</span>
+<span class="gi">+        int idDebug_ExecuteButton = wxNewId();</span>
+<span class="gi">+        int idDebug_ClearButton = wxNewId();</span>
+<span class="gi">+        int idDebug_LoadButton = wxNewId();</span>
+<span class="gi">+</span>
+<span class="gi">+        wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);</span>
+<span class="gi">+        wxBoxSizer *control_sizer = new wxBoxSizer(wxHORIZONTAL);</span>
+<span class="gi">+</span>
+<span class="gi">+        wxWindow *text_control = text_control_logger-&gt;CreateTextCtrl(this);</span>
+<span class="gi">+        sizer-&gt;Add(text_control, wxEXPAND, wxEXPAND | wxALL , 0);</span>
+<span class="gi">+        sizer-&gt;Add(control_sizer, 0, wxEXPAND | wxALL, 0);</span>
+<span class="gi">+</span>
+<span class="gi">+        wxStaticText *label = new wxStaticText(this, wxID_ANY, _T(&quot;Command:&quot;),</span>
+<span class="gi">+                                               wxDefaultPosition, wxDefaultSize, wxST_NO_AUTORESIZE);</span>
+<span class="gi">+</span>
+<span class="gi">+        m_command_entry = new wxComboBox(this, idDebug_LogEntryControl, wxEmptyString,</span>
+<span class="gi">+                                         wxDefaultPosition, wxDefaultSize, 0, 0,</span>
+<span class="gi">+                                         wxCB_DROPDOWN | wxTE_PROCESS_ENTER);</span>
+<span class="gi">+</span>
+<span class="gi">+        wxBitmap execute_bitmap = wxArtProvider::GetBitmap(wxART_MAKE_ART_ID_FROM_STR(_T(&quot;wxART_EXECUTABLE_FILE&quot;)),</span>
+<span class="gi">+                                                           wxART_BUTTON);</span>
+<span class="gi">+        wxBitmap clear_bitmap = wxArtProvider::GetBitmap(wxART_MAKE_ART_ID_FROM_STR(_T(&quot;wxART_DELETE&quot;)),wxART_BUTTON);</span>
+<span class="gi">+        wxBitmap file_open_bitmap =wxArtProvider::GetBitmap(wxART_MAKE_ART_ID_FROM_STR(_T(&quot;wxART_FILE_OPEN&quot;)),</span>
+<span class="gi">+                                                            wxART_BUTTON);</span>
+<span class="gi">+</span>
+<span class="gi">+        wxBitmapButton *button_execute;</span>
+<span class="gi">+        button_execute = new wxBitmapButton(this, idDebug_ExecuteButton, execute_bitmap, wxDefaultPosition,</span>
+<span class="gi">+                                            wxDefaultSize, wxBU_AUTODRAW, wxDefaultValidator,</span>
+<span class="gi">+                                            _T(&quot;idDebug_ExecuteButton&quot;));</span>
+<span class="gi">+        button_execute-&gt;SetToolTip(_(&quot;Execute current command&quot;));</span>
+<span class="gi">+</span>
+<span class="gi">+        wxBitmapButton *button_load = new wxBitmapButton(this, idDebug_LoadButton, file_open_bitmap, wxDefaultPosition,</span>
+<span class="gi">+                                                         wxDefaultSize, wxBU_AUTODRAW, wxDefaultValidator,</span>
+<span class="gi">+                                                         _T(&quot;idDebug_LoadButton&quot;));</span>
+<span class="gi">+        button_load-&gt;SetDefault();</span>
+<span class="gi">+        button_load-&gt;SetToolTip(_(&quot;Load from file&quot;));</span>
+<span class="gi">+</span>
+<span class="gi">+        wxBitmapButton *button_clear = new wxBitmapButton(this, idDebug_ClearButton, clear_bitmap, wxDefaultPosition,</span>
+<span class="gi">+                                                          wxDefaultSize, wxBU_AUTODRAW, wxDefaultValidator,</span>
+<span class="gi">+                                                          _T(&quot;idDebug_ClearButton&quot;));</span>
+<span class="gi">+        button_clear-&gt;SetDefault();</span>
+<span class="gi">+        button_clear-&gt;SetToolTip(_(&quot;Clear output window&quot;));</span>
+<span class="gi">+</span>
+<span class="gi">+        control_sizer-&gt;Add(label, 0, wxALIGN_CENTER | wxALL, 2);</span>
+<span class="gi">+        control_sizer-&gt;Add(m_command_entry, wxEXPAND, wxEXPAND | wxALL, 2);</span>
+<span class="gi">+        control_sizer-&gt;Add(button_execute, 0, wxEXPAND | wxALL, 0);</span>
+<span class="gi">+        control_sizer-&gt;Add(button_load, 0, wxALL|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 0);</span>
+<span class="gi">+        control_sizer-&gt;Add(button_clear, 0, wxALL|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 0);</span>
+<span class="gi">+</span>
+<span class="gi">+        SetSizer(sizer);</span>
+<span class="gi">+</span>
+<span class="gi">+        Connect(idDebug_LogEntryControl,</span>
+<span class="gi">+                wxEVT_COMMAND_TEXT_ENTER,</span>
+<span class="gi">+                wxObjectEventFunction(&amp;DebugLogPanel::OnEntryCommand));</span>
+<span class="gi">+        Connect(idDebug_ExecuteButton,</span>
+<span class="gi">+                wxEVT_COMMAND_BUTTON_CLICKED,</span>
+<span class="gi">+                wxObjectEventFunction(&amp;DebugLogPanel::OnEntryCommand));</span>
+<span class="gi">+        Connect(idDebug_ClearButton,</span>
+<span class="gi">+                wxEVT_COMMAND_BUTTON_CLICKED,</span>
+<span class="gi">+                wxObjectEventFunction(&amp;DebugLogPanel::OnClearLog));</span>
+<span class="gi">+        Connect(idDebug_LoadButton,</span>
+<span class="gi">+                wxEVT_COMMAND_BUTTON_CLICKED,</span>
+<span class="gi">+                wxObjectEventFunction(&amp;DebugLogPanel::OnLoadFile));</span>
+<span class="gi">+</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+<span class="gi">+    void OnEntryCommand(wxCommandEvent&amp; event)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        assert(m_</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mortenmacfly 2009-06-19 07:25:33</div>

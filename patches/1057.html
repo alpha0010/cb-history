@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,136 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: app.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- app.cpp    (revision 2454)</span>
+<span class="gi">+++ app.cpp    (working copy)</span>
+<span class="gu">@@ -317,14 +317,36 @@</span>
+     m_BatchWindowAutoClose = true;
+     m_pBatchBuildDialog = 0;
+ 
+<span class="gi">+    class Splash {</span>
+<span class="gi">+    public:</span>
+<span class="gi">+        Splash(const bool show) : m_pSplash(0)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            if (show)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                wxBitmap bmp = LoadPNGWindows2000Hack(ConfigManager::ReadDataPath() + _T(&quot;/images/splash_new.png&quot;));</span>
+<span class="gi">+                m_pSplash = new cbSplashScreen(bmp, -1, 0, -1, wxNO_BORDER | wxFRAME_NO_TASKBAR);</span>
+<span class="gi">+                Manager::Yield();</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+<span class="gi">+        ~Splash() {hide();}</span>
+<span class="gi">+        void hide()</span>
+<span class="gi">+        {</span>
+<span class="gi">+            if (m_pSplash)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                m_pSplash-&gt;Destroy();</span>
+<span class="gi">+                m_pSplash = 0;</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+<span class="gi">+    private:</span>
+<span class="gi">+        cbSplashScreen* m_pSplash;</span>
+<span class="gi">+    };</span>
+<span class="gi">+</span>
+     wxTheClipboard-&gt;Flush();
+ 
+     static CrashHandler crash_handler;
+ 
+     try
+     {
+<span class="gd">-        m_pSplash = 0;</span>
+<span class="gd">-</span>
+     #if (wxUSE_ON_FATAL_EXCEPTION == 1)
+         wxHandleFatalExceptions(true);
+     #endif
+<span class="gu">@@ -342,8 +364,9 @@</span>
+             return false;
+         }
+ 
+<span class="gd">-        if (!m_Batch)</span>
+<span class="gd">-            ShowSplashScreen();</span>
+<span class="gi">+        Splash splash(!m_Batch &amp;&amp;</span>
+<span class="gi">+                      !m_NoSplash &amp;&amp;</span>
+<span class="gi">+                      Manager::Get()-&gt;GetConfigManager(_T(&quot;app&quot;))-&gt;ReadBool(_T(&quot;/environment/show_splash&quot;), true));</span>
+ 
+         InitLocale();
+         m_pSingleInstance = 0;
+<span class="gu">@@ -366,7 +389,7 @@</span>
+             m_pSingleInstance = new wxSingleInstanceChecker(name, tempFolder);
+             if (m_pSingleInstance-&gt;IsAnotherRunning())
+             {
+<span class="gd">-                HideSplashScreen();</span>
+<span class="gi">+                splash.hide();</span>
+                 wxLogError(_(&quot;Another program instance is already running.\nCode::Blocks is currently configured to only allow one running instance.\n\nYou can access this Setting under the menu item &#39;Environment&#39;.&quot;));
+                 return false;
+             }
+<span class="gu">@@ -397,7 +420,7 @@</span>
+         Manager::ProcessPendingEvents();
+ 
+         // finally, show the app
+<span class="gd">-        HideSplashScreen();</span>
+<span class="gi">+        splash.hide();</span>
+         SetTopWindow(frame);
+         frame-&gt;Show();
+ 
+<span class="gu">@@ -553,33 +576,10 @@</span>
+         m_pBatchBuildDialog-&gt;EndModal(wxID_OK);
+ }
+ 
+<span class="gd">-void CodeBlocksApp::ShowSplashScreen()</span>
+<span class="gd">-{</span>
+<span class="gd">-    HideSplashScreen();</span>
+<span class="gd">-</span>
+<span class="gd">-    if (!m_NoSplash &amp;&amp; Manager::Get()-&gt;GetConfigManager(_T(&quot;app&quot;))-&gt;ReadBool(_T(&quot;/environment/show_splash&quot;), true) == true)</span>
+<span class="gd">-    {</span>
+<span class="gd">-        const wxString splashImage = _T(&quot;/images/splash_new.png&quot;);</span>
+<span class="gd">-        wxBitmap bmp = LoadPNGWindows2000Hack(ConfigManager::ReadDataPath() + splashImage);</span>
+<span class="gd">-        m_pSplash = new cbSplashScreen(bmp, -1l, 0, -1, wxNO_BORDER | wxFRAME_NO_TASKBAR);</span>
+<span class="gd">-        Manager::Yield();</span>
+<span class="gd">-    }</span>
+<span class="gd">-}</span>
+<span class="gd">-</span>
+<span class="gd">-void CodeBlocksApp::HideSplashScreen()</span>
+<span class="gd">-{</span>
+<span class="gd">-    if (m_pSplash)</span>
+<span class="gd">-    {</span>
+<span class="gd">-        m_pSplash-&gt;Destroy();</span>
+<span class="gd">-        m_pSplash = 0;</span>
+<span class="gd">-    }</span>
+<span class="gd">-}</span>
+<span class="gd">-</span>
+ bool CodeBlocksApp::CheckResource(const wxString&amp; res)
+ {
+     if (!wxFileExists(res))
+     {
+<span class="gd">-        HideSplashScreen();</span>
+         wxString msg;
+         msg.Printf(_T(&quot;Cannot find %s...\n&quot;
+             &quot;%s was configured to be installed in &#39;%s&#39;.\n&quot;
+<span class="gh">Index: app.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- app.h    (revision 2454)</span>
+<span class="gi">+++ app.h    (working copy)</span>
+<span class="gu">@@ -60,8 +60,6 @@</span>
+         int BatchJob();
+         wxLocale m_locale; // locale we&#39;ll be using
+     private:
+<span class="gd">-        void ShowSplashScreen();</span>
+<span class="gd">-        void HideSplashScreen();</span>
+         bool CheckResource(const wxString&amp; res);
+         void SetupPersonality(const wxString&amp; personality);
+         void DelayLoadDdeFiles(MainFrame* frame);
+<span class="gu">@@ -85,7 +83,6 @@</span>
+         wxDialog* m_pBatchBuildDialog;
+         // batch jobs - end
+ 
+<span class="gd">-        cbSplashScreen* m_pSplash;</span>
+         wxSingleInstanceChecker* m_pSingleInstance;
+ 
+         DECLARE_EVENT_TABLE()
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">olorin 2006-05-16 06:39:44</div>

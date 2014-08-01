@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,107 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/scriptedwizard/wizpage.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/scriptedwizard/wizpage.cpp    (revision 5987)</span>
+<span class="gi">+++ src/plugins/scriptedwizard/wizpage.cpp    (working copy)</span>
+<span class="gu">@@ -273,7 +273,7 @@</span>
+ 
+         if (m_Filename.IsEmpty() || !wxDirExists(wxPathOnly(m_Filename)))
+         {
+<span class="gd">-            cbMessageBox(_(&quot;Please select a filename with full path for your new file...&quot;), _(&quot;Error&quot;), wxICON_ERROR);</span>
+<span class="gi">+            cbMessageBox(_(&quot;Please select a filename with full path for your new file...&quot;), _(&quot;Error&quot;), wxICON_ERROR, GetParent());</span>
+             event.Veto();
+             return;
+         }
+<span class="gu">@@ -347,19 +347,19 @@</span>
+         wxString title = m_pProjectPathPanel-&gt;GetTitle();
+ //        if (!wxDirExists(dir))
+ //        {
+<span class="gd">-//            cbMessageBox(_(&quot;Please select a valid path to create your project...&quot;), _(&quot;Error&quot;), wxICON_ERROR);</span>
+<span class="gi">+//            cbMessageBox(_(&quot;Please select a valid path to create your project...&quot;), _(&quot;Error&quot;), wxICON_ERROR, GetParent());</span>
+ //            event.Veto();
+ //            return;
+ //        }
+         if (title.IsEmpty())
+         {
+<span class="gd">-            cbMessageBox(_(&quot;Please select a title for your project...&quot;), _(&quot;Error&quot;), wxICON_ERROR);</span>
+<span class="gi">+            cbMessageBox(_(&quot;Please select a title for your project...&quot;), _(&quot;Error&quot;), wxICON_ERROR, GetParent());</span>
+             event.Veto();
+             return;
+         }
+         if (name.IsEmpty())
+         {
+<span class="gd">-            cbMessageBox(_(&quot;Please select a name for your project...&quot;), _(&quot;Error&quot;), wxICON_ERROR);</span>
+<span class="gi">+            cbMessageBox(_(&quot;Please select a name for your project...&quot;), _(&quot;Error&quot;), wxICON_ERROR, GetParent());</span>
+             event.Veto();
+             return;
+         }
+<span class="gu">@@ -368,10 +368,10 @@</span>
+             if (cbMessageBox(_(&quot;A project with the same name already exists in the project folder.\n&quot;
+                         &quot;Are you sure you want to use this directory (files may be OVERWRITTEN)?&quot;),
+                         _(&quot;Confirmation&quot;),
+<span class="gd">-                        wxICON_QUESTION | wxYES_NO) != wxID_YES)</span>
+<span class="gi">+                        wxICON_QUESTION | wxYES_NO, GetParent()) != wxID_YES)</span>
+             {
+ //                cbMessageBox(_(&quot;A project with the same name already exists in the project folder.\n&quot;
+<span class="gd">-//                            &quot;Please select a different project name...&quot;), _(&quot;Warning&quot;), wxICON_WARNING);</span>
+<span class="gi">+//                            &quot;Please select a different project name...&quot;), _(&quot;Warning&quot;), wxICON_WARNING, GetParent());</span>
+                 event.Veto();
+                 return;
+             }
+<span class="gu">@@ -436,7 +436,7 @@</span>
+         wxString dir = Manager::Get()-&gt;GetMacrosManager()-&gt;ReplaceMacros(m_pGenericSelectPath-&gt;txtFolder-&gt;GetValue());
+         if (!wxDirExists(dir))
+         {
+<span class="gd">-            cbMessageBox(_(&quot;Please select a valid location...&quot;), _(&quot;Error&quot;), wxICON_ERROR);</span>
+<span class="gi">+            cbMessageBox(_(&quot;Please select a valid location...&quot;), _(&quot;Error&quot;), wxICON_ERROR, GetParent());</span>
+             event.Veto();
+             return;
+         }
+<span class="gu">@@ -458,7 +458,7 @@</span>
+     : WizPageBase(_T(&quot;CompilerPage&quot;), parent, bitmap),
+     m_AllowConfigChange(allowConfigChange)
+ {
+<span class="gd">-    m_pCompilerPanel = new CompilerPanel(this);</span>
+<span class="gi">+    m_pCompilerPanel = new CompilerPanel(this, GetParent());</span>
+ 
+     wxArrayString valids = GetArrayFromString(validCompilerIDs, _T(&quot;;&quot;), true);
+     wxString def = compilerID;
+<span class="gu">@@ -568,13 +568,13 @@</span>
+     {
+         if (GetCompilerID().IsEmpty())
+         {
+<span class="gd">-            wxMessageBox(_(&quot;You must select a compiler for your project...&quot;), _(&quot;Error&quot;), wxICON_ERROR);</span>
+<span class="gi">+            cbMessageBox(_(&quot;You must select a compiler for your project...&quot;), _(&quot;Error&quot;), wxICON_ERROR, GetParent());</span>
+             event.Veto();
+             return;
+         }
+         if (m_AllowConfigChange &amp;&amp; !GetWantDebug() &amp;&amp; !GetWantRelease())
+         {
+<span class="gd">-            wxMessageBox(_(&quot;You must select at least one configuration...&quot;), _(&quot;Error&quot;), wxICON_ERROR);</span>
+<span class="gi">+            cbMessageBox(_(&quot;You must select at least one configuration...&quot;), _(&quot;Error&quot;), wxICON_ERROR, GetParent());</span>
+             event.Veto();
+             return;
+         }
+<span class="gu">@@ -688,7 +688,7 @@</span>
+     {
+         if (m_pBuildTargetPanel-&gt;GetCompilerCombo()-&gt;IsShown() &amp;&amp; GetCompilerID().IsEmpty())
+         {
+<span class="gd">-            wxMessageBox(_(&quot;You must select a compiler for your build target...&quot;), _(&quot;Error&quot;), wxICON_ERROR);</span>
+<span class="gi">+            cbMessageBox(_(&quot;You must select a compiler for your build target...&quot;), _(&quot;Error&quot;), wxICON_ERROR, GetParent());</span>
+             event.Veto();
+             return;
+         }
+<span class="gu">@@ -696,7 +696,7 @@</span>
+         cbProject* theproject = Manager::Get()-&gt;GetProjectManager()-&gt;GetActiveProject(); // can&#39;t fail; if no project, the wizard didn&#39;t even run
+         if (theproject-&gt;GetBuildTarget(m_pBuildTargetPanel-&gt;GetTargetName()))
+         {
+<span class="gd">-            wxMessageBox(_(&quot;A build target with that name already exists in the active project...&quot;), _(&quot;Error&quot;), wxICON_ERROR);</span>
+<span class="gi">+            cbMessageBox(_(&quot;A build target with that name already exists in the active project...&quot;), _(&quot;Error&quot;),</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">techy 2009-12-31 00:16:01</div>

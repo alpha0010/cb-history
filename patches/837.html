@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,111 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: plugins/compilergcc/compileroptionsdlg.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/compilergcc/compileroptionsdlg.h    (revision 2006)</span>
+<span class="gi">+++ plugins/compilergcc/compileroptionsdlg.h    (working copy)</span>
+<span class="gu">@@ -67,9 +67,11 @@</span>
+         void OnAddDirClick(wxCommandEvent&amp; event);
+         void OnEditDirClick(wxCommandEvent&amp; event);
+         void OnRemoveDirClick(wxCommandEvent&amp; event);
+<span class="gi">+        void OnClearDirClick(wxCommandEvent&amp; event);</span>
+         void OnAddVarClick(wxCommandEvent&amp; event);
+         void OnEditVarClick(wxCommandEvent&amp; event);
+         void OnRemoveVarClick(wxCommandEvent&amp; event);
+<span class="gi">+        void OnClearVarClick(wxCommandEvent&amp; event);</span>
+         void OnSetDefaultCompilerClick(wxCommandEvent&amp; event);
+         void OnAddCompilerClick(wxCommandEvent&amp; event);
+         void OnEditCompilerClick(wxCommandEvent&amp; event);
+<span class="gh">Index: plugins/compilergcc/compileroptionsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/compilergcc/compileroptionsdlg.cpp    (revision 2006)</span>
+<span class="gi">+++ plugins/compilergcc/compileroptionsdlg.cpp    (working copy)</span>
+<span class="gu">@@ -43,9 +43,11 @@</span>
+ BEGIN_EVENT_TABLE(CompilerOptionsDlg, wxPanel)
+     EVT_UPDATE_UI(            XRCID(&quot;btnEditDir&quot;),        CompilerOptionsDlg::OnUpdateUI)
+     EVT_UPDATE_UI(            XRCID(&quot;btnDelDir&quot;),            CompilerOptionsDlg::OnUpdateUI)
+<span class="gi">+    EVT_UPDATE_UI(            XRCID(&quot;btnClearDir&quot;),            CompilerOptionsDlg::OnUpdateUI)</span>
+     EVT_UPDATE_UI(            XRCID(&quot;spnDirs&quot;),            CompilerOptionsDlg::OnUpdateUI)
+     EVT_UPDATE_UI(            XRCID(&quot;btnEditVar&quot;),        CompilerOptionsDlg::OnUpdateUI)
+     EVT_UPDATE_UI(            XRCID(&quot;btnDeleteVar&quot;),        CompilerOptionsDlg::OnUpdateUI)
+<span class="gi">+    EVT_UPDATE_UI(            XRCID(&quot;btnClearVar&quot;),        CompilerOptionsDlg::OnUpdateUI)</span>
+     EVT_UPDATE_UI(            XRCID(&quot;cmbCompilerPolicy&quot;),    CompilerOptionsDlg::OnUpdateUI)
+     EVT_UPDATE_UI(            XRCID(&quot;cmbLinkerPolicy&quot;),    CompilerOptionsDlg::OnUpdateUI)
+     EVT_UPDATE_UI(            XRCID(&quot;cmbIncludesPolicy&quot;),    CompilerOptionsDlg::OnUpdateUI)
+<span class="gu">@@ -97,6 +99,7 @@</span>
+     EVT_LISTBOX_DCLICK(        XRCID(&quot;lstLibDirs&quot;),        CompilerOptionsDlg::OnEditDirClick)
+     EVT_LISTBOX_DCLICK(        XRCID(&quot;lstResDirs&quot;),        CompilerOptionsDlg::OnEditDirClick)
+     EVT_BUTTON(                XRCID(&quot;btnDelDir&quot;),            CompilerOptionsDlg::OnRemoveDirClick)
+<span class="gi">+    EVT_BUTTON(                XRCID(&quot;btnClearDir&quot;),            CompilerOptionsDlg::OnClearDirClick)</span>
+     EVT_BUTTON(                XRCID(&quot;btnAddLib&quot;),            CompilerOptionsDlg::OnAddLibClick)
+     EVT_BUTTON(                XRCID(&quot;btnEditLib&quot;),        CompilerOptionsDlg::OnEditLibClick)
+     EVT_LISTBOX_DCLICK(        XRCID(&quot;lstLibs&quot;),           CompilerOptionsDlg::OnEditLibClick)
+<span class="gu">@@ -112,6 +115,7 @@</span>
+     EVT_BUTTON(                XRCID(&quot;btnAddVar&quot;),            CompilerOptionsDlg::OnAddVarClick)
+     EVT_BUTTON(                XRCID(&quot;btnEditVar&quot;),        CompilerOptionsDlg::OnEditVarClick)
+     EVT_BUTTON(                XRCID(&quot;btnDeleteVar&quot;),        CompilerOptionsDlg::OnRemoveVarClick)
+<span class="gi">+    EVT_BUTTON(                XRCID(&quot;btnClearVar&quot;),        CompilerOptionsDlg::OnClearVarClick)</span>
+     EVT_BUTTON(                XRCID(&quot;btnMasterPath&quot;),        CompilerOptionsDlg::OnMasterPathClick)
+     EVT_BUTTON(                XRCID(&quot;btnAutoDetect&quot;),        CompilerOptionsDlg::OnAutoDetectClick)
+     EVT_BUTTON(                XRCID(&quot;btnCcompiler&quot;),        CompilerOptionsDlg::OnSelectProgramClick)
+<span class="gu">@@ -1074,6 +1078,19 @@</span>
+     }
+ }
+ 
+<span class="gi">+void CompilerOptionsDlg::OnClearDirClick(wxCommandEvent&amp; event)</span>
+<span class="gi">+{</span>
+<span class="gi">+    wxListBox* control = GetDirsListBox();</span>
+<span class="gi">+    if (!control || control-&gt;GetSelection() &lt; 0)</span>
+<span class="gi">+        return;</span>
+<span class="gi">+    if (cbMessageBox(_(&quot;Remove all directories from the list?&quot;),</span>
+<span class="gi">+                    _(&quot;Confirmation&quot;),</span>
+<span class="gi">+                    wxOK | wxCANCEL | wxICON_QUESTION) == wxID_OK)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        control-&gt;Clear();</span>
+<span class="gi">+    }</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ void CompilerOptionsDlg::OnAddVarClick(wxCommandEvent&amp; event)
+ {
+     CompileOptionsBase* base = GetVarsOwner();
+<span class="gu">@@ -1145,6 +1162,32 @@</span>
+     }
+ }
+ 
+<span class="gi">+void CompilerOptionsDlg::OnClearVarClick(wxCommandEvent&amp; event)</span>
+<span class="gi">+{</span>
+<span class="gi">+    wxListBox* lstVars = XRCCTRL(*this, &quot;lstVars&quot;, wxListBox);</span>
+<span class="gi">+    if (lstVars-&gt;IsEmpty())</span>
+<span class="gi">+        return;</span>
+<span class="gi">+</span>
+<span class="gi">+  CompileOptionsBase* base = GetVarsOwner();</span>
+<span class="gi">+  if (!base)</span>
+<span class="gi">+    return;</span>
+<span class="gi">+</span>
+<span class="gi">+    if (cbMessageBox(_(&quot;Are you sure you want to clear all variables?&quot;),</span>
+<span class="gi">+                   _(&quot;Confirmation&quot;),</span>
+<span class="gi">+                   wxYES | wxNO | wxICON_QUESTION) == wxID_YES)</span>
+<span class="gi">+    {</span>
+<span class="gi">+    // Unset all variables of lstVars</span>
+<span class="gi">+    for (int i=0; i&lt;lstVars-&gt;GetCount(); i++)</span>
+<span class="gi">+    {</span>
+<span class="gi">+      wxString key = lstVars-&gt;GetString(i).BeforeFirst(_T(&#39;=&#39;)).Trim(true);</span>
+<span class="gi">+      if (!key.IsEmpty())</span>
+<span class="gi">+        base-&gt;UnsetVar(key);</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+<span class="gi">+    lstVars-&gt;Clear();</span>
+<span class="gi">+    }</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ void CompilerOptionsDlg::OnSetDefaultCompilerClick(wxCommandEvent&amp; event)
+ {
+     wxComboBox* cmb = XRCCTRL(*this, &quot;cmbCompiler&quot;, wxComboBox);
+<span class="gu">@@ -1542,10 +1585,11 @@</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mortenmacfly 2006-02-15 19:04:58</div>

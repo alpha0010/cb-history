@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,36 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/src/infopane.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/infopane.cpp    (revision 6195)</span>
+<span class="gi">+++ src/src/infopane.cpp    (working copy)</span>
+<span class="gu">@@ -44,8 +44,6 @@</span>
+ InfoPane::InfoPane(wxWindow* parent) : cbAuiNotebook(parent, idNB, wxDefaultPosition, wxDefaultSize, infopane_flags), baseID(wxNewId())
+ {
+     defaultBitmap = cbLoadBitmap(ConfigManager::GetDataFolder() + _T(&quot;/images/edit_16x16.png&quot;), wxBITMAP_TYPE_PNG);
+<span class="gd">-    if (Manager::Get()-&gt;GetConfigManager(_T(&quot;app&quot;))-&gt;ReadBool(_T(&quot;/environment/infopane_tabs_bottom&quot;), false))</span>
+<span class="gd">-        SetWindowStyleFlag(GetWindowStyleFlag() | wxAUI_NB_BOTTOM);</span>
+ 
+     wxRegisterId(baseID + num_pages);
+     for(int i = 0; i &lt; num_pages; ++i)
+<span class="gh">Index: src/src/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/main.cpp    (revision 6195)</span>
+<span class="gi">+++ src/src/main.cpp    (working copy)</span>
+<span class="gu">@@ -1158,6 +1158,10 @@</span>
+     // load manager and messages selected page
+     Manager::Get()-&gt;GetProjectManager()-&gt;GetNotebook()-&gt;SetSelection(Manager::Get()-&gt;GetConfigManager(_T(&quot;app&quot;))-&gt;ReadInt(_T(&quot;/main_frame/layout/left_block_selection&quot;), 0));
+     m_pInfoPane-&gt;SetSelection(Manager::Get()-&gt;GetConfigManager(_T(&quot;app&quot;))-&gt;ReadInt(_T(&quot;/main_frame/layout/bottom_block_selection&quot;), 0));
+<span class="gi">+    // Cryogen 23/3/10 wxAuiNotebook can&#39;t set it&#39;s own tab position once instantiated, for some reason. This code fails in InfoPane::InfoPane().</span>
+<span class="gi">+    // Moved here as this seems like a resonable place to do UI setup. Feel free to move it elsewhere.</span>
+<span class="gi">+    if (Manager::Get()-&gt;GetConfigManager(_T(&quot;app&quot;))-&gt;ReadBool(_T(&quot;/environment/infopane_tabs_bottom&quot;), false))</span>
+<span class="gi">+        m_pInfoPane-&gt;SetWindowStyleFlag(m_pInfoPane-&gt;GetWindowStyleFlag() | wxAUI_NB_BOTTOM);</span>
+ 
+ #ifndef __WXMAC__
+     int x = 0;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mortenmacfly 2011-02-09 05:32:32</div>

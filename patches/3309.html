@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,138 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: trunk/src/include/editormanager.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- trunk/src/include/editormanager.h    (revision 8127)</span>
+<span class="gi">+++ trunk/src/include/editormanager.h    (working copy)</span>
+<span class="gu">@@ -122,9 +122,11 @@</span>
+         // If file is modified, queries to save (yes/no/cancel).
+         // Returns false on &quot;cancel&quot;.
+         bool QueryClose(EditorBase* editor);
+<span class="gi">+        bool QueryCloseProject(cbProject* project);</span>
+         bool QueryCloseAll();
+<span class="gd">-        bool CloseAll(bool dontsave=false);</span>
+<span class="gd">-        bool CloseAllExcept(EditorBase* editor, bool dontsave=false);</span>
+<span class="gi">+        bool CloseProject(cbProject* project, bool dontsave = false);</span>
+<span class="gi">+        bool CloseAll(bool dontsave = false);</span>
+<span class="gi">+        bool CloseAllExcept(EditorBase* editor, bool dontsave = false);</span>
+         bool Save(const wxString&amp; filename);
+         bool Save(int index);
+         bool SaveActive();
+<span class="gh">Index: trunk/src/include/projectmanager.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- trunk/src/include/projectmanager.h    (revision 8127)</span>
+<span class="gi">+++ trunk/src/include/projectmanager.h    (working copy)</span>
+<span class="gu">@@ -522,6 +522,7 @@</span>
+         void OnRenameFile(wxCommandEvent&amp; event);
+         void OnSaveProject(wxCommandEvent&amp; event);
+         void OnCloseProject(wxCommandEvent&amp; event);
+<span class="gi">+        void OnCloseProjectFiles(wxCommandEvent&amp; event);</span>
+         void OnSaveFile(wxCommandEvent&amp; event);
+         void OnCloseFile(wxCommandEvent&amp; event);
+         void OnOpenFile(wxCommandEvent&amp; event);
+<span class="gh">Index: trunk/src/sdk/editormanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- trunk/src/sdk/editormanager.cpp    (revision 8127)</span>
+<span class="gi">+++ trunk/src/sdk/editormanager.cpp    (working copy)</span>
+<span class="gu">@@ -686,11 +686,48 @@</span>
+     return true;
+ }
+ 
+<span class="gi">+bool EditorManager::CloseProject(cbProject* project, bool dontsave)</span>
+<span class="gi">+{</span>
+<span class="gi">+    if(!dontsave)</span>
+<span class="gi">+        if(!QueryCloseProject(project))</span>
+<span class="gi">+            return false;</span>
+<span class="gi">+</span>
+<span class="gi">+    m_pNotebook-&gt;Freeze();</span>
+<span class="gi">+    for (int i = m_pNotebook-&gt;GetPageCount() - 1; i &gt;= 0; --i)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        EditorBase* eb = InternalGetEditorBase(i);</span>
+<span class="gi">+        if(eb &amp;&amp; eb-&gt;IsBuiltinEditor())</span>
+<span class="gi">+        {</span>
+<span class="gi">+            ProjectFile* prjf = ((cbEditor*)eb)-&gt;GetProjectFile();</span>
+<span class="gi">+            if(prjf &amp;&amp; (prjf-&gt;GetParentProject() == project))</span>
+<span class="gi">+                Close(eb, true);</span>
+<span class="gi">+        }</span>
+<span class="gi">+    }</span>
+<span class="gi">+    m_pNotebook-&gt;Thaw();</span>
+<span class="gi">+    return true;</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ bool EditorManager::CloseAll(bool dontsave)
+ {
+     return CloseAllExcept(GetEditor(_(&quot;Start here&quot;)), dontsave);
+ }
+ 
+<span class="gi">+bool EditorManager::QueryCloseProject(cbProject* project)</span>
+<span class="gi">+{</span>
+<span class="gi">+    for (int i = m_pNotebook-&gt;GetPageCount() - 1; i &gt;= 0; --i)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        EditorBase* eb = InternalGetEditorBase(i);</span>
+<span class="gi">+        if(eb &amp;&amp; eb-&gt;IsBuiltinEditor())</span>
+<span class="gi">+        {</span>
+<span class="gi">+            ProjectFile* prjf = ((cbEditor*)eb)-&gt;GetProjectFile();</span>
+<span class="gi">+            if(prjf &amp;&amp; (prjf-&gt;GetParentProject() == project))</span>
+<span class="gi">+                if (!QueryClose(eb))</span>
+<span class="gi">+                    return false; // aborted</span>
+<span class="gi">+        }</span>
+<span class="gi">+    }</span>
+<span class="gi">+    return true;</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ bool EditorManager::QueryCloseAll()
+ {
+     for (int i = m_pNotebook-&gt;GetPageCount() - 1; i &gt;= 0; --i)
+<span class="gh">Index: trunk/src/sdk/projectmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- trunk/src/sdk/projectmanager.cpp    (revision 8127)</span>
+<span class="gi">+++ trunk/src/sdk/projectmanager.cpp    (working copy)</span>
+<span class="gu">@@ -79,6 +79,7 @@</span>
+ int idMenuSaveProject = wxNewId();
+ int idMenuSaveFile = wxNewId();
+ int idMenuCloseProject = wxNewId();
+<span class="gi">+int idMenuCloseProjectFiles = wxNewId();</span>
+ int idMenuCloseFile = wxNewId();
+ int idMenuAddFilePopup = wxNewId();
+ int idMenuAddFilesRecursivelyPopup = wxNewId();
+<span class="gu">@@ -338,6 +339,7 @@</span>
+     EVT_MENU(idMenuSaveProject, ProjectManager::OnSaveProject)
+     EVT_MENU(idMenuSaveFile, ProjectManager::OnSaveFile)
+     EVT_MENU(idMenuCloseProject, ProjectManager::OnCloseProject)
+<span class="gi">+    EVT_MENU(idMenuCloseProjectFiles, ProjectManager::OnCloseProjectFiles)</span>
+     EVT_MENU(idMenuCloseFile, ProjectManager::OnCloseFile)
+     EVT_MENU(idMenuOpenFile, ProjectManager::OnOpenFile)
+     EVT_MENU(idMenuProjectNotes, ProjectManager::OnNotes)
+<span class="gu">@@ -717,6 +719,7 @@</span>
+             menu.Enable(idMenuSaveProject, PopUpMenuOption);
+             menu.Append(idMenuCloseProject,             _(&quot;Close project&quot;));
+             menu.Enable(idMenuCloseProject, PopUpMenuOption);
+<span class="gi">+            menu.Append(idMenuCloseProjectFiles,        _(&quot;Close all project files&quot;));</span>
+             menu.AppendSeparator();
+             menu.Append(idMenuAddFilePopup,             _(&quot;Add files...&quot;));
+             menu.Enable(idMenuAddFilePopup, PopUpMenuOption);
+<span class="gu">@@ -2537,6 +2540,22 @@</span>
+     Manager::Get()-&gt;GetAppWindow()-&gt;Refresh();
+ }
+ 
+<span class="gi">+void ProjectManager::OnCloseProjectFiles(wxCommandEvent&amp; WXUNUSED(event))</span>
+<span class="gi">+{</span>
+<span class="gi">+    wxTreeItemId sel = GetTreeSelection();</span>
+<span class="gi">+    if (!sel.IsOk())</span>
+<span class="gi">+        return;</span>
+<span class="gi">+</span>
+<span class="gi">+    FileTreeData* ftd = (FileTreeData*)m_pTree-&gt;GetItemData(sel);</span>
+<span class="gi">+    cbProject *proj = 0;</span>
+<span class="gi">+    if (ftd)</span>
+<span class="gi">+        proj = ftd-&gt;GetProject();</span>
+<span class="gi">+</span>
+<span class="gi">+    if(proj)</span>
+<span class="gi">+        Manager::Get()-&gt;GetEditorManager()-&gt;CloseProject(proj);</span>
+<span class="gi">+    Manager::</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,93 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: plugins/compilergcc/compileroptionsdlg.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/compilergcc/compileroptionsdlg.h    (revision 2016)</span>
+<span class="gi">+++ plugins/compilergcc/compileroptionsdlg.h    (working copy)</span>
+<span class="gu">@@ -92,6 +92,7 @@</span>
+         void OnAddExtraPathClick(wxCommandEvent&amp; event);
+         void OnEditExtraPathClick(wxCommandEvent&amp; event);
+         void OnRemoveExtraPathClick(wxCommandEvent&amp; event);
+<span class="gi">+        void OnClearExtraPathClick(wxCommandEvent&amp; event);</span>
+         void OnUpdateUI(wxUpdateUIEvent&amp; event);
+         void OnMyCharHook(wxKeyEvent&amp; event);
+ 
+<span class="gh">Index: plugins/compilergcc/compileroptionsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/compilergcc/compileroptionsdlg.cpp    (revision 2016)</span>
+<span class="gi">+++ plugins/compilergcc/compileroptionsdlg.cpp    (working copy)</span>
+<span class="gu">@@ -67,6 +67,7 @@</span>
+     EVT_UPDATE_UI(            XRCID(&quot;btnExtraAdd&quot;),        CompilerOptionsDlg::OnUpdateUI)
+     EVT_UPDATE_UI(            XRCID(&quot;btnExtraEdit&quot;),        CompilerOptionsDlg::OnUpdateUI)
+     EVT_UPDATE_UI(            XRCID(&quot;btnExtraDelete&quot;),    CompilerOptionsDlg::OnUpdateUI)
+<span class="gi">+    EVT_UPDATE_UI(            XRCID(&quot;btnExtraClear&quot;),    CompilerOptionsDlg::OnUpdateUI)</span>
+     EVT_UPDATE_UI(            XRCID(&quot;txtCcompiler&quot;),        CompilerOptionsDlg::OnUpdateUI)
+     EVT_UPDATE_UI(            XRCID(&quot;btnCcompiler&quot;),        CompilerOptionsDlg::OnUpdateUI)
+     EVT_UPDATE_UI(            XRCID(&quot;txtCPPcompiler&quot;),    CompilerOptionsDlg::OnUpdateUI)
+<span class="gu">@@ -108,6 +109,7 @@</span>
+     EVT_BUTTON(                XRCID(&quot;btnExtraAdd&quot;),        CompilerOptionsDlg::OnAddExtraPathClick)
+     EVT_BUTTON(                XRCID(&quot;btnExtraEdit&quot;),        CompilerOptionsDlg::OnEditExtraPathClick)
+     EVT_BUTTON(                XRCID(&quot;btnExtraDelete&quot;),    CompilerOptionsDlg::OnRemoveExtraPathClick)
+<span class="gi">+    EVT_BUTTON(                XRCID(&quot;btnExtraClear&quot;),    CompilerOptionsDlg::OnClearExtraPathClick)</span>
+     EVT_SPIN_UP(            XRCID(&quot;spnLibs&quot;),            CompilerOptionsDlg::OnMoveLibUpClick)
+     EVT_SPIN_DOWN(            XRCID(&quot;spnLibs&quot;),            CompilerOptionsDlg::OnMoveLibDownClick)
+     EVT_SPIN_UP(            XRCID(&quot;spnDirs&quot;),            CompilerOptionsDlg::OnMoveDirUpClick)
+<span class="gu">@@ -1438,6 +1440,22 @@</span>
+     control-&gt;Delete(control-&gt;GetSelection());
+ }
+ 
+<span class="gi">+void CompilerOptionsDlg::OnClearExtraPathClick(wxCommandEvent&amp; event)</span>
+<span class="gi">+{</span>
+<span class="gi">+    wxListBox* control = XRCCTRL(*this, &quot;lstExtraPaths&quot;, wxListBox);</span>
+<span class="gi">+    if (!control || control-&gt;IsEmpty())</span>
+<span class="gi">+        return;</span>
+<span class="gi">+</span>
+<span class="gi">+    if (cbMessageBox(_(&quot;Remove all extra paths from the list?&quot;), _(&quot;Confirmation&quot;), wxICON_QUESTION | wxOK | wxCANCEL) == wxID_OK)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        int compilerIdx = XRCCTRL(*this, &quot;cmbCompiler&quot;, wxComboBox)-&gt;GetSelection();</span>
+<span class="gi">+        Compiler* compiler = CompilerFactory::GetCompiler(compilerIdx);</span>
+<span class="gi">+        wxArrayString empty;</span>
+<span class="gi">+        compiler-&gt;SetExtraPaths(empty);</span>
+<span class="gi">+        control-&gt;Clear();</span>
+<span class="gi">+    }</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ void CompilerOptionsDlg::OnMoveLibUpClick(wxSpinEvent&amp; event)
+ {
+     wxListBox* lstLibs = XRCCTRL(*this, &quot;lstLibs&quot;, wxListBox);
+<span class="gu">@@ -1649,6 +1667,7 @@</span>
+         XRCCTRL(*this, &quot;btnExtraAdd&quot;, wxButton)-&gt;Enable(en);
+         XRCCTRL(*this, &quot;btnExtraEdit&quot;, wxButton)-&gt;Enable(en &amp;&amp; extraSel != -1);
+         XRCCTRL(*this, &quot;btnExtraDelete&quot;, wxButton)-&gt;Enable(en &amp;&amp; extraSel != -1);
+<span class="gi">+        XRCCTRL(*this, &quot;btnExtraClear&quot;, wxButton)-&gt;Enable(en &amp;&amp; extraSel != -1);</span>
+         XRCCTRL(*this, &quot;txtCcompiler&quot;, wxTextCtrl)-&gt;Enable(en);
+         XRCCTRL(*this, &quot;btnCcompiler&quot;, wxButton)-&gt;Enable(en);
+         XRCCTRL(*this, &quot;txtCPPcompiler&quot;, wxTextCtrl)-&gt;Enable(en);
+<span class="gu">@@ -1735,7 +1754,7 @@</span>
+     const wxChar* str_libs[4] = { _T(&quot;btnEditLib&quot;),_T(&quot;btnAddLib&quot;),_T(&quot;btnDelLib&quot;),_T(&quot;btnClearLib&quot;) };
+     const wxChar* str_dirs[4] = { _T(&quot;btnEditDir&quot;),_T(&quot;btnAddDir&quot;),_T(&quot;btnDelDir&quot;),_T(&quot;btnClearDir&quot;) };
+     const wxChar* str_vars[4] = { _T(&quot;btnEditVar&quot;),_T(&quot;btnAddVar&quot;),_T(&quot;btnDeleteVar&quot;),_T(&quot;btnClearVar&quot;) };
+<span class="gd">-    const wxChar* str_xtra[3] = { _T(&quot;btnExtraEdit&quot;),_T(&quot;btnExtraAdd&quot;),_T(&quot;btnExtraDelete&quot;) };</span>
+<span class="gi">+    const wxChar* str_xtra[4] = { _T(&quot;btnExtraEdit&quot;),_T(&quot;btnExtraAdd&quot;),_T(&quot;btnExtraDelete&quot;),_T(&quot;btnExtraClear&quot;) };</span>
+ 
+     if(keycode == WXK_RETURN || keycode == WXK_NUMPAD_ENTER)
+         { myidx = 0; } // Edit
+<span class="gh">Index: plugins/compilergcc/resources/compiler_options.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/compilergcc/resources/compiler_options.xrc    (revision 2016)</span>
+<span class="gi">+++ plugins/compilergcc/resources/compiler_options.xrc    (working copy)</span>
+<span class="gu">@@ -855,17 +855,28 @@</span>
+                                             &lt;object class=&quot;wxButton&quot; name=&quot;btnExtraAdd&quot;&gt;
+                                               &lt;label&gt;Add&lt;/label&gt;
+                                             &lt;/object&gt;
+<span class="gi">+                                            &lt;flag&gt;wxRIGHT&lt;/flag&gt;</span>
+<span class="gi">+                                            &lt;border&gt;8&lt;/border&gt;</span>
+                                           &lt;/object&gt;
+                                           &lt;object class=&quot;sizeritem&quot;&gt;
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mortenmacfly 2006-02-16 12:33:01</div>

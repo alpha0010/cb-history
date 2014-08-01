@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,111 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbplugin.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbplugin.cpp    (revision 7966)</span>
+<span class="gi">+++ src/sdk/cbplugin.cpp    (working copy)</span>
+<span class="gu">@@ -813,10 +813,10 @@</span>
+     //start xterm -e sleep {some unique # of seconds}
+     consolePid = wxExecute(cmd, wxEXEC_ASYNC);
+     if (consolePid &lt;= 0) return -1;
+<span class="gd">-</span>
+<span class="gi">+    bool KeepLooping = true;</span>
+     // Issue the PS command to get the /dev/tty device name
+     // First, wait for the xterm to settle down, else PS won&#39;t see the sleep task
+<span class="gd">-    for (int ii = 0; ii &lt; 100; ++ii)</span>
+<span class="gi">+    for (int ii = 0; ii &lt; 100 &amp;&amp; KeepLooping; ++ii)</span>
+     {
+         Manager::Yield();
+         ::wxMilliSleep(200);
+<span class="gu">@@ -824,8 +824,8 @@</span>
+         // For some reason wxExecute returns PID&gt;0, when the command cannot be launched.
+         // Here we check if the process is alive and the PID is really a valid one.
+         if (kill(consolePid, 0) == -1 &amp;&amp; errno == ESRCH) {
+<span class="gd">-            Log(wxString::Format(_(&quot;Can&#39;t launch console (%s)&quot;), cmd.c_str()), Logger::error);</span>
+<span class="gd">-            break;</span>
+<span class="gi">+            //If the PID isn&#39;t found then make this the last loop</span>
+<span class="gi">+            KeepLooping = false;</span>
+         }
+ 
+         int localConsolePid = consolePid;
+<span class="gu">@@ -836,6 +836,7 @@</span>
+             return localConsolePid;
+         }
+     }
+<span class="gi">+    Log(wxString::Format(_(&quot;Can&#39;t launch console (%s)&quot;), cmd.c_str()), Logger::error);</span>
+     // failed to find the console tty
+     if (consolePid != 0)
+         ::wxKill(consolePid);
+<span class="gu">@@ -860,7 +861,7 @@</span>
+     wxArrayString psOutput;
+     wxArrayString psErrors;
+ 
+<span class="gd">-    psCmd &lt;&lt; wxT(&quot;ps x -o tty,pid,command&quot;);</span>
+<span class="gi">+    psCmd &lt;&lt; wxT(&quot;ps x -o tty,command&quot;);</span>
+ //    DebugLog(wxString::Format( _(&quot;Executing: %s&quot;), psCmd.c_str()) );
+     int result = wxExecute(psCmd, psOutput, psErrors, wxEXEC_SYNC);
+     psCmd.Clear();
+<span class="gu">@@ -873,6 +874,7 @@</span>
+ 
+     wxString ConsTtyStr;
+     wxString ConsPidStr;
+<span class="gi">+    wxString ConsCmdStr;</span>
+     ConsPidStr &lt;&lt; ConsPid;
+     //find task with our unique sleep time
+     const wxString &amp;uniqueSleepTimeStr = MakeSleepCommand();
+<span class="gu">@@ -883,28 +885,33 @@</span>
+         psCmd = psOutput.Item(i);
+ //        DebugLog(wxString::Format( _(&quot;PS result: %s&quot;), psCmd.c_str()) );
+         // find the pts/# or tty/# or whatever it&#39;s called
+<span class="gd">-        // by seaching the output of &quot;ps x -o tty,pid,command&quot; command.</span>
+<span class="gi">+        // by seaching the output of &quot;ps x -o tty,command&quot; command.</span>
+         // The output of ps looks like:
+<span class="gd">-        // TT       PID   COMMAND</span>
+<span class="gd">-        // pts/0    13342 /bin/sh ./run.sh</span>
+<span class="gd">-        // pts/0    13343 /home/pecanpecan/devel/trunk/src/devel/codeblocks</span>
+<span class="gd">-        // pts/0    13361 /usr/bin/gdb -nx -fullname -quiet -args ./conio</span>
+<span class="gd">-        // pts/0    13362 xterm -font -*-*-*-*-*-*-20-*-*-*-*-*-*-* -T Program Console -e sleep 93343</span>
+<span class="gd">-        // pts/2    13363 sleep 93343</span>
+<span class="gd">-        // ?        13365 /home/pecan/proj/conio/conio</span>
+<span class="gd">-        // pts/1    13370 ps x -o tty,pid,command</span>
+<span class="gi">+        // TT       COMMAND</span>
+<span class="gi">+        // pts/0    /bin/sh ./run.sh</span>
+<span class="gi">+        // pts/0    /home/pecanpecan/devel/trunk/src/devel/codeblocks</span>
+<span class="gi">+        // pts/0    /usr/bin/gdb -nx -fullname -quiet -args ./conio</span>
+<span class="gi">+        // pts/0    xterm -font -*-*-*-*-*-*-20-*-*-*-*-*-*-* -T Program Console -e sleep 93343</span>
+<span class="gi">+        // pts/2    sleep 93343</span>
+<span class="gi">+        // ?        /home/pecan/proj/conio/conio</span>
+<span class="gi">+        // pts/1    ps x -o tty,pid,command</span>
+<span class="gi">+            </span>
+<span class="gi">+        int pos = psCmd.Find(&#39; &#39;, false);</span>
+<span class="gi">+        if(pos == wxNOT_FOUND)</span>
+<span class="gi">+            continue;</span>
+<span class="gi">+        size_t cmdpos = psCmd.find_first_not_of(&#39; &#39;, pos);</span>
+<span class="gi">+        if(cmdpos == wxString::npos)</span>
+<span class="gi">+            continue;</span>
+<span class="gi">+        ConsCmdStr = psCmd.Mid(cmdpos);</span>
+<span class="gi">+//        DebugLog(wxString::Format( _(&quot;Command string: %s&quot;), ConsCmdStr.c_str()) );</span>
+ 
+<span class="gd">-        if (psCmd.Contains(uniqueSleepTimeStr))</span>
+<span class="gd">-        do</span>
+<span class="gi">+        </span>
+<span class="gi">+        if (ConsCmdStr.IsSameAs(uniqueSleepTimeStr))</span>
+         {
+<span class="gd">-            // check for correct &quot;sleep&quot; line</span>
+<span class="gd">-            if (psCmd.Contains(wxT(&quot;-T&quot;)))</span>
+<span class="gd">-                break; //error;wrong sleep line.</span>
+<span class="gd">-            // found &quot;sleep 93343&quot; string, extract tty field</span>
+             ConsTtyStr = wxT(&quot;/dev/&quot;) + psCmd.BeforeFirst(&#39; &#39;);
+ //            DebugLog(wxString::Format( _(&quot;TTY is[%s]&quot;), ConsTtyStr.c_str()) );
+             return ConsTtyStr;
+<span class="gd">-        } while(0);//if do</span>
+<span class="gi">+        }</span>
+     }//for
+ 
+     knt = psErrors.GetCount();
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

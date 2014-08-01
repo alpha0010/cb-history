@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,110 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbar.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbar.cpp    (revision 4430)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbar.cpp    (working copy)</span>
+<span class="gu">@@ -178,6 +178,12 @@</span>
+         case wxsCPP: Decl.Add(_T(&quot;&lt;wx/toolbar.h&gt;&quot;)); break;
+         default: wxsCodeMarks::Unknown(_T(&quot;wxsToolBar::OnEnumDeclFiles&quot;),Language);
+     }
+<span class="gi">+</span>
+<span class="gi">+    for ( int i=0; i&lt;GetChildCount(); i++ )</span>
+<span class="gi">+    {</span>
+<span class="gi">+        wxsItem* Child = GetChild(i);</span>
+<span class="gi">+        Child-&gt;EnumDeclFiles(Decl, Def, Language);</span>
+<span class="gi">+    }</span>
+ }
+ 
+ bool wxsToolBar::OnCanAddToResource(wxsItemResData* Data,bool ShowMessage)
+<span class="gh">Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbaritem.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbaritem.cpp    (revision 4430)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbaritem.cpp    (working copy)</span>
+<span class="gu">@@ -94,8 +94,8 @@</span>
+                         default:     ItemType = _T(&quot;wxITEM_CHECK&quot;);  break;
+                     }
+ 
+<span class="gd">-                    wxString BitmapCode  = m_Bitmap.BuildCode(true,_T(&quot;&quot;),Language,wxART_TOOLBAR);</span>
+<span class="gd">-                    wxString Bitmap2Code = m_Bitmap2.BuildCode(true,_T(&quot;&quot;),Language,wxART_TOOLBAR);</span>
+<span class="gi">+                    wxString BitmapCode  = m_Bitmap.BuildCode(true,_T(&quot;&quot;),Language,wxART_MAKE_CLIENT_ID(wxART_TOOLBAR));</span>
+<span class="gi">+                    wxString Bitmap2Code = m_Bitmap2.BuildCode(true,_T(&quot;&quot;),Language,wxART_MAKE_CLIENT_ID(wxART_TOOLBAR));</span>
+                     if ( BitmapCode.IsEmpty() )  BitmapCode  = _T(&quot;wxNullBitmap&quot;);
+                     if ( Bitmap2Code.IsEmpty() ) Bitmap2Code = _T(&quot;wxNullBitmap&quot;);
+ 
+<span class="gu">@@ -124,6 +124,15 @@</span>
+     }
+ }
+ 
+<span class="gi">+void wxsToolBarItem::OnEnumDeclFiles(wxArrayString&amp; Decl,wxArrayString&amp; Def,wxsCodingLang Language)</span>
+<span class="gi">+{</span>
+<span class="gi">+    switch ( Language )</span>
+<span class="gi">+    {</span>
+<span class="gi">+        case wxsCPP: Decl.Add(_T(&quot;&lt;wx/artprov.h&gt;&quot;)); break;</span>
+<span class="gi">+        default: wxsCodeMarks::Unknown(_T(&quot;wxsToolBarItem::OnEnumDeclFiles&quot;),Language);</span>
+<span class="gi">+    }</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ void wxsToolBarItem::OnEnumToolProperties(long Flags)
+ {
+ 
+<span class="gh">Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbaritem.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbaritem.h    (revision 4430)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstoolbaritem.h    (working copy)</span>
+<span class="gu">@@ -14,7 +14,7 @@</span>
+ 
+         virtual void OnBuildCreatingCode(wxString&amp; Code,const wxString&amp; WindowParent,wxsCodingLang Language);
+         virtual void OnEnumToolProperties(long Flags);
+<span class="gd">-        virtual void OnEnumDeclFiles(wxArrayString&amp; Decl,wxArrayString&amp; Def,wxsCodingLang Language) {}</span>
+<span class="gi">+        virtual void OnEnumDeclFiles(wxArrayString&amp; Decl,wxArrayString&amp; Def,wxsCodingLang Language);</span>
+         virtual bool OnIsPointer() { return true; }
+         virtual bool OnCanAddToResource(wxsItemResData* Data,bool ShowMessage) { return false; }
+         virtual bool OnXmlWrite(TiXmlElement* Element,bool IsXRC,bool IsExtra);
+<span class="gh">Index: src/plugins/contrib/wxSmith/wxwidgets/properties/wxsbitmapiconproperty.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/wxwidgets/properties/wxsbitmapiconproperty.cpp    (revision 4430)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/wxwidgets/properties/wxsbitmapiconproperty.cpp    (working copy)</span>
+<span class="gu">@@ -48,7 +48,7 @@</span>
+     }
+ 
+     wxString TempClient = Client.empty() ? DefaultClient : Client;
+<span class="gd">-    return wxArtProvider::GetBitmap(wxART_MAKE_ART_ID_FROM_STR(Id),TempClient,Size);</span>
+<span class="gi">+    return wxArtProvider::GetBitmap(wxART_MAKE_ART_ID_FROM_STR(Id), wxART_MAKE_CLIENT_ID_FROM_STR(TempClient),Size);</span>
+ }
+ 
+ wxString wxsBitmapIconData::BuildCode(bool NoResize,const wxString&amp; SizeCode,wxsCodingLang Language,const wxString&amp; DefaultClient)
+<span class="gu">@@ -74,16 +74,28 @@</span>
+             }
+             else
+             {
+<span class="gd">-                Code &lt;&lt; _T(&quot;wxArtProvider::GetBitmap(wxART_MAKE_ART_ID_FROM_STR(&quot;) &lt;&lt; wxsCodeMarks::WxString(wxsCPP,Id) &lt;&lt; _T(&quot;),&quot;);</span>
+<span class="gd">-                if ( Client.empty() )</span>
+<span class="gi">+</span>
+<span class="gi">+                Code &lt;&lt; _T(&quot;wxArtProvider::GetBitmap(&quot;);</span>
+<span class="gi">+                if(wxsCodeMarks::ValidateIdentifier(Language, Id))</span>
+                 {
+<span class="gd">-                    Code &lt;&lt; wxsCodeMarks::WxString(wxsCPP,DefaultClient,false);</span>
+<span class="gi">+                    Code &lt;&lt; _T(&quot;wxART_MAKE_ART_ID(&quot;) &lt;&lt; Id &lt;&lt; _T(&quot;), &quot;);</span>
+                 }
+                 else
+                 {
+<span class="gd">-                    Code &lt;&lt; wxsCodeMarks::WxString(wxsCPP,Client,false);</span>
+<span class="gi">+                    Code &lt;&lt; _T(&quot;wxART_MAKE_ART_ID_FROM_STR(&quot;) &lt;&lt; wxsCodeMarks::WxString(wxsCPP,Id) &lt;&lt; _T(&quot;), &quot;);</span>
+                 }
+ 
+<span class="gi">+                wxString TempClient = Client.empty() ? DefaultClient : Client;</span>
+<span class="gi">+</span>
+<span class="gi">+                if(wxsCodeMarks::ValidateIdentifier(Language, TempClient))</span>
+<span class="gi">+                {</span>
+<span class="gi">+                    Code &lt;&lt; _T(&quot;wxART_MAKE_CLIENT_ID(&quot;) &lt;&lt; TempClient &lt;&lt; _T(&quot;)&quot;);</span>
+<span class="gi">+                }</span>
+<span class="gi">+                else</span>
+<span class="gi">+</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

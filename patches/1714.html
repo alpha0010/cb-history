@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,84 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/codecompletion/codecompletion.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/codecompletion.cpp    (revision 3363)</span>
+<span class="gi">+++ src/plugins/codecompletion/codecompletion.cpp    (working copy)</span>
+<span class="gu">@@ -552,7 +552,7 @@</span>
+ #endif
+             ed-&gt;GetControl()-&gt;AutoCompSetIgnoreCase(!caseSens);
+             ed-&gt;GetControl()-&gt;AutoCompSetCancelAtStart(true);
+<span class="gd">-            ed-&gt;GetControl()-&gt;AutoCompSetFillUps(wxEmptyString);</span>
+<span class="gi">+            ed-&gt;GetControl()-&gt;AutoCompSetFillUps(cfg-&gt;Read(_T(&quot;/fillup_chars&quot;), wxEmptyString));</span>
+             ed-&gt;GetControl()-&gt;AutoCompSetChooseSingle(m_IsAutoPopup ? false : cfg-&gt;ReadBool(_T(&quot;/auto_select_one&quot;), false));
+             ed-&gt;GetControl()-&gt;AutoCompSetAutoHide(true);
+             ed-&gt;GetControl()-&gt;AutoCompSetDropRestOfWord(m_IsAutoPopup ? false : true);
+<span class="gh">Index: src/plugins/codecompletion/ccoptionsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/ccoptionsdlg.cpp    (revision 3363)</span>
+<span class="gi">+++ src/plugins/codecompletion/ccoptionsdlg.cpp    (working copy)</span>
+<span class="gu">@@ -113,6 +113,7 @@</span>
+     XRCCTRL(*this, &quot;spnThreadsNum&quot;, wxSpinCtrl)-&gt;Enable(false);
+     XRCCTRL(*this, &quot;chkFloatCB&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/as_floating_window&quot;), false));
+     XRCCTRL(*this, &quot;chkNoSB&quot;, wxCheckBox)-&gt;SetValue(!cfg-&gt;ReadBool(_T(&quot;/use_symbols_browser&quot;), true));
+<span class="gi">+    XRCCTRL(*this, &quot;txtFillupChars&quot;, wxTextCtrl)-&gt;SetValue(cfg-&gt;Read(_T(&quot;/fillup_chars&quot;), wxEmptyString));</span>
+ 
+     int timerDelay = cfg-&gt;ReadInt(_T(&quot;/cc_delay&quot;), 500);
+     XRCCTRL(*this, &quot;sliderDelay&quot;, wxSlider)-&gt;SetValue(timerDelay / 100);
+<span class="gu">@@ -250,6 +251,8 @@</span>
+     XRCCTRL(*this, &quot;spnMaxMatches&quot;, wxSpinCtrl)-&gt;Enable(en);
+     XRCCTRL(*this, &quot;sliderDelay&quot;, wxSlider)-&gt;Enable(en);
+     XRCCTRL(*this, &quot;chkSimpleMode&quot;, wxCheckBox)-&gt;Enable(en);
+<span class="gi">+    XRCCTRL(*this, &quot;lblFillupChars&quot;, wxStaticText)-&gt;Enable(en);</span>
+<span class="gi">+    XRCCTRL(*this, &quot;txtFillupChars&quot;, wxTextCtrl)-&gt;Enable(en);</span>
+ 
+     en = !XRCCTRL(*this, &quot;chkNoSB&quot;, wxCheckBox)-&gt;GetValue();
+     XRCCTRL(*this, &quot;chkInheritance&quot;, wxCheckBox)-&gt;Enable(en);
+<span class="gu">@@ -284,6 +287,7 @@</span>
+     m_Parser.Options().useSmartSense = !XRCCTRL(*this, &quot;chkSimpleMode&quot;, wxCheckBox)-&gt;GetValue();
+ 
+     cfg-&gt;Write(_T(&quot;/use_symbols_browser&quot;), (bool)!XRCCTRL(*this, &quot;chkNoSB&quot;, wxCheckBox)-&gt;GetValue());
+<span class="gi">+    cfg-&gt;Write(_T(&quot;/fillup_chars&quot;), XRCCTRL(*this, &quot;txtFillupChars&quot;, wxTextCtrl)-&gt;GetValue());</span>
+     m_Parser.ClassBrowserOptions().showInheritance = XRCCTRL(*this, &quot;chkInheritance&quot;, wxCheckBox)-&gt;GetValue();
+     cfg-&gt;Write(_T(&quot;/as_floating_window&quot;), (bool)XRCCTRL(*this, &quot;chkFloatCB&quot;, wxCheckBox)-&gt;GetValue());
+     m_Parser.WriteOptions();
+<span class="gh">Index: src/plugins/codecompletion/resources/settings.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/resources/settings.xrc    (revision 3363)</span>
+<span class="gi">+++ src/plugins/codecompletion/resources/settings.xrc    (working copy)</span>
+<span class="gu">@@ -135,6 +135,31 @@</span>
+                                                 &lt;/object&gt;
+                                             &lt;/object&gt;
+                                         &lt;/object&gt;
+<span class="gi">+                                        &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gi">+                                            &lt;option&gt;1&lt;/option&gt;</span>
+<span class="gi">+                                            &lt;flag&gt;wxALL|wxALIGN_LEFT|wxALIGN_TOP|wxEXPAND&lt;/flag&gt;</span>
+<span class="gi">+                                            &lt;object class=&quot;wxFlexGridSizer&quot;&gt;</span>
+<span class="gi">+                                                &lt;rows&gt;1&lt;/rows&gt;</span>
+<span class="gi">+                                                &lt;cols&gt;2&lt;/cols&gt;</span>
+<span class="gi">+                                                &lt;vgap&gt;0&lt;/vgap&gt;</span>
+<span class="gi">+                                                &lt;hgap&gt;0&lt;/hgap&gt;</span>
+<span class="gi">+                                                &lt;growablecols&gt;2&lt;/growablecols&gt;</span>
+<span class="gi">+                                                &lt;growablerows&gt;1&lt;/growablerows&gt;</span>
+<span class="gi">+                                                &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gi">+                                                    &lt;flag&gt;wxALL|wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;</span>
+<span class="gi">+                                                    &lt;object class=&quot;wxStaticText&quot; name=&quot;lblFillupChars&quot;&gt;</span>
+<span class="gi">+                                                        &lt;label&gt;Fillup Characters&lt;/label&gt;</span>
+<span class="gi">+                                                        &lt;size&gt;83,13&lt;/size&gt;</span>
+<span class="gi">+                                                    &lt;/object&gt;</span>
+<span class="gi">+                                                &lt;/object&gt;</span>
+<span class="gi">+                                                &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gi">+                                                    &lt;flag&gt;wxALL|wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;</span>
+<span class="gi">+                                                    &lt;object class=&quot;wxTextCtrl&quot; name=&quot;txtFillupChars&quot;&gt;</span>
+<span class="gi">+                                                        &lt;value&gt;Text&lt;/value&gt;</span>
+<span class="gi">+                                                    &lt;/object&gt;</span>
+<span class="gi">+                                                &lt;/object&gt;</span>
+<span class="gi">+                                            &lt;/object&gt;</span>
+<span class="gi">+                                        &lt;/object&gt;</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">ramazank 2006-12-11 22:36:57</div>

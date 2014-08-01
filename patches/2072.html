@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,70 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 4149)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -456,6 +456,7 @@</span>
+     // if we add more constructors in the future, don&#39;t forget to set this!
+     m_pData = new cbEditorInternalData(this);
+     m_IsBuiltinEditor = true;
+<span class="gi">+    m_hookslocked=false;</span>
+
+     if (!filename.IsEmpty())
+     {
+<span class="gu">@@ -1161,6 +1162,7 @@</span>
+     if (!wxFileExists(m_Filename))
+         return false;
+
+<span class="gi">+    m_hookslocked=true;</span>
+     // open file
+     m_pControl-&gt;SetReadOnly(false);
+     wxString st;
+<span class="gu">@@ -1169,7 +1171,10 @@</span>
+     wxFile file(m_Filename);
+
+     if (!file.IsOpened())
+<span class="gi">+    {</span>
+<span class="gi">+        m_hookslocked=false;</span>
+         return false;
+<span class="gi">+    }</span>
+
+     m_pControl-&gt;SetModEventMask(0);
+     if (detectEncoding)
+<span class="gu">@@ -1197,6 +1202,9 @@</span>
+     m_pControl-&gt;SetZoom(Manager::Get()-&gt;GetEditorManager()-&gt;GetZoom());
+     if (m_pControl2)
+         m_pControl2-&gt;SetZoom(Manager::Get()-&gt;GetEditorManager()-&gt;GetZoom());
+<span class="gi">+</span>
+<span class="gi">+    m_hookslocked=false;</span>
+<span class="gi">+</span>
+     return true;
+ }
+
+<span class="gu">@@ -2522,6 +2530,8 @@</span>
+ // generic scintilla event handler
+ void cbEditor::OnScintillaEvent(wxScintillaEvent&amp; event)
+ {
+<span class="gi">+    if(m_hookslocked)</span>
+<span class="gi">+        return;</span>
+     // call any hooked functors
+     if (EditorHooks::HasRegisteredHooks())
+     {
+<span class="gh">Index: src/include/cbeditor.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/cbeditor.h    (revision 4149)</span>
+<span class="gi">+++ src/include/cbeditor.h    (working copy)</span>
+<span class="gu">@@ -341,6 +341,7 @@</span>
+         void DestroySplitView();
+
+         // variables
+<span class="gi">+        bool m_hookslocked;</span>
+         bool m_IsOK;
+         wxSplitterWindow* m_pSplitter;
+         wxBoxSizer* m_pSizer;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">rickg22 2007-06-22 01:07:50</div>

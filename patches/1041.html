@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,208 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: app.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- app.cpp    (revision 2438)</span>
+<span class="gi">+++ app.cpp    (working copy)</span>
+<span class="gu">@@ -62,8 +62,69 @@</span>
+ 
+ #include &quot;appglobals.h&quot;
+ 
+<span class="gi">+namespace {</span>
+<span class="gi">+</span>
+<span class="gi">+// this list will be filled with files</span>
+<span class="gi">+// (received through DDE or command line)</span>
+<span class="gi">+// to be loaded after the app has started up</span>
+<span class="gi">+wxArrayString s_DelayedFilesToOpen;</span>
+<span class="gi">+</span>
+<span class="gi">+#ifdef __WXMSW__</span>
+<span class="gi">+</span>
+<span class="gi">+bool s_Loading = false;</span>
+<span class="gi">+</span>
+<span class="gi">+class DDEServer : public wxServer</span>
+<span class="gi">+{</span>
+<span class="gi">+    public:</span>
+<span class="gi">+        DDEServer(MainFrame* frame) : m_Frame(frame) {}</span>
+<span class="gi">+        wxConnectionBase *OnAcceptConnection(const wxString&amp; topic);</span>
+<span class="gi">+        MainFrame* GetFrame(){ return m_Frame; }</span>
+<span class="gi">+        void SetFrame(MainFrame* frame){ m_Frame = frame; }</span>
+<span class="gi">+    private:</span>
+<span class="gi">+        MainFrame* m_Frame;</span>
+<span class="gi">+};</span>
+<span class="gi">+</span>
+<span class="gi">+class DDEConnection : public wxConnection</span>
+<span class="gi">+{</span>
+<span class="gi">+    public:</span>
+<span class="gi">+        DDEConnection(MainFrame* frame) : m_Frame(frame) {}</span>
+<span class="gi">+        bool OnExecute(const wxString&amp; topic, wxChar *data, int size, wxIPCFormat format);</span>
+<span class="gi">+    private:</span>
+<span class="gi">+        MainFrame* m_Frame;</span>
+<span class="gi">+};</span>
+<span class="gi">+</span>
+<span class="gi">+wxConnectionBase* DDEServer::OnAcceptConnection(const wxString&amp; topic)</span>
+<span class="gi">+{</span>
+<span class="gi">+    return topic==DDE_TOPIC ? new DDEConnection(m_Frame) : 0L;</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+bool DDEConnection::OnExecute(const wxString&amp; topic, wxChar *data, int size, wxIPCFormat format)</span>
+<span class="gi">+{</span>
+<span class="gi">+    wxString strData(data);</span>
+<span class="gi">+</span>
+<span class="gi">+    if (!strData.StartsWith(_T(&quot;[Open(\&quot;&quot;)))</span>
+<span class="gi">+        return false;</span>
+<span class="gi">+</span>
+<span class="gi">+    wxRegEx reCmd(_T(&quot;\&quot;(.*)\&quot;&quot;));</span>
+<span class="gi">+    if (reCmd.Matches(strData))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        const wxString file = reCmd.GetMatch(strData, 1);</span>
+<span class="gi">+        if (s_Loading)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            s_DelayedFilesToOpen.Add(file);</span>
+<span class="gi">+        }</span>
+<span class="gi">+        else if (m_Frame)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            m_Frame-&gt;Open(file, true); // add to history, files that open through DDE</span>
+<span class="gi">+        }</span>
+<span class="gi">+    }</span>
+<span class="gi">+    return true;</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+DDEServer* g_DDEServer = 0L;</span>
+<span class="gi">+</span>
+ #if wxUSE_CMDLINE_PARSER
+<span class="gd">-static const wxCmdLineEntryDesc cmdLineDesc[] =</span>
+<span class="gi">+const wxCmdLineEntryDesc cmdLineDesc[] =</span>
+ {
+     { wxCMD_LINE_SWITCH, _T(&quot;h&quot;), _T(&quot;help&quot;), _T(&quot;show this help message&quot;), wxCMD_LINE_VAL_NONE, wxCMD_LINE_OPTION_HELP },
+ #ifdef __WXMSW__
+<span class="gu">@@ -86,14 +147,10 @@</span>
+ };
+ #endif // wxUSE_CMDLINE_PARSER
+ 
+<span class="gd">-#ifdef __WXMSW__</span>
+<span class="gd">-DDEServer* g_DDEServer = 0L;</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ #endif
+ 
+<span class="gd">-// this list will be filled with DDE files to load after the app has started up</span>
+<span class="gd">-wxArrayString s_DdeFilesToOpen;</span>
+<span class="gd">-bool s_Loading = false;</span>
+<span class="gd">-</span>
+ IMPLEMENT_APP(CodeBlocksApp)
+ 
+ BEGIN_EVENT_TABLE(CodeBlocksApp, wxApp)
+<span class="gu">@@ -140,9 +197,9 @@</span>
+     return true;
+ }
+ 
+<span class="gd">-void CodeBlocksApp::InitAssociations(MainFrame* frame)</span>
+<span class="gi">+#ifdef __WXMSW__</span>
+<span class="gi">+void CodeBlocksApp::InitAssociations()</span>
+ {
+<span class="gd">-#ifdef __WXMSW__</span>
+     ConfigManager *cfg = Manager::Get()-&gt;GetConfigManager(_T(&quot;app&quot;));
+     if (!m_NoAssocs &amp;&amp; cfg-&gt;ReadBool(_T(&quot;/environment/check_associations&quot;), true))
+     {
+<span class="gu">@@ -168,8 +225,8 @@</span>
+ 
+         }
+     }
+<span class="gi">+}</span>
+ #endif
+<span class="gd">-}</span>
+ 
+ void CodeBlocksApp::InitDebugConsole()
+ {
+<span class="gu">@@ -324,16 +381,27 @@</span>
+     cfg-&gt;Write(_T(&quot;/locale/language&quot;), (int)lng);
+ }
+ 
+<span class="gi">+</span>
+<span class="gi">+</span>
+<span class="gi">+#ifdef __WXMSW__</span>
+<span class="gi">+        HINSTANCE m_ExceptionHandlerLib;</span>
+<span class="gi">+        bool m_NoDDE; // no DDE</span>
+<span class="gi">+        bool m_NoAssocs; // no associations check</span>
+<span class="gi">+#endif</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+ bool CodeBlocksApp::OnInit()
+ {
+<span class="gi">+#ifdef __WXMSW__</span>
+     s_Loading = true;
+<span class="gi">+#endif</span>
+<span class="gi">+    m_pBatchBuildDialog = 0;</span>
+<span class="gi">+    m_BatchExitCode = 0;</span>
+     m_Batch = false;
+     m_BatchNotify = false;
+     m_Build = false;
+     m_ReBuild = false;
+<span class="gd">-    m_BatchExitCode = 0;</span>
+     m_BatchWindowAutoClose = true;
+<span class="gd">-    m_pBatchBuildDialog = 0;</span>
+ 
+     wxTheClipboard-&gt;Flush();
+ 
+<span class="gu">@@ -403,8 +471,10 @@</span>
+ 
+         if (m_Batch)
+         {
+<span class="gi">+#ifdef __WXMSW__</span>
+             s_Loading = false;
+<span class="gd">-            DelayLoadDdeFiles(frame);</span>
+<span class="gi">+            LoadDelayedFiles(frame);</span>
+<span class="gi">+#endif</span>
+             BatchJob();
+             frame-&gt;Close();
+             return true;
+<span class="gu">@@ -426,11 +496,14 @@</span>
+         frame-&gt;Show();
+ 
+         frame-&gt;ShowTips(); // this func checks if the user wants tips, so no need to check here
+<span class="gd">-        InitAssociations(frame);</span>
+ 
+<span class="gi">+#ifdef __WXMSW__</span>
+<span class="gi">+        InitAssociations();</span>
+         s_Loading = false;
+<span class="gd">-        DelayLoadDdeFiles(frame);</span>
+<span class="gi">+#endif</span>
+ 
+<span class="gi">+        LoadDelayedFiles(frame);</span>
+<span class="gi">+</span>
+         return true;
+     }
+     catch (cbException&amp; exception)
+<span class="gu">@@ -454,11 +527,11 @@</span>
+     wxTheClipboard-&gt;Flush();
+ 
+ #ifdef __WXMSW__
+<span class="gd">-    if (g_DDEServer)</span>
+<span class="gd">-        delete g_DDEServer;</span>
+<span class="gi">+    delete g_DDEServer;</span>
+     if (m_ExceptionHandlerLib)
+         FreeLibrary(m_ExceptionHandlerLib);
+ #endif
+<span class="gi">+</span>
+     if (m_pSingleInstance)
+         delete m_pSingleInstance;
+     // WX docs say that this function&#39;s return value is ignored,
+<span class="gu">@@ -677,14 +750,14 @@</span>
+                         if (ft == ftCodeBlocksProject)
+                         {
+                             hasProj = true;
+<span class="gd">-                            s_DdeFilesToOpen.Add(parser.GetParam(param));</span>
+<span class="gi">+                            s_DelayedFilesToOpen.Add(parser.GetParam(param));</span>
+                         }
+                         else if (ft == ftCodeBlocksWorkspace)
+                         {
+                             // only one workspace can be opened
+                             hasWksp = true;
+<span class="gd">-</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">olorin 2006-05-10 21:10:02</div>

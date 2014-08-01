@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,44 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/src/app.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/app.cpp    (revision 2229)</span>
+<span class="gi">+++ src/src/app.cpp    (working copy)</span>
+<span class="gu">@@ -230,8 +230,12 @@</span>
+     SetTopWindow(0);
+     frame-&gt;Hide(); // frame is shown by the caller
+ #ifdef __WXMSW__
+<span class="gd">-    if(g_DDEServer)</span>
+<span class="gi">+    if (!m_NoDDE &amp;&amp; Manager::Get()-&gt;GetConfigManager(_T(&quot;app&quot;))-&gt;ReadBool(_T(&quot;/environment/use_dde&quot;), true))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        g_DDEServer = new DDEServer(frame);</span>
+<span class="gi">+        g_DDEServer-&gt;Create(DDE_SERVICE);</span>
+         g_DDEServer-&gt;SetFrame(frame);
+<span class="gi">+    }</span>
+ #endif
+     if (ParseCmdLine(frame) == 0)
+     {
+<span class="gu">@@ -407,17 +411,6 @@</span>
+         SetTopWindow(frame);
+         frame-&gt;Show();
+ 
+<span class="gd">-#ifdef __WXMSW__</span>
+<span class="gd">-        // moved from InitAssociations()</span>
+<span class="gd">-        // fixes DDE bug when app is started by double clicking a file in Windows Explorer and</span>
+<span class="gd">-        // the &quot;Tip of the Day&quot; dialog is enabled.</span>
+<span class="gd">-        if (!m_NoDDE &amp;&amp; Manager::Get()-&gt;GetConfigManager(_T(&quot;app&quot;))-&gt;ReadBool(_T(&quot;/environment/use_dde&quot;), true))</span>
+<span class="gd">-        {</span>
+<span class="gd">-            g_DDEServer = new DDEServer(frame);</span>
+<span class="gd">-            g_DDEServer-&gt;Create(DDE_SERVICE);</span>
+<span class="gd">-        }</span>
+<span class="gd">-#endif</span>
+<span class="gd">-</span>
+         frame-&gt;ShowTips(); // this func checks if the user wants tips, so no need to check here
+         InitAssociations(frame);
+         return true;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,55 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: plugins/debuggergdb/gdb_driver.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/debuggergdb/gdb_driver.cpp    (revision 3258)</span>
+<span class="gi">+++ plugins/debuggergdb/gdb_driver.cpp    (working copy)</span>
+<span class="gu">@@ -22,7 +22,7 @@</span>
+ static wxRegEx reThreadSwitch(_T(&quot;^\\[Switching to thread .*\\]#0[ \t]+(0x[A-z0-9]+) in (.*) from (.*)&quot;));
+ static wxRegEx reThreadSwitch2(_T(&quot;^\\[Switching to thread .*\\]#0[ \t]+(0x[A-z0-9]+) in (.*) from (.*):([0-9]+)&quot;));
+ #ifdef __WXMSW__
+<span class="gd">-    static wxRegEx reBreak(_T(&quot;([A-z]:)([^:]+):([0-9]+):[0-9]+:[begmidl]+:(0x[0-9A-z]+)&quot;));</span>
+<span class="gi">+    static wxRegEx reBreak(_T(&quot;..([A-z]:)([^:]+):([0-9]+):[0-9]+:[begmidl]+:(0x[0-9A-z]+)&quot;));</span>
+ #else
+     static wxRegEx reBreak(_T(&quot;\032\032([^:]+):([0-9]+):[0-9]+:[begmidl]+:(0x[0-9A-z]+)&quot;));
+ #endif
+<span class="gu">@@ -130,6 +130,7 @@</span>
+     wxString cmd;
+     cmd &lt;&lt; debugger;
+     cmd &lt;&lt; _T(&quot; -nx&quot;);          // don&#39;t run .gdbinit
+<span class="gi">+    cmd &lt;&lt; _T(&quot; -readnow &quot;);    // read symbol table immediately</span>
+     cmd &lt;&lt; _T(&quot; -fullname &quot;);   // report full-path filenames when breaking
+     cmd &lt;&lt; _T(&quot; -quiet&quot;);       // don&#39;t display version on startup
+     cmd &lt;&lt; _T(&quot; -args &quot;) &lt;&lt; debuggee;
+<span class="gu">@@ -141,6 +142,7 @@</span>
+     wxString cmd;
+     cmd &lt;&lt; debugger;
+     cmd &lt;&lt; _T(&quot; -nx&quot;);          // don&#39;t run .gdbinit
+<span class="gi">+    cmd &lt;&lt; _T(&quot; -readnow &quot;);    // read symbol table immediately</span>
+     cmd &lt;&lt; _T(&quot; -fullname &quot;);   // report full-path filenames when breaking
+     cmd &lt;&lt; _T(&quot; -quiet&quot;);       // don&#39;t display version on startup
+     cmd &lt;&lt; _T(&quot; -pid=&quot;) &lt;&lt; wxString::Format(_T(&quot;%d&quot;), pid);
+<span class="gh">Index: plugins/debuggergdb/debuggerstate.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/debuggergdb/debuggerstate.cpp    (revision 3258)</span>
+<span class="gi">+++ plugins/debuggergdb/debuggerstate.cpp    (working copy)</span>
+<span class="gu">@@ -104,10 +104,11 @@</span>
+         }
+         else
+         {
+<span class="gd">-            // for foreign files, we still should use a relative path</span>
+<span class="gi">+            // for foreign files, we should use an absolute path</span>
+             wxFileName f(filename);
+<span class="gd">-            f.MakeRelativeTo(prj-&gt;GetBasePath());</span>
+<span class="gi">+            f.MakeAbsolute();</span>
+             fname = f.GetFullPath();
+<span class="gi">+            fname.Replace(_T(&quot;\\&quot;), _T(&quot;/&quot;));</span>
+         }
+     }
+     return fname;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">ramazank 2006-11-24 22:51:48</div>

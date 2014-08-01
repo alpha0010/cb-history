@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,68 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/debuggergdb/gdb_commands.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/debuggergdb/gdb_commands.h    (Revision 7112)</span>
+<span class="gi">+++ src/plugins/debuggergdb/gdb_commands.h    (Arbeitskopie)</span>
+<span class="gu">@@ -784,6 +784,46 @@</span>
+ };
+ 
+ /**
+<span class="gi">+  * Command to get the REAL type of the type</span>
+<span class="gi">+  * will repeat until a registrated type was fond or the same type is retuned</span>
+<span class="gi">+  */</span>
+<span class="gi">+class GdbCmd_FindTypeType : public DebuggerCmd</span>
+<span class="gi">+{</span>
+<span class="gi">+        GDBWatch::Pointer m_watch;</span>
+<span class="gi">+    public:</span>
+<span class="gi">+        GdbCmd_FindTypeType(DebuggerDriver* driver, GDBWatch::Pointer watch) :</span>
+<span class="gi">+            DebuggerCmd(driver),</span>
+<span class="gi">+            m_watch(watch)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            wxString type;</span>
+<span class="gi">+            m_watch-&gt;GetType(type);</span>
+<span class="gi">+            m_Cmd &lt;&lt; wxT(&quot;whatis &quot;);</span>
+<span class="gi">+            m_Cmd &lt;&lt; type;</span>
+<span class="gi">+        }</span>
+<span class="gi">+        void ParseOutput(const wxString&amp; output)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            // examples:</span>
+<span class="gi">+            // type = wxString</span>
+<span class="gi">+            // type = const wxChar</span>
+<span class="gi">+            // type = Action *</span>
+<span class="gi">+            // type = bool</span>
+<span class="gi">+            wxString m_ParseFunc, type, tmp = output.AfterFirst(_T(&#39;=&#39;));</span>
+<span class="gi">+            m_watch-&gt;GetType(type);</span>
+<span class="gi">+</span>
+<span class="gi">+            m_Cmd = static_cast&lt;GDB_driver*&gt;(m_pDriver)-&gt;GetScriptedTypeCommand(type, m_ParseFunc);</span>
+<span class="gi">+            if( m_Cmd.IsEmpty() &amp;&amp; type != tmp )</span>
+<span class="gi">+            {</span>
+<span class="gi">+                //type = tmp;</span>
+<span class="gi">+                m_watch-&gt;SetType(tmp);</span>
+<span class="gi">+                m_pDriver-&gt;QueueCommand(new GdbCmd_FindTypeType(m_pDriver, m_watch), DebuggerDriver::High);</span>
+<span class="gi">+                return;</span>
+<span class="gi">+            }</span>
+<span class="gi">+            </span>
+<span class="gi">+            m_pDriver-&gt;QueueCommand(new GdbCmd_Watch(m_pDriver, m_watch), DebuggerDriver::High);</span>
+<span class="gi">+        }</span>
+<span class="gi">+};</span>
+<span class="gi">+</span>
+<span class="gi">+/**</span>
+   * Command to get a watched variable&#39;s type.
+   */
+ class GdbCmd_FindWatchType : public DebuggerCmd
+<span class="gu">@@ -831,7 +871,7 @@</span>
+                 m_watch-&gt;SetType(tmp);
+                 m_watch-&gt;SetValue(wxEmptyString);
+             }
+<span class="gd">-            m_pDriver-&gt;QueueCommand(new GdbCmd_Watch(m_pDriver, m_watch), DebuggerDriver::High);</span>
+<span class="gi">+            m_pDriver-&gt;QueueCommand(new GdbCmd_FindTypeType(m_pDriver, m_watch), DebuggerDriver::High);</span>
+         }
+ };
+ 
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">cbuser132 2011-04-16 12:59:20</div>

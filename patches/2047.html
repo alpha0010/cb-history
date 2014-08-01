@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,101 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/include/projectbuildtarget.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/projectbuildtarget.h    (revision 4084)</span>
+<span class="gi">+++ src/include/projectbuildtarget.h    (working copy)</span>
+<span class="gu">@@ -112,6 +112,14 @@</span>
+         /** Provides an easy way to iterate all the files belonging in this target.
+           * @return A list of files belonging in this target. */
+         virtual FilesList&amp; GetFilesList(){ return m_Files; }
+<span class="gi">+</span>
+<span class="gi">+        /** @return True if target linking should be forced, false if not. */</span>
+<span class="gi">+        virtual bool GetForceLinking(){ return m_ForceLinking; }</span>
+<span class="gi">+</span>
+<span class="gi">+        /** Set if target linking should be forced.</span>
+<span class="gi">+          * Used to force linking when files are added or removed from project.</span>
+<span class="gi">+          * @param forceIt If true, target linking is forced else it is not. */</span>
+<span class="gi">+        virtual void SetForceLinking(bool forceIt){ m_ForceLinking = forceIt; };</span>
+     private:
+         friend class ProjectFile; // to allow it to add/remove files in FilesList
+         cbProject* m_Project;
+<span class="gu">@@ -123,6 +131,7 @@</span>
+         bool m_CreateStaticLib;
+         bool m_CreateDefFile;
+         bool m_UseConsoleRunner;
+<span class="gi">+        bool m_ForceLinking;</span>
+ };
+ 
+ #endif // PROJECTBUILDTARGET_H
+<span class="gh">Index: src/plugins/compilergcc/directcommands.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/directcommands.cpp    (revision 4084)</span>
+<span class="gi">+++ src/plugins/compilergcc/directcommands.cpp    (working copy)</span>
+<span class="gu">@@ -518,6 +518,11 @@</span>
+         force = true;
+     if (AreExternalDepsOutdated(out.GetFullPath(), target-&gt;GetAdditionalOutputFiles(), target-&gt;GetExternalDeps()))
+         force = true;
+<span class="gi">+    if (target-&gt;GetForceLinking())</span>
+<span class="gi">+    {</span>
+<span class="gi">+        force = true;</span>
+<span class="gi">+        target-&gt;SetForceLinking(false);</span>
+<span class="gi">+    }</span>
+ 
+     Compiler* compiler = target ? CompilerFactory::GetCompiler(target-&gt;GetCompilerID()) : m_pCompiler;
+ 
+<span class="gh">Index: src/sdk/cbproject.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbproject.cpp    (revision 4084)</span>
+<span class="gi">+++ src/sdk/cbproject.cpp    (working copy)</span>
+<span class="gu">@@ -730,6 +730,7 @@</span>
+         if (target)
+         {
+             target-&gt;GetFilesList().DeleteObject(pf);
+<span class="gi">+            target-&gt;SetForceLinking(true);</span>
+         }
+     }
+     delete pf;
+<span class="gh">Index: src/sdk/projectbuildtarget.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/projectbuildtarget.cpp    (revision 4084)</span>
+<span class="gi">+++ src/sdk/projectbuildtarget.cpp    (working copy)</span>
+<span class="gu">@@ -44,6 +44,7 @@</span>
+     m_CreateStaticLib = true;
+     m_CreateDefFile = true;
+     m_UseConsoleRunner = true;
+<span class="gi">+    m_ForceLinking = false;</span>
+ }
+ 
+ // class destructor
+<span class="gh">Index: src/sdk/projectfile.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/projectfile.cpp    (revision 4084)</span>
+<span class="gi">+++ src/sdk/projectfile.cpp    (working copy)</span>
+<span class="gu">@@ -62,7 +62,10 @@</span>
+     {
+         ProjectBuildTarget* target = project-&gt;GetBuildTarget(targetName);
+         if (target &amp;&amp; !target-&gt;m_Files.Find(this))
+<span class="gi">+        {</span>
+             target-&gt;m_Files.Append(this);
+<span class="gi">+            target-&gt;SetForceLinking(true);</span>
+<span class="gi">+        }</span>
+     }
+ }
+ 
+<span class="gu">@@ -85,7 +88,10 @@</span>
+         {
+             wxFilesListNode* node = target-&gt;m_Files.Find(this);
+             if (node)
+<span class="gi">+            {</span>
+                 target-&gt;m_Files.Erase(node);
+<span class="gi">+                target-&gt;SetForceLinking(true);</span>
+<span class="gi">+            }</span>
+         }
+     }
+ }
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">pauliusz 2007-06-16 00:04:01</div>

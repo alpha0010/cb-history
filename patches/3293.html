@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,135 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/editormanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editormanager.cpp    (revision 8050)</span>
+<span class="gi">+++ src/sdk/editormanager.cpp    (working copy)</span>
+<span class="gu">@@ -2808,36 +2808,63 @@</span>
+         pop-&gt;Append(idNBTabCloseAll, _(&quot;Close all&quot;));
+         pop-&gt;Append(idNBTabCloseAllOthers, _(&quot;Close all others&quot;));
+     }
+<span class="gi">+</span>
+<span class="gi">+    int any_modified = 0;</span>
+<span class="gi">+    for (int i = 0; i &lt; GetEditorsCount(); ++i)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        EditorBase* ed = GetEditor(i);</span>
+<span class="gi">+        if (ed &amp;&amp; ed-&gt;GetModified())</span>
+<span class="gi">+        {</span>
+<span class="gi">+            if(++any_modified &gt; 1)</span>
+<span class="gi">+                break;</span>
+<span class="gi">+        }</span>
+<span class="gi">+    }</span>
+<span class="gi">+    if (any_modified &gt; 0)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        pop-&gt;AppendSeparator();</span>
+<span class="gi">+        if (GetEditor(event.GetSelection())-&gt;GetModified())</span>
+<span class="gi">+            pop-&gt;Append(idNBTabSave, _(&quot;Save&quot;));</span>
+<span class="gi">+        if (any_modified &gt; 1 || !GetEditor(event.GetSelection())-&gt;GetModified())</span>
+<span class="gi">+            pop-&gt;Append(idNBTabSaveAll, _(&quot;Save all&quot;));</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+     pop-&gt;AppendSeparator();
+<span class="gd">-    pop-&gt;Append(idNBTabSave, _(&quot;Save&quot;));</span>
+<span class="gd">-    pop-&gt;Append(idNBTabSaveAll, _(&quot;Save all&quot;));</span>
+<span class="gd">-    pop-&gt;AppendSeparator();</span>
+<span class="gd">-    pop-&gt;Append(idNBSwapHeaderSource, _(&quot;Swap header/source&quot;));</span>
+<span class="gd">-    pop-&gt;Append(idNBTabOpenContainingFolder, _(&quot;Open containing folder&quot;));</span>
+<span class="gd">-    pop-&gt;AppendSeparator();</span>
+<span class="gd">-    pop-&gt;Append(idNBTabTop, _(&quot;Tabs at top&quot;));</span>
+<span class="gd">-    pop-&gt;Append(idNBTabBottom, _(&quot;Tabs at bottom&quot;));</span>
+<span class="gi">+    wxString name = GetEditor(event.GetSelection())-&gt;GetFilename().Lower();</span>
+<span class="gi">+    if (name.EndsWith(FileFilters::C_DOT_EXT)    ||</span>
+<span class="gi">+        name.EndsWith(FileFilters::CPP_DOT_EXT)  ||</span>
+<span class="gi">+        name.EndsWith(FileFilters::CC_DOT_EXT)   ||</span>
+<span class="gi">+        name.EndsWith(FileFilters::CXX_DOT_EXT)  ||</span>
+<span class="gi">+        name.EndsWith(FileFilters::CPLPL_DOT_EXT))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        pop-&gt;Append(idNBSwapHeaderSource, _(&quot;Switch to header&quot;));</span>
+<span class="gi">+    }</span>
+<span class="gi">+    else if (FileTypeOf(name) == ftHeader)</span>
+<span class="gi">+        pop-&gt;Append(idNBSwapHeaderSource, _(&quot;Switch to source&quot;));</span>
+<span class="gi">+    cbEditor* ed = GetBuiltinEditor(event.GetSelection());</span>
+<span class="gi">+    if (ed)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        pop-&gt;Append(idNBTabOpenContainingFolder, _(&quot;Open containing folder&quot;));</span>
+<span class="gi">+        pop-&gt;Append(idNBProperties, _(&quot;Properties...&quot;));</span>
+<span class="gi">+        pop-&gt;AppendSeparator();</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+     if (Manager::Get()-&gt;GetConfigManager(_T(&quot;app&quot;))-&gt;ReadBool(_T(&quot;/environment/editor_tabs_bottom&quot;), false))
+<span class="gd">-        pop-&gt;FindItem(idNBTabBottom)-&gt;Enable(false);</span>
+<span class="gi">+        pop-&gt;Append(idNBTabTop, _(&quot;Tabs at top&quot;));</span>
+     else
+<span class="gd">-        pop-&gt;FindItem(idNBTabTop)-&gt;Enable(false);</span>
+<span class="gi">+        pop-&gt;Append(idNBTabBottom, _(&quot;Tabs at bottom&quot;));</span>
+ 
+<span class="gd">-    cbEditor* ed = GetBuiltinEditor(event.GetSelection());</span>
+     if (ed)
+     {
+<span class="gd">-        pop-&gt;AppendSeparator();</span>
+<span class="gd">-        pop-&gt;Append(idNBProperties, _(&quot;Properties...&quot;));</span>
+<span class="gd">-</span>
+         wxMenu* splitMenu = new wxMenu;
+<span class="gd">-        splitMenu-&gt;Append(idNBTabSplitHorz, _(&quot;Horizontally&quot;));</span>
+<span class="gd">-        splitMenu-&gt;Append(idNBTabSplitVert, _(&quot;Vertically&quot;));</span>
+<span class="gd">-        splitMenu-&gt;AppendSeparator();</span>
+<span class="gd">-        splitMenu-&gt;Append(idNBTabUnsplit, _(&quot;Unsplit&quot;));</span>
+<span class="gd">-        splitMenu-&gt;Enable(idNBTabSplitHorz, ed-&gt;GetSplitType() != cbEditor::stHorizontal);</span>
+<span class="gd">-        splitMenu-&gt;Enable(idNBTabSplitVert, ed-&gt;GetSplitType() != cbEditor::stVertical);</span>
+<span class="gd">-        splitMenu-&gt;Enable(idNBTabUnsplit, ed-&gt;GetSplitType() != cbEditor::stNoSplit);</span>
+<span class="gd">-</span>
+<span class="gd">-        pop-&gt;AppendSeparator();</span>
+<span class="gi">+        if (ed-&gt;GetSplitType() != cbEditor::stHorizontal)</span>
+<span class="gi">+            splitMenu-&gt;Append(idNBTabSplitHorz, _(&quot;Horizontally&quot;));</span>
+<span class="gi">+        if (ed-&gt;GetSplitType() != cbEditor::stVertical)</span>
+<span class="gi">+            splitMenu-&gt;Append(idNBTabSplitVert, _(&quot;Vertically&quot;));</span>
+<span class="gi">+        if (ed-&gt;GetSplitType() != cbEditor::stNoSplit)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            splitMenu-&gt;AppendSeparator();</span>
+<span class="gi">+            splitMenu-&gt;Append(idNBTabUnsplit, _(&quot;Unsplit&quot;));</span>
+<span class="gi">+        }</span>
+         pop-&gt;Append(-1, _(&quot;Split view&quot;), splitMenu);
+ 
+         if (Manager::Get()-&gt;GetProjectManager()-&gt;GetActiveProject()) // project must be open
+<span class="gu">@@ -2855,21 +2882,6 @@</span>
+         }
+     }
+ 
+<span class="gd">-    bool any_modified = false;</span>
+<span class="gd">-</span>
+<span class="gd">-    for (int i = 0; i &lt; GetEditorsCount(); ++i)</span>
+<span class="gd">-    {</span>
+<span class="gd">-        EditorBase* ed = GetEditor(i);</span>
+<span class="gd">-        if (ed &amp;&amp; ed-&gt;GetModified())</span>
+<span class="gd">-        {</span>
+<span class="gd">-            any_modified = true;</span>
+<span class="gd">-            break;</span>
+<span class="gd">-        }</span>
+<span class="gd">-    }</span>
+<span class="gd">-</span>
+<span class="gd">-    pop-&gt;Enable(idNBTabSave, GetEditor(event.GetSelection())-&gt;GetModified());</span>
+<span class="gd">-    pop-&gt;Enable(idNBTabSaveAll, any_modified );</span>
+<span class="gd">-</span>
+     // allow plugins to use this menu
+     Manager::Get()-&gt;GetPluginManager()-&gt;AskPluginsForModuleMenu(mtEditorTab, pop);
+ 
+<span class="gh">Index: src/sdk/projectmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/projectmanager.cpp    (revision 8050)</span>
+<span class="gi">+++ src/sdk/projectmanager.cpp    (working copy)</span>
+<span class="gu">@@ -1948,12 +1948,10 @@</span>
+ void ProjectManager::OnTabContextMenu(wxAuiNotebookEvent&amp; /*event*/)
+ {
+     wxMenu* NBmenu = new wxMenu();
+<span class="gd">-    NBmenu-&gt;Append(idNB_TabTop, _(&quot;Tabs at top&quot;));</span>
+<span class="gd">-    NBmenu-&gt;Append(idNB_TabBottom, _(&quot;Tabs at bottom&quot;));</span>
+     if (Manager::Get()-&gt;GetConfigManager(_T(&quot;app&quot;))-&gt;ReadBool(_T(&quot;/environment/project_tabs_bottom&quot;), false))
+<span class="gd">-        NBmenu-&gt;FindItem(idNB_TabBottom)-&gt;Enable(false);</span>
+<span class="gi">+        NBmenu-&gt;Append(idN</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">alpha0010 2012-05-26 22:35:57</div>

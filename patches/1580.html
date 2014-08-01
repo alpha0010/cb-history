@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,123 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/pluginsconfigurationdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/pluginsconfigurationdlg.cpp    (revision 3130)</span>
+<span class="gi">+++ src/sdk/pluginsconfigurationdlg.cpp    (working copy)</span>
+<span class="gu">@@ -44,6 +44,7 @@</span>
+ #include &lt;wx/dirdlg.h&gt;
+ #include &lt;wx/progdlg.h&gt;
+ #include &lt;wx/filename.h&gt;
+<span class="gi">+#include &lt;wx/html/htmlwin.h&gt;</span>
+ 
+ #include &quot;pluginsconfigurationdlg.h&quot; // class&#39;s header file
+ 
+<span class="gu">@@ -61,7 +62,7 @@</span>
+     EVT_BUTTON(XRCID(&quot;btnInstall&quot;), PluginsConfigurationDlg::OnInstall)
+     EVT_BUTTON(XRCID(&quot;btnUninstall&quot;), PluginsConfigurationDlg::OnUninstall)
+     EVT_BUTTON(XRCID(&quot;btnExport&quot;), PluginsConfigurationDlg::OnExport)
+<span class="gd">-    EVT_BUTTON(XRCID(&quot;btnInfo&quot;), PluginsConfigurationDlg::OnInfo)</span>
+<span class="gi">+    EVT_LIST_ITEM_SELECTED(XRCID(&quot;lstPlugins&quot;), PluginsConfigurationDlg::OnSelect)</span>
+ 
+     EVT_UPDATE_UI(-1, PluginsConfigurationDlg::OnUpdateUI)
+ END_EVENT_TABLE()
+<span class="gu">@@ -87,6 +88,31 @@</span>
+     }
+     XRCCTRL(*this, &quot;chkInstallGlobally&quot;, wxCheckBox)-&gt;SetValue(globalInstall);
+     XRCCTRL(*this, &quot;chkInstallConfirmation&quot;, wxCheckBox)-&gt;SetValue(confirmation);
+<span class="gi">+    </span>
+<span class="gi">+    // Set default font size based on system default font size</span>
+<span class="gi">+#ifdef __linux__</span>
+<span class="gi">+    /* NOTE (mandrav#1#): wxWidgets documentation on wxHtmlWindow::SetFonts(),</span>
+<span class="gi">+    states that the sizes array accepts values from -2 to +4.</span>
+<span class="gi">+    My tests (under linux at least) have showed that it actually</span>
+<span class="gi">+    expects real point sizes. */</span>
+<span class="gi">+    </span>
+<span class="gi">+    wxFont systemFont = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);</span>
+<span class="gi">+    int sizes[7] = {};</span>
+<span class="gi">+    for (int i = 0; i &lt; 7; ++i)</span>
+<span class="gi">+        sizes[i] = systemFont.GetPointSize();</span>
+<span class="gi">+    XRCCTRL(*this, &quot;htmlInfo&quot;, wxHtmlWindow)-&gt;SetFonts(wxEmptyString, wxEmptyString, &amp;sizes[0]);</span>
+<span class="gi">+#endif</span>
+<span class="gi">+</span>
+<span class="gi">+    wxString initialInfo;</span>
+<span class="gi">+    initialInfo &lt;&lt; _T(&quot;&lt;html&gt;&lt;body&gt;&lt;font color=\&quot;#0000AA\&quot;&gt;&quot;);</span>
+<span class="gi">+    initialInfo &lt;&lt; _(&quot;Tip: The above list allows for multiple selections.&quot;);</span>
+<span class="gi">+    initialInfo &lt;&lt; _T(&quot;&lt;/font&gt;&lt;br /&gt;&lt;br /&gt;&lt;i&gt;&lt;font color=\&quot;#696969\&quot;&gt;&quot;);</span>
+<span class="gi">+    initialInfo &lt;&lt; _(&quot;Have you saved your work first?&quot;);</span>
+<span class="gi">+    initialInfo &lt;&lt; _T(&quot;&lt;br /&gt;\n&quot;);</span>
+<span class="gi">+    initialInfo &lt;&lt; _(&quot;All functionality in this dialog is to be considered as &amp;quot;experimental&amp;quot;.&quot;);</span>
+<span class="gi">+    initialInfo &lt;&lt; _T(&quot;&lt;/font&gt;&lt;/i&gt;&lt;br /&gt;&lt;/body&gt;&lt;/html&gt;\n&quot;);</span>
+<span class="gi">+</span>
+<span class="gi">+    XRCCTRL(*this, &quot;htmlInfo&quot;, wxHtmlWindow)-&gt;SetPage(initialInfo);</span>
+ }
+ 
+ void PluginsConfigurationDlg::FillList()
+<span class="gu">@@ -357,7 +383,7 @@</span>
+         cbMessageBox(_(&quot;Failed exporting one or more plugins:\n\n&quot;) + failure, _(&quot;Warning&quot;), wxICON_WARNING);
+ }
+ 
+<span class="gd">-void PluginsConfigurationDlg::OnInfo(wxCommandEvent&amp; event)</span>
+<span class="gi">+void PluginsConfigurationDlg::OnSelect(wxListEvent&amp; event)</span>
+ {
+     wxListCtrl* list = XRCCTRL(*this, &quot;lstPlugins&quot;, wxListCtrl);
+     if (list-&gt;GetSelectedItemCount() != 1)
+<span class="gu">@@ -367,15 +393,20 @@</span>
+     const PluginElement* elem = (const PluginElement*)list-&gt;GetItemData(sel);
+     if (!elem)
+         return;
+<span class="gi">+   </span>
+<span class="gi">+    wxString description(elem-&gt;info.description);</span>
+<span class="gi">+    description.Replace(_T(&quot;\n&quot;), _T(&quot;&lt;br /&gt;\n&quot;));</span>
+ 
+     wxString info;
+<span class="gd">-    info &lt;&lt; _(&quot;Title: &quot;) &lt;&lt; elem-&gt;info.title &lt;&lt; _T(&#39;\n&#39;);</span>
+<span class="gd">-    info &lt;&lt; _(&quot;Version: &quot;) &lt;&lt; elem-&gt;info.version &lt;&lt; _T(&#39;\n&#39;);</span>
+<span class="gd">-    info &lt;&lt; _(&quot;Description: &quot;) &lt;&lt; elem-&gt;info.description &lt;&lt; _T(&#39;\n&#39;);</span>
+<span class="gd">-    info &lt;&lt; _T(&#39;\n&#39;);</span>
+<span class="gd">-    info &lt;&lt; _(&quot;Filename: &quot;) &lt;&lt; elem-&gt;fileName &lt;&lt; _T(&#39;\n&#39;);</span>
+<span class="gi">+    info &lt;&lt; _T(&quot;&lt;html&gt;&lt;body&gt;\n&quot;);</span>
+<span class="gi">+    info &lt;&lt; _T(&quot;&lt;h3&gt;&quot;) &lt;&lt; elem-&gt;info.title &lt;&lt; _T(&quot; &quot;);</span>
+<span class="gi">+    info &lt;&lt; _T(&quot;&lt;font color=\&quot;#0000AA\&quot;&gt;&quot;) &lt;&lt; elem-&gt;info.version &lt;&lt; _T(&quot;&lt;/font&gt;&lt;/h3&gt;&quot;);</span>
+<span class="gi">+    info &lt;&lt; _T(&quot;&lt;i&gt;&lt;font color=\&quot;#808080\&quot; size=\&quot;-1\&quot;&gt;&quot;) &lt;&lt; UnixFilename(elem-&gt;fileName) &lt;&lt; _T(&quot;&lt;/font&gt;&lt;/i&gt;&lt;br /&gt;\n&quot;);</span>
+<span class="gi">+    info &lt;&lt; _T(&quot;&lt;br /&gt;\n&quot;);</span>
+<span class="gi">+    info &lt;&lt; description &lt;&lt; _T(&quot;&lt;br /&gt;\n&quot;);</span>
+<span class="gi">+    info &lt;&lt; _T(&quot;&lt;/body&gt;&lt;/html&gt;\n&quot;);</span>
+ 
+<span class="gd">-    cbMessageBox(info, _(&quot;Information&quot;), wxICON_INFORMATION);</span>
+<span class="gi">+    XRCCTRL(*this, &quot;htmlInfo&quot;, wxHtmlWindow)-&gt;SetPage(info);</span>
+ }
+ 
+ void PluginsConfigurationDlg::OnUpdateUI(wxUpdateUIEvent&amp; event)
+<span class="gu">@@ -402,7 +433,6 @@</span>
+     XRCCTRL(*this, &quot;btnDisable&quot;, wxButton)-&gt;Enable(en &amp;&amp; (lastSelectionMultiple || (hasPlugin &amp;&amp; isAttached)));
+     XRCCTRL(*this, &quot;btnUninstall&quot;, wxButton)-&gt;Enable(en);
+     XRCCTRL(*this, &quot;btnExport&quot;, wxButton)-&gt;Enable(en);
+<span class="gd">-    XRCCTRL(*this, &quot;btnInfo&quot;, wxButton)-&gt;Enable(en);</span>
+ }
+ 
+ void PluginsConfigurationDlg::EndModal(int retCode)
+<span class="gh">Index: src/sdk/pluginsconfigurationdlg.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/pluginsconfigurationdlg.h    (revision 3130)</span>
+<span class="gi">+++ src/sdk/pluginsconfigurationdlg.h    (working copy)</span>
+<span class="gu">@@ -21,7 +21,7 @@</span>
+         void OnInstall(wxCommandEvent&amp; event);
+         void OnUninstall(wxCommandEvent&amp; event);
+         void OnExport(wxCommandEvent&amp; event);
+<span class="gd">-        void OnInfo(wxCommandEvent&amp; event);</span>
+<span class="gi">+        void OnSelect(wxListEvent&amp; event);</span>
+         void OnUpdateUI(wxUpdateUIEvent&amp; event);
+ 
+         DECLARE_EVENT_TABLE();
+<span class="gh">Index: src/sdk/resources/plugins_configuration.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/plugins_configuration.xrc    (revision 3130)</span>
+<span class="gi">+++ src/sdk/resources/plugins_configuration.xrc    (</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">takeshimiya 2006-10-24 07:25:31</div>

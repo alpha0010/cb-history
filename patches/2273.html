@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,48 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: gdb_driver.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- gdb_driver.cpp    (revision 4703)</span>
+<span class="gi">+++ gdb_driver.cpp    (working copy)</span>
+<span class="gu">@@ -396,22 +396,23 @@</span>
+ void GDB_driver::CorrectCygwinPath(wxString&amp; path)
+ {
+     unsigned int i=0, escCount=0;
+<span class="gd">-    // prepare to convert to a valid path if Cygwin is being used</span>
+<span class="gd">-    if(path.Contains(m_CygdrivePrefix))</span>
+<span class="gi">+    </span>
+<span class="gi">+    // preserve any escape characters at start of path - this is true for</span>
+<span class="gi">+    // breakpoints - value is 2, but made dynamic for safety as we</span>
+<span class="gi">+    // are only checking for the CDprefix not any furthur correctness</span>
+<span class="gi">+    if(path.GetChar(0)== g_EscapeChars)</span>
+     {
+<span class="gd">-        // preserve any escape characters at start of path - this is true for</span>
+<span class="gd">-        // breakpoints - value is 2, but made dynamic for safety as we</span>
+<span class="gd">-        // are only checking for the CDprefix not any furthur correctness</span>
+<span class="gd">-        if(path.GetChar(0)== g_EscapeChars)</span>
+<span class="gi">+        while(i&lt;path.Len()&amp; (path.GetChar(i)==g_EscapeChars))</span>
+         {
+<span class="gd">-            while(i&lt;path.Len()&amp; (path.GetChar(i)==g_EscapeChars))</span>
+<span class="gd">-            {</span>
+<span class="gd">-                // get character</span>
+<span class="gd">-                escCount+=1;</span>
+<span class="gd">-                i+=1;</span>
+<span class="gd">-            }</span>
+<span class="gi">+            // get character</span>
+<span class="gi">+            escCount+=1;</span>
+<span class="gi">+            i+=1;</span>
+         }
+<span class="gi">+    }</span>
+ 
+<span class="gi">+    // prepare to convert to a valid path if Cygwin is being used</span>
+<span class="gi">+    if(path.substr(escCount, m_CygdrivePrefix.Len()) == m_CygdrivePrefix)</span>
+<span class="gi">+    {</span>
+         // step over the escape characters and remove cygwin prefix
+         path.Remove(escCount, (m_CygdrivePrefix.Len())+1);
+         // insert &#39;:&#39; after drive label by reading and removing drive the label
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mortenmacfly 2008-07-23 18:20:40</div>

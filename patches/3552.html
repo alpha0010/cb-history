@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,91 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/debuggergdb/cdb_driver.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/debuggergdb/cdb_driver.cpp    (revision 9652)</span>
+<span class="gi">+++ src/plugins/debuggergdb/cdb_driver.cpp    (working copy)</span>
+<span class="gu">@@ -27,7 +27,9 @@</span>
+ 
+ #include &lt;cbdebugger_interfaces.h&gt;
+ 
+<span class="gd">-static wxRegEx rePrompt(_T(&quot;([0-9]+:){1,2}[0-9]+&gt;&quot;));</span>
+<span class="gi">+// ElCaBoom: Slightly different prompt when using 64-bit CDB to debug a 32-bit binary</span>
+<span class="gi">+// static wxRegEx rePrompt(_T(&quot;([0-9]+:){1,2}[0-9]+&gt;&quot;));</span>
+<span class="gi">+static wxRegEx rePrompt(_T(&quot;([0-9]+:){1,2}[xX0-9]+&gt;&quot;));</span>
+ static wxRegEx reBP(_T(&quot;Breakpoint ([0-9]+) hit&quot;));
+ // one stack frame (to access current file; is there another way???)
+ //  # ChildEBP RetAddr
+<span class="gu">@@ -58,28 +60,31 @@</span>
+     if (m_Target-&gt;GetTargetType() == ttConsoleOnly)
+         cmd &lt;&lt; wxT(&quot; -2&quot;); // tell the debugger to launch a console for us
+ 
+<span class="gd">-    if (m_Dirs.GetCount() &gt; 0)</span>
+<span class="gd">-    {</span>
+<span class="gd">-        // add symbols dirs</span>
+<span class="gd">-        cmd &lt;&lt; _T(&quot; -y &quot;);</span>
+<span class="gd">-        for (unsigned int i = 0; i &lt; m_Dirs.GetCount(); ++i)</span>
+<span class="gd">-            cmd &lt;&lt; m_Dirs[i] &lt;&lt; wxPATH_SEP;</span>
+<span class="gi">+    if (m_Dirs.GetCount() &gt; 0)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        // add symbols dirs</span>
+<span class="gi">+        // ElCaBoom: Not necessary, CDB will find the PDB through the binary image</span>
+<span class="gi">+        //cmd &lt;&lt; _T(&quot; -y &quot;);</span>
+<span class="gi">+        //for (unsigned int i = 0; i &lt; m_Dirs.GetCount(); ++i)</span>
+<span class="gi">+        //    cmd &lt;&lt; m_Dirs[i] &lt;&lt; wxPATH_SEP;</span>
+ 
+<span class="gd">-        // add source dirs</span>
+<span class="gd">-        cmd &lt;&lt; _T(&quot; -srcpath &quot;);</span>
+<span class="gd">-        for (unsigned int i = 0; i &lt; m_Dirs.GetCount(); ++i)</span>
+<span class="gd">-            cmd &lt;&lt; m_Dirs[i] &lt;&lt; wxPATH_SEP;</span>
+<span class="gi">+        // add source dirs</span>
+<span class="gi">+        cmd &lt;&lt; _T(&quot; -srcpath &quot;);</span>
+<span class="gi">+        for (unsigned int i = 0; i &lt; m_Dirs.GetCount(); ++i)</span>
+<span class="gi">+            cmd &lt;&lt; m_Dirs[i] &lt;&lt; wxPATH_SEP;</span>
+     }
+     return cmd;
+ }
+ 
+ // FIXME (obfuscated#): Implement user arguments
+<span class="gd">-wxString CDB_driver::GetCommandLine(const wxString&amp; debugger, const wxString&amp; debuggee, cb_unused const wxString &amp;userArguments)</span>
+<span class="gi">+// Fixed by ElCaBoom</span>
+<span class="gi">+wxString CDB_driver::GetCommandLine(const wxString&amp; debugger, const wxString&amp; debuggee, const wxString &amp;userArguments)</span>
+ {
+     wxString cmd = GetCommonCommandLine(debugger);
+<span class="gi">+    // ElCaBoom: Add the user arguments</span>
+<span class="gi">+    cmd &lt;&lt; _T(&#39; &#39;) &lt;&lt; userArguments;</span>
+<span class="gi">+    // finally, add the program to debug</span>
+     cmd &lt;&lt; _T(&#39; &#39;);
+<span class="gd">-</span>
+<span class="gd">-    // finally, add the program to debug</span>
+     wxFileName debuggeeFileName(debuggee);
+     if (debuggeeFileName.IsAbsolute())
+         cmd &lt;&lt; debuggee;
+<span class="gu">@@ -90,9 +95,12 @@</span>
+ }
+ 
+ // FIXME (obfuscated#): Implement user arguments
+<span class="gd">-wxString CDB_driver::GetCommandLine(const wxString&amp; debugger, int pid, cb_unused const wxString &amp;userArguments)</span>
+<span class="gi">+// Fixed by ElCaBoom</span>
+<span class="gi">+wxString CDB_driver::GetCommandLine(const wxString&amp; debugger, int pid, const wxString &amp;userArguments)</span>
+ {
+     wxString cmd = GetCommonCommandLine(debugger);
+<span class="gi">+    // ElCaBoom: Add the user arguments</span>
+<span class="gi">+    cmd &lt;&lt; _T(&#39; &#39;) &lt;&lt; userArguments;</span>
+     // finally, add the PID
+     cmd &lt;&lt; _T(&quot; -p &quot;) &lt;&lt; wxString::Format(_T(&quot;%d&quot;), pid);
+     return cmd;
+<span class="gu">@@ -119,6 +127,8 @@</span>
+     QueueCommand(new DebuggerCmd(this, _T(&quot;l+t&quot;))); // source mode
+     QueueCommand(new DebuggerCmd(this, _T(&quot;l+s&quot;))); // show source lines
+     QueueCommand(new DebuggerCmd(this, _T(&quot;l+o&quot;))); // only source lines
+<span class="gi">+    // ElCaBoom: Added command not to break on WOW64 breakpoint, just report the event (64-bit CDB)</span>
+<span class="gi">+    QueueCommand(new DebuggerCmd(this, _T(&quot;sxn 4000001f&quot;)));</span>
+ 
+     if (!m_pDBG-&gt;GetActiveConfigEx().GetFlag(DebuggerConfiguration::DoNotRun))
+     {
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">tpetrov 2014-04-26 15:18:17</div>

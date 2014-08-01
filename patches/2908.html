@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,138 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: debian/changelog</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- debian/changelog    (revision 6089)</span>
+<span class="gi">+++ debian/changelog    (working copy)</span>
+<span class="gu">@@ -1,4 +1,4 @@</span>
+<span class="gd">-codeblocks (8.02svn5933) unstable; urgency=low</span>
+<span class="gi">+codeblocks (8.02svn6089) unstable; urgency=low</span>
+ 
+   * more fixes to debian build system, sources and packages are now
+     lintian-clean, except for some words guessed as spelling-errors.
+<span class="gh">Index: src/sdk/projectmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/projectmanager.cpp    (revision 6089)</span>
+<span class="gi">+++ src/sdk/projectmanager.cpp    (working copy)</span>
+<span class="gu">@@ -1437,50 +1437,49 @@</span>
+     }
+ 
+     FileType ft = FileTypeOf(filename);
+<span class="gd">-    if (ft == ftHeader || ft == ftSource)</span>
+<span class="gi">+</span>
+<span class="gi">+    // first look for custom editors</span>
+<span class="gi">+    // if that fails, try MIME handlers</span>
+<span class="gi">+    EditorBase* eb = Manager::Get()-&gt;GetEditorManager()-&gt;IsOpen(filename);</span>
+<span class="gi">+    if (eb &amp;&amp; !eb-&gt;IsBuiltinEditor())</span>
+     {
+<span class="gd">-        // C/C++ header/source files, always get opened inside Code::Blocks</span>
+<span class="gd">-        cbEditor* ed = Manager::Get()-&gt;GetEditorManager()-&gt;Open(filename);</span>
+<span class="gd">-        if (ed)</span>
+<span class="gd">-        {</span>
+<span class="gd">-            ed-&gt;SetProjectFile(pf);</span>
+<span class="gd">-            ed-&gt;Activate();</span>
+<span class="gd">-        }</span>
+<span class="gd">-        else</span>
+<span class="gd">-        {</span>
+<span class="gd">-            wxString msg;</span>
+<span class="gd">-            msg.Printf(_(&quot;Failed to open &#39;%s&#39;.&quot;), filename.c_str());</span>
+<span class="gd">-            Manager::Get()-&gt;GetLogManager()-&gt;LogError(msg);</span>
+<span class="gd">-        }</span>
+<span class="gi">+        // custom editors just get activated</span>
+<span class="gi">+        eb-&gt;Activate();</span>
+<span class="gi">+        return;</span>
+     }
+<span class="gd">-    else</span>
+<span class="gi">+</span>
+<span class="gi">+    // then try MIME handlers</span>
+<span class="gi">+    cbMimePlugin* plugin = Manager::Get()-&gt;GetPluginManager()-&gt;GetMIMEHandlerForFile(filename);</span>
+<span class="gi">+    if (!plugin)</span>
+     {
+<span class="gd">-        // first look for custom editors</span>
+<span class="gd">-        // if that fails, try MIME handlers</span>
+<span class="gd">-        EditorBase* eb = Manager::Get()-&gt;GetEditorManager()-&gt;IsOpen(filename);</span>
+<span class="gd">-        if (eb &amp;&amp; !eb-&gt;IsBuiltinEditor())</span>
+<span class="gi">+        if (ft == ftHeader || ft == ftSource)</span>
+         {
+<span class="gd">-            // custom editors just get activated</span>
+<span class="gd">-            eb-&gt;Activate();</span>
+<span class="gd">-            return;</span>
+<span class="gi">+            // try falling back on the internal editor before</span>
+<span class="gi">+            // resorting to an error message.</span>
+<span class="gi">+            cbEditor* ed = Manager::Get()-&gt;GetEditorManager()-&gt;Open(filename);</span>
+<span class="gi">+            if (ed)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                ed-&gt;SetProjectFile(pf);</span>
+<span class="gi">+                ed-&gt;Activate();</span>
+<span class="gi">+            }</span>
+<span class="gi">+            else</span>
+<span class="gi">+            {</span>
+<span class="gi">+                wxString msg;</span>
+<span class="gi">+                msg.Printf(_(&quot;Failed to open &#39;%s&#39;.&quot;), filename.c_str());</span>
+<span class="gi">+                Manager::Get()-&gt;GetLogManager()-&gt;LogError(msg);</span>
+<span class="gi">+            }</span>
+         }
+<span class="gd">-</span>
+<span class="gd">-        // not a recognized file type</span>
+<span class="gd">-        cbMimePlugin* plugin = Manager::Get()-&gt;GetPluginManager()-&gt;GetMIMEHandlerForFile(filename);</span>
+<span class="gd">-        if (!plugin)</span>
+<span class="gd">-        {</span>
+<span class="gd">-            wxString msg;</span>
+<span class="gd">-            msg.Printf(_(&quot;Could not open file &#39;%s&#39;.\nNo handler registered for this type of file.&quot;), filename.c_str());</span>
+<span class="gd">-            Manager::Get()-&gt;GetLogManager()-&gt;LogError(msg);</span>
+<span class="gd">-        }</span>
+<span class="gd">-        else if (plugin-&gt;OpenFile(filename) != 0)</span>
+<span class="gd">-        {</span>
+<span class="gd">-            const PluginInfo* info = Manager::Get()-&gt;GetPluginManager()-&gt;GetPluginInfo(plugin);</span>
+<span class="gd">-            wxString msg;</span>
+<span class="gd">-            msg.Printf(_(&quot;Could not open file &#39;%s&#39;.\nThe registered handler (%s) could not open it.&quot;), filename.c_str(), info ? info-&gt;title.c_str() : wxString(_(&quot;&lt;Unknown plugin&gt;&quot;)).c_str());</span>
+<span class="gd">-            Manager::Get()-&gt;GetLogManager()-&gt;LogError(msg);</span>
+<span class="gd">-        }</span>
+<span class="gi">+        wxString msg;</span>
+<span class="gi">+        msg.Printf(_(&quot;Could not open file &#39;%s&#39;.\nNo handler registered for this type of file.&quot;), filename.c_str());</span>
+<span class="gi">+        Manager::Get()-&gt;GetLogManager()-&gt;LogError(msg);</span>
+     }
+<span class="gi">+    else if (plugin-&gt;OpenFile(filename) != 0)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        const PluginInfo* info = Manager::Get()-&gt;GetPluginManager()-&gt;GetPluginInfo(plugin);</span>
+<span class="gi">+        wxString msg;</span>
+<span class="gi">+        msg.Printf(_(&quot;Could not open file &#39;%s&#39;.\nThe registered handler (%s) could not open it.&quot;), filename.c_str(), info ? info-&gt;title.c_str() : wxString(_(&quot;&lt;Unknown plugin&gt;&quot;)).c_str());</span>
+<span class="gi">+        Manager::Get()-&gt;GetLogManager()-&gt;LogError(msg);</span>
+<span class="gi">+    }</span>
+ }
+ 
+ void ProjectManager::DoOpenSelectedFile()
+<span class="gh">Index: src/src/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/main.cpp    (revision 6089)</span>
+<span class="gi">+++ src/src/main.cpp    (working copy)</span>
+<span class="gu">@@ -1566,25 +1566,28 @@</span>
+             }
+         }
+         //
+<span class="gd">-        // Source files</span>
+<span class="gd">-        //</span>
+<span class="gd">-        case ftHeader:</span>
+<span class="gd">-            // fallthrough</span>
+<span class="gd">-        case ftSource:</span>
+<span class="gd">-            // fallthrough</span>
+<span class="gd">-        case ftResource:</span>
+<span class="gd">-            return DoOpenFile(filename, addToHistory);</span>
+<span class="gd">-        //</span>
+         // For all other files, ask MIME plugin for a suitable handler
+         //
+         default:
+         {
+             cbMimePlugin* plugin = Manager::Get()-&gt;GetPluginManager()-&gt;GetMIMEHandlerForFile(filename);
+<span class="gd">-            // warn user that &quot;Files extension handler&quot; is disabled</span>
+<span class="gi">+            // attempt fall back on the internal editor</span>
+             if (!plugin)
+             {
+<span class="gd">-                cbMessageBox(_(&quot;Could not open file &quot;) +</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">terryp 2010-01-19 04:04:37</div>

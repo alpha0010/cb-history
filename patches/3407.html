@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,75 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/codecompletion/nativeparser_base.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/nativeparser_base.cpp    (wersja 8785)</span>
+<span class="gi">+++ src/plugins/codecompletion/nativeparser_base.cpp    (kopia robocza)</span>
+<span class="gu">@@ -1318,7 +1318,11 @@</span>
+                 if (!token)
+                     continue;
+                 if ( !AddChildrenOfUnnamed(tree, token, result) )
+<span class="gi">+                {</span>
+                     result.insert(*it);
+<span class="gi">+                    AddChildrenOfEnum(tree, token, result);</span>
+<span class="gi">+                }</span>
+<span class="gi">+                    </span>
+             }
+ 
+             tree-&gt;RecalcInheritanceChain(parent);
+<span class="gu">@@ -1334,7 +1338,10 @@</span>
+                     if (!token)
+                         continue;
+                     if ( !AddChildrenOfUnnamed(tree, token, result) )
+<span class="gi">+                    {</span>
+                         result.insert(*it2);
+<span class="gi">+                        AddChildrenOfEnum(tree, token, result);</span>
+<span class="gi">+                    }</span>
+                 }
+             }
+         }
+<span class="gh">Index: src/plugins/codecompletion/nativeparser_base.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/nativeparser_base.h    (wersja 8785)</span>
+<span class="gi">+++ src/plugins/codecompletion/nativeparser_base.h    (kopia robocza)</span>
+<span class="gu">@@ -396,7 +396,8 @@</span>
+     // for GenerateResultSet()
+     bool AddChildrenOfUnnamed(TokenTree* tree, const Token* parent, TokenIdxSet&amp; result)
+     {
+<span class="gd">-        if (parent-&gt;m_TokenKind == tkClass &amp;&amp; parent-&gt;m_Name.StartsWith(g_UnnamedSymbol))</span>
+<span class="gi">+        if (((parent-&gt;m_TokenKind &amp; (tkClass | tkEnum)) != 0) </span>
+<span class="gi">+            &amp;&amp; parent-&gt;m_Name.StartsWith(g_UnnamedSymbol))</span>
+         {
+             // add all its children
+             for (TokenIdxSet::const_iterator it = parent-&gt;m_Children.begin();
+<span class="gu">@@ -411,7 +412,25 @@</span>
+         }
+         return false;
+     }
+<span class="gi">+    </span>
+<span class="gi">+    bool AddChildrenOfEnum(TokenTree* tree, const Token* parent, TokenIdxSet&amp; result)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        if (parent-&gt;m_TokenKind == tkEnum)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            // add all its children</span>
+<span class="gi">+            for (TokenIdxSet::const_iterator it = parent-&gt;m_Children.begin();</span>
+<span class="gi">+                                             it != parent-&gt;m_Children.end(); ++it)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                Token* tokenChild = tree-&gt;at(*it);</span>
+<span class="gi">+                if (tokenChild)</span>
+<span class="gi">+                    result.insert(*it);</span>
+<span class="gi">+            }</span>
+ 
+<span class="gi">+            return true;</span>
+<span class="gi">+        }</span>
+<span class="gi">+        return false;</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+     // for GenerateResultSet()
+     bool MatchText(const wxString&amp; text, const wxString&amp; target, bool caseSens, bool isPrefix)
+     {
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">p2rkw 2013-01-15 21:26:07</div>

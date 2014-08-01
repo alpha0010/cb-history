@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,144 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/include/propgrid/include/wx/propgrid/manager.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/propgrid/include/wx/propgrid/manager.h    (revision 3811)</span>
+<span class="gi">+++ src/include/propgrid/include/wx/propgrid/manager.h    (working copy)</span>
+<span class="gu">@@ -925,6 +925,8 @@</span>
+ #endif
+     wxPG_IMPLEMENT_PGMAN_METHOD_NORET1_INBODY(SetPropertyValuePoint,const wxPoint&amp;)
+     wxPG_IMPLEMENT_PGMAN_METHOD_NORET1_INBODY(SetPropertyValueSize,const wxSize&amp;)
+<span class="gi">+    wxPG_IMPLEMENT_PGMAN_METHOD_NORET1_INBODY(SetPropertyValueLongLong,const wxLongLong&amp;)</span>
+<span class="gi">+    wxPG_IMPLEMENT_PGMAN_METHOD_NORET1_INBODY(SetPropertyValueULongLong,const wxULongLong&amp;)</span>
+ #ifdef __WXPYTHON__
+     wxPG_IMPLEMENT_PGMAN_METHOD_NORET1_INBODY(SetPropertyValuePyObject,PyObject*)
+ #endif
+<span class="gu">@@ -1228,7 +1230,7 @@</span>
+ 
+     void RefreshHelpBox( int new_splittery, int new_width, int new_height );
+ 
+<span class="gd">-    void RepaintSplitter( int new_splittery, int new_width, int new_height, bool desc_too );</span>
+<span class="gi">+    void RepaintSplitter( wxDC&amp; dc, int new_splittery, int new_width, int new_height, bool desc_too );</span>
+ 
+     void SetDescribedProperty( wxPGProperty* p );
+ 
+<span class="gh">Index: src/include/propgrid/include/wx/propgrid/pg_dox_mainpage.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/propgrid/include/wx/propgrid/pg_dox_mainpage.h    (revision 3811)</span>
+<span class="gi">+++ src/include/propgrid/include/wx/propgrid/pg_dox_mainpage.h    (working copy)</span>
+<span class="gu">@@ -13,7 +13,7 @@</span>
+ #define __WX_PG_DOX_MAINPAGE_H__
+ 
+ /**
+<span class="gd">-    \mainpage wxPropertyGrid 1.2.6 Overview</span>
+<span class="gi">+    \mainpage wxPropertyGrid 1.2.7 Overview</span>
+ 
+       wxPropertyGrid is a specialized two-column grid for editing properties
+     such as strings, numbers, flagsets, fonts, and colours. It allows hierarchial,
+<span class="gu">@@ -1593,7 +1593,8 @@</span>
+ 
+         #include &lt;wx/propgrid/propdev.h&gt;
+ 
+<span class="gd">-        WX_PG_IMPLEMENT_STRING_PROPERTY(PROPNAME,FLAGS)</span>
+<span class="gi">+        // FLAGS can be wxPG_NO_ESCAPE if escape sequences shall not be expanded.</span>
+<span class="gi">+        WX_PG_IMPLEMENT_STRING_PROPERTY(PROPNAME, FLAGS)</span>
+ 
+         bool PROPNAMEClass::OnButtonClick( wxPropertyGrid* propgrid, wxString&amp; value )
+         {
+<span class="gu">@@ -1615,7 +1616,7 @@</span>
+ 
+         #include &lt;wx/propgrid/propdev.h&gt;
+ 
+<span class="gd">-        WX_PG_IMPLEMENT_STRING_PROPERTY_WITH_VALIDATOR(PROPNAME)</span>
+<span class="gi">+        WX_PG_IMPLEMENT_STRING_PROPERTY_WITH_VALIDATOR(PROPNAME, FLAGS)</span>
+ 
+         bool PROPNAMEClass::OnButtonClick( wxPropertyGrid* propgrid, wxString&amp; value )
+         {
+<span class="gh">Index: src/include/propgrid/include/wx/propgrid/propdev.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/propgrid/include/wx/propgrid/propdev.h    (revision 3811)</span>
+<span class="gi">+++ src/include/propgrid/include/wx/propgrid/propdev.h    (working copy)</span>
+<span class="gu">@@ -1669,14 +1669,11 @@</span>
+ protected:
+ #ifndef SWIG
+ 
+<span class="gd">-    const wxString* m_str;</span>
+<span class="gd">-    const wxChar*   m_curPos;</span>
+<span class="gd">-#if wxUSE_STL</span>
+<span class="gd">-    //wxString        m_buffer;</span>
+<span class="gi">+    const wxString*             m_str;</span>
+<span class="gi">+    wxString::const_iterator    m_curPos;</span>
+<span class="gi">+    wxString                    m_readyToken;</span>
+<span class="gi">+    wxUniChar                   m_delimeter;</span>
+ #endif
+<span class="gd">-    wxString        m_readyToken;</span>
+<span class="gd">-    wxChar          m_delimeter;</span>
+<span class="gd">-#endif</span>
+ };
+ 
+ #define WX_PG_TOKENIZER2_BEGIN(WXSTRING,DELIMITER) \
+<span class="gh">Index: src/include/propgrid/include/wx/propgrid/propgrid.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/propgrid/include/wx/propgrid/propgrid.h    (revision 3811)</span>
+<span class="gi">+++ src/include/propgrid/include/wx/propgrid/propgrid.h    (working copy)</span>
+<span class="gu">@@ -19,10 +19,10 @@</span>
+ #include &lt;wx/dynarray.h&gt;
+ #include &lt;wx/hashmap.h&gt;
+ #include &lt;wx/variant.h&gt;
+<span class="gi">+#include &lt;wx/longlong.h&gt;</span>
+ #include &lt;wx/tooltip.h&gt;
+ #include &lt;wx/datetime.h&gt;
+ 
+<span class="gd">-</span>
+ // NB: Do *NOT * remove this.
+ #if defined(SWIG) || defined(SWIG_TYPE_TABLE)
+     #ifndef __WXPYTHON__
+<span class="gu">@@ -95,7 +95,7 @@</span>
+ //     In fact, it will more likely be updated once a week or so
+ //     (less often when releases are made more sparsely).
+ //
+<span class="gd">-#define wxPG_VERSION        1260</span>
+<span class="gi">+#define wxPG_VERSION        1270</span>
+ 
+ 
+ // -----------------------------------------------------------------------
+<span class="gu">@@ -244,6 +244,19 @@</span>
+ #endif
+ 
+ 
+<span class="gi">+#ifndef SWIG</span>
+<span class="gi">+    #if !wxCHECK_VERSION(2,9,0)</span>
+<span class="gi">+        #if !defined(wxUniChar)</span>
+<span class="gi">+            #define wxUniChar   wxChar</span>
+<span class="gi">+        #endif</span>
+<span class="gi">+        //#define wxPGGetIterChar(str, i)  str[i]</span>
+<span class="gi">+        #define wxPGGetIterChar(str, i)  *i</span>
+<span class="gi">+    #else</span>
+<span class="gi">+        #define wxPGGetIterChar(str, i)  *i</span>
+<span class="gi">+    #endif</span>
+<span class="gi">+#endif</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+ // -----------------------------------------------------------------------
+ 
+ //
+<span class="gu">@@ -284,6 +297,8 @@</span>
+ #define SetPropertyValueArrint2     SetPropertyValue
+ #define SetPropertyValueArrstr2     SetPropertyValue
+ #define SetPropertyValueDatetime    SetPropertyValue
+<span class="gi">+#define SetPropertyValueLongLong    SetPropertyValue</span>
+<span class="gi">+#define SetPropertyValueULongLong   SetPropertyValue</span>
+ 
+ #else
+ 
+<span class="gu">@@ -1176,6 +1191,8 @@</span>
+     #define wxPGVariantToDateTime(A)        A.GetDateTime()
+     #define wxPGVariantToWxPoint(A)         ((wxPGVariantDataPoint*)(A.GetData()))-&gt;GetValueRef()
+     #define wxPGVariantToWxSize(A)          ((wxPGVariantDataSize*)(A.GetData
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">pauliusz 2007-04-11 16:57:23</div>

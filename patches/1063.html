@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,103 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: update.mac</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- update.mac    (revision 0)</span>
+<span class="gi">+++ update.mac    (revision 0)</span>
+<span class="gu">@@ -0,0 +1,103 @@</span>
+<span class="gi">+#!/bin/sh</span>
+<span class="gi">+</span>
+<span class="gi">+echo Creating output directory tree</span>
+<span class="gi">+</span>
+<span class="gi">+mkdir -p output/share/codeblocks/lexers</span>
+<span class="gi">+mkdir -p output/share/codeblocks/images/settings</span>
+<span class="gi">+mkdir -p output/share/codeblocks/images/codecompletion</span>
+<span class="gi">+mkdir -p output/share/codeblocks/images/16x16</span>
+<span class="gi">+mkdir -p output/share/codeblocks/plugins</span>
+<span class="gi">+mkdir -p output/share/codeblocks/templates</span>
+<span class="gi">+mkdir -p output/share/codeblocks/templates/wizard</span>
+<span class="gi">+mkdir -p output/share/codeblocks/scripts</span>
+<span class="gi">+mkdir -p devel/share/codeblocks/lexers</span>
+<span class="gi">+mkdir -p devel/share/codeblocks/images/settings</span>
+<span class="gi">+mkdir -p devel/share/codeblocks/images/codecompletion</span>
+<span class="gi">+mkdir -p devel/share/codeblocks/images/16x16</span>
+<span class="gi">+mkdir -p devel/share/codeblocks/plugins</span>
+<span class="gi">+mkdir -p devel/share/codeblocks/templates</span>
+<span class="gi">+mkdir -p devel/share/codeblocks/templates/wizard</span>
+<span class="gi">+mkdir -p devel/share/codeblocks/scripts</span>
+<span class="gi">+</span>
+<span class="gi">+ZIPCMD=&quot;zip&quot;</span>
+<span class="gi">+RESDIR=&quot;devel/share/codeblocks&quot;</span>
+<span class="gi">+echo Compressing core UI resources</span>
+<span class="gi">+${ZIPCMD} -j9 ${RESDIR}/resources.zip src/resources/*.xrc &gt; /dev/null</span>
+<span class="gi">+${ZIPCMD} -j9 ${RESDIR}/manager_resources.zip sdk/resources/*.xrc sdk/resources/images/*.png &gt; /dev/null</span>
+<span class="gi">+${ZIPCMD} -j9 ${RESDIR}/start_here.zip src/resources/start_here/* &gt; /dev/null</span>
+<span class="gi">+echo Compressing plugins UI resources</span>
+<span class="gi">+${ZIPCMD} -j9 ${RESDIR}/astyle.zip plugins/astyle/resources/*.xrc &gt; /dev/null</span>
+<span class="gi">+${ZIPCMD} -j9 ${RESDIR}/plugin_wizard.zip plugins/pluginwizard/resources/*.xrc &gt; /dev/null</span>
+<span class="gi">+${ZIPCMD} -j9 ${RESDIR}/class_wizard.zip plugins/classwizard/resources/*.xrc &gt; /dev/null</span>
+<span class="gi">+${ZIPCMD} -j9 ${RESDIR}/code_completion.zip plugins/codecompletion/resources/*.xrc &gt; /dev/null</span>
+<span class="gi">+${ZIPCMD} -j9 ${RESDIR}/compiler_gcc.zip plugins/compilergcc/resources/*.xrc &gt; /dev/null</span>
+<span class="gi">+${ZIPCMD} -j9 ${RESDIR}/defaultmimehandler.zip plugins/defaultmimehandler/resources/*.xrc &gt; /dev/null</span>
+<span class="gi">+${ZIPCMD} -j9 ${RESDIR}/debugger_gdb.zip plugins/debuggergdb/resources/*.xrc &gt; /dev/null</span>
+<span class="gi">+${ZIPCMD} -j9 ${RESDIR}/todo.zip plugins/todo/resources/*.xrc &gt; /dev/null</span>
+<span class="gi">+${ZIPCMD} -j9 ${RESDIR}/autosave.zip plugins/autosave/*.xrc &gt; /dev/null</span>
+<span class="gi">+echo Packing core UI bitmaps</span>
+<span class="gi">+cd src/resources</span>
+<span class="gi">+${ZIPCMD} -0 ../../${RESDIR}/resources.zip images/*.png images/16x16/*.png &gt; /dev/null</span>
+<span class="gi">+#cd ../../sdk/resources</span>
+<span class="gi">+#${ZIPCMD} -0 ../../${RESDIR}/manager_resources.zip images/*.png &gt; /dev/null</span>
+<span class="gi">+echo Packing plugins UI bitmaps</span>
+<span class="gi">+cd ../../plugins/compilergcc/resources</span>
+<span class="gi">+${ZIPCMD} -0 ../../../${RESDIR}/compiler_gcc.zip images/*.png images/16x16/*.png &gt; /dev/null</span>
+<span class="gi">+cd ../../../plugins/debuggergdb/resources</span>
+<span class="gi">+${ZIPCMD} -0 ../../../${RESDIR}/debugger_gdb.zip images/*.png images/16x16/*.png &gt; /dev/null</span>
+<span class="gi">+cd ../../..</span>
+<span class="gi">+</span>
+<span class="gi">+echo Copying files</span>
+<span class="gi">+cp -f ${RESDIR}/*.zip output/share/codeblocks &gt; /dev/null</span>
+<span class="gi">+cp -f sdk/resources/lexers/lexer_* ${RESDIR}/lexers &gt; /dev/null</span>
+<span class="gi">+cp -f sdk/resources/lexers/lexer_* output/share/codeblocks/lexers &gt; /dev/null</span>
+<span class="gi">+cp -f src/resources/images/*.png ${RESDIR}/images &gt; /dev/null</span>
+<span class="gi">+cp -f src/resources/images/settings/*.png ${RESDIR}/images/settings &gt; /dev/null</span>
+<span class="gi">+cp -f src/resources/images/*.png output/share/codeblocks/images &gt; /dev/null</span>
+<span class="gi">+cp -f src/resources/images/settings/*.png output/share/codeblocks/images/settings &gt; /dev/null</span>
+<span class="gi">+cp -f src/resources/images/16x16/*.png ${RESDIR}/images/16x16 &gt; /dev/null</span>
+<span class="gi">+cp -f src/resources/images/16x16/*.png output/share/codeblocks/images/16x16 &gt; /dev/null</span>
+<span class="gi">+cp -f plugins/codecompletion/resources/images/*.png ${RESDIR}/images/codecompletion &gt; /dev/null</span>
+<span class="gi">+cp -f plugins/codecompletion/resources/images/*.png output/share/codeblocks/images/codecompletion &gt; /dev/null</span>
+<span class="gi">+cp -rf plugins/projectwizard/resources/* ${RESDIR}/templates/wizard &gt; /dev/null</span>
+<span class="gi">+cp -rf plugins/projectwizard/resources/* output/share/codeblocks/templates/wizard &gt; /dev/null</span>
+<span class="gi">+cp -f templates/common/* output/share/codeblocks/templates &gt; /dev/null</span>
+<span class="gi">+cp -f templates/unix/* output/share/codeblocks/templates &gt; /dev/null</span>
+<span class="gi">+cp -f templates/common/* ${RESDIR}/templates &gt; /dev/null</span>
+<span class="gi">+cp -f templates/unix/* ${RESDIR}/templates &gt; /dev/null</span>
+<span class="gi">+cp -f scripts/*.script ${RESDIR}/scripts &gt; /dev/null</span>
+<span class="gi">+cp -f scripts/*.script output/share/codeblocks/scripts &gt; /dev/null</span>
+<span class="gi">+cp -f tips.txt devel/share/codeblocks &gt; /dev/null</span>
+<span class="gi">+cp -f tips.txt output/share/codeblocks &gt; /dev/null</span>
+<span class="gi">+cp -f tools/ConsoleRunner/console_runner output &gt; /dev/null</span>
+<span class="gi">+cp -f tools/ConsoleRunner/console_runner devel &gt; /dev/null</span>
+<span class="gi">+cp -f devel/codeblocks output &gt; /dev/null</span>
+<span class="gi">+cp -f devel/*.so output &gt; /dev/null</span>
+<span class="gi">+cp -f ${RESDIR}/plugins/*.so output/share/codeblocks/plugins &gt; /dev/null</span>
+<span class="gi">+cp -f devel/*.dylib output &gt; /dev/null</span>
+<span class="gi">+cp -f ${RESDIR}/plugins/*.dylib output/share/codeblocks/plugins &gt; /dev/null</span>
+<span class="gi">+echo Stripping debug info from output tree</span>
+<span class="gi">+strip -S output/codeblocks</span>
+<span class="gi">+strip -S output/*.so</span>
+<span class="gi">+strip -S output/*.dylib</span>
+<span class="gi">+strip -S output/share/codeblocks/plugins/*.so</span>
+<span class="gi">+strip -S output/share/codeblocks/plugins/*.dylib</span>
+<span class="gi">+</span>
+<span class="gi">+echo Creating launch-scripts</span>
+<span class="gi">+echo -e &quot;#!/bin/sh\n&quot; &gt; output/run.sh</span>
+<span class="gi">+echo -n &quot;APP_DIR=&quot; &gt;&gt; output/run.sh</span>
+<span class="gi">+echo `pwd`/output &gt;&gt; output/run.s</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">pecan 2006-05-20 14:16:11</div>

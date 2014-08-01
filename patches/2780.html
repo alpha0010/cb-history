@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,125 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/update.bat</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/update.bat    (revision 5680)</span>
+<span class="gi">+++ src/update.bat    (working copy)</span>
+<span class="gu">@@ -64,9 +64,6 @@</span>
+ %ZIPCMD% -0 -qu ..\..\..\%CB_DEVEL_RESDIR%\debugger.zip images\*.png images\16x16\*.png &gt; nul
+ cd ..\..\..
+ 
+<span class="gd">-echo Copying external exception handler</span>
+<span class="gd">-xcopy /D /y exchndl.dll output &gt; nul</span>
+<span class="gd">-xcopy /D /y exchndl.dll devel &gt; nul</span>
+ echo Copying files
+ xcopy /D /y %CB_DEVEL_RESDIR%\*.zip %CB_OUTPUT_RESDIR% &gt; nul
+ xcopy /D /y sdk\resources\lexers\lexer_* %CB_DEVEL_RESDIR%\lexers &gt; nul
+<span class="gh">Index: src/base/exchndl/include/demangle.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/base/exchndl/include/demangle.h    (revision 0)</span>
+<span class="gi">+++ src/base/exchndl/include/demangle.h    (revision 0)</span>
+<span class="gu">@@ -0,0 +1,576 @@</span>
+<span class="gi">+/* Defs for interface to demanglers.</span>
+<span class="gi">+   Copyright 1992, 1993, 1994, 1995, 1996, 1997, 1998, 2000, 2001, 2002,</span>
+<span class="gi">+   2003, 2004, 2005, 2007 Free Software Foundation, Inc.</span>
+<span class="gi">+   </span>
+<span class="gi">+   This program is free software; you can redistribute it and/or</span>
+<span class="gi">+   modify it under the terms of the GNU Library General Public License</span>
+<span class="gi">+   as published by the Free Software Foundation; either version 2, or</span>
+<span class="gi">+   (at your option) any later version.</span>
+<span class="gi">+</span>
+<span class="gi">+   In addition to the permissions in the GNU Library General Public</span>
+<span class="gi">+   License, the Free Software Foundation gives you unlimited</span>
+<span class="gi">+   permission to link the compiled version of this file into</span>
+<span class="gi">+   combinations with other programs, and to distribute those</span>
+<span class="gi">+   combinations without any restriction coming from the use of this</span>
+<span class="gi">+   file.  (The Library Public License restrictions do apply in other</span>
+<span class="gi">+   respects; for example, they cover modification of the file, and</span>
+<span class="gi">+   distribution when not linked into a combined executable.)</span>
+<span class="gi">+</span>
+<span class="gi">+   This program is distributed in the hope that it will be useful, but</span>
+<span class="gi">+   WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="gi">+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</span>
+<span class="gi">+   Library General Public License for more details.</span>
+<span class="gi">+</span>
+<span class="gi">+   You should have received a copy of the GNU Library General Public</span>
+<span class="gi">+   License along with this program; if not, write to the Free Software</span>
+<span class="gi">+   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston, MA</span>
+<span class="gi">+   02110-1301, USA.  */</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+<span class="gi">+#if !defined (DEMANGLE_H)</span>
+<span class="gi">+#define DEMANGLE_H</span>
+<span class="gi">+</span>
+<span class="gi">+#include &quot;libiberty.h&quot;</span>
+<span class="gi">+</span>
+<span class="gi">+#ifdef __cplusplus</span>
+<span class="gi">+extern &quot;C&quot; {</span>
+<span class="gi">+#endif /* __cplusplus */</span>
+<span class="gi">+</span>
+<span class="gi">+/* Options passed to cplus_demangle (in 2nd parameter). */</span>
+<span class="gi">+</span>
+<span class="gi">+#define DMGL_NO_OPTS     0        /* For readability... */</span>
+<span class="gi">+#define DMGL_PARAMS     (1 &lt;&lt; 0)    /* Include function args */</span>
+<span class="gi">+#define DMGL_ANSI     (1 &lt;&lt; 1)    /* Include const, volatile, etc */</span>
+<span class="gi">+#define DMGL_JAVA     (1 &lt;&lt; 2)    /* Demangle as Java rather than C++. */</span>
+<span class="gi">+#define DMGL_VERBOSE     (1 &lt;&lt; 3)    /* Include implementation details.  */</span>
+<span class="gi">+#define DMGL_TYPES     (1 &lt;&lt; 4)    /* Also try to demangle type encodings.  */</span>
+<span class="gi">+#define DMGL_RET_POSTFIX (1 &lt;&lt; 5)       /* Print function return types (when</span>
+<span class="gi">+                                           present) after function signature */</span>
+<span class="gi">+</span>
+<span class="gi">+#define DMGL_AUTO     (1 &lt;&lt; 8)</span>
+<span class="gi">+#define DMGL_GNU     (1 &lt;&lt; 9)</span>
+<span class="gi">+#define DMGL_LUCID     (1 &lt;&lt; 10)</span>
+<span class="gi">+#define DMGL_ARM     (1 &lt;&lt; 11)</span>
+<span class="gi">+#define DMGL_HP      (1 &lt;&lt; 12)       /* For the HP aCC compiler;</span>
+<span class="gi">+                                            same as ARM except for</span>
+<span class="gi">+                                            template arguments, etc. */</span>
+<span class="gi">+#define DMGL_EDG     (1 &lt;&lt; 13)</span>
+<span class="gi">+#define DMGL_GNU_V3     (1 &lt;&lt; 14)</span>
+<span class="gi">+#define DMGL_GNAT     (1 &lt;&lt; 15)</span>
+<span class="gi">+</span>
+<span class="gi">+/* If none of these are set, use &#39;current_demangling_style&#39; as the default. */</span>
+<span class="gi">+#define DMGL_STYLE_MASK (DMGL_AUTO|DMGL_GNU|DMGL_LUCID|DMGL_ARM|DMGL_HP|DMGL_EDG|DMGL_GNU_V3|DMGL_JAVA|DMGL_GNAT)</span>
+<span class="gi">+</span>
+<span class="gi">+/* Enumeration of possible demangling styles.</span>
+<span class="gi">+</span>
+<span class="gi">+   Lucid and ARM styles are still kept logically distinct, even though</span>
+<span class="gi">+   they now both behave identically.  The resulting style is actual the</span>
+<span class="gi">+   union of both.  I.E. either style recognizes both &quot;__pt__&quot; and &quot;__rf__&quot;</span>
+<span class="gi">+   for operator &quot;-&gt;&quot;, even though the first is lucid style and the second</span>
+<span class="gi">+   is ARM style. (FIXME?) */</span>
+<span class="gi">+</span>
+<span class="gi">+extern enum demangling_styles</span>
+<span class="gi">+{</span>
+<span class="gi">+  no_demangling = -1,</span>
+<span class="gi">+  unknown_demangling = 0,</span>
+<span class="gi">+  auto_demangling = DMGL_AUTO,</span>
+<span class="gi">+  gnu_demangling = DMGL_GNU,</span>
+<span class="gi">+  lucid_demangling = DMGL_LUCID,</span>
+<span class="gi">+  arm_demangling = DMGL_ARM,</span>
+<span class="gi">+  hp_demangling = DMGL_HP,</span>
+<span class="gi">+  edg_demangling = DMGL_EDG,</span>
+<span class="gi">+  gnu_v3_demangling = DMGL_GNU_V3,</span>
+<span class="gi">+  java_demangling = DMGL_JAVA,</span>
+<span class="gi">+  gnat_demangling = DMGL_GNAT</span>
+<span class="gi">+} current_demangling_style;</span>
+<span class="gi">+</span>
+<span class="gi">+/* Define string names for the various demangling styles. */</span>
+<span class="gi">+</span>
+<span class="gi">+#define NO_DEMANGLING_STYLE_STRING            &quot;none&quot;</span>
+<span class="gi">+#define AUTO_DEMANGLING_STYLE_STRING          &quot;auto&quot;</span>
+<span class="gi">+#define GNU_DEMANGLING_STYLE_STRING              &quot;gnu&quot;</span>
+<span class="gi">+#define LUCID_DEMANGLING_STYLE_STRING          &quot;lucid&quot;</span>
+<span class="gi">+#define ARM_DEMANGLING_STYLE_STRING          &quot;arm&quot;</span>
+<span class="gi">+#define HP_DEMANGLING_STYLE_STRING          &quot;hp&quot;</span>
+<span class="gi">+#define EDG_DEMANGLING_STYLE_STRING          &quot;edg&quot;</span>
+<span class="gi">+#define GNU_V3_DEMANGLING_STYLE_STRING        &quot;gnu-v3&quot;</span>
+<span class="gi">+#define JAVA_DEMANGLING_STYLE_STRING          &quot;java&quot;</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mortenmacfly 2009-11-29 19:07:17</div>

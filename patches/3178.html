@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,160 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: debian/changelog</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- debian/changelog    (revision 7254)</span>
+<span class="gi">+++ debian/changelog    (working copy)</span>
+<span class="gu">@@ -1,4 +1,4 @@</span>
+<span class="gd">-codeblocks (10.05svn6787) unstable; urgency=low</span>
+<span class="gi">+codeblocks (10.05svn7252) unstable; urgency=low</span>
+ 
+   * New svn revision
+ 
+<span class="gh">Index: configure.in</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- configure.in    (revision 7254)</span>
+<span class="gi">+++ configure.in    (working copy)</span>
+<span class="gu">@@ -305,6 +305,7 @@</span>
+     src/plugins/scriptedwizard/resources/Makefile
+     src/plugins/scriptedwizard/resources/arm/Makefile
+     src/plugins/scriptedwizard/resources/avr/Makefile
+<span class="gi">+    src/plugins/scriptedwizard/resources/catalina/Makefile</span>
+     src/plugins/scriptedwizard/resources/c_file/Makefile
+     src/plugins/scriptedwizard/resources/console/Makefile
+     src/plugins/scriptedwizard/resources/d/Makefile
+<span class="gh">Index: src/plugins/compilergcc/compilerCatalina.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilerCatalina.h    (revision 0)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilerCatalina.h    (revision 0)</span>
+<span class="gu">@@ -0,0 +1,23 @@</span>
+<span class="gi">+/*</span>
+<span class="gi">+ * This file is part of the Code::Blocks IDE and licensed under the GNU General Public License, version 3</span>
+<span class="gi">+ * http://www.gnu.org/licenses/gpl-3.0.html</span>
+<span class="gi">+ */</span>
+<span class="gi">+</span>
+<span class="gi">+#ifndef COMPILER_CATALINA_H</span>
+<span class="gi">+#define COMPILER_CATALINA_H</span>
+<span class="gi">+</span>
+<span class="gi">+#include &quot;compiler.h&quot;</span>
+<span class="gi">+</span>
+<span class="gi">+class CompilerCatalina : public Compiler</span>
+<span class="gi">+{</span>
+<span class="gi">+    public:</span>
+<span class="gi">+        CompilerCatalina();</span>
+<span class="gi">+        virtual ~CompilerCatalina();</span>
+<span class="gi">+        virtual void Reset();</span>
+<span class="gi">+        virtual void LoadDefaultRegExArray();</span>
+<span class="gi">+        virtual AutoDetectResult AutoDetectInstallationDir();</span>
+<span class="gi">+    protected:</span>
+<span class="gi">+        virtual Compiler* CreateCopy();</span>
+<span class="gi">+};</span>
+<span class="gi">+</span>
+<span class="gi">+#endif // COMPILER_CATALINA_H</span>
+<span class="gh">Index: src/plugins/compilergcc/compilergcc.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilergcc.cpp    (revision 7254)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilergcc.cpp    (working copy)</span>
+<span class="gu">@@ -8,20 +8,11 @@</span>
+  */
+ 
+ #include &lt;sdk.h&gt;
+<span class="gd">-</span>
+<span class="gi">+#include &lt;prep.h&gt;</span>
+ #include &lt;wx/frame.h&gt; // GetMenuBar
+ #include &lt;wx/gauge.h&gt;     // Needs to be before compilergcc.h if NOPCH on wxMSW
+ #include &lt;wx/listctrl.h&gt;
+<span class="gd">-#include &lt;wx/xrc/xmlres.h&gt;</span>
+<span class="gd">-#include &lt;wx/sizer.h&gt;</span>
+<span class="gd">-#include &lt;wx/button.h&gt;</span>
+<span class="gd">-#include &lt;wx/stattext.h&gt;</span>
+<span class="gd">-#include &lt;wx/statline.h&gt;</span>
+<span class="gd">-#include &lt;wx/ffile.h&gt;</span>
+<span class="gd">-#include &lt;wx/utils.h&gt;</span>
+<span class="gd">-#include &lt;wx/uri.h&gt;</span>
+<span class="gd">-</span>
+<span class="gd">-#include &lt;prep.h&gt;</span>
+<span class="gi">+#include &quot;compilergcc.h&quot;</span>
+ #include &lt;manager.h&gt;
+ #include &lt;sdk_events.h&gt;
+ #include &lt;pipedprocess.h&gt;
+<span class="gu">@@ -36,8 +27,14 @@</span>
+ #include &lt;cbeditor.h&gt;
+ #include &lt;annoyingdialog.h&gt;
+ #include &lt;filefilters.h&gt;
+<span class="gd">-</span>
+<span class="gd">-#include &quot;compilergcc.h&quot;</span>
+<span class="gi">+#include &lt;wx/xrc/xmlres.h&gt;</span>
+<span class="gi">+#include &lt;wx/sizer.h&gt;</span>
+<span class="gi">+#include &lt;wx/button.h&gt;</span>
+<span class="gi">+#include &lt;wx/stattext.h&gt;</span>
+<span class="gi">+#include &lt;wx/statline.h&gt;</span>
+<span class="gi">+#include &lt;wx/ffile.h&gt;</span>
+<span class="gi">+#include &lt;wx/utils.h&gt;</span>
+<span class="gi">+#include &lt;wx/uri.h&gt;</span>
+ #include &quot;makefilegenerator.h&quot;
+ #include &quot;compileroptionsdlg.h&quot;
+ #include &quot;directcommands.h&quot;
+<span class="gu">@@ -49,16 +46,17 @@</span>
+ #include &quot;compilerMINGW.h&quot;
+ #ifdef __WXGTK__
+ // TODO (mandrav#1#): Find out which compilers exist for linux and adapt this
+<span class="gi">+    #include &quot;compilerDMD.h&quot;</span>
+     #include &quot;compilerGNUARM.h&quot;
+     #include &quot;compilerGNUAVR.h&quot;
+ #endif
+ #ifdef __WXMSW__
+     #include &quot;compilerMSVC.h&quot;
+     #include &quot;compilerMSVC8.h&quot;
+<span class="gd">-    #include &quot;compilerMSVC10.h&quot;</span>
+     #include &quot;compilerBCC.h&quot;
+     #include &quot;compilerDMC.h&quot;
+     #include &quot;compilerOW.h&quot;
+<span class="gi">+    #include &quot;compilerDMD.h&quot;</span>
+     #include &quot;compilerGNUARM.h&quot;
+     #include &quot;compilerGNUAVR.h&quot;
+     #include &quot;compilerGNUMSP430.h&quot;
+<span class="gu">@@ -68,9 +66,8 @@</span>
+ #include &quot;compilerICC.h&quot;
+ #include &quot;compilerSDCC.h&quot;
+ #include &quot;compilerTcc.h&quot;
+<span class="gi">+#include &quot;compilerCatalina.h&quot;</span>
+ #include &quot;compilerGDC.h&quot;
+<span class="gd">-#include &quot;compilerLDC.h&quot;</span>
+<span class="gd">-#include &quot;compilerDMD.h&quot;</span>
+ #include &quot;compilerGNUPOWERPC.h&quot;
+ #include &quot;compilerGNUTRICORE.h&quot;
+ 
+<span class="gu">@@ -112,7 +109,7 @@</span>
+ 
+         style[caption].SetAlignment(wxTEXT_ALIGNMENT_DEFAULT);
+         style[caption].SetFont(style[error].GetFont());
+<span class="gd">-        style[warning].SetTextColour(BlendTextColour(*wxBLUE));</span>
+<span class="gi">+        style[warning].SetTextColour(*wxBLUE);</span>
+         style[error].SetFont(style[info].GetFont());
+     }
+ 
+<span class="gu">@@ -194,10 +191,10 @@</span>
+ int idMenuRebuild = XRCID(&quot;idCompilerMenuRebuild&quot;);
+ int idMenuRebuildTarget = wxNewId();
+ int idMenuRebuildFromProjectManager = wxNewId();
+<span class="gi">+int idMenuCompileAll = XRCID(&quot;idCompilerMenuCompileAll&quot;);</span>
+<span class="gi">+int idMenuRebuildAll = XRCID(&quot;idCompilerMenuRebuildAll&quot;);</span>
+ int idMenuClean = XRCID(&quot;idCompilerMenuClean&quot;);
+<span class="gd">-int idMenuBuildWorkspace = XRCID(&quot;idCompilerMenuBuildWorkspace&quot;);</span>
+<span class="gd">-int idMenuRebuildWorkspace = XRCID(&quot;idCompilerMenuRebuildWorkspace&quot;);</span>
+<span class="gd">-int idMenuCleanWorkspace = XRCID(&quot;idCompilerMenuCleanWorkspace&quot;);</span>
+<span class="gi">+int idMenuCleanAll = XRCID(&quot;idCompilerMenuCleanAll&quot;);</span>
+ int idMenuCleanTarget = wxNewId();
+ int idMenuCleanFromProjectManager = wxNewId();
+ int idMenuCompileAndRun = XRCID(&quot;idCompilerMenuCompileAndRun&quot;);
+<span class="gu">@@ -243,10 +240,10 @@</span>
+     EVT_UPDATE_UI(idMenuRebuild, CompilerGCC::OnUpdateUI)
+     EVT_UPDATE_UI(idMenuRebuildTarget, CompilerGCC::OnUpdateUI)
+     EVT_UPD
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">blackoscar 2011-06-26 03:08:38</div>

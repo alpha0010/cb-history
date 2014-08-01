@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,111 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 4335)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -960,6 +960,27 @@</span>
+     control-&gt;SetTabIndents(mgr-&gt;ReadBool(_T(&quot;/tab_indents&quot;), true));
+     control-&gt;SetBackSpaceUnIndents(mgr-&gt;ReadBool(_T(&quot;/backspace_unindents&quot;), true));
+     control-&gt;SetWrapMode(mgr-&gt;ReadBool(_T(&quot;/word_wrap&quot;), false));
+<span class="gi">+    if(mgr-&gt;ReadBool(_T(&quot;/word_wrap_style_home_end&quot;), true))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        //in word wrap mode, home/end keys goto the wrap point if not already there,</span>
+<span class="gi">+        //otherwise to the start/end of the entire line.</span>
+<span class="gi">+        //alt+home/end go to start/end of the entire line.</span>
+<span class="gi">+        //in unwrapped mode, there is no difference between home/end and alt+home/end</span>
+<span class="gi">+        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_NULL,wxSCI_CMD_VCHOMEWRAP);</span>
+<span class="gi">+        control-&gt;CmdKeyAssign(wxSCI_KEY_END,wxSCI_SCMOD_NULL,wxSCI_CMD_LINEENDWRAP);</span>
+<span class="gi">+        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_ALT,wxSCI_CMD_VCHOME);</span>
+<span class="gi">+        control-&gt;CmdKeyAssign(wxSCI_KEY_END,wxSCI_SCMOD_ALT,wxSCI_CMD_LINEEND);</span>
+<span class="gi">+        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_SHIFT,wxSCI_CMD_VCHOMEWRAPEXTEND);</span>
+<span class="gi">+        control-&gt;CmdKeyAssign(wxSCI_KEY_END,wxSCI_SCMOD_SHIFT,wxSCI_CMD_LINEENDWRAPEXTEND);</span>
+<span class="gi">+        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_SHIFT|wxSCI_SCMOD_ALT,wxSCI_CMD_VCHOMEEXTEND);</span>
+<span class="gi">+        control-&gt;CmdKeyAssign(wxSCI_KEY_END,wxSCI_SCMOD_SHIFT|wxSCI_SCMOD_ALT,wxSCI_CMD_LINEENDEXTEND);</span>
+<span class="gi">+    } else</span>
+<span class="gi">+    { //in word wrap mode, home/end keys goto start/end of the entire line. alt+home/end goes to wrap points</span>
+<span class="gi">+        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_ALT,wxSCI_CMD_VCHOMEWRAP);</span>
+<span class="gi">+        control-&gt;CmdKeyAssign(wxSCI_KEY_END,wxSCI_SCMOD_ALT,wxSCI_CMD_LINEENDWRAP);</span>
+<span class="gi">+        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_SHIFT|wxSCI_SCMOD_ALT,wxSCI_CMD_VCHOMEWRAPEXTEND);</span>
+<span class="gi">+        control-&gt;CmdKeyAssign(wxSCI_KEY_END,wxSCI_SCMOD_SHIFT|wxSCI_SCMOD_ALT,wxSCI_CMD_LINEENDWRAPEXTEND);</span>
+<span class="gi">+    }</span>
+     control-&gt;SetViewEOL(mgr-&gt;ReadBool(_T(&quot;/show_eol&quot;), false));
+     control-&gt;SetViewWhiteSpace(mgr-&gt;ReadInt(_T(&quot;/view_whitespace&quot;), 0));
+     //gutter
+<span class="gu">@@ -1860,20 +1881,34 @@</span>
+         GetControl()-&gt;MarkerAdd(line, marker);
+ }
+ 
+<span class="gd">-void cbEditor::GotoMatchingBrace()</span>
+<span class="gi">+void cbEditor::GotoMatchingBrace(bool select)</span>
+ {
+     cbStyledTextCtrl* control = GetControl();
+ 
+<span class="gi">+//    int currentpos=control-&gt;GetCurrentPos();</span>
+<span class="gi">+    int anchorpos=control-&gt;GetAnchor();</span>
+     // this works only when the caret is *before* the brace
+     int matchingBrace = control-&gt;BraceMatch(control-&gt;GetCurrentPos());
+<span class="gi">+    int offset=-1;</span>
+ 
+     // if we haven&#39;t found it, we &#39;ll search at pos-1 too
+     if(matchingBrace == wxSCI_INVALID_POSITION)
+<span class="gi">+    {</span>
+         matchingBrace = control-&gt;BraceMatch(control-&gt;GetCurrentPos() - 1);
+<span class="gi">+        offset=0;</span>
+<span class="gi">+    }</span>
+ 
+     // now, we either found it or not
+     if(matchingBrace != wxSCI_INVALID_POSITION)
+<span class="gd">-        control-&gt;GotoPos(matchingBrace);</span>
+<span class="gi">+    {</span>
+<span class="gi">+        matchingBrace-=offset; //move to the position either inside or outside the match depending on whether we were inside or outside of the first brace</span>
+<span class="gi">+        if(select)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            control-&gt;GotoPos(matchingBrace);</span>
+<span class="gi">+            control-&gt;SetAnchor(anchorpos);</span>
+<span class="gi">+        } else</span>
+<span class="gi">+            control-&gt;GotoPos(matchingBrace);</span>
+<span class="gi">+    }</span>
+ }
+ 
+ void cbEditor::HighlightBraces()
+<span class="gh">Index: src/include/cbeditor.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/cbeditor.h    (revision 4335)</span>
+<span class="gi">+++ src/include/cbeditor.h    (working copy)</span>
+<span class="gu">@@ -175,7 +175,7 @@</span>
+         EditorColourSet* GetColourSet() const { return m_pTheme; }
+ 
+         /** Jumps to the matching brace (if there is one). */
+<span class="gd">-        void GotoMatchingBrace();</span>
+<span class="gi">+        void GotoMatchingBrace(bool select=false);</span>
+ 
+         /** Highlights the brace pair (one of the braces must be under the cursor) */
+         void HighlightBraces();
+<span class="gh">Index: src/src/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/main.cpp    (revision 4335)</span>
+<span class="gi">+++ src/src/main.cpp    (working copy)</span>
+<span class="gu">@@ -146,6 +146,7 @@</span>
+ int idEditPaste = XRCID(&quot;idEditPaste&quot;);
+ int idEditSwapHeaderSource = XRCID(&quot;idEditSwapHeaderSource&quot;);
+ int idEditGotoMatchingBrace = XRCID(&quot;idEditGotoMatchingBrace&quot;);
+<span class="gi">+int idEditSelectMatchingBrace = XRCID(&quot;idEditSelectMatchingBrace&quot;);</span>
+ int idEditHighlightMode = XRCID(&quot;idEditHighlightMode&quot;);
+ int idEditHighlightModeText = XRCID(&quot;idEditHighlightModeText&quot;);
+ int idEditBookmarks = XRCID(&quot;idEditBookmarks&quot;);
+<span class="gu">@@ -276,6 +277,7 @@</span>
+     EVT_UPDATE_UI(idEditPaste, MainFrame::OnEditMenuUpdateUI)
+     EVT_UPDATE_UI(idEditSwapHeaderSource, MainFrame::OnEditMenuUpdateUI)
+     EVT_UPDATE_UI(idEditGotoMatchingBrace, MainFrame::OnEditMenuUpdateUI)
+<span class="gi">+    EVT_UPDATE_UI(idEditSelectMatchingBrace, MainFrame::OnEditMenuUpdateUI)</span>
+     EVT_UPDATE_UI(idEditFoldAll, MainFrame::OnEditMenuUpdateUI)
+     EVT_UPDATE_UI(idEditUnfoldAll, MainFrame::OnEditMenuUpdateUI)
+     EVT_UPDATE_UI(idEdi
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">dmoore 2007-07-29 22:22:57</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,145 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: include/wx/KWIC/AngularMeter.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- include/wx/KWIC/AngularMeter.h    (revision 8190)</span>
+<span class="gi">+++ include/wx/KWIC/AngularMeter.h    (working copy)</span>
+<span class="gu">@@ -11,6 +11,7 @@</span>
+ //
+ /////////////////////////////////////////////////////////////////////////////
+ 
+<span class="gi">+#include &lt;wx/dcmemory.h&gt;</span>
+ 
+ #define MAXSECTORCOLOR 10
+ 
+<span class="gu">@@ -19,27 +20,28 @@</span>
+ public:
+     kwxAngularMeter(wxWindow *parent, const wxWindowID id = -1, const wxPoint&amp; pos = wxDefaultPosition, const wxSize&amp; size = wxDefaultSize);
+     kwxAngularMeter(){};
+<span class="gi">+</span>
+     virtual ~kwxAngularMeter();
+<span class="gd">-    bool Create(wxWindow* parent, const wxWindowID id, const wxPoint&amp; pos, const wxSize&amp; size);</span>
+<span class="gd">-</span>
+     void SetSectorColor(int nSector, wxColour colour) ;
+<span class="gd">-    void SetNumSectors(int nSector) { m_nSec = nSector ; };</span>
+<span class="gd">-    void SetNumTick(int nTick) { m_nTick = nTick ; };</span>
+<span class="gd">-    void SetRange(int min, int max) { m_nRangeStart = min ; m_nRangeEnd = max ; } ;</span>
+<span class="gd">-    void SetAngle(int min, int max) { m_nAngleStart = min ; m_nAngleEnd = max ; } ;</span>
+<span class="gi">+    void SetNumSectors(int nSector) { m_nSec = nSector ; m_bNeedRedrawBackground = true;};</span>
+<span class="gi">+    void SetNumTick(int nTick) { m_nTick = nTick ; m_bNeedRedrawBackground = true;};</span>
+<span class="gi">+    void SetRange(int min, int max) { m_nRangeStart = min ; m_nRangeEnd = max ; m_bNeedRedrawBackground = true;} ;</span>
+<span class="gi">+    void SetAngle(int min, int max) { m_nAngleStart = min ; m_nAngleEnd = max ; m_bNeedRedrawBackground = true;} ;</span>
+     void SetValue(int val);
+     void SetNeedleColour(wxColour colour) { m_cNeedleColour = colour ; } ;
+<span class="gd">-    void SetBackColour(wxColour colour) { m_cBackColour = colour ; } ;</span>
+<span class="gi">+    void SetBackColour(wxColour colour) { m_cBackColour = colour ; m_bNeedRedrawBackground = true;} ;</span>
+     void SetBorderColour(wxColour colour) { m_cBorderColour = colour ; } ;
+     void SetTxtFont(wxFont &amp;font) { m_Font = font ; } ;
+     void DrawCurrent(bool state) { m_bDrawCurrent = state ; } ;
+<span class="gi">+    void ConstructBackground();</span>
+ 
+ 
+ private:
+     // any class wishing to process wxWindows events must use this macro
+     DECLARE_EVENT_TABLE()
+ 
+<span class="gd">-    void OnPaint(wxPaintEvent&amp; event);</span>
+<span class="gi">+    void    OnPaint(wxPaintEvent&amp; event);</span>
+<span class="gi">+    void    OnEraseBackGround(wxEraseEvent&amp; event) {};</span>
+     void    DrawTicks(wxDC &amp;dc) ;
+     void    DrawNeedle(wxDC &amp;dc) ;
+     void    DrawSectors(wxDC &amp;dc) ;
+<span class="gu">@@ -65,4 +67,10 @@</span>
+     wxColour m_cBorderColour ;
+ 
+     wxBitmap  *m_pPreviewBmp ;
+<span class="gi">+</span>
+<span class="gi">+    wxMemoryDC m_BackgroundDc;</span>
+<span class="gi">+</span>
+<span class="gi">+    bool m_bNeedRedrawBackground;</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+ };
+<span class="gh">Index: src/wx/KWIC/AngularMeter.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/wx/KWIC/AngularMeter.cpp    (revision 8190)</span>
+<span class="gi">+++ src/wx/KWIC/AngularMeter.cpp    (working copy)</span>
+<span class="gu">@@ -27,50 +27,94 @@</span>
+ #include &lt;wx/event.h&gt;
+ 
+ 
+<span class="gi">+//IMPLEMENT_DYNAMIC_CLASS(kwxAngularMeter, wxWindow)</span>
+<span class="gi">+</span>
+ BEGIN_EVENT_TABLE(kwxAngularMeter,wxWindow)
+     EVT_PAINT(kwxAngularMeter::OnPaint)
+<span class="gi">+    EVT_ERASE_BACKGROUND(kwxAngularMeter::OnEraseBackGround)</span>
+ END_EVENT_TABLE()
+ 
+ kwxAngularMeter::kwxAngularMeter(wxWindow* parent, const wxWindowID id, const wxPoint&amp; pos, const wxSize&amp; size)
+<span class="gi">+    : wxWindow(parent, id, pos, size, 0)</span>
+ {
+<span class="gd">-    Create(parent, id, pos, size);</span>
+<span class="gd">-}</span>
+ 
+<span class="gd">-bool kwxAngularMeter::Create(wxWindow* parent, const wxWindowID id, const wxPoint&amp; pos, const wxSize&amp; size)</span>
+<span class="gd">-{</span>
+<span class="gd">-    if(!wxWindow::Create(parent, id, pos, size))</span>
+<span class="gd">-        return false;</span>
+<span class="gi">+  if (parent)</span>
+<span class="gi">+    SetBackgroundColour(parent-&gt;GetBackgroundColour());</span>
+<span class="gi">+  else</span>
+<span class="gi">+    SetBackgroundColour(*wxLIGHT_GREY);</span>
+ 
+<span class="gd">-    if (parent)</span>
+<span class="gd">-        SetBackgroundColour(parent-&gt;GetBackgroundColour());</span>
+<span class="gd">-    else</span>
+<span class="gd">-        SetBackgroundColour(*wxLIGHT_GREY);</span>
+<span class="gd">-</span>
+<span class="gi">+    //SetSize(size);</span>
+     SetAutoLayout(TRUE);
+     Refresh();
+ 
+     m_id = id;
+ 
+<span class="gd">-    //valori di default</span>
+<span class="gi">+    //Default values</span>
+ 
+<span class="gd">-    m_nScaledVal = 0;        //gradi</span>
+<span class="gi">+    m_nScaledVal = 0;        //degrees</span>
+     m_nRealVal = 0;
+<span class="gd">-    m_nTick = 0;    //numero tacche</span>
+<span class="gd">-    m_nSec = 1;        //default numero settori</span>
+<span class="gi">+    m_nTick = 0;    //number of notches</span>
+<span class="gi">+    m_nSec = 1;        //default number of sectors</span>
+     m_nRangeStart = 0;
+     m_nRangeEnd = 220;
+     m_nAngleStart = -20;
+     m_nAngleEnd = 200;
+     m_aSectorColor[0] = *wxWHITE;
+<span class="gd">-    m_cBackColour = GetBackgroundColour() ;        //default sfondo applicazione</span>
+<span class="gd">-    m_cNeedleColour = *wxRED;    //indicatore</span>
+<span class="gi">+//    m_cBackColour = *wxLIGHT_GREY;</span>
+<span class="gi">+    m_cBackColour = GetBackgroundColour() ;        //default background application</span>
+<span class="gi">+    m_cNeedleColour = *wxRED;    //indicator</span>
+     m_cBorderColour = GetBackgroundColour() ;
+     m_dPI = 4.0 * atan(1.0);
+     m_Font = *wxSWISS_FONT;    //font
+     m_bDrawCurrent = true ;
+ 
+<span class="gd">-    membitmap = new wxBitmap(size.GetWidth(), size.GetHeight());</span>
+<span class="gd">-    return true;</span>
+<span class="gi">+    membitmap = new wxBitmap(size.GetWidth(), size.GetHeight()) ;</span>
+<span class="gi">+</span>
+<span class="gi">+    m_BackgroundDc.SelectObject(*membitmap);</span>
+<span class="gi">+    m_BackgroundDc.SetBackground(parent-&gt;GetBackgroundColour());</span>
+<span class="gi">+    m_BackgroundDc.Clear();</span>
+<span class="gi">+    m_BackgroundDc.SetPen(*wxRED_PEN);</span>
+<span class="gi">+    //m_BackgroundDc.SetBrush(*wxTRANSPARENT_BRUSH);</span>
+<span class="gi">+    m</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">ollydbg 2012-08-06 03:02:15</div>

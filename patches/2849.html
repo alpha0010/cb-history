@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,87 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/replacedlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/replacedlg.cpp    (revision 5925)</span>
+<span class="gi">+++ src/sdk/replacedlg.cpp    (working copy)</span>
+<span class="gu">@@ -28,6 +28,12 @@</span>
+ 
+ BEGIN_EVENT_TABLE(ReplaceDlg, wxDialog)
+     EVT_NOTEBOOK_PAGE_CHANGED(XRCID(&quot;nbReplace&quot;), ReplaceDlg::OnFindChange)
+<span class="gi">+    EVT_CHECKBOX(XRCID(&quot;chkMultiLine1&quot;), ReplaceDlg::OnMultiChange)</span>
+<span class="gi">+    EVT_CHECKBOX(XRCID(&quot;chkMultiLine2&quot;), ReplaceDlg::OnMultiChange)</span>
+<span class="gi">+    EVT_CHECKBOX(XRCID(&quot;chkLimitTo1&quot;), ReplaceDlg::OnLimitToChange)</span>
+<span class="gi">+    EVT_CHECKBOX(XRCID(&quot;chkLimitTo2&quot;), ReplaceDlg::OnLimitToChange)</span>
+<span class="gi">+</span>
+<span class="gi">+    EVT_SIZE(                           ReplaceDlg::OnSize)</span>
+     EVT_CHECKBOX(XRCID(&quot;chkRegEx1&quot;),     ReplaceDlg::OnRegEx)
+     EVT_ACTIVATE(                       ReplaceDlg::OnActivate)
+ END_EVENT_TABLE()
+<span class="gu">@@ -40,16 +46,45 @@</span>
+     wxXmlResource::Get()-&gt;LoadDialog(this, parent, _T(&quot;dlgReplace&quot;));
+     ConfigManager* cfg = Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;));
+ 
+<span class="gi">+    // Get minimum size. This must be done before loading the values, or our dialog could get REALLY fat.</span>
+<span class="gi">+    wxSize sizeSingle = XRCCTRL(*this, &quot;tabReplaceSingle&quot;, wxPanel)-&gt;GetEffectiveMinSize();</span>
+<span class="gi">+    wxSize sizeMulti  = XRCCTRL(*this, &quot;tabReplaceMulti&quot;, wxPanel)-&gt;GetEffectiveMinSize();</span>
+<span class="gi">+    wxSize sizeFilesSingle = XRCCTRL(*this, &quot;tabReplaceInFilesSingle&quot;, wxPanel)-&gt;GetEffectiveMinSize();</span>
+<span class="gi">+    wxSize sizeFilesMulti  = XRCCTRL(*this, &quot;tabReplaceInFilesMulti&quot;, wxPanel)-&gt;GetEffectiveMinSize();</span>
+<span class="gi">+</span>
+<span class="gi">+    sizeSingle.IncTo(sizeMulti);</span>
+<span class="gi">+    sizeFilesSingle.IncTo(sizeFilesMulti);</span>
+<span class="gi">+</span>
+<span class="gi">+    wxSize tmpsize = XRCCTRL(*this, &quot;nbReplaceInFilesSingleMulti&quot;, wxPanel)-&gt;GetClientSize();</span>
+<span class="gi">+    XRCCTRL(*this, &quot;tabReplaceInFilesMulti&quot;, wxPanel)-&gt;SetSize(tmpsize);</span>
+<span class="gi">+    XRCCTRL(*this, &quot;tabReplaceInFilesSingle&quot;, wxPanel)-&gt;SetSize(tmpsize);</span>
+<span class="gi">+</span>
+<span class="gi">+    tmpsize = XRCCTRL(*this, &quot;nbReplaceSingleMulti&quot;, wxPanel)-&gt;GetClientSize();</span>
+<span class="gi">+    XRCCTRL(*this, &quot;tabReplaceMulti&quot;, wxPanel)-&gt;SetSize(tmpsize);</span>
+<span class="gi">+    XRCCTRL(*this, &quot;tabReplaceSingle&quot;, wxPanel)-&gt;SetSize(tmpsize);</span>
+<span class="gi">+</span>
+     // load last searches
+     FillComboWithLastValues(XRCCTRL(*this, &quot;cmbFind1&quot;, wxComboBox), CONF_GROUP _T(&quot;/last&quot;));
+     FillComboWithLastValues(XRCCTRL(*this, &quot;cmbReplace1&quot;, wxComboBox), CONF_GROUP _T(&quot;/lastReplace&quot;));
+     FillComboWithLastValues(XRCCTRL(*this, &quot;cmbFind2&quot;, wxComboBox), CONF_GROUP _T(&quot;/last&quot;));
+     FillComboWithLastValues(XRCCTRL(*this, &quot;cmbReplace2&quot;, wxComboBox), CONF_GROUP _T(&quot;/lastReplace&quot;));
+ 
+<span class="gi">+    // load last multiline searches</span>
+<span class="gi">+    XRCCTRL(*this, &quot;txtMultiLineFind1&quot;, wxTextCtrl)-&gt;SetValue(cfg-&gt;Read(CONF_GROUP _T(&quot;/lastMultiLineFind&quot;), _T(&quot;&quot;)));</span>
+<span class="gi">+    XRCCTRL(*this, &quot;txtMultiLineReplace1&quot;, wxTextCtrl)-&gt;SetValue(cfg-&gt;Read(CONF_GROUP _T(&quot;/lastMultiLineReplace&quot;), _T(&quot;&quot;)));</span>
+<span class="gi">+    XRCCTRL(*this, &quot;txtMultiLineFind2&quot;, wxTextCtrl)-&gt;SetValue(cfg-&gt;Read(CONF_GROUP _T(&quot;/lastMultiLineFind&quot;), _T(&quot;&quot;)));</span>
+<span class="gi">+    XRCCTRL(*this, &quot;txtMultiLineReplace2&quot;, wxTextCtrl)-&gt;SetValue(cfg-&gt;Read(CONF_GROUP _T(&quot;/lastMultiLineReplace&quot;), _T(&quot;&quot;)));</span>
+<span class="gi">+</span>
+     // replace options
+     XRCCTRL(*this, &quot;cmbFind1&quot;, wxComboBox)-&gt;SetValue(initial);
+<span class="gd">-    XRCCTRL(*this, &quot;chkWholeWord1&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(CONF_GROUP _T(&quot;/match_word&quot;), false));</span>
+<span class="gd">-    XRCCTRL(*this, &quot;chkStartWord1&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(CONF_GROUP _T(&quot;/start_word&quot;), false));</span>
+<span class="gi">+</span>
+<span class="gi">+    bool flgWholeWord = cfg-&gt;ReadBool(CONF_GROUP _T(&quot;/match_word&quot;), false);</span>
+<span class="gi">+    bool flgStartWord = cfg-&gt;ReadBool(CONF_GROUP _T(&quot;/start_word&quot;), false);</span>
+<span class="gi">+    bool flgStartFile = cfg-&gt;ReadBool(CONF_GROUP _T(&quot;/start_file&quot;), false);</span>
+<span class="gi">+    XRCCTRL(*this, &quot;chkLimitTo1&quot;, wxCheckBox)-&gt;SetValue(flgWholeWord | flgStartWord | flgStartFile);</span>
+<span class="gi">+    XRCCTRL(*this, &quot;rbLimitTo1&quot;, wxRadioBox)-&gt;Enable((bool)(flgWholeWord | flgStartWord | flgStartFile));</span>
+<span class="gi">+    XRCCTRL(*this, &quot;rbLimitTo1&quot;, wxRadioBox)-&gt;SetSelection(flgStartFile ? 2 : (flgStartWord ? 1 : 0));</span>
+<span class="gi">+</span>
+     XRCCTRL(*this, &quot;chkMatchCase1&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(CONF_GROUP _T(&quot;/match_case&quot;), false));
+     XRCCTRL(*this, &quot;chkRegEx1&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(CONF_GROUP _T(&quot;/regex&quot;), false));
+     XRCCTRL(*this, &quot;rbDirection&quot;, wxRadioBox)-&gt;SetSelection(cfg-&gt;ReadInt(CONF_GROUP _T(&quot;/direction&quot;), 1));
+<span class="gu">@@ -61,13 +96,37 @@</span>
+     XRCCTRL(*this, &quot;chkAutoWrapSearch&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/find_options/auto_wrap_search&quot;), true));
+ 
+     // replace in files options
+<span class="gi">+    flgWholeWord = cfg-&gt;ReadBool(CONF_GROUP _T(&quot;/match_word2&quot;), false);</span>
+<span class="gi">+    flgStartWord = cfg-&gt;ReadBool(CONF_GROUP _T(&quot;/start_word2&quot;), false);</span>
+<span class="gi">+    flgStartFile = cfg-&gt;ReadBool(CONF_GROUP _T(&quot;/start_file2&quot;), false);</span>
+<span class="gi">+    XRCCTRL(*this, &quot;chkLimitTo2&quot;, wxCheckBox)-&gt;SetValue(flgWholeWord | flgStartWord | flgStartFile);</span>
+<span class="gi">+    XRCCTRL(*this, &quot;rbLimitTo2&quot;, wxRadioBox)-&gt;Enable((bool)(flgWholeWord | flgStartWord | flgStartFile));</span>
+<span class="gi">+    XRCCTRL(*this, &quot;rbLimitTo2&quot;, wxRadioBox)-&gt;SetSelection(flgStartFile ? 2 : (flgStartWord ? 1 : 0));</span>
+<span class="gi">+</span>
+     XRCCTRL(*this, &quot;cmbFind2&quot;, wxComboBox)-&gt;SetValue(initial);
+<span class="gd">-    XRCCTRL(*this, &quot;chkWholeWord2&quot;, wxCheckBox)-&gt;SetValu</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">rickg22 2009-11-18 14:45:29</div>

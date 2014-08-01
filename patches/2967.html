@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,155 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/astyle/astyleplugin.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/astyle/astyleplugin.cpp    (revision 6196)</span>
+<span class="gi">+++ src/plugins/astyle/astyleplugin.cpp    (working copy)</span>
+<span class="gu">@@ -102,7 +102,7 @@</span>
+     {
+         case mtEditorManager:
+             menu-&gt;AppendSeparator();
+<span class="gd">-            menu-&gt;Append( idCodeFormatterActiveFile, _( &quot;Format this file (AStyle)&quot; ), _( &quot;Format the source code in the current file&quot; ) );</span>
+<span class="gi">+            menu-&gt;Append( idCodeFormatterActiveFile, _( &quot;Format use AStyle&quot; ), _( &quot;Format the selected source code (selected line) in the current file&quot; ) );</span>
+             break;
+ 
+         case mtProjectManager:
+<span class="gu">@@ -290,14 +290,68 @@</span>
+ 
+ bool AStylePlugin::FormatEditor( cbEditor *ed )
+ {
+<span class="gd">-    if (ed-&gt;GetControl()-&gt;GetReadOnly())</span>
+<span class="gi">+    cbStyledTextCtrl* control = ed-&gt;GetControl();</span>
+<span class="gi">+    if (control-&gt;GetReadOnly())</span>
+     {
+         cbMessageBox(_(&quot;The file is read-only!&quot;), _(&quot;Error&quot;), wxICON_ERROR);
+         return false;
+     }
+ 
+<span class="gd">-    wxString edText(ed-&gt;GetControl()-&gt;GetText());</span>
+<span class="gi">+    bool onlySelected = false;</span>
+<span class="gi">+    wxString edText;</span>
+<span class="gi">+    wxString selText;</span>
+<span class="gi">+    int leftBracesNumber = 0;</span>
+<span class="gi">+    const int pos = control-&gt;GetCurrentPos();</span>
+<span class="gi">+    int start = control-&gt;GetSelectionStart();</span>
+<span class="gi">+    int end = control-&gt;GetSelectionEnd();</span>
+<span class="gi">+    wxString fromWord;</span>
+<span class="gi">+    if (start != end)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        onlySelected = true;</span>
+<span class="gi">+        start = control-&gt;GetLineIndentPosition(control-&gt;LineFromPosition(start));</span>
+<span class="gi">+        control-&gt;GotoPos(start);</span>
+<span class="gi">+        control-&gt;Home();</span>
+<span class="gi">+        start = control-&gt;GetCurrentPos();</span>
+<span class="gi">+        control-&gt;SetSelectionStart(start);</span>
+<span class="gi">+        end = control-&gt;GetLineEndPosition(control-&gt;LineFromPosition(end));</span>
+<span class="gi">+        control-&gt;SetSelectionEnd(end);</span>
+<span class="gi">+        selText = control-&gt;GetTextRange(start, end);</span>
+ 
+<span class="gi">+        wxChar ch;</span>
+<span class="gi">+        int findBracesPos = start;</span>
+<span class="gi">+        while (--findBracesPos &gt; 0 )</span>
+<span class="gi">+        {</span>
+<span class="gi">+            ch = control-&gt;GetCharAt(findBracesPos);</span>
+<span class="gi">+            int style = control-&gt;GetStyleAt(findBracesPos);</span>
+<span class="gi">+            int lexer = control-&gt;GetLexer();</span>
+<span class="gi">+            if (lexer == wxSCI_LEX_CPP)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                if (style == wxSCI_C_COMMENT || style == wxSCI_C_COMMENTDOC</span>
+<span class="gi">+                    || style == wxSCI_C_COMMENTDOCKEYWORD || style == wxSCI_C_COMMENTDOCKEYWORDERROR</span>
+<span class="gi">+                    || style == wxSCI_C_COMMENTLINE || style == wxSCI_C_COMMENTLINEDOC</span>
+<span class="gi">+                    || style == wxSCI_C_STRING || style == wxSCI_C_CHARACTER)</span>
+<span class="gi">+                    continue;</span>
+<span class="gi">+            }</span>
+<span class="gi">+            else if (lexer == wxSCI_LEX_D)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                if (style == wxSCI_D_COMMENT || style == wxSCI_D_COMMENTDOC</span>
+<span class="gi">+                    || style == wxSCI_D_COMMENTDOCKEYWORD || style == wxSCI_D_COMMENTDOCKEYWORDERROR</span>
+<span class="gi">+                    || style == wxSCI_D_COMMENTLINE || style == wxSCI_D_COMMENTLINEDOC</span>
+<span class="gi">+                    || style == wxSCI_D_STRING || style == wxSCI_D_CHARACTER)</span>
+<span class="gi">+                    continue;</span>
+<span class="gi">+            }</span>
+<span class="gi">+</span>
+<span class="gi">+            if (ch == _T(&#39;}&#39;)) --leftBracesNumber;</span>
+<span class="gi">+            else if (ch == _T(&#39;{&#39;)) ++leftBracesNumber;</span>
+<span class="gi">+        }</span>
+<span class="gi">+</span>
+<span class="gi">+        for (int i = leftBracesNumber; i &gt; 0; --i)</span>
+<span class="gi">+            edText.Append(_T(&#39;{&#39;));</span>
+<span class="gi">+        edText.Append(selText);</span>
+<span class="gi">+    }</span>
+<span class="gi">+    else</span>
+<span class="gi">+        edText = control-&gt;GetText();</span>
+<span class="gi">+</span>
+     wxString formattedText;
+ 
+     astyle::ASFormatter formatter;
+<span class="gu">@@ -308,9 +362,8 @@</span>
+ 
+     wxString eolChars;
+ 
+<span class="gd">-    switch (ed-&gt;GetControl()-&gt;GetEOLMode())</span>
+<span class="gi">+    switch (control-&gt;GetEOLMode())</span>
+     {
+<span class="gd">-</span>
+         case wxSCI_EOL_CRLF:
+             eolChars = _T(&quot;\r\n&quot;);
+             break;
+<span class="gu">@@ -324,7 +377,7 @@</span>
+             break;
+     }
+ 
+<span class="gd">-    if (edText.size() &amp;&amp; edText.Last() != _T(&#39;\r&#39;) &amp;&amp; edText.Last() != _T(&#39;\n&#39;))</span>
+<span class="gi">+    if (edText.size() &amp;&amp; edText.Last() != _T(&#39;\r&#39;) &amp;&amp; edText.Last() != _T(&#39;\n&#39;) &amp;&amp; !onlySelected)</span>
+     {
+         edText += eolChars;
+     }
+<span class="gu">@@ -338,15 +391,17 @@</span>
+     std::vector&lt;int&gt; ed_breakpoints;
+ 
+     // hack: we need to evaluate the special case of having a bookmark in the first line here
+<span class="gd">-</span>
+<span class="gd">-    if (ed-&gt;HasBookmark(0))</span>
+<span class="gi">+    if (!onlySelected)</span>
+     {
+<span class="gd">-        new_bookmark.push_back(0);</span>
+<span class="gi">+        if (ed-&gt;HasBookmark(0))</span>
+<span class="gi">+        {</span>
+<span class="gi">+            new_bookmark.push_back(0);</span>
+<span class="gi">+        }</span>
+<span class="gi">+        if (ed-&gt;HasBreakpoint(0))</span>
+<span class="gi">+        {</span>
+<span class="gi">+            ed_breakpoints.push_back(0);</span>
+<span class="gi">+        }</span>
+     }
+<span class="gd">-    if (ed-&gt;HasBreakpoint(0))</span>
+<span class="gd">-    {</span>
+<span class="gd">-        ed_breakpoints.push_back(0);</span>
+<span class="gd">-    }</span>
+ 
+     wxSetCursor(*wxHOURGLASS_CURSOR);
+ 
+<span class="gu">@@ -373,14 +428,25 @@</span>
+         }
+     }
+ 
+<span class="gd">-    int pos = ed-&gt;GetControl()-&gt;GetCurrentPos();</span>
+<span class="gi">+    if (onlySelected &amp;&amp; leftBracesNumber &gt; 0)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        while (leftBracesNumber &gt; 0)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            --leftBracesNumber;</span>
+<span class="gi">+            formattedText = formattedText.SubString(formattedText.Find(_T(&#39;{&#39;)) + 1, formattedText.Length());</span>
+<span class="gi">+        }</span>
+<span class="gi">+        formattedText = formattedText.SubString(formattedText.Find(eolChars) + eolChars.Length(), formattedText.Length());</span>
+<span class="gi">+    }</span>
+ 
+<span class="gd">-    bool changed = BuffersDiffer( formattedText, edText );</span>
+<span class="gi">+    bool changed = BuffersDiffer( formattedText, !onlySelected ?</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">loaden 2010-03-29 01:19:49</div>

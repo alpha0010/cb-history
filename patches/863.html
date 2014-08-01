@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,75 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: C:/CodeBlocks/src/sdk/manager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- C:/CodeBlocks/src/sdk/manager.cpp    (revision 2084)</span>
+<span class="gi">+++ C:/CodeBlocks/src/sdk/manager.cpp    (working copy)</span>
+<span class="gu">@@ -252,6 +252,11 @@</span>
+     return ToolsManager::Get();
+ }
+ 
+<span class="gi">+TemplateManager* Manager::GetTemplateManager() const</span>
+<span class="gi">+{</span>
+<span class="gi">+    return TemplateManager::Get();</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ MacrosManager* Manager::GetMacrosManager() const
+ {
+     return MacrosManager::Get();
+<span class="gh">Index: C:/CodeBlocks/src/sdk/manager.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- C:/CodeBlocks/src/sdk/manager.h    (revision 2084)</span>
+<span class="gi">+++ C:/CodeBlocks/src/sdk/manager.h    (working copy)</span>
+<span class="gu">@@ -20,6 +20,7 @@</span>
+ class MessageManager;
+ class PluginManager;
+ class ToolsManager;
+<span class="gi">+class TemplateManager;</span>
+ class MacrosManager;
+ class PersonalityManager;
+ class wxMenu;
+<span class="gu">@@ -89,6 +90,7 @@</span>
+     MessageManager* GetMessageManager() const;
+     PluginManager* GetPluginManager() const;
+     ToolsManager* GetToolsManager() const;
+<span class="gi">+    TemplateManager* GetTemplateManager() const;</span>
+     MacrosManager* GetMacrosManager() const;
+     PersonalityManager* GetPersonalityManager() const;
+     UserVariableManager* GetUserVariableManager() const;
+<span class="gh">Index: C:/CodeBlocks/src/src/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- C:/CodeBlocks/src/src/main.cpp    (revision 2084)</span>
+<span class="gi">+++ C:/CodeBlocks/src/src/main.cpp    (working copy)</span>
+<span class="gu">@@ -1366,7 +1366,7 @@</span>
+     wxCommandEvent evt;
+     wxString link = event.GetString();
+     if(link.IsSameAs(_T(&quot;CB_CMD_NEW_PROJECT&quot;)))
+<span class="gd">-        TemplateManager::Get()-&gt;NewProject();</span>
+<span class="gi">+        Manager::Get()-&gt;GetTemplateManager()-&gt;NewProject();</span>
+     else if(link.IsSameAs(_T(&quot;CB_CMD_OPEN_PROJECT&quot;)))
+         OnProjectOpen(evt);
+ //    else if (link.IsSameAs(_T(&quot;CB_CMD_CONF_ENVIRONMENT&quot;)))
+<span class="gu">@@ -2439,7 +2439,7 @@</span>
+ 
+ void MainFrame::OnProjectNew(wxCommandEvent&amp; event)
+ {
+<span class="gd">-    cbProject* prj = TemplateManager::Get()-&gt;NewProject();</span>
+<span class="gi">+    cbProject* prj = Manager::Get()-&gt;GetTemplateManager()-&gt;NewProject();</span>
+     // verify that the open files are still in sync
+     // the new file might have overwritten an existing one)
+     Manager::Get()-&gt;GetEditorManager()-&gt;CheckForExternallyModifiedFiles();
+<span class="gu">@@ -2494,7 +2494,7 @@</span>
+ 
+ void MainFrame::OnProjectSaveTemplate(wxCommandEvent&amp; event)
+ {
+<span class="gd">-    TemplateManager::Get()-&gt;SaveUserTemplate(Manager::Get()-&gt;GetProjectManager()-&gt;GetActiveProject());</span>
+<span class="gi">+    Manager::Get()-&gt;GetTemplateManager()-&gt;SaveUserTemplate(Manager::Get()-&gt;GetProjectManager()-&gt;GetActiveProject());</span>
+ }
+ 
+ void MainFrame::OnProjectCloseProject(wxCommandEvent&amp; event)
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mandrav 2006-02-26 18:27:55</div>

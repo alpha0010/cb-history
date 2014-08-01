@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,154 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable">From fae0848a3f14c1aa8f6095a585d50a8201049d63 Mon Sep 17 00:00:00 2001
+From: Dan Horak &lt;dan@danny.cz&gt;
+Date: Wed, 13 May 2009 10:21:19 +0200
+Subject: [PATCH 01/19] add check for tinyxml into configure
+
+<span class="gd">---</span>
+ configure.in |    9 +++++++++
+ 1 files changed, 9 insertions(+), 0 deletions(-)
+
+<span class="gh">diff --git a/configure.in b/configure.in</span>
+<span class="gh">index 6f914bd..0a546ca 100644</span>
+<span class="gd">--- a/configure.in</span>
+<span class="gi">+++ b/configure.in</span>
+<span class="gu">@@ -54,9 +54,18 @@ AC_SEARCH_LIBS(gzopen, z, [HAVE_ZLIB=yes], [HAVE_ZLIB=no])</span>
+ LIBS=$save_LIBS
+ AC_SEARCH_LIBS(BZ2_bzopen, bz2, [HAVE_BZIP2=yes], [HAVE_BZIP2=no])
+ LIBS=$save_LIBS
+<span class="gi">+save_CC=$CC</span>
+<span class="gi">+save_CPP=$CPP</span>
+<span class="gi">+CC=$CXX</span>
+<span class="gi">+CPP=$CXXCPP</span>
+<span class="gi">+AC_CHECK_HEADER(tinyxml.h, [HAVE_TINYXML=yes], [HAVE_TINYXML=no])</span>
+<span class="gi">+CC=$save_CC</span>
+<span class="gi">+CPP=$save_CPP</span>
+<span class="gi">+</span>
+ 
+ AM_CONDITIONAL([HAVE_ZLIB], [test &quot;$HAVE_ZLIB&quot; = yes])
+ AM_CONDITIONAL([HAVE_BZIP2], [test &quot;$HAVE_BZIP2&quot; = yes])
+<span class="gi">+AM_CONDITIONAL([HAVE_TINYXML], [test &quot;$HAVE_TINYXML&quot; = yes])</span>
+ 
+ dnl versioning info for libtool
+ dnl Note this is the ABI version which is not the same as our actual library version
+<span class="gd">-- </span>
+1.6.3.3
+
+From 017c9d90b734a65dce3720fa690c12ee5b8b17a7 Mon Sep 17 00:00:00 2001
+From: Dan Horak &lt;dan@danny.cz&gt;
+Date: Wed, 13 May 2009 16:53:29 +0200
+Subject: [PATCH 02/19] move tinywxuni.h header from tinyxml into sdk
+
+<span class="gd">---</span>
+ src/include/Makefile.am                            |    1 +
+ src/include/tinywxuni.h                            |   15 +++++++++++++++
+ src/include/tinyxml/Makefile.am                    |    2 +-
+ src/include/tinyxml/tinywxuni.h                    |   15 ---------------
+ .../contrib/BrowseTracker/BrowseTrackerLayout.cpp  |    2 +-
+ .../contrib/lib_finder/librarydetectionmanager.cpp |    2 +-
+ .../contrib/wxSmith/wxsversionconverter.cpp        |    2 +-
+ .../contrib/wxSmith/wxwidgets/wxsitemresdata.cpp   |    2 +-
+ .../wxSmith/wxwidgets/wxwidgetsresfactory.cpp      |    2 +-
+ src/sdk/configmanager.cpp                          |    2 +-
+ src/sdk/globals.cpp                                |    2 +-
+ src/sdk/projectlayoutloader.cpp                    |    2 +-
+ src/sdk/projectloader.cpp                          |    2 +-
+ src/sdk/workspaceloader.cpp                        |    2 +-
+ src/tools/cb_share_config/mainframe.cpp            |    2 +-
+ 15 files changed, 28 insertions(+), 27 deletions(-)
+ create mode 100644 src/include/tinywxuni.h
+ delete mode 100644 src/include/tinyxml/tinywxuni.h
+
+<span class="gh">diff --git a/src/include/Makefile.am b/src/include/Makefile.am</span>
+<span class="gh">index 8d0d931..9138ffd 100644</span>
+<span class="gd">--- a/src/include/Makefile.am</span>
+<span class="gi">+++ b/src/include/Makefile.am</span>
+<span class="gu">@@ -119,6 +119,7 @@ ALLHEADERS = annoyingdialog.h \</span>
+                 selecttargetdlg.h \
+                 settings.h \
+                 templatemanager.h \
+<span class="gi">+                tinywxuni.h \</span>
+                 toolsmanager.h \
+                 uservarmanager.h \
+                 virtualbuildtargetsdlg.h \
+<span class="gh">diff --git a/src/include/tinywxuni.h b/src/include/tinywxuni.h</span>
+new file mode 100644
+<span class="gh">index 0000000..9ebf3a5</span>
+<span class="gd">--- /dev/null</span>
+<span class="gi">+++ b/src/include/tinywxuni.h</span>
+<span class="gu">@@ -0,0 +1,15 @@</span>
+<span class="gi">+#ifndef TINYWXUNI_H</span>
+<span class="gi">+#define TINYWXUNI_H</span>
+<span class="gi">+</span>
+<span class="gi">+class wxString;</span>
+<span class="gi">+class TiXmlDocument;</span>
+<span class="gi">+</span>
+<span class="gi">+namespace TinyXML</span>
+<span class="gi">+{</span>
+<span class="gi">+    bool LoadDocument(const wxString&amp; filename, TiXmlDocument *doc);</span>
+<span class="gi">+    TiXmlDocument* LoadDocument(const wxString&amp; filename);</span>
+<span class="gi">+</span>
+<span class="gi">+    bool SaveDocument(const wxString&amp; filename, TiXmlDocument* doc);</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+#endif</span>
+<span class="gh">diff --git a/src/include/tinyxml/Makefile.am b/src/include/tinyxml/Makefile.am</span>
+<span class="gh">index fdfa2c5..c22e938 100644</span>
+<span class="gd">--- a/src/include/tinyxml/Makefile.am</span>
+<span class="gi">+++ b/src/include/tinyxml/Makefile.am</span>
+<span class="gu">@@ -1,3 +1,3 @@</span>
+ sdkdir=$(includedir)/codeblocks/tinyxml
+ 
+<span class="gd">-sdk_HEADERS = tinystr.h tinyxml.h tinywxuni.h</span>
+<span class="gi">+sdk_HEADERS = tinystr.h tinyxml.h</span>
+<span class="gh">diff --git a/src/include/tinyxml/tinywxuni.h b/src/include/tinyxml/tinywxuni.h</span>
+deleted file mode 100644
+<span class="gh">index 9ebf3a5..0000000</span>
+<span class="gd">--- a/src/include/tinyxml/tinywxuni.h</span>
+<span class="gi">+++ /dev/null</span>
+<span class="gu">@@ -1,15 +0,0 @@</span>
+<span class="gd">-#ifndef TINYWXUNI_H</span>
+<span class="gd">-#define TINYWXUNI_H</span>
+<span class="gd">-</span>
+<span class="gd">-class wxString;</span>
+<span class="gd">-class TiXmlDocument;</span>
+<span class="gd">-</span>
+<span class="gd">-namespace TinyXML</span>
+<span class="gd">-{</span>
+<span class="gd">-    bool LoadDocument(const wxString&amp; filename, TiXmlDocument *doc);</span>
+<span class="gd">-    TiXmlDocument* LoadDocument(const wxString&amp; filename);</span>
+<span class="gd">-</span>
+<span class="gd">-    bool SaveDocument(const wxString&amp; filename, TiXmlDocument* doc);</span>
+<span class="gd">-}</span>
+<span class="gd">-</span>
+<span class="gd">-#endif</span>
+<span class="gh">diff --git a/src/plugins/contrib/BrowseTracker/BrowseTrackerLayout.cpp b/src/plugins/contrib/BrowseTracker/BrowseTrackerLayout.cpp</span>
+<span class="gh">index 7eeb514..30f38d4 100644</span>
+<span class="gd">--- a/src/plugins/contrib/BrowseTracker/BrowseTrackerLayout.cpp</span>
+<span class="gi">+++ b/src/plugins/contrib/BrowseTracker/BrowseTrackerLayout.cpp</span>
+<span class="gu">@@ -47,7 +47,7 @@</span>
+ 
+ #include &lt;wx/tokenzr.h&gt;
+ #include &quot;tinyxml/tinyxml.h&quot;
+<span class="gd">-#include &quot;tinyxml/tinywxuni.h&quot;</span>
+<span class="gi">+#include &quot;tinywxuni.h&quot;</span>
+ 
+ #include &quot;BrowseTrackerLayout.h&quot;
+ #include &quot;BrowseMarks.h&quot;
+<span class="gh">diff --git a/src/plugins/contrib/lib_finder/librarydetectionmanager.cpp b/src/plugins/contrib/lib_finder/librarydetectionmanager.cpp</span>
+<span class="gh">index db01cf2..b61adf8 100644</span>
+<span class="gd">--- a/src/plugins/contrib/lib_finder/librarydetectionmanager.cpp</span>
+<span class="gi">+++ b/src/plugins/contrib/lib_finder/librarydetectionmanager.cpp</span>
+<span class="gu">@@ -22,7 +22,7 @@</span>
+ */
+ 
+ #include &lt;tinyxml/tinyxml.h&gt;
+<span class="gd">-#include &lt;tinyxml/tinywxuni.</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">horakdan 2009-08-18 12:48:03</div>

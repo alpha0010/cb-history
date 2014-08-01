@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,62 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 8732)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -375,6 +394,15 @@</span>
+         return url;
+     }
+ 
+<span class="gi">+    void BufferPosition(cbStyledTextCtrl* stc)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        const int dist = stc-&gt;VisibleFromDocLine(stc-&gt;GetCurrentLine()) - stc-&gt;GetFirstVisibleLine();</span>
+<span class="gi">+        if (dist &gt;= 0 &amp;&amp; dist &lt; 2)</span>
+<span class="gi">+            stc-&gt;LineScroll(0, dist - 2);</span>
+<span class="gi">+        else if (dist &gt;= stc-&gt;LinesOnScreen() - 2)</span>
+<span class="gi">+            stc-&gt;LineScroll(0, 3 + dist - stc-&gt;LinesOnScreen());</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+     // vars
+     bool m_strip_trailing_spaces;
+     bool m_ensure_final_line_end;
+<span class="gu">@@ -2255,7 +2295,10 @@</span>
+ 
+     int newLine = p_Control-&gt;FindChangedLine(fromLine, toLine);
+     if (newLine != wxSCI_INVALID_POSITION)
+<span class="gi">+    {</span>
+         p_Control-&gt;GotoLine(newLine);
+<span class="gi">+        m_pData-&gt;BufferPosition(p_Control);</span>
+<span class="gi">+    }</span>
+ }
+ 
+ void cbEditor::GotoPreviousChanged()
+<span class="gu">@@ -2271,7 +2314,10 @@</span>
+ 
+     int newLine = p_Control-&gt;FindChangedLine(fromLine, toLine);
+     if (newLine != wxSCI_INVALID_POSITION)
+<span class="gi">+    {</span>
+         p_Control-&gt;GotoLine(newLine);
+<span class="gi">+        m_pData-&gt;BufferPosition(p_Control);</span>
+<span class="gi">+    }</span>
+ }
+ 
+ void cbEditor::SetChangeCollection(bool collectChange)
+<span class="gu">@@ -2438,8 +2484,11 @@</span>
+     // now, we either found it or not
+     if (matchingBrace != wxSCI_INVALID_POSITION)
+     {
+<span class="gi">+        // move to the actual position</span>
+         control-&gt;GotoPos(matchingBrace);
+         control-&gt;ChooseCaretX();
+<span class="gi">+        // make nearby lines visible</span>
+<span class="gi">+        m_pData-&gt;BufferPosition(control);</span>
+     }
+ }
+ 
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">tpetrov 2012-12-02 15:31:02</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,96 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbproject.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbproject.cpp    (revision 3836)</span>
+<span class="gi">+++ src/sdk/cbproject.cpp    (working copy)</span>
+<span class="gu">@@ -454,6 +454,8 @@</span>
+         NotifyPlugins(cbEVT_PROJECT_SAVE);
+         return true;
+     }
+<span class="gi">+</span>
+<span class="gi">+    cbMessageBox(_(&quot;Couldn&#39;t save project &quot;) + m_Filename + _(&quot;\n(Maybe the file is write-protected?)&quot;), _(&quot;Warning&quot;), wxICON_WARNING);</span>
+     return false;
+ }
+ 
+<span class="gu">@@ -469,6 +471,8 @@</span>
+         NotifyPlugins(cbEVT_PROJECT_SAVE);
+         return true;
+     }
+<span class="gi">+</span>
+<span class="gi">+    cbMessageBox(_(&quot;Couldn&#39;t save project &quot;) + m_Filename + _(&quot;\n(Maybe the file is write-protected?)&quot;), _(&quot;Warning&quot;), wxICON_WARNING);</span>
+     return false;
+ }
+ 
+<span class="gh">Index: src/sdk/cbworkspace.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbworkspace.cpp    (revision 3836)</span>
+<span class="gi">+++ src/sdk/cbworkspace.cpp    (working copy)</span>
+<span class="gu">@@ -125,6 +125,8 @@</span>
+     WorkspaceLoader wsp;
+     bool ret = wsp.Save(m_Title, m_Filename.GetFullPath());
+     SetModified(!ret);
+<span class="gi">+    if(!ret)</span>
+<span class="gi">+        cbMessageBox(_(&quot;Couldn&#39;t save workspace &quot;) + m_Filename.GetFullPath() + _(&quot;\n(Maybe the file is write-protected?)&quot;), _(&quot;Warning&quot;), wxICON_WARNING);</span>
+     return ret;
+ }
+ 
+<span class="gh">Index: src/src/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/main.cpp    (revision 3836)</span>
+<span class="gi">+++ src/src/main.cpp    (working copy)</span>
+<span class="gu">@@ -2262,11 +2262,9 @@</span>
+ 
+ void MainFrame::OnFileSaveProject(wxCommandEvent&amp; event)
+ {
+<span class="gd">-    if (Manager::Get()-&gt;GetProjectManager()-&gt;SaveActiveProject() ||</span>
+<span class="gd">-        Manager::Get()-&gt;GetProjectManager()-&gt;SaveActiveProjectAs())</span>
+<span class="gi">+    // no need to call SaveActiveProjectAs(), because this is handled in cbProject::Save()</span>
+<span class="gi">+    if (Manager::Get()-&gt;GetProjectManager()-&gt;SaveActiveProject())</span>
+         AddToRecentProjectsHistory(Manager::Get()-&gt;GetProjectManager()-&gt;GetActiveProject()-&gt;GetFilename());
+<span class="gd">-    else</span>
+<span class="gd">-        cbMessageBox(_(&quot;Couldn&#39;t save project. (Maybe the file is write-protected?)&quot;), _(&quot;Warning&quot;), wxICON_WARNING);</span>
+     DoUpdateStatusBar();
+     DoUpdateAppTitle();
+ }
+<span class="gu">@@ -2275,16 +2273,13 @@</span>
+ {
+     if (Manager::Get()-&gt;GetProjectManager()-&gt;SaveActiveProjectAs())
+         AddToRecentProjectsHistory(Manager::Get()-&gt;GetProjectManager()-&gt;GetActiveProject()-&gt;GetFilename());
+<span class="gd">-    else</span>
+<span class="gd">-        cbMessageBox(_(&quot;Couldn&#39;t save project. (Maybe the file is write-protected?)&quot;), _(&quot;Warning&quot;), wxICON_WARNING);</span>
+     DoUpdateStatusBar();
+     DoUpdateAppTitle();
+ }
+ 
+ void MainFrame::OnFileSaveProjectAllProjects(wxCommandEvent&amp; event)
+ {
+<span class="gd">-    if (!Manager::Get()-&gt;GetProjectManager()-&gt;SaveAllProjects())</span>
+<span class="gd">-        cbMessageBox(_(&quot;Couldn&#39;t save all projects. (Maybe some files are write-protected?)&quot;), _(&quot;Warning&quot;), wxICON_WARNING);</span>
+<span class="gi">+    Manager::Get()-&gt;GetProjectManager()-&gt;SaveAllProjects();</span>
+     DoUpdateStatusBar();
+     DoUpdateAppTitle();
+ }
+<span class="gu">@@ -2358,16 +2353,12 @@</span>
+ {
+     if (Manager::Get()-&gt;GetProjectManager()-&gt;SaveWorkspace())
+         AddToRecentProjectsHistory(Manager::Get()-&gt;GetProjectManager()-&gt;GetWorkspace()-&gt;GetFilename());
+<span class="gd">-    else</span>
+<span class="gd">-        cbMessageBox(_(&quot;Couldn&#39;t save workspace. (Maybe the file is write-protected?)&quot;), _(&quot;Warning&quot;), wxICON_WARNING);</span>
+ }
+ 
+ void MainFrame::OnFileSaveWorkspaceAs(wxCommandEvent&amp; event)
+ {
+     if (Manager::Get()-&gt;GetProjectManager()-&gt;SaveWorkspaceAs(_T(&quot;&quot;)))
+         AddToRecentProjectsHistory(Manager::Get()-&gt;GetProjectManager()-&gt;GetWorkspace()-&gt;GetFilename());
+<span class="gd">-    else</span>
+<span class="gd">-        cbMessageBox(_(&quot;Couldn&#39;t save workspace. (Maybe the file is write-protected?)&quot;), _(&quot;Warning&quot;), wxICON_WARNING);</span>
+ }
+ 
+ void MainFrame::OnFileCloseWorkspace(wxCommandEvent&amp; event)
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mandrav 2007-04-12 13:31:01</div>

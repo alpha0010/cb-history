@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,128 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/debuggergdb/debuggergdb.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/debuggergdb/debuggergdb.cpp    (revision 4978)</span>
+<span class="gi">+++ src/plugins/debuggergdb/debuggergdb.cpp    (working copy)</span>
+<span class="gu">@@ -1602,51 +1602,67 @@</span>
+
+ bool DebuggerGDB::AddBreakpoint(const wxString&amp; file, int line)
+ {
+<span class="gd">-    if (!IsStopped())</span>
+<span class="gd">-        return false;</span>
+<span class="gi">+    bool debuggerIsRunning = !IsStopped();</span>
+<span class="gi">+    if (debuggerIsRunning)</span>
+<span class="gi">+        Break();</span>
+     m_State.AddBreakpoint(file, line, false);
+     if (m_pBreakpointsWindow)
+         m_pBreakpointsWindow-&gt;Refresh();
+<span class="gi">+    if (debuggerIsRunning)</span>
+<span class="gi">+        Continue();</span>
+     return true;
+ }
+
+ bool DebuggerGDB::AddBreakpoint(const wxString&amp; functionSignature)
+ {
+<span class="gd">-    if (!IsStopped())</span>
+<span class="gd">-        return false;</span>
+<span class="gi">+    bool debuggerIsRunning = !IsStopped();</span>
+<span class="gi">+    if (debuggerIsRunning)</span>
+<span class="gi">+        Break();</span>
+     m_State.AddBreakpoint(wxEmptyString, -1, false, functionSignature);
+     if (m_pBreakpointsWindow)
+         m_pBreakpointsWindow-&gt;Refresh();
+<span class="gi">+    if (debuggerIsRunning)</span>
+<span class="gi">+        Continue();</span>
+     return true;
+ }
+
+ bool DebuggerGDB::RemoveBreakpoint(const wxString&amp; file, int line)
+ {
+<span class="gd">-    if (!IsStopped())</span>
+<span class="gd">-        return false;</span>
+<span class="gi">+    bool debuggerIsRunning = !IsStopped();</span>
+<span class="gi">+    if (debuggerIsRunning)</span>
+<span class="gi">+        Break();</span>
+     m_State.RemoveBreakpoint(file, line);
+     if (m_pBreakpointsWindow)
+         m_pBreakpointsWindow-&gt;Refresh();
+<span class="gi">+    if (debuggerIsRunning)</span>
+<span class="gi">+        Continue();</span>
+     return true;
+ }
+
+ bool DebuggerGDB::RemoveBreakpoint(const wxString&amp; functionSignature)
+ {
+<span class="gd">-//    if (!IsStopped())</span>
+<span class="gd">-        return false;</span>
+<span class="gi">+//    bool debuggerIsRunning = !IsStopped();</span>
+<span class="gi">+//    if (debuggerIsRunning)</span>
+<span class="gi">+//        Break();</span>
+<span class="gi">+    return false;</span>
+ //    m_State.RemoveBreakpoint(wxEmptyString, event.GetInt());
+ //    if (m_pBreakpointsWindow)
+ //        m_pBreakpointsWindow-&gt;Refresh();
+<span class="gd">-//    return true;</span>
+<span class="gi">+//  if (debuggerIsRunning)</span>
+<span class="gi">+//        Continue();</span>
+<span class="gi">+//  return true;</span>
+ }
+
+ bool DebuggerGDB::RemoveAllBreakpoints(const wxString&amp; file)
+ {
+<span class="gd">-    if (!IsStopped())</span>
+<span class="gd">-        return false;</span>
+<span class="gi">+    bool debuggerIsRunning = !IsStopped();</span>
+<span class="gi">+    if (debuggerIsRunning)</span>
+<span class="gi">+        Break();</span>
+     m_State.RemoveAllBreakpoints(file);
+     if (m_pBreakpointsWindow)
+         m_pBreakpointsWindow-&gt;Refresh();
+<span class="gi">+    if (debuggerIsRunning)</span>
+<span class="gi">+        Continue();</span>
+     return true;
+ }
+
+<span class="gu">@@ -1977,8 +1993,8 @@</span>
+         mbar-&gt;Enable(idMenuStep, en &amp;&amp; stopped);
+         mbar-&gt;Enable(idMenuStepOut, m_pProcess &amp;&amp; en &amp;&amp; stopped);
+         mbar-&gt;Enable(idMenuRunToCursor, en &amp;&amp; ed &amp;&amp; stopped);
+<span class="gd">-        mbar-&gt;Enable(idMenuToggleBreakpoint, en &amp;&amp; ed &amp;&amp; stopped);</span>
+<span class="gd">-        mbar-&gt;Enable(idMenuRemoveAllBreakpoints, en &amp;&amp; ed &amp;&amp; stopped);</span>
+<span class="gi">+        mbar-&gt;Enable(idMenuToggleBreakpoint, en &amp;&amp; ed);</span>
+<span class="gi">+        mbar-&gt;Enable(idMenuRemoveAllBreakpoints, en &amp;&amp; ed);</span>
+         mbar-&gt;Enable(idMenuSendCommandToGDB, m_pProcess &amp;&amp; stopped);
+         mbar-&gt;Enable(idMenuAddSymbolFile, m_pProcess &amp;&amp; stopped);
+         mbar-&gt;Enable(idMenuStop, m_pProcess &amp;&amp; en);
+<span class="gh">Index: src/plugins/debuggergdb/breakpointsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/debuggergdb/breakpointsdlg.cpp    (revision 4978)</span>
+<span class="gi">+++ src/plugins/debuggergdb/breakpointsdlg.cpp    (working copy)</span>
+<span class="gu">@@ -120,8 +120,8 @@</span>
+ void BreakpointsDlg::RemoveBreakpoint(int sel)
+ {
+     // if debugger is running and is not paused, return
+<span class="gd">-    if (m_State.HasDriver() &amp;&amp; !m_State.GetDriver()-&gt;IsStopped())</span>
+<span class="gd">-        return;</span>
+<span class="gi">+//    if (m_State.HasDriver() &amp;&amp; !m_State.GetDriver()-&gt;IsStopped())</span>
+<span class="gi">+//        return;</span>
+     // if index is out of range, return
+     if (sel &lt; 0 || sel &gt;= (int)m_State.GetBreakpoints().GetCount())
+         return;
+<span class="gu">@@ -153,8 +153,8 @@</span>
+ void BreakpointsDlg::OnRemoveAll(wxCommandEvent&amp; event)
+ {
+     // if debugger is running and is not paused, return
+<span class="gd">-    if (m_State.HasDriver() &amp;&amp; !m_State.GetDriver()-&gt;IsStopped())</span>
+<span class="gd">-        return;</span>
+<span class="gi">+//    if (m_State.HasDriver() &amp;&amp; !m_State.GetDriver()-&gt;IsStopped())</span>
+<span class="gi">+//        return;</span>
+     while (m_State.GetBreakpoints().GetCount())
+     {
+         // if not valid breakpoint, continue with the next one
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">killerbot 2008-05-01 12:15:37</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,150 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/globals.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/globals.cpp    (revision 4978)</span>
+<span class="gi">+++ src/sdk/globals.cpp    (working copy)</span>
+<span class="gu">@@ -31,6 +31,7 @@</span>
+ #include &lt;algorithm&gt;
+ #include &quot;filefilters.h&quot;
+ #include &quot;tinyxml/tinywxuni.h&quot;
+<span class="gi">+#include &quot;filegroupsandmasks.h&quot;</span>
+
+
+ namespace compatibility { typedef TernaryCondTypedef&lt;wxMinimumVersion&lt;2,5&gt;::eval, wxTreeItemIdValue, long int&gt;::eval tree_cookie_t; };
+<span class="gu">@@ -284,6 +285,27 @@</span>
+     else if (ext.IsSameAs(FileFilters::SCRIPT_EXT))
+         return ftScript;
+
+<span class="gi">+    // DrewBoo: Before giving up, see if the ProjectManager</span>
+<span class="gi">+    // considers this extension a source or header</span>
+<span class="gi">+    else</span>
+<span class="gi">+    {</span>
+<span class="gi">+        ProjectManager *pm = Manager::Get()-&gt;GetProjectManager();</span>
+<span class="gi">+        if ( pm )</span>
+<span class="gi">+        {</span>
+<span class="gi">+            const FilesGroupsAndMasks* fg = pm-&gt;GetFilesGroupsAndMasks();</span>
+<span class="gi">+            if ( fg )</span>
+<span class="gi">+            {</span>
+<span class="gi">+               for ( unsigned int i = 0; i != fg-&gt;GetGroupsCount(); ++i )</span>
+<span class="gi">+               {</span>
+<span class="gi">+                    if ( fg-&gt;GetGroupName(i) == _T(&quot;Sources&quot;) &amp;&amp; fg-&gt;MatchesMask( ext, i ) )</span>
+<span class="gi">+                        return ftSource;</span>
+<span class="gi">+                    if ( fg-&gt;GetGroupName(i) == _T(&quot;Headers&quot;) &amp;&amp; fg-&gt;MatchesMask( ext, i ) )</span>
+<span class="gi">+                        return ftHeader;</span>
+<span class="gi">+               }</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+     return ftOther;
+ }
+
+<span class="gh">Index: src/sdk/filegroupsandmasks.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/filegroupsandmasks.cpp    (revision 4978)</span>
+<span class="gi">+++ src/sdk/filegroupsandmasks.cpp    (working copy)</span>
+<span class="gu">@@ -179,11 +179,11 @@</span>
+     return GetStringFromArray(fg-&gt;fileMasks);
+ }
+
+<span class="gd">-bool FilesGroupsAndMasks::MatchesMask(const wxString&amp; ext, unsigned int group)</span>
+<span class="gi">+bool FilesGroupsAndMasks::MatchesMask(const wxString&amp; ext, unsigned int group) const</span>
+ {
+     if (ext.IsEmpty() || group &gt;= m_Groups.GetCount())
+         return false;
+<span class="gd">-    FileGroups* fg = m_Groups[group];</span>
+<span class="gi">+    const FileGroups* fg = m_Groups[group];</span>
+     for (unsigned int i = 0; i &lt; fg-&gt;fileMasks.GetCount(); ++i)
+     {
+         if (ext.Matches(fg-&gt;fileMasks[i]))
+<span class="gh">Index: src/sdk/editormanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editormanager.cpp    (revision 4978)</span>
+<span class="gi">+++ src/sdk/editormanager.cpp    (working copy)</span>
+<span class="gu">@@ -40,6 +40,7 @@</span>
+ #include &lt;wx/bmpbuttn.h&gt;
+ #include &lt;wx/progdlg.h&gt;
+ #include &lt;wx/fontutil.h&gt;
+<span class="gi">+#include &lt;wx/tokenzr.h&gt;</span>
+
+ #include &quot;editorcolourset.h&quot;
+ #include &quot;editorconfigurationdlg.h&quot;
+<span class="gu">@@ -50,6 +51,7 @@</span>
+ #include &quot;filefilters.h&quot;
+ #include &quot;searchresultslog.h&quot;
+ #include &quot;projectfileoptionsdlg.h&quot;
+<span class="gi">+#include &quot;filegroupsandmasks.h&quot;</span>
+
+ #include &quot;wx/wxFlatNotebook/wxFlatNotebook.h&quot;
+
+<span class="gu">@@ -1024,6 +1026,36 @@</span>
+             fname.SetExt(FileFilters::CXX_EXT);
+             if (fname.FileExists())
+                 break;
+<span class="gi">+</span>
+<span class="gi">+// DrewBoo: See if the project manager knows of other extensions</span>
+<span class="gi">+//   (This could also outright replace the hard-coded extensions above)</span>
+<span class="gi">+            ProjectManager *pm = Manager::Get()-&gt;GetProjectManager();</span>
+<span class="gi">+            if ( !pm )</span>
+<span class="gi">+                break;</span>
+<span class="gi">+</span>
+<span class="gi">+            const FilesGroupsAndMasks* fg = pm-&gt;GetFilesGroupsAndMasks();</span>
+<span class="gi">+            if ( !fg )</span>
+<span class="gi">+                break;</span>
+<span class="gi">+</span>
+<span class="gi">+            for ( unsigned int i = 0; i != fg-&gt;GetGroupsCount(); ++i )</span>
+<span class="gi">+            {</span>
+<span class="gi">+                if ( fg-&gt;GetGroupName(i) == _(&quot;Sources&quot;) )</span>
+<span class="gi">+                {</span>
+<span class="gi">+                    wxStringTokenizer tkz( fg-&gt;GetFileMasks(i), _T(&quot;;&quot;) );</span>
+<span class="gi">+                    while ( tkz.HasMoreTokens() )</span>
+<span class="gi">+                    {</span>
+<span class="gi">+                        wxString token = tkz.GetNextToken();</span>
+<span class="gi">+                        wxString ext;</span>
+<span class="gi">+                        if ( token.StartsWith( _(&quot;*.&quot;), &amp;ext ) )</span>
+<span class="gi">+                        {</span>
+<span class="gi">+                            fname.SetExt(ext);</span>
+<span class="gi">+                            if (fname.FileExists())</span>
+<span class="gi">+                                break;</span>
+<span class="gi">+                        }</span>
+<span class="gi">+                    }</span>
+<span class="gi">+                    break;</span>
+<span class="gi">+                }</span>
+<span class="gi">+            }</span>
+         }
+         else if (ft == ftSource)
+         {
+<span class="gu">@@ -1039,6 +1071,36 @@</span>
+             fname.SetExt(FileFilters::HXX_EXT);
+             if (fname.FileExists())
+                 break;
+<span class="gi">+</span>
+<span class="gi">+// DrewBoo: See if the project manager knows of other extensions</span>
+<span class="gi">+//   (This could also outright replace the hard-coded extensions above)</span>
+<span class="gi">+            ProjectManager *pm = Manager::Get()-&gt;GetProjectManager();</span>
+<span class="gi">+            if ( !pm )</span>
+<span class="gi">+                break;</span>
+<span class="gi">+</span>
+<span class="gi">+            const FilesGroupsAndMasks* fg = pm-&gt;GetFilesGroupsAndMasks();</span>
+<span class="gi">+            if ( !fg )</span>
+<span class="gi">+                break;</span>
+<span class="gi">+</span>
+<span class="gi">+            for ( unsigned int i = 0; i != fg-&gt;GetGroupsCount(); ++i )</span>
+<span class="gi">+            {</span>
+<span class="gi">+                if ( fg-&gt;GetGroupName(i) == _(&quot;Headers&quot;) )</span>
+<span class="gi">+                {</span>
+<span class="gi">+                    wxStringTokenizer tkz( fg-&gt;GetFileMasks(i), _T(&quot;;&quot;) );</span>
+<span class="gi">+                    while ( tkz.HasMoreTokens() )</span>
+<span class="gi">+                    {</span>
+<span class="gi">+                        wxString token = tkz.GetNextToken();</span>
+<span class="gi">+                        wxString ext;</span>
+<span class="gi">+                        if ( token.StartsWith( _(&quot;*.&quot;), &amp;ext ) )</span>
+<span class="gi">+</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">arkay 2008-04-05 15:55:24</div>

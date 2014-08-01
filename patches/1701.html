@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,113 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/editorconfigurationdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorconfigurationdlg.cpp    (revision 3315)</span>
+<span class="gi">+++ src/sdk/editorconfigurationdlg.cpp    (working copy)</span>
+<span class="gu">@@ -123,6 +123,7 @@</span>
+        XRCCTRL(*this, &quot;chkBackspaceUnindents&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/backspace_unindents&quot;), true));
+        XRCCTRL(*this, &quot;chkWordWrap&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/word_wrap&quot;), false));
+        XRCCTRL(*this, &quot;chkPosixRegex&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/use_posix_style_regexes&quot;), false));
+<span class="gi">+       XRCCTRL(*this, &quot;chkAdvancedRegex&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/use_advanced_regexes&quot;), false));</span>
+        XRCCTRL(*this, &quot;chkShowLineNumbers&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/show_line_numbers&quot;), true));
+        XRCCTRL(*this, &quot;chkHighlightCaretLine&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/highlight_caret_line&quot;), false));
+        XRCCTRL(*this, &quot;spnTabSize&quot;, wxSpinCtrl)-&gt;SetValue(cfg-&gt;ReadInt(_T(&quot;/tab_size&quot;), 4));
+<span class="gu">@@ -837,6 +838,7 @@</span>
+         cfg-&gt;Write(_T(&quot;/backspace_unindents&quot;),     XRCCTRL(*this, &quot;chkBackspaceUnindents&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/word_wrap&quot;),             XRCCTRL(*this, &quot;chkWordWrap&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/use_posix_style_regexes&quot;),XRCCTRL(*this, &quot;chkPosixRegex&quot;, wxCheckBox)-&gt;GetValue());
+<span class="gi">+        cfg-&gt;Write(_T(&quot;/use_advanced_regexes&quot;), XRCCTRL(*this, &quot;chkAdvancedRegex&quot;, wxCheckBox)-&gt;GetValue());</span>
+
+         cfg-&gt;Write(_T(&quot;/show_line_numbers&quot;),     XRCCTRL(*this, &quot;chkShowLineNumbers&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/highlight_caret_line&quot;), XRCCTRL(*this, &quot;chkHighlightCaretLine&quot;, wxCheckBox)-&gt;GetValue());
+<span class="gh">Index: src/sdk/editormanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editormanager.cpp    (revision 3315)</span>
+<span class="gi">+++ src/sdk/editormanager.cpp    (working copy)</span>
+<span class="gu">@@ -1415,6 +1415,7 @@</span>
+     if (!control || !data)
+         return -1;
+
+<span class="gi">+    bool AdvRegex=false;</span>
+     int flags = 0;
+     CalculateFindReplaceStartEnd(control, data);
+
+<span class="gu">@@ -1429,8 +1430,18 @@</span>
+         flags |= wxSCI_FIND_REGEXP;
+         if (Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;))-&gt;ReadBool(_T(&quot;/use_posix_style_regexes&quot;), false))
+             flags |= wxSCI_FIND_POSIX;
+<span class="gi">+        AdvRegex=Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;))-&gt;ReadBool(_T(&quot;/use_advanced_regexes&quot;), false);</span>
+     }
+
+<span class="gi">+    wxRegEx re;</span>
+<span class="gi">+    if(AdvRegex)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        if(data-&gt;matchCase)</span>
+<span class="gi">+            re.Compile(data-&gt;findText,wxRE_ADVANCED|wxRE_NEWLINE);</span>
+<span class="gi">+        else</span>
+<span class="gi">+            re.Compile(data-&gt;findText,wxRE_ADVANCED|wxRE_NEWLINE|wxRE_ICASE);</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+     control-&gt;BeginUndoAction();
+     int pos = -1;
+     bool replace = false;
+<span class="gu">@@ -1444,7 +1455,32 @@</span>
+     while (!stop)
+     {
+         int lengthFound = 0;
+<span class="gd">-        pos = control-&gt;FindText(data-&gt;start, data-&gt;end, data-&gt;findText, flags, &amp;lengthFound);</span>
+<span class="gi">+        if(!AdvRegex)</span>
+<span class="gi">+            pos = control-&gt;FindText(data-&gt;start, data-&gt;end, data-&gt;findText, flags, &amp;lengthFound);</span>
+<span class="gi">+        else</span>
+<span class="gi">+        {</span>
+<span class="gi">+            wxString text=control-&gt;GetTextRange(data-&gt;start, data-&gt;end);</span>
+<span class="gi">+            if(re.Matches(text))</span>
+<span class="gi">+            {</span>
+<span class="gi">+                size_t start,len;</span>
+<span class="gi">+                re.GetMatch(&amp;start,&amp;len,0);</span>
+<span class="gi">+                pos=start+data-&gt;start;</span>
+<span class="gi">+                lengthFound=len;</span>
+<span class="gi">+                if(start==0&amp;&amp;len==0) //For searches for &quot;^&quot; or &quot;$&quot; (and null returning variants on this) need to make sure we have forward progress and not simply matching on a previous BOL/EOL find</span>
+<span class="gi">+                {</span>
+<span class="gi">+                    text=text.Mid(1);</span>
+<span class="gi">+                    if(re.Matches(text))</span>
+<span class="gi">+                    {</span>
+<span class="gi">+                        size_t start,len;</span>
+<span class="gi">+                        re.GetMatch(&amp;start,&amp;len,0);</span>
+<span class="gi">+                        pos=start+data-&gt;start+1;</span>
+<span class="gi">+                        lengthFound=len;</span>
+<span class="gi">+                    } else</span>
+<span class="gi">+                        pos=-1;</span>
+<span class="gi">+                }</span>
+<span class="gi">+            } else</span>
+<span class="gi">+                pos=-1;</span>
+<span class="gi">+        }</span>
+         if (pos != -1)
+         {
+             control-&gt;GotoPos(pos);
+<span class="gu">@@ -1534,8 +1570,17 @@</span>
+                     // set target same as selection
+                     control-&gt;SetTargetStart(control-&gt;GetSelectionStart());
+                     control-&gt;SetTargetEnd(control-&gt;GetSelectionEnd());
+<span class="gd">-                    // replace with regEx support</span>
+<span class="gd">-                    lengthReplace = control-&gt;ReplaceTargetRE(data-&gt;replaceText);</span>
+<span class="gi">+                    if(AdvRegex)</span>
+<span class="gi">+                    {</span>
+<span class="gi">+                        wxString text=control-&gt;GetSelectedText();</span>
+<span class="gi">+                        re.Replace(&amp;text,data-&gt;replaceText,1);</span>
+<span class="gi">+                        lengthReplace=text.Len();</span>
+<span class="gi">+                        control-&gt;ReplaceSelection(text);</span>
+<span class="gi">+                    } else</span>
+<span class="gi">+                    {</span>
+<span class="gi">+                        // replace with regEx support</span>
+<span class="gi">+                        lengthReplace = control-&gt;ReplaceTargetRE(data-&gt;replaceText);</span>
+<span class="gi">+                    }</span>
+                     // reset target
+                     control-&gt;SetTarget
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">dmoore 2006-12-07 20:04:34</div>

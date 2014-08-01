@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,73 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/projectmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/projectmanager.cpp    (revision 5731)</span>
+<span class="gi">+++ src/sdk/projectmanager.cpp    (working copy)</span>
+<span class="gu">@@ -157,6 +157,7 @@</span>
+ 
+     EVT_TREE_ITEM_ACTIVATED(ID_ProjectManager, ProjectManager::OnProjectFileActivated)
+     EVT_TREE_ITEM_RIGHT_CLICK(ID_ProjectManager, ProjectManager::OnTreeItemRightClick)
+<span class="gi">+    EVT_TREE_KEY_DOWN(ID_ProjectManager, ProjectManager::OnKeyDown)</span>
+     EVT_COMMAND_RIGHT_CLICK(ID_ProjectManager, ProjectManager::OnRightClick)
+ 
+     EVT_AUINOTEBOOK_TAB_RIGHT_UP(idNB, ProjectManager::OnTabContextMenu)
+<span class="gu">@@ -2089,14 +2090,17 @@</span>
+     }
+     else if (event.GetId() == idMenuRemoveFilePopup)
+     {
+<span class="gd">-        // remove single file</span>
+<span class="gd">-        prj-&gt;BeginRemoveFiles();</span>
+<span class="gd">-        RemoveFileFromProject(ftd-&gt;GetProjectFile(), prj);</span>
+<span class="gd">-        prj-&gt;CalculateCommonTopLevelPath();</span>
+<span class="gd">-        if (prj-&gt;GetCommonTopLevelPath() == oldpath)</span>
+<span class="gd">-            m_pTree-&gt;Delete(sel);</span>
+<span class="gd">-        prj-&gt;EndRemoveFiles();</span>
+<span class="gd">-        RebuildTree();</span>
+<span class="gi">+        if(ftd-&gt;GetProjectFile())</span>
+<span class="gi">+        {</span>
+<span class="gi">+            // remove single file</span>
+<span class="gi">+            prj-&gt;BeginRemoveFiles();</span>
+<span class="gi">+            RemoveFileFromProject(ftd-&gt;GetProjectFile(), prj);</span>
+<span class="gi">+            prj-&gt;CalculateCommonTopLevelPath();</span>
+<span class="gi">+            if (prj-&gt;GetCommonTopLevelPath() == oldpath)</span>
+<span class="gi">+                m_pTree-&gt;Delete(sel);</span>
+<span class="gi">+            prj-&gt;EndRemoveFiles();</span>
+<span class="gi">+            RebuildTree();</span>
+<span class="gi">+        }</span>
+     }
+     else if (event.GetId() == idMenuRemoveFolderFilesPopup)
+     {
+<span class="gu">@@ -2843,3 +2847,14 @@</span>
+         CloseWorkspace();
+     }
+ }
+<span class="gi">+</span>
+<span class="gi">+void ProjectManager::OnKeyDown(wxTreeEvent&amp; event)</span>
+<span class="gi">+{</span>
+<span class="gi">+    const wxKeyEvent&amp; key_event = event.GetKeyEvent();</span>
+<span class="gi">+</span>
+<span class="gi">+    if(key_event.GetKeyCode() == WXK_DELETE || key_event.GetKeyCode() == WXK_NUMPAD_DELETE)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        wxCommandEvent command(0, idMenuRemoveFilePopup);</span>
+<span class="gi">+        OnRemoveFileFromProject(command);</span>
+<span class="gi">+    }</span>
+<span class="gi">+}</span>
+<span class="gh">Index: src/include/projectmanager.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/projectmanager.h    (revision 5731)</span>
+<span class="gi">+++ src/include/projectmanager.h    (working copy)</span>
+<span class="gu">@@ -478,6 +478,7 @@</span>
+         void OnUpdateUI(wxUpdateUIEvent&amp; event);
+         void OnIdle(wxIdleEvent&amp; event);
+         void OnAppDoneStartup(CodeBlocksEvent&amp; event);
+<span class="gi">+        void OnKeyDown(wxTreeEvent&amp; event);</span>
+ 
+         void DoOpenSelectedFile();
+         void DoOpenFile(ProjectFile* pf, const wxString&amp; filename);
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

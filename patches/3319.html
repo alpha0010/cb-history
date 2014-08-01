@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,112 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/include/globals.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/globals.h    (revision 8236)</span>
+<span class="gi">+++ src/include/globals.h    (working copy)</span>
+<span class="gu">@@ -206,6 +206,8 @@</span>
+ 
+ extern DLLIMPORT wxString URLEncode(const wxString &amp;str);
+ 
+<span class="gi">+extern DLLIMPORT wxString ExpandBackticks(wxString &amp;str);</span>
+<span class="gi">+</span>
+ /// Check if CommonControls version is at least 6 (XP and up)
+ extern DLLIMPORT bool UsesCommonControls6();
+ 
+<span class="gh">Index: src/include/compilercommandgenerator.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/compilercommandgenerator.h    (revision 8236)</span>
+<span class="gi">+++ src/include/compilercommandgenerator.h    (working copy)</span>
+<span class="gu">@@ -20,7 +20,6 @@</span>
+ 
+ typedef std::map&lt;ProjectBuildTarget*, wxString&gt; OptionsMap;
+ typedef std::map&lt;ProjectBuildTarget*, wxArrayString&gt; SearchDirsMap;
+<span class="gd">-typedef std::map&lt;wxString, wxString&gt; BackticksMap;</span>
+ 
+ /** Generate command-lines needed to produce a build.
+   * This pre-generates everything when Init() is called.
+<span class="gu">@@ -98,9 +97,7 @@</span>
+     private:
+         wxString GetProcessedIncludeDir(Compiler* compiler, ProjectBuildTarget* target,
+                                         const wxArrayString&amp; inc_dirs, const wxString&amp; inc_switch);
+<span class="gd">-        wxString ExpandBackticks(wxString&amp; str);</span>
+         void SearchDirsFromBackticks(Compiler* compiler, ProjectBuildTarget* target, const wxString&amp; btOutput);
+<span class="gd">-        BackticksMap m_Backticks;</span>
+         wxArrayString m_NotLoadedScripts;
+         wxArrayString m_ScriptsWithErrors;
+ };
+<span class="gh">Index: src/sdk/editorcolourset.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorcolourset.cpp    (revision 8236)</span>
+<span class="gi">+++ src/sdk/editorcolourset.cpp    (working copy)</span>
+<span class="gu">@@ -651,34 +651,34 @@</span>
+ 
+         for (unsigned int i = 0; i &lt; it-&gt;second.m_Colours.GetCount(); ++i)
+         {
+<span class="gd">-            OptionColour* opt = it-&gt;second.m_Colours.Item(i);</span>
+<span class="gd">-            if (!opt)</span>
+<span class="gd">-                continue;</span>
+             wxString tmpKey;
+             tmpKey &lt;&lt; key &lt;&lt; _T(&quot;/style&quot;) &lt;&lt; wxString::Format(_T(&quot;%d&quot;), i);
+<span class="gd">-</span>
+<span class="gd">-            if (cfg-&gt;Exists(tmpKey + _T(&quot;/name&quot;)))</span>
+<span class="gd">-                opt-&gt;name = cfg-&gt;Read(tmpKey + _T(&quot;/name&quot;));</span>
+<span class="gd">-            else</span>
+<span class="gi">+            if (!cfg-&gt;Exists(tmpKey + _T(&quot;/name&quot;)))</span>
+             {
+                 // make sure we didn&#39;t create it accidentally
+                 cfg-&gt;DeleteSubPath(tmpKey);
+                 continue;
+             }
+<span class="gi">+            wxString name = cfg-&gt;Read(tmpKey + _T(&quot;/name&quot;));</span>
+<span class="gi">+            for (size_t j = 0; j &lt; it-&gt;second.m_Colours.GetCount(); ++j)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                OptionColour* opt = it-&gt;second.m_Colours.Item(j);</span>
+<span class="gi">+                if (!opt || opt-&gt;name != name)</span>
+<span class="gi">+                    continue;</span>
+ 
+<span class="gd">-            if (cfg-&gt;Exists(tmpKey + _T(&quot;/fore&quot;)))</span>
+<span class="gd">-                opt-&gt;fore = cfg-&gt;ReadColour(tmpKey + _T(&quot;/fore&quot;), opt-&gt;fore);</span>
+<span class="gd">-            if (cfg-&gt;Exists(tmpKey + _T(&quot;/back&quot;)))</span>
+<span class="gd">-                opt-&gt;back = cfg-&gt;ReadColour(tmpKey + _T(&quot;/back&quot;), opt-&gt;back);</span>
+<span class="gd">-            if (cfg-&gt;Exists(tmpKey + _T(&quot;/bold&quot;)))</span>
+<span class="gd">-                opt-&gt;bold = cfg-&gt;ReadBool(tmpKey + _T(&quot;/bold&quot;), opt-&gt;bold);</span>
+<span class="gd">-            if (cfg-&gt;Exists(tmpKey + _T(&quot;/italics&quot;)))</span>
+<span class="gd">-                opt-&gt;italics = cfg-&gt;ReadBool(tmpKey + _T(&quot;/italics&quot;), opt-&gt;italics);</span>
+<span class="gd">-            if (cfg-&gt;Exists(tmpKey + _T(&quot;/underlined&quot;)))</span>
+<span class="gd">-                opt-&gt;underlined = cfg-&gt;ReadBool(tmpKey + _T(&quot;/underlined&quot;), opt-&gt;underlined);</span>
+<span class="gd">-</span>
+<span class="gd">-            if (cfg-&gt;Exists(tmpKey + _T(&quot;/isStyle&quot;)))</span>
+<span class="gd">-                opt-&gt;isStyle = cfg-&gt;ReadBool(tmpKey + _T(&quot;/isStyle&quot;), opt-&gt;isStyle);</span>
+<span class="gi">+                if (cfg-&gt;Exists(tmpKey + _T(&quot;/fore&quot;)))</span>
+<span class="gi">+                    opt-&gt;fore = cfg-&gt;ReadColour(tmpKey     + _T(&quot;/fore&quot;),       opt-&gt;fore);</span>
+<span class="gi">+                if (cfg-&gt;Exists(tmpKey + _T(&quot;/back&quot;)))</span>
+<span class="gi">+                    opt-&gt;back = cfg-&gt;ReadColour(tmpKey     + _T(&quot;/back&quot;),       opt-&gt;back);</span>
+<span class="gi">+                if (cfg-&gt;Exists(tmpKey + _T(&quot;/bold&quot;)))</span>
+<span class="gi">+                    opt-&gt;bold = cfg-&gt;ReadBool(tmpKey       + _T(&quot;/bold&quot;),       opt-&gt;bold);</span>
+<span class="gi">+                if (cfg-&gt;Exists(tmpKey + _T(&quot;/italics&quot;)))</span>
+<span class="gi">+                    opt-&gt;italics = cfg-&gt;ReadBool(tmpKey    + _T(&quot;/italics&quot;),    opt-&gt;italics);</span>
+<span class="gi">+                if (cfg-&gt;Exists(tmpKey + _T(&quot;/underlined&quot;)))</span>
+<span class="gi">+                    opt-&gt;underlined = cfg-&gt;ReadBool(tmpKey + _T(&quot;/underlined&quot;), opt-&gt;underlined);</span>
+<span class="gi">+                if (cfg-&gt;Exists(tmpKey + _T(&quot;/isStyle&quot;)))</span>
+<span class="gi">+                    opt-&gt;isStyle = cfg-&gt;ReadBool(tmpKey    + _T(&quot;/isStyle&quot;),    opt-&gt;isStyle);</span>
+<span class="gi">+            }</span>
+         }
+         wxString tmpkey;
+         for (int i = 0; i &lt;= wxSCI_KEYWORDSET_MAX; ++i)
+<span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 8236)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -1576,7 +1576,7 @@</span>
+     ConfigManager* mgr = Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;));
+ 
+     // Interpret #if/#else/#endif to grey out code that is not active
+<span class="gd">-    control-&gt;SetProperty(_T(&quot;lexer.cpp.track.preprocessor&quot;), mgr-&gt;ReadBool(_T(&quot;/track_preprocessor&quot;)</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

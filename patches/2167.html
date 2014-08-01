@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,85 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: configure.in</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- configure.in    (revision 4437)</span>
+<span class="gi">+++ configure.in    (working copy)</span>
+<span class="gu">@@ -49,6 +49,15 @@</span>
+ AC_CHECK_FUNC(snprintf, AC_DEFINE(HAVE_SNPRINTF,,snprintf))
+ AC_CHECK_FUNC(vsnprintf, AC_DEFINE(HAVE_VSNPRINTF,,vsnprintf))
+ 
+<span class="gi">+save_LIBS=$LIBS</span>
+<span class="gi">+AC_SEARCH_LIBS(gzopen, z, [HAVE_ZLIB=yes], [HAVE_ZLIB=no])</span>
+<span class="gi">+LIBS=$save_LIBS</span>
+<span class="gi">+AC_SEARCH_LIBS(BZ2_bzopen, bz2, [HAVE_BZIP2=yes], [HAVE_BZIP2=no])</span>
+<span class="gi">+LIBS=$save_LIBS</span>
+<span class="gi">+</span>
+<span class="gi">+AM_CONDITIONAL([HAVE_ZLIB], [test &quot;$HAVE_ZLIB&quot; = yes])</span>
+<span class="gi">+AM_CONDITIONAL([HAVE_BZIP2], [test &quot;$HAVE_BZIP2&quot; = yes])</span>
+<span class="gi">+</span>
+ dnl versioning info for libtool
+ dnl Note this is the ABI version which is not the same as our actual library version
+ CODEBLOCKS_CURRENT=0
+<span class="gh">Index: src/plugins/contrib/help_plugin/Makefile.am</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/help_plugin/Makefile.am    (revision 4437)</span>
+<span class="gi">+++ src/plugins/contrib/help_plugin/Makefile.am    (working copy)</span>
+<span class="gu">@@ -1,4 +1,11 @@</span>
+<span class="gd">-SUBDIRS = bzip2 zlib</span>
+<span class="gi">+DIST_SUBDIRS = bzip2 zlib</span>
+<span class="gi">+SUBDIRS =</span>
+<span class="gi">+if ! HAVE_BZIP2</span>
+<span class="gi">+SUBDIRS += bzip2</span>
+<span class="gi">+endif</span>
+<span class="gi">+if ! HAVE_ZLIB</span>
+<span class="gi">+SUBDIRS += zlib</span>
+<span class="gi">+endif</span>
+ 
+ INCLUDES = $(WX_CXXFLAGS) \
+         -I$(top_srcdir)/src/include \
+<span class="gu">@@ -11,9 +18,19 @@</span>
+ 
+ libhelp_plugin_la_LDFLAGS = -module -version-info 0:1:0 -shared -no-undefined -avoid-version
+ 
+<span class="gd">-libhelp_plugin_la_LIBADD = $(PLUGIN_WX_LIBS) ../../../sdk/libcodeblocks.la \</span>
+<span class="gd">-                bzip2/libbzip2.la \</span>
+<span class="gd">-                zlib/libz.la</span>
+<span class="gi">+libhelp_plugin_la_LIBADD = $(PLUGIN_WX_LIBS) ../../../sdk/libcodeblocks.la</span>
+<span class="gi">+if ! HAVE_BZIP2</span>
+<span class="gi">+libhelp_plugin_la_LIBADD += bzip2/libbzip2.la</span>
+<span class="gi">+INCLUDES += -Ibzip2</span>
+<span class="gi">+else</span>
+<span class="gi">+libhelp_plugin_la_LIBADD += -lbz2</span>
+<span class="gi">+endif</span>
+<span class="gi">+if ! HAVE_ZLIB</span>
+<span class="gi">+libhelp_plugin_la_LIBADD += zlib/libz.la</span>
+<span class="gi">+INCLUDES += -Izlib</span>
+<span class="gi">+else</span>
+<span class="gi">+libhelp_plugin_la_LIBADD += -lz</span>
+<span class="gi">+endif</span>
+ 
+ libhelp_plugin_la_SOURCES = help_common.cpp \
+             HelpConfigDialog.cpp \
+<span class="gh">Index: src/plugins/contrib/help_plugin/help_plugin.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/help_plugin/help_plugin.cpp    (revision 4437)</span>
+<span class="gi">+++ src/plugins/contrib/help_plugin/help_plugin.cpp    (working copy)</span>
+<span class="gu">@@ -25,9 +25,10 @@</span>
+ 
+ #include &quot;help_plugin.h&quot;
+ #include &quot;man2html.h&quot;
+<span class="gd">-#include &quot;bzip2/bzlib.h&quot;</span>
+<span class="gd">-#include &quot;zlib/zlib.h&quot;</span>
+ 
+<span class="gi">+#include &lt;bzlib.h&gt;</span>
+<span class="gi">+#include &lt;zlib.h&gt;</span>
+<span class="gi">+</span>
+ #include &lt;wx/process.h&gt;
+ #include &lt;wx/intl.h&gt;
+ #include &lt;wx/textdlg.h&gt;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">horakdan 2007-09-07 13:08:20</div>

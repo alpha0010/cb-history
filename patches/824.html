@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,182 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: configure.in</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- configure.in    (revision 1964)</span>
+<span class="gi">+++ configure.in    (arbetskopia)</span>
+<span class="gu">@@ -25,7 +25,7 @@</span>
+ dnl Checks for header files.
+ AC_HEADER_DIRENT
+ AC_HEADER_STDC
+<span class="gd">-AC_CHECK_HEADERS([fcntl.h limits.h stdlib.h string.h sys/param.h unistd.h])</span>
+<span class="gi">+AC_CHECK_HEADERS([fcntl.h limits.h stdlib.h string.h sys/param.h unistd.h malloc.h])</span>
+ 
+ dnl Checks for typedefs, structures, and compiler characteristics.
+ AC_HEADER_STDBOOL
+<span class="gh">Index: src/sdk/as/source/as_gcobject.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/as/source/as_gcobject.cpp    (revision 1964)</span>
+<span class="gi">+++ src/sdk/as/source/as_gcobject.cpp    (arbetskopia)</span>
+<span class="gu">@@ -29,9 +29,14 @@</span>
+ */
+ 
+ 
+<span class="gi">+#ifdef HAVE_CONFIG_H</span>
+<span class="gi">+#include &quot;config.h&quot;</span>
+<span class="gi">+#endif</span>
+ #include &lt;assert.h&gt;
+ #include &lt;new&gt;
+<span class="gi">+#if defined(WIN32) || defined(HAVE_MALLOC_H)</span>
+ #include &lt;malloc.h&gt;
+<span class="gi">+#endif</span>
+ 
+ #include &quot;as_config.h&quot;
+ #include &quot;as_scriptengine.h&quot;
+<span class="gh">Index: src/sdk/as/source/as_scriptengine.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/as/source/as_scriptengine.cpp    (revision 1964)</span>
+<span class="gi">+++ src/sdk/as/source/as_scriptengine.cpp    (arbetskopia)</span>
+<span class="gu">@@ -36,7 +36,12 @@</span>
+ //
+ 
+ 
+<span class="gi">+#ifdef HAVE_CONFIG_H</span>
+<span class="gi">+#include &quot;config.h&quot;</span>
+<span class="gi">+#endif</span>
+<span class="gi">+#if defined(WIN32) || defined(HAVE_MALLOC_H)</span>
+ #include &lt;malloc.h&gt;
+<span class="gi">+#endif</span>
+ 
+ #include &quot;as_config.h&quot;
+ #include &quot;as_scriptengine.h&quot;
+<span class="gh">Index: src/sdk/as/source/as_arrayobject.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/as/source/as_arrayobject.cpp    (revision 1964)</span>
+<span class="gi">+++ src/sdk/as/source/as_arrayobject.cpp    (arbetskopia)</span>
+<span class="gu">@@ -28,10 +28,14 @@</span>
+    andreas@angelcode.com
+ */
+ 
+<span class="gd">-</span>
+<span class="gi">+#ifdef HAVE_CONFIG_H</span>
+<span class="gi">+#include &quot;config.h&quot;</span>
+<span class="gi">+#endif</span>
+ #include &lt;assert.h&gt;
+ #include &lt;new&gt;
+<span class="gi">+#if defined(WIN32) || defined(HAVE_MALLOC_H)</span>
+ #include &lt;malloc.h&gt;
+<span class="gi">+#endif</span>
+ 
+ #include &quot;as_config.h&quot;
+ #include &quot;as_arrayobject.h&quot;
+<span class="gh">Index: src/sdk/as/source/as_config.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/as/source/as_config.h    (revision 1964)</span>
+<span class="gi">+++ src/sdk/as/source/as_config.h    (arbetskopia)</span>
+<span class="gu">@@ -165,6 +165,9 @@</span>
+ // AS_X86
+ // Use assembler code for the x86 CPU family
+ 
+<span class="gi">+// AS_PPC</span>
+<span class="gi">+// Use assembler code for the PPC CPU family</span>
+<span class="gi">+</span>
+ // AS_SH4
+ // Use assembler code for the SH4 CPU family
+ 
+<span class="gu">@@ -276,9 +279,21 @@</span>
+         #define CDECL_RETURN_SIMPLE_IN_MEMORY
+         #define STDCALL_RETURN_SIMPLE_IN_MEMORY
+     #endif
+<span class="gi">+    #if defined(__APPLE__) &amp;&amp; defined(__MACH__)</span>
+<span class="gi">+        // Mach-O</span>
+<span class="gi">+    #endif</span>
+     #ifdef i386
+         #define AS_X86
+     #endif
+<span class="gi">+    #ifdef __i386__</span>
+<span class="gi">+        #define AS_X86</span>
+<span class="gi">+    #endif</span>
+<span class="gi">+    #ifdef __ppc__</span>
+<span class="gi">+        #define AS_PPC</span>
+<span class="gi">+    #endif</span>
+<span class="gi">+    #ifdef __powerpc__</span>
+<span class="gi">+        #define AS_PPC</span>
+<span class="gi">+    #endif</span>
+ #endif
+ 
+ // Dreamcast console
+<span class="gh">Index: src/sdk/as/Makefile.am</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/as/Makefile.am    (revision 1964)</span>
+<span class="gi">+++ src/sdk/as/Makefile.am    (arbetskopia)</span>
+<span class="gu">@@ -21,6 +21,7 @@</span>
+ $(srcdir)/source/as_c.cpp \
+ $(srcdir)/source/as_callfunc.cpp \
+ $(srcdir)/source/as_callfunc_sh4.cpp \
+<span class="gi">+$(srcdir)/source/as_callfunc_ppc.cpp \</span>
+ $(srcdir)/source/as_callfunc_x86.cpp \
+ $(srcdir)/source/as_compiler.cpp \
+ $(srcdir)/source/as_configgroup.cpp \
+<span class="gh">Index: src/sdk/as/source/as_callfunc_ppc.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- /dev/null    Tue Feb  7 23:24:08 2006</span>
+<span class="gi">+++ src/sdk/as/source/as_callfunc_ppc.cpp    Tue Feb  7 00:12:40 2006</span>
+<span class="gu">@@ -0,0 +1,239 @@</span>
+<span class="gi">+/*</span>
+<span class="gi">+   AngelCode Scripting Library</span>
+<span class="gi">+   Copyright (c) 2003-2006 Andreas Jönsson</span>
+<span class="gi">+   Copyright (c) 2005-2006 Anders F Björklund</span>
+<span class="gi">+</span>
+<span class="gi">+   This software is provided &#39;as-is&#39;, without any express or implied </span>
+<span class="gi">+   warranty. In no event will the authors be held liable for any </span>
+<span class="gi">+   damages arising from the use of this software.</span>
+<span class="gi">+</span>
+<span class="gi">+   Permission is granted to anyone to use this software for any </span>
+<span class="gi">+   purpose, including commercial applications, and to alter it and </span>
+<span class="gi">+   redistribute it freely, subject to the following restrictions:</span>
+<span class="gi">+</span>
+<span class="gi">+   1. The origin of this software must not be misrepresented; you </span>
+<span class="gi">+      must not claim that you wrote the original software. If you use</span>
+<span class="gi">+      this software in a product, an acknowledgment in the product </span>
+<span class="gi">+      documentation would be appreciated but is not required.</span>
+<span class="gi">+</span>
+<span class="gi">+   2. Altered source versions must be plainly marked as such, and </span>
+<span class="gi">+      must not be misrepresented as being the original software.</span>
+<span class="gi">+</span>
+<span class="gi">+   3. This notice may not be removed or altered from any source </span>
+<span class="gi">+      distribution.</span>
+<span class="gi">+</span>
+<span class="gi">+*/</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+<span class="gi">+//</span>
+<span class="gi">+// as_callfunc.cpp</span>
+<span class="gi">+//</span>
+<span class="gi">+// These functions handle the actual calling of system functions</span>
+<span class="gi">+//</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+<span class="gi">+#include &quot;as_config.h&quot;</span>
+<span class="gi">+</span>
+<span class="gi">+#ifndef AS_MAX_PORTABILITY</span>
+<span class="gi">+#ifdef AS_PPC</span>
+<span class="gi">+</span>
+<span class="gi">+#include &quot;as_callfunc.h&quot;</span>
+<span class="gi">+#include &quot;as_scriptengine.h&quot;</span>
+<span class="gi">+#include &quot;as_texts.h&quot;</span>
+<span class="gi">+#include &quot;as_tokendef.h&quot;</span>
+<span class="gi">+</span>
+<span class="gi">+BEGIN_AS_NAMESPACE</span>
+<span class="gi">+</span>
+<span class="gi">+int DetectCallingConvention(bool isMethod, const asUPtr &amp;ptr, int callConv, asSSystemFunctionInterface *internal)</span>
+<span class="gi">+{</span>
+<span class="gi">+    memset(internal, 0, sizeof(asSSystemFunctionInterface));</span>
+<span class="gi">+</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mandrav 2006-02-17 08:18:23</div>

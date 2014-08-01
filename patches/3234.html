@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,97 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/editorconfigurationdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorconfigurationdlg.cpp    (revision 7618)</span>
+<span class="gi">+++ src/sdk/editorconfigurationdlg.cpp    (working copy)</span>
+<span class="gu">@@ -118,6 +118,7 @@</span>
+     XRCCTRL(*this, &quot;chkUseChangebar&quot;, wxCheckBox)-&gt;SetValue(m_EnableChangebar);
+     XRCCTRL(*this, &quot;chkShowIndentGuides&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/show_indent_guides&quot;), false));
+     XRCCTRL(*this, &quot;chkBraceSmartIndent&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/brace_smart_indent&quot;), true));
+<span class="gi">+    XRCCTRL(*this, &quot;chkSelectionBraceCompletion&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/selection_brace_completion&quot;), false));</span>
+     XRCCTRL(*this, &quot;chkTabIndents&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/tab_indents&quot;), true));
+     XRCCTRL(*this, &quot;chkBackspaceUnindents&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/backspace_unindents&quot;), true));
+     XRCCTRL(*this, &quot;chkWordWrap&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/word_wrap&quot;), false));
+<span class="gu">@@ -795,6 +796,7 @@</span>
+         cfg-&gt;Write(_T(&quot;/use_tab&quot;),                             XRCCTRL(*this, &quot;chkUseTab&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/show_indent_guides&quot;),                  XRCCTRL(*this, &quot;chkShowIndentGuides&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/brace_smart_indent&quot;),                  XRCCTRL(*this, &quot;chkBraceSmartIndent&quot;, wxCheckBox)-&gt;GetValue());
+<span class="gi">+        cfg-&gt;Write(_T(&quot;/selection_brace_completion&quot;),          XRCCTRL(*this, &quot;chkSelectionBraceCompletion&quot;, wxCheckBox)-&gt;GetValue());</span>
+         cfg-&gt;Write(_T(&quot;/tab_indents&quot;),                         XRCCTRL(*this, &quot;chkTabIndents&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/backspace_unindents&quot;),                 XRCCTRL(*this, &quot;chkBackspaceUnindents&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/word_wrap&quot;),                           XRCCTRL(*this, &quot;chkWordWrap&quot;, wxCheckBox)-&gt;GetValue());
+<span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 7618)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -2986,6 +2986,122 @@</span>
+     static int autoUnIndentValue = -1;
+     static int autoUnIndentLine = -1;
+ 
+<span class="gi">+    bool SelectionBraceCompletion = Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;))-&gt;ReadBool(_T(&quot;/selection_brace_completion&quot;), false);</span>
+<span class="gi">+    if ((SelectionBraceCompletion || control-&gt;IsBraceShortcutActive()) &amp;&amp; !control-&gt;GetLastSelectedText().IsEmpty())</span>
+<span class="gi">+    {</span>
+<span class="gi">+        wxString selectedText = control-&gt;GetLastSelectedText();</span>
+<span class="gi">+        switch (ch)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            case _T(&#39;\&#39;&#39;):</span>
+<span class="gi">+            {</span>
+<span class="gi">+                control-&gt;BeginUndoAction();</span>
+<span class="gi">+                control-&gt;DeleteBack();</span>
+<span class="gi">+                selectedText.Replace(wxT(&quot;\\&#39;&quot;), wxT(&quot;&#39;&quot;));</span>
+<span class="gi">+                selectedText.Replace(wxT(&quot;&#39;&quot;), wxT(&quot;\\&#39;&quot;));</span>
+<span class="gi">+                control-&gt;AddText(wxT(&quot;&#39;&quot;) + selectedText + wxT(&quot;&#39;&quot;));</span>
+<span class="gi">+                control-&gt;EndUndoAction();</span>
+<span class="gi">+                return;</span>
+<span class="gi">+            }</span>
+<span class="gi">+            case _T(&#39;&quot;&#39;):</span>
+<span class="gi">+            {</span>
+<span class="gi">+                control-&gt;BeginUndoAction();</span>
+<span class="gi">+                control-&gt;DeleteBack();</span>
+<span class="gi">+                selectedText.Replace(wxT(&quot;\\\&quot;&quot;), wxT(&quot;\&quot;&quot;));</span>
+<span class="gi">+                selectedText.Replace(wxT(&quot;\&quot;&quot;), wxT(&quot;\\\&quot;&quot;));</span>
+<span class="gi">+                control-&gt;AddText(wxT(&quot;\&quot;&quot;) + selectedText + wxT(&quot;\&quot;&quot;));</span>
+<span class="gi">+                control-&gt;SetSelectionVoid(pos - 1, pos + selectedText.Length() + 1);</span>
+<span class="gi">+                int startLine = control-&gt;LineFromPosition(control-&gt;GetSelectionStart());</span>
+<span class="gi">+                int endLine = control-&gt;LineFromPosition(control-&gt;GetSelectionEnd());</span>
+<span class="gi">+                if(startLine != endLine)</span>
+<span class="gi">+                {</span>
+<span class="gi">+                    int selectionEnd = pos + selectedText.Length() + 1;</span>
+<span class="gi">+                    for(int i = endLine; i &gt; startLine; i--)</span>
+<span class="gi">+                    {</span>
+<span class="gi">+                        control-&gt;Home();</span>
+<span class="gi">+                        for(int j = control-&gt;GetCurrentPos(); control-&gt;GetCharAt(j) == _T(&#39; &#39;) || control-&gt;GetCharAt(j) == _T(&#39;\t&#39;); j++)</span>
+<span class="gi">+                        {</span>
+<span class="gi">+                            control-&gt;CharRight();</span>
+<span class="gi">+                        }</span>
+<span class="gi">+                        control-&gt;AddText(wxT(&quot;\&quot;&quot;));</span>
+<span class="gi">+                        control-&gt;SetEmptySelection(control-&gt;GetLineEndPosition(i - 1));</span>
+<span class="gi">+                        control-&gt;AddText(wxT(&quot;\&quot;&quot;));</span>
+<span class="gi">+                        selectionEnd += control-&gt;GetIndent() + 2;</span>
+<span class="gi">+                    }</span>
+<span class="gi">+                    control-&gt;SetSelectionVoid(pos - 1, selectionEnd);</span>
+<span class="gi">+                }</span>
+<span class="gi">+                control-&gt;EndUndoAction();</span>
+<span class="gi">+                return;</span>
+<span class="gi">+            }</span>
+<span class="gi">+            case _T(&#39;(&#39;):</span>
+<span class="gi">+            case _T(&#39;)&#39;):</span>
+<span class="gi">+            {</span>
+<span class="gi">+                control-&gt;BeginUndoAction();</span>
+<span class="gi">+                control-&gt;DeleteBack();</span>
+<span class="gi">+                control-&gt;InsertText(pos - 1, wxT(&quot;(&quot;) + selectedText + wxT(&quot;)&quot;));</span>
+<span class="gi">+                if(ch == _T(&#39;)&#39;))</span>
+<span class="gi">+                {</span>
+<span class="gi">+                    control-&gt;SetEmptySelection(pos + selectedText.Length() + 1);</span>
+<span class="gi">+                }</span>
+<span class="gi">+                control-&gt;EndUndoAction();</span>
+<span class="gi">+                return;</span>
+<span class="gi">+            }</span>
+<span class="gi">+            case</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">alpha0010 2011-11-19 02:05:28</div>

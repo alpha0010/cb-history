@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,125 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/editormanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editormanager.cpp    (revision 4079)</span>
+<span class="gi">+++ src/sdk/editormanager.cpp    (working copy)</span>
+<span class="gu">@@ -913,7 +913,7 @@</span>
+     for (int i = 0; i &lt; m_pNotebook-&gt;GetPageCount(); ++i)
+     {
+         EditorBase* ed = InternalGetEditorBase(i);
+<span class="gd">-        if (ed &amp;&amp; !ed-&gt;Save())</span>
+<span class="gi">+        if (ed &amp;&amp; ed-&gt;GetModified() &amp;&amp; !ed-&gt;Save())</span>
+         {
+             wxString msg;
+             msg.Printf(_(&quot;File %s could not be saved...&quot;), ed-&gt;GetFilename().c_str());
+<span class="gh">Index: src/sdk/projectmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/projectmanager.cpp    (revision 4079)</span>
+<span class="gi">+++ src/sdk/projectmanager.cpp    (working copy)</span>
+<span class="gu">@@ -1015,7 +1015,8 @@</span>
+     for (int i = 0; i &lt; prjCount; ++i)
+     {
+         cbProject* project = m_pProjects-&gt;Item(i);
+<span class="gd">-        if (SaveProject(project))</span>
+<span class="gi">+        bool isModified = project-&gt;GetModified();</span>
+<span class="gi">+        if (isModified &amp;&amp; SaveProject(project))</span>
+             ++count;
+     }
+     UnfreezeTree(true);
+<span class="gh">Index: src/src/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/main.cpp    (revision 4079)</span>
+<span class="gi">+++ src/src/main.cpp    (working copy)</span>
+<span class="gu">@@ -127,6 +127,7 @@</span>
+ int idFileOpenDefWorkspace = XRCID(&quot;idFileOpenDefWorkspace&quot;);
+ int idFileSaveWorkspace = XRCID(&quot;idFileSaveWorkspace&quot;);
+ int idFileSaveWorkspaceAs = XRCID(&quot;idFileSaveWorkspaceAs&quot;);
+<span class="gi">+int idFileSaveAll = XRCID(&quot;idFileSaveAll&quot;);</span>
+ int idFileCloseWorkspace = XRCID(&quot;idFileCloseWorkspace&quot;);
+ int idFileClose = XRCID(&quot;idFileClose&quot;);
+ int idFileCloseAll = XRCID(&quot;idFileCloseAll&quot;);
+<span class="gu">@@ -264,6 +265,7 @@</span>
+     EVT_UPDATE_UI(idFileSaveProjectAs, MainFrame::OnProjectMenuUpdateUI)
+     EVT_UPDATE_UI(idFileSaveProjectAllProjects, MainFrame::OnProjectMenuUpdateUI)
+     EVT_UPDATE_UI(idFileSaveProjectTemplate, MainFrame::OnProjectMenuUpdateUI)
+<span class="gi">+    EVT_UPDATE_UI(idFileSaveAll, MainFrame::OnProjectMenuUpdateUI)</span>
+     EVT_UPDATE_UI(idFileCloseProject, MainFrame::OnProjectMenuUpdateUI)
+     EVT_UPDATE_UI(idFileCloseAllProjects, MainFrame::OnProjectMenuUpdateUI)
+ 
+<span class="gu">@@ -339,6 +341,7 @@</span>
+     EVT_MENU(idFileOpenDefWorkspace,  MainFrame::OnFileOpenDefWorkspace)
+     EVT_MENU(idFileSaveWorkspace,  MainFrame::OnFileSaveWorkspace)
+     EVT_MENU(idFileSaveWorkspaceAs,  MainFrame::OnFileSaveWorkspaceAs)
+<span class="gi">+    EVT_MENU(idFileSaveAll,  MainFrame::OnFileSaveAll)</span>
+     EVT_MENU(idFileCloseWorkspace,  MainFrame::OnFileCloseWorkspace)
+     EVT_MENU(idFileClose,  MainFrame::OnFileClose)
+     EVT_MENU(idFileCloseAll,  MainFrame::OnFileCloseAll)
+<span class="gu">@@ -2337,6 +2340,20 @@</span>
+     DoUpdateAppTitle();
+ }
+ 
+<span class="gi">+void MainFrame::OnFileSaveAll(wxCommandEvent&amp; event)</span>
+<span class="gi">+{</span>
+<span class="gi">+    Manager::Get()-&gt;GetEditorManager()-&gt;SaveAll();</span>
+<span class="gi">+    Manager::Get()-&gt;GetProjectManager()-&gt;SaveAllProjects();</span>
+<span class="gi">+</span>
+<span class="gi">+    if (Manager::Get()-&gt;GetProjectManager()-&gt;GetWorkspace()-&gt;GetModified()</span>
+<span class="gi">+        &amp;&amp; Manager::Get()-&gt;GetProjectManager()-&gt;SaveWorkspace())</span>
+<span class="gi">+    {</span>
+<span class="gi">+        AddToRecentProjectsHistory(Manager::Get()-&gt;GetProjectManager()-&gt;GetWorkspace()-&gt;GetFilename());</span>
+<span class="gi">+    }</span>
+<span class="gi">+    DoUpdateStatusBar();</span>
+<span class="gi">+    DoUpdateAppTitle();</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ void MainFrame::OnFileSaveProjectTemplate(wxCommandEvent&amp; event)
+ {
+     TemplateManager::Get()-&gt;SaveUserTemplate(Manager::Get()-&gt;GetProjectManager()-&gt;GetActiveProject());
+<span class="gh">Index: src/src/main.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/main.h    (revision 4079)</span>
+<span class="gi">+++ src/src/main.h    (working copy)</span>
+<span class="gu">@@ -81,6 +81,7 @@</span>
+         void OnFileOpenDefWorkspace(wxCommandEvent&amp; event);
+         void OnFileSaveWorkspace(wxCommandEvent&amp; event);
+         void OnFileSaveWorkspaceAs(wxCommandEvent&amp; event);
+<span class="gi">+        void OnFileSaveAll(wxCommandEvent&amp; event);</span>
+         void OnFileCloseWorkspace(wxCommandEvent&amp; event);
+         void OnFileClose(wxCommandEvent&amp; event);
+         void OnFileCloseAll(wxCommandEvent&amp; event);
+<span class="gh">Index: src/src/resources/main_menu.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/resources/main_menu.xrc    (revision 4079)</span>
+<span class="gi">+++ src/src/resources/main_menu.xrc    (working copy)</span>
+<span class="gu">@@ -101,8 +101,7 @@</span>
+         &lt;help&gt;Save the active file under a different name&lt;/help&gt;
+       &lt;/object&gt;
+       &lt;object class=&quot;wxMenuItem&quot; name=&quot;idFileSaveAllFiles&quot;&gt;
+<span class="gd">-        &lt;label&gt;Save a&amp;amp;ll files&lt;/label&gt;</span>
+<span class="gd">-        &lt;accel&gt;Ctrl-Shift-S&lt;/accel&gt;</span>
+<span class="gi">+        &lt;label&gt;Save all files&lt;/label&gt;</span>
+         &lt;help&gt;Save all modified files&lt;/help&gt;
+       &lt;/object&gt;
+       &lt;object class=&quot;separator&quot;/&gt;
+<span class="gu">@@ -136,6 +135,13 @@</span>
+         &lt;help&gt;Close current workspace&lt;/help&gt;
+       &lt;/object&gt;
+       &lt;object class=&quot;separator&quot;/&gt;
+<span class="gi">+      &lt;object class=&quot;wxMenuItem&quot; name=&quot;idFileSaveAll&quot;&gt;</span>
+<span class="gi">+        &lt;label&gt;Save a&amp;amp;ll&lt;/label&gt;</span>
+<span class="gi">+        &lt;bitmap&gt;images\16x16\filesaveall.png&lt;/bitmap&gt;</span>
+<span class="gi">+        &lt;accel&gt;Ctrl-Shift-S&lt;/accel&gt;</span>
+<span class="gi">+        &lt;help&gt;Save all files, projects and the workspace&lt;/help&gt;</span>
+<span class="gi">+      &lt;/object&gt;</span>
+<span class="gi">+      &lt;object class=&quot;separator&quot;/&gt;</span>
+       &lt;object class=&quot;wxMenuItem&quot; name=&quot;idFileClose&quot;&gt;
+         &lt;label&gt;&amp;amp;Close file&lt;/label&gt;
+         &lt;bitmap&gt;images\16
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">raph_ 2007-06-09 13:27:55</div>

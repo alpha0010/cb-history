@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,129 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: include/configmanager.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- include/configmanager.h    (revision 4832)</span>
+<span class="gi">+++ include/configmanager.h    (working copy)</span>
+<span class="gu">@@ -82,7 +82,28 @@</span>
+ };
+ 
+ 
+<span class="gi">+// Defaults;</span>
+<span class="gi">+// Log window</span>
+<span class="gi">+extern const wxColour defLogColourListStandardFront;</span>
+<span class="gi">+extern const wxColour defLogColourTextStandardFront;</span>
+<span class="gi">+extern const wxColour defLogColourTextStandardBack;</span>
+<span class="gi">+extern const wxColour defLogColourListSuccessFront;</span>
+<span class="gi">+extern const wxColour defLogColourTextSuccessFront;</span>
+<span class="gi">+extern const wxColour defLogColourTextSuccessBack;</span>
+<span class="gi">+extern const wxColour defLogColourListWarningFront;</span>
+<span class="gi">+extern const wxColour defLogColourTextWarningFront;</span>
+<span class="gi">+extern const wxColour defLogColourTextWarningBack;</span>
+<span class="gi">+extern const wxColour defLogColourListErrorFront;</span>
+<span class="gi">+extern const wxColour defLogColourTextErrorFront;</span>
+<span class="gi">+extern const wxColour defLogColourTextErrorBack;</span>
+<span class="gi">+extern const wxColour defLogColourListCriticalFront;</span>
+<span class="gi">+extern const wxColour defLogColourTextCriticalFront;</span>
+<span class="gi">+extern const wxColour defLogColourTextCriticalBack;</span>
+<span class="gi">+extern const wxColour defLogColourListFailureFront;</span>
+<span class="gi">+extern const wxColour defLogColourTextFailureFront;</span>
+<span class="gi">+extern const wxColour defLogColourTextFailureBack;</span>
+ 
+<span class="gi">+</span>
+ /* ------------------------------------------------------------------------------------------------------------------
+ *  ConfigManager class
+ */
+<span class="gh">Index: include/loggers.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- include/loggers.h    (revision 4832)</span>
+<span class="gi">+++ include/loggers.h    (working copy)</span>
+<span class="gu">@@ -54,7 +54,8 @@</span>
+     wxString asterisk;
+ 
+     CSS();
+<span class="gd">-    operator wxString();</span>
+<span class="gi">+    operator wxString();</span>
+<span class="gi">+    void UpdateSettings();</span>
+ };
+ 
+ class DLLIMPORT HTMLFileLogger : public FileLogger
+<span class="gu">@@ -66,7 +67,8 @@</span>
+ 
+     virtual void Append(const wxString&amp; msg, Logger::level lv);
+     virtual void Open(const wxString&amp; filename);
+<span class="gd">-    virtual void Close();</span>
+<span class="gi">+    virtual void Close();</span>
+<span class="gi">+    virtual void UpdateSettings();</span>
+ };
+ 
+ class DLLIMPORT TextCtrlLogger : public Logger
+<span class="gh">Index: plugins/compilergcc/compilergcc.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/compilergcc/compilergcc.cpp    (revision 4832)</span>
+<span class="gi">+++ plugins/compilergcc/compilergcc.cpp    (working copy)</span>
+<span class="gu">@@ -123,7 +123,11 @@</span>
+ 
+         style[caption].SetAlignment(wxTEXT_ALIGNMENT_DEFAULT);
+         style[caption].SetFont(style[error].GetFont());
+<span class="gd">-        style[warning].SetTextColour(*wxBLUE);</span>
+<span class="gi">+        ConfigManager* mcfg = Manager::Get()-&gt;GetConfigManager(_T(&quot;message_manager&quot;));</span>
+<span class="gi">+        control-&gt;SetForegroundColour(mcfg-&gt;ReadColour(_T(&quot;/log_colour_text_standard_front&quot;), defLogColourTextStandardFront));</span>
+<span class="gi">+        control-&gt;SetBackgroundColour(mcfg-&gt;ReadColour(_T(&quot;/log_colour_text_standard_back&quot;), defLogColourTextStandardBack));</span>
+<span class="gi">+        style[warning].SetTextColour(mcfg-&gt;ReadColour(_T(&quot;/log_colour_text_warning_front&quot;), defLogColourTextWarningFront));</span>
+<span class="gi">+        style[warning].SetBackgroundColour(mcfg-&gt;ReadColour(_T(&quot;/log_colour_text_warning_back&quot;), defLogColourTextWarningBack));</span>
+         style[error].SetFont(style[info].GetFont());
+     }
+ 
+<span class="gh">Index: sdk/configmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- sdk/configmanager.cpp    (revision 4832)</span>
+<span class="gi">+++ sdk/configmanager.cpp    (working copy)</span>
+<span class="gu">@@ -51,6 +51,27 @@</span>
+ #include &quot;tinyxml/tinywxuni.h&quot;
+ #include &lt;stdlib.h&gt;
+ 
+<span class="gi">+// Defaults;</span>
+<span class="gi">+// Log window</span>
+<span class="gi">+const wxColour defLogColourListStandardFront = *wxBLACK;</span>
+<span class="gi">+const wxColour defLogColourTextStandardFront = *wxBLACK;</span>
+<span class="gi">+const wxColour defLogColourTextStandardBack = *wxWHITE;</span>
+<span class="gi">+const wxColour defLogColourListSuccessFront = *wxBLUE;</span>
+<span class="gi">+const wxColour defLogColourTextSuccessFront = *wxBLUE;</span>
+<span class="gi">+const wxColour defLogColourTextSuccessBack = *wxWHITE;</span>
+<span class="gi">+const wxColour defLogColourListWarningFront = wxColour(0x00, 0x00, 0xa0);   // navy blue</span>
+<span class="gi">+const wxColour defLogColourTextWarningFront = *wxBLUE;</span>
+<span class="gi">+const wxColour defLogColourTextWarningBack = *wxWHITE;</span>
+<span class="gi">+const wxColour defLogColourListErrorFront = *wxRED;</span>
+<span class="gi">+const wxColour defLogColourTextErrorFront = *wxRED;</span>
+<span class="gi">+const wxColour defLogColourTextErrorBack = *wxWHITE;</span>
+<span class="gi">+const wxColour defLogColourListCriticalFront = wxColour(0x0a, 0x00, 0x00);  // maroon</span>
+<span class="gi">+const wxColour defLogColourTextCriticalFront = *wxWHITE;</span>
+<span class="gi">+const wxColour defLogColourTextCriticalBack = *wxRED;</span>
+<span class="gi">+const wxColour defLogColourListFailureFront = wxColour(0x00, 0x00, 0xa0);   // navy blue</span>
+<span class="gi">+const wxColour defLogColourTextFailureFront = *wxWHITE;</span>
+<span class="gi">+const wxColour defLogColourTextFailureBack = *wxRED;</span>
+<span class="gi">+</span>
+ template&lt;&gt; CfgMgrBldr* Mgr&lt;CfgMgrBldr&gt;::instance = 0;
+ template&lt;&gt; bool  Mgr&lt;CfgMgrBldr&gt;::isShutdown = false;
+ 
+<span class="gh">Index: sdk/loggers.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- sdk/loggers.cpp    (revision 4832)</span>
+<span class="gi">+++ sdk/loggers.cpp    (working copy)</span>
+<span class="gu">@@ -29,12 +29,15 @@</span>
+ void TextCtrlLogger::UpdateSettings()
+ {
+     if (!control)
+<span class="gd">-        return;</span>
+<span class="gi">+        return;</span>
+<span class="gi">+</span>
+<span class="gi">+    ConfigManager* mcfg = Manager::Get()-&gt;GetConfigManager(_T(&quot;message_manager&quot;));</span>
+<span class="gi">+</span>
+<span class="gi">+    control-&gt;SetForegroundColour(mcfg-&gt;ReadColour(</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">cacolijn 2008-01-18 18:40:56</div>

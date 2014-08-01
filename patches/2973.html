@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,113 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/regex_testbed/regexdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/regex_testbed/regexdlg.cpp    (revision 6195)</span>
+<span class="gi">+++ src/plugins/contrib/regex_testbed/regexdlg.cpp    (working copy)</span>
+<span class="gu">@@ -201,7 +201,7 @@</span>
+         return ret;
+ 
+     for(size_t i = 0; i &lt; m_wxre.GetMatchCount(); ++i)
+<span class="gd">-        if(!!m_wxre.GetMatch(text, i))</span>
+<span class="gi">+        if(m_wxre.GetMatch(text, i))</span>
+             ret.Add(m_wxre.GetMatch(text, i));
+ 
+     return ret;
+<span class="gh">Index: src/plugins/contrib/regex_testbed/regexdlg.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/regex_testbed/regexdlg.xrc    (revision 6195)</span>
+<span class="gi">+++ src/plugins/contrib/regex_testbed/regexdlg.xrc    (working copy)</span>
+<span class="gu">@@ -1,93 +1,104 @@</span>
+ &lt;resource&gt;
+<span class="gd">-    &lt;object class=&quot;wxScrollingDialog&quot; name=&quot;regex_dialog&quot;&gt;</span>
+<span class="gd">-        &lt;title&gt;Regular expression utility&lt;/title&gt;</span>
+<span class="gd">-        &lt;centered&gt;1&lt;/centered&gt;</span>
+<span class="gd">-        &lt;style&gt;wxSTAY_ON_TOP|wxDEFAULT_DIALOG_STYLE&lt;/style&gt;</span>
+<span class="gd">-        &lt;object class=&quot;wxFlexGridSizer&quot;&gt;</span>
+<span class="gd">-            &lt;cols&gt;1&lt;/cols&gt;</span>
+<span class="gd">-            &lt;growablecols&gt;0&lt;/growablecols&gt;</span>
+<span class="gd">-            &lt;growablerows&gt;4&lt;/growablerows&gt;</span>
+<span class="gd">-            &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxStaticText&quot; name=&quot;ID_3&quot;&gt;</span>
+<span class="gd">-                    &lt;label&gt;Regular expression:&lt;/label&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+<span class="gd">-                &lt;flag&gt;wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL&lt;/flag&gt;</span>
+<span class="gd">-                &lt;border&gt;10&lt;/border&gt;</span>
+<span class="gd">-            &lt;/object&gt;</span>
+<span class="gd">-            &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxTextCtrl&quot; name=&quot;ID_REGEX&quot;&gt;</span>
+<span class="gd">-                    &lt;size&gt;80,-1&lt;/size&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+<span class="gd">-                &lt;flag&gt;wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL&lt;/flag&gt;</span>
+<span class="gd">-                &lt;border&gt;10&lt;/border&gt;</span>
+<span class="gd">-            &lt;/object&gt;</span>
+<span class="gd">-            &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxTextCtrl&quot; name=&quot;ID_QUOTED&quot;&gt;</span>
+<span class="gd">-                    &lt;size&gt;80,-1&lt;/size&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+<span class="gd">-                &lt;flag&gt;wxTOP|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL&lt;/flag&gt;</span>
+<span class="gd">-                &lt;border&gt;10&lt;/border&gt;</span>
+<span class="gd">-            &lt;/object&gt;</span>
+<span class="gd">-            &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxBoxSizer&quot;&gt;</span>
+<span class="gd">-                    &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                        &lt;object class=&quot;wxStaticText&quot; name=&quot;ID_1&quot;&gt;</span>
+<span class="gd">-                            &lt;label&gt;Regex library:&lt;/label&gt;</span>
+<span class="gd">-                        &lt;/object&gt;</span>
+<span class="gd">-                        &lt;flag&gt;wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL&lt;/flag&gt;</span>
+<span class="gd">-                        &lt;border&gt;10&lt;/border&gt;</span>
+<span class="gd">-                    &lt;/object&gt;</span>
+<span class="gd">-                    &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                        &lt;object class=&quot;wxChoice&quot; name=&quot;ID_LIBRARY&quot;&gt;</span>
+<span class="gd">-                            &lt;content&gt;</span>
+<span class="gd">-                                &lt;item&gt;wxWidgets (wxRE_EXTENDED)&lt;/item&gt;</span>
+<span class="gd">-                                &lt;item&gt;wxWidgets (wxRE_ADVANCED)&lt;/item&gt;</span>
+<span class="gd">-                                &lt;item&gt;wxWidgets (wxRE_BASIC)&lt;/item&gt;</span>
+<span class="gd">-                            &lt;/content&gt;</span>
+<span class="gd">-                        &lt;/object&gt;</span>
+<span class="gd">-                        &lt;flag&gt;wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL&lt;/flag&gt;</span>
+<span class="gd">-                        &lt;border&gt;10&lt;/border&gt;</span>
+<span class="gd">-                    &lt;/object&gt;</span>
+<span class="gd">-                    &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                        &lt;object class=&quot;wxCheckBox&quot; name=&quot;ID_NOCASE&quot;&gt;</span>
+<span class="gd">-                            &lt;label&gt;Case insensitive&lt;/label&gt;</span>
+<span class="gd">-                        &lt;/object&gt;</span>
+<span class="gd">-                        &lt;flag&gt;wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL&lt;/flag&gt;</span>
+<span class="gd">-                        &lt;border&gt;10&lt;/border&gt;</span>
+<span class="gd">-                    &lt;/object&gt;</span>
+<span class="gd">-                    &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                        &lt;object class=&quot;wxCheckBox&quot; name=&quot;ID_NEWLINES&quot;&gt;</span>
+<span class="gd">-                            &lt;label&gt;Match newlines&lt;/label&gt;</span>
+<span class="gd">-                        &lt;/object&gt;</span>
+<span class="gd">-                        &lt;flag&gt;wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL&lt;/flag&gt;</span>
+<span class="gd">-                        &lt;border&gt;10&lt;/border&gt;</span>
+<span class="gd">-                    &lt;/object&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+<span class="gd">-                &lt;flag&gt;wxTOP|wxBOTTOM|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL&lt;/flag&gt;</span>
+<span class="gd">-                &lt;border&gt;5&lt;/border&gt;</span>
+<span class="gd">-            &lt;/object&gt;</span>
+<span class="gd">-            &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxStaticText&quot; name=&quot;ID_STATICTEXT1&quot;&gt;</span>
+<span class="gd">-                    &lt;label&gt;Text:&lt;/label&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+<span class="gd">-                &lt;flag&gt;wxTOP|wxLEFT|wxRIGHT|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL&lt;/flag&gt;</span>
+<span class="gd">-                &lt;border&gt;10&lt;/border&gt;</span>
+<span class="gd">-            &lt;/object&gt;</span>
+<span class="gd">-            &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxTextCtrl&quot; name=&quot;ID_TEXT&quot;&gt;</span>
+<span class="gd">-                    &lt;style&gt;wxTE_MULTILINE&lt;/style&gt;</span>
+<span class="gd">-                    &lt;size&gt;600,60&lt;/size&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+<span class="gd">-                &lt;flag&gt;wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL&lt;/flag&gt;</span>
+<span class="gd">-                &lt;border&gt;10&lt;/border&gt;</span>
+<span class="gd">-            &lt;/object&gt;</span>
+<span class="gd">-            &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxHtmlWindow&quot; name=&quot;ID_OUT&quot;&gt;</span>
+<span class="gd">-</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">biplab 2010-08-31 14:07:06</div>

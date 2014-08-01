@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,53 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/projectmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/projectmanager.cpp    (revision 4010)</span>
+<span class="gi">+++ src/sdk/projectmanager.cpp    (working copy)</span>
+<span class="gu">@@ -166,7 +166,7 @@</span>
+     EVT_TREE_ITEM_ACTIVATED(ID_ProjectManager, ProjectManager::OnProjectFileActivated)
+     EVT_TREE_ITEM_RIGHT_CLICK(ID_ProjectManager, ProjectManager::OnTreeItemRightClick)
+     EVT_COMMAND_RIGHT_CLICK(ID_ProjectManager, ProjectManager::OnRightClick)
+<span class="gd">-</span>
+<span class="gi">+    EVT_COMMAND_LEFT_DCLICK(ID_ProjectManager, ProjectManager::OnLeftDClick)</span>
+     EVT_MENU_RANGE(idOpenWith[0], idOpenWith[MAX_OPEN_WITH_ITEMS - 1], ProjectManager::OnOpenWith)
+     EVT_MENU(idOpenWithInternal, ProjectManager::OnOpenWith)
+     EVT_MENU(idNB_TabTop, ProjectManager::OnTabPosition)
+<span class="gu">@@ -1809,6 +1809,23 @@</span>
+     m_pTree-&gt;PopupMenu(&amp;menu, pt);
+ }
+ 
+<span class="gi">+void ProjectManager::OnLeftDClick(wxCommandEvent&amp; event)</span>
+<span class="gi">+{</span>
+<span class="gi">+    wxTreeItemId sel = m_pTree-&gt;GetSelection();</span>
+<span class="gi">+    FileTreeData* ftd = (FileTreeData*)m_pTree-&gt;GetItemData(sel);</span>
+<span class="gi">+    if (!ftd)</span>
+<span class="gi">+        return;</span>
+<span class="gi">+    if(GetActiveProject()==ftd-&gt;GetProject())</span>
+<span class="gi">+         m_pTree-&gt;Toggle(sel);</span>
+<span class="gi">+    else</span>
+<span class="gi">+        SetProject(ftd-&gt;GetProject(), false);</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+ void ProjectManager::OnTreeItemRightClick(wxTreeEvent&amp; event)
+ {
+     #ifdef USE_OPENFILES_TREE
+<span class="gh">Index: src/include/projectmanager.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/projectmanager.h    (revision 4010)</span>
+<span class="gi">+++ src/include/projectmanager.h    (working copy)</span>
+<span class="gu">@@ -383,6 +383,7 @@</span>
+         void OnTreeBeginDrag(wxTreeEvent&amp; event);
+         void OnTreeEndDrag(wxTreeEvent&amp; event);
+         void OnRightClick(wxCommandEvent&amp; event);
+<span class="gi">+        void OnLeftDClick(wxCommandEvent&amp; event);</span>
+         void OnRenameWorkspace(wxCommandEvent&amp; event);
+         void OnSaveWorkspace(wxCommandEvent&amp; event);
+         void OnSaveAsWorkspace(wxCommandEvent&amp; event);
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">dmoore 2007-05-30 10:57:14</div>

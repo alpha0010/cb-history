@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,131 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/globals.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/globals.cpp    (revision 3483)</span>
+<span class="gi">+++ src/sdk/globals.cpp    (working copy)</span>
+<span class="gu">@@ -624,10 +624,6 @@</span>
+
+ void PlaceWindow(wxWindow *w, cbPlaceDialogMode mode, bool enforce)
+ {
+<span class="gd">-    HMONITOR hMonitor;</span>
+<span class="gd">-    MONITORINFO mi;</span>
+<span class="gd">-    RECT        r;</span>
+<span class="gd">-</span>
+     int the_mode;
+
+     if(!w)
+<span class="gu">@@ -649,30 +645,46 @@</span>
+     else
+         the_mode = (int) mode;
+
+<span class="gi">+    wxRect* monitorRect;</span>
+<span class="gi">+#if (WINVER &gt;= 0x0410)</span>
+<span class="gi">+    if ( wxGetWinVersion() &gt;= wxWinVersion_98 )</span>
+<span class="gi">+    {</span>
+<span class="gi">+        RECT        r;</span>
+<span class="gi">+        HMONITOR    hMonitor;</span>
+<span class="gi">+        MONITORINFO mi;</span>
+<span class="gi">+        hMonitor = MonitorFromWindow((HWND) referenceWindow-&gt;GetHandle(), MONITOR_DEFAULTTONEAREST);</span>
+
+<span class="gd">-    hMonitor = MonitorFromWindow((HWND) referenceWindow-&gt;GetHandle(), MONITOR_DEFAULTTONEAREST);</span>
+<span class="gi">+        mi.cbSize = sizeof(mi);</span>
+<span class="gi">+        GetMonitorInfo(hMonitor, &amp;mi);</span>
+<span class="gi">+        r = mi.rcWork;</span>
+
+<span class="gd">-    mi.cbSize = sizeof(mi);</span>
+<span class="gd">-    GetMonitorInfo(hMonitor, &amp;mi);</span>
+<span class="gd">-    r = mi.rcWork;</span>
+<span class="gi">+        wxRect monitorRectA = wxRect(wxPoint(r.left, r.top), wxPoint(r.right, r.bottom));</span>
+<span class="gi">+        monitorRect = &amp;monitorRectA;</span>
+<span class="gi">+    }</span>
+<span class="gi">+    else</span>
+<span class="gi">+#else</span>
+<span class="gi">+// use stub code under Windows 95 and NT 4.0 for GetMonitorInfo</span>
+<span class="gi">+#define COMPILE_MULTIMON_STUBS</span>
+<span class="gi">+#endif</span>
+<span class="gi">+    {</span>
+<span class="gi">+        wxRect monitorRectB = wxGetClientDisplayRect();</span>
+<span class="gi">+        monitorRect = &amp;monitorRectB;</span>
+<span class="gi">+    }</span>
+
+<span class="gd">-    int monitorWidth  = r.right - r.left;</span>
+<span class="gd">-    int monitorHeight = r.bottom - r. top;</span>
+<span class="gd">-</span>
+     switch(the_mode)
+     {
+         case pdlCentre:
+         {
+<span class="gd">-            windowRect.x = r.left + (monitorWidth  - windowRect.width)/2;</span>
+<span class="gd">-            windowRect.y = r.top  + (monitorHeight - windowRect.height)/2;</span>
+<span class="gi">+            windowRect.x = monitorRect-&gt;GetLeft() + (monitorRect-&gt;GetWidth()  - windowRect.width)/2;</span>
+<span class="gi">+            windowRect.y = monitorRect-&gt;GetTop()  + (monitorRect-&gt;GetHeight() - windowRect.height)/2;</span>
+         }
+         break;
+
+
+         case pdlHead:
+         {
+<span class="gd">-            windowRect.x = r.left + (monitorWidth  - windowRect.width)/2;</span>
+<span class="gd">-            windowRect.y = r.top  + (monitorHeight - windowRect.height)/3;</span>
+<span class="gi">+            windowRect.x = monitorRect-&gt;GetLeft() + (monitorRect-&gt;GetWidth()  - windowRect.width)/2;</span>
+<span class="gi">+            windowRect.y = monitorRect-&gt;GetTop()  + (monitorRect-&gt;GetHeight() - windowRect.height)/3;</span>
+         }
+         break;
+
+<span class="gu">@@ -684,26 +696,26 @@</span>
+             int y1 = windowRect.y;
+             int y2 = windowRect.y + windowRect.height;
+
+<span class="gd">-            if(windowRect.width &gt; monitorWidth) // cannot place without clipping, so centre it</span>
+<span class="gi">+            if(windowRect.width &gt; monitorRect-&gt;GetWidth()) // cannot place without clipping, so centre it</span>
+             {
+<span class="gd">-                x1 = r.left + (monitorWidth  - windowRect.width)/2;</span>
+<span class="gi">+                x1 = monitorRect-&gt;GetLeft() + (monitorRect-&gt;GetWidth()  - windowRect.width)/2;</span>
+                 x2 = x1 + windowRect.width;
+             }
+             else
+             {
+<span class="gd">-                x2 = std::min((int) r.right, windowRect.GetRight());</span>
+<span class="gd">-                x1 = std::max(x2 - windowRect.width, (int) r.left);</span>
+<span class="gi">+                x2 = std::min((int) monitorRect-&gt;GetRight(), windowRect.GetRight());</span>
+<span class="gi">+                x1 = std::max(x2 - windowRect.width, (int) monitorRect-&gt;GetLeft());</span>
+                 x2 = x1 + windowRect.width;
+             }
+<span class="gd">-            if(windowRect.height &gt; monitorHeight) // cannot place without clipping, so centre it</span>
+<span class="gi">+            if(windowRect.height &gt; monitorRect-&gt;GetHeight()) // cannot place without clipping, so centre it</span>
+             {
+<span class="gd">-                y1 = r.top + (monitorHeight  - windowRect.height)/2;</span>
+<span class="gi">+                y1 = monitorRect-&gt;GetTop() + (monitorRect-&gt;GetHeight()  - windowRect.height)/2;</span>
+                 y2 = y1 + windowRect.height;
+             }
+             else
+             {
+<span class="gd">-                y2 = std::min((int) r.bottom, windowRect.GetBottom());</span>
+<span class="gd">-                y1 = std::max(y2 - windowRect.height, (int) r.top);</span>
+<span class="gi">+                y2 = std::min((int) monitorRect-&gt;GetBottom(), windowRect.GetBottom());</span>
+<span class="gi">+                y1 = std::max(y2 - windowRect.height, (int) monitorRect-&gt;GetTop());</span>
+                 y2 = y1 + windowRect.height;
+             }
+             windowRect = wxRect(x1, y1, x2-x1, y2-y1);
+<span class="gu">@@ -718,10 +730,10 @@</span>
+             int y1 = windowRect.y;
+             int y2 = windowRect.y + windowRect.height;
+
+<span class="gd">-            x1 = std::max(x1, (int) r.left);</span>
+<span class="gd">-            x2 = std::min(x2, (int) r.right);</span>
+<span class="gd">-            y1 = std::max(y1, (int) r.top);</span>
+<span class="gd">-            y2 = std::min(y2, (int) r.bottom);</span>
+<span class="gi">+            x1 = std::max(x1, (int) monitorRect-&gt;GetLeft());</span>
+<span class="gi">+            x2 = std::min(x2, (int) monitorRect-&gt;GetRight());</span>
+<span class="gi">+            y1 = std::max(y1, (int) monitorRect-&gt;GetTop());</span>
+<span class="gi">+            y2 = std::min(y2, (int) monitorRect-&gt;GetBottom());</span>
+
+             windowRect = wxRect(x1, y1, x2-x1, y2-y1);
+         }
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">stahta01 2007-01-14 20:21:16</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,141 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/resources/lexers/lexer_fortran.sample</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/lexers/lexer_fortran.sample    (revision 0)</span>
+<span class="gi">+++ src/sdk/resources/lexers/lexer_fortran.sample    (revision 0)</span>
+<span class="gu">@@ -0,0 +1,44 @@</span>
+<span class="gi">+MODULE NUMERICAL</span>
+<span class="gi">+USE DECLARATIONS</span>
+<span class="gi">+CONTAINS</span>
+<span class="gi">+</span>
+<span class="gi">+SUBROUTINE ELGS (A,N,INDX)</span>
+<span class="gi">+! Subroutine to perform the partial-pivoting Gaussian elimination.</span>
+<span class="gi">+! A(N,N) is the original matrix in the input and transformed matrix</span>
+<span class="gi">+! plus the pivoting element ratios below the diagonal in the output.</span>
+<span class="gi">+! INDX(N) records the pivoting order.  Copyright (c) Tao Pang 2001.</span>
+<span class="gi">+  IMPLICIT NONE</span>
+<span class="gi">+  INTEGER, INTENT (IN) :: N</span>
+<span class="gi">+  INTEGER :: I,J,K,ITMP</span>
+<span class="gi">+  INTEGER, INTENT (OUT), DIMENSION (N) :: INDX</span>
+<span class="gi">+  REAL :: C1,PI,PI1,PJ</span>
+<span class="gi">+  REAL, INTENT (INOUT), DIMENSION (N,N) :: A</span>
+<span class="gi">+  REAL, DIMENSION (N) :: C</span>
+<span class="gi">+! Initialize the index</span>
+<span class="gi">+  DO I = 1, N</span>
+<span class="gi">+    INDX(I) = I</span>
+<span class="gi">+  END DO</span>
+<span class="gi">+! Find the rescaling factors, one from each row</span>
+<span class="gi">+  DO I = 1, N</span>
+<span class="gi">+    C1= 0.0</span>
+<span class="gi">+    DO J = 1, N</span>
+<span class="gi">+      C1 = AMAX1(C1,ABS(A(I,J)))</span>
+<span class="gi">+    END DO</span>
+<span class="gi">+    C(I) = C1</span>
+<span class="gi">+  END DO</span>
+<span class="gi">+! Search the pivoting (largest) element from each column</span>
+<span class="gi">+  DO J = 1, N-1</span>
+<span class="gi">+    PI1 = 0.0</span>
+<span class="gi">+    DO I = J, N</span>
+<span class="gi">+      PI = ABS(A(INDX(I),J))/C(INDX(I))</span>
+<span class="gi">+      IF (PI.GT.PI1) THEN</span>
+<span class="gi">+        PI1 = PI</span>
+<span class="gi">+        K   = I</span>
+<span class="gi">+      ENDIF</span>
+<span class="gi">+    END DO</span>
+<span class="gi">+! Search the pivoting (largest) element from each column</span>
+<span class="gi">+! Interchange the rows via INDX(N) to record pivoting order</span>
+<span class="gi">+! etc ....</span>
+<span class="gi">+  END DO</span>
+<span class="gi">+END SUBROUTINE ELGS</span>
+<span class="gi">+END MODULE NUMERICAL</span>
+<span class="gh">Index: src/sdk/resources/lexers/lexer_fortran.xml</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/lexers/lexer_fortran.xml    (revision 0)</span>
+<span class="gi">+++ src/sdk/resources/lexers/lexer_fortran.xml    (revision 0)</span>
+<span class="gu">@@ -0,0 +1,139 @@</span>
+<span class="gi">+&lt;?xml version=&quot;1.0&quot;?&gt;</span>
+<span class="gi">+&lt;!DOCTYPE CodeBlocks_lexer_properties&gt;</span>
+<span class="gi">+&lt;CodeBlocks_lexer_properties&gt;</span>
+<span class="gi">+        &lt;Lexer name=&quot;Fortran&quot;</span>
+<span class="gi">+                index=&quot;36&quot;</span>
+<span class="gi">+                filemasks=&quot;*.f90,*.f95,*.f2k&quot;&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Default&quot;</span>
+<span class="gi">+                        index=&quot;0&quot;</span>
+<span class="gi">+                        fg=&quot;0,0,0&quot;</span>
+<span class="gi">+                        bg=&quot;255,255,255&quot;</span>
+<span class="gi">+                        bold=&quot;0&quot;</span>
+<span class="gi">+                        italics=&quot;0&quot;</span>
+<span class="gi">+                        underlined=&quot;0&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Comment&quot;</span>
+<span class="gi">+                        index=&quot;1&quot;</span>
+<span class="gi">+                        fg=&quot;160,160,160&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Number&quot;</span>
+<span class="gi">+                        index=&quot;2&quot;</span>
+<span class="gi">+                        fg=&quot;240,0,240&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Identifier&quot;</span>
+<span class="gi">+                        index=&quot;7&quot;</span>
+<span class="gi">+                        fg=&quot;240,0,240&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Keyword&quot;</span>
+<span class="gi">+                        index=&quot;8&quot;</span>
+<span class="gi">+                        fg=&quot;0,0,160&quot;</span>
+<span class="gi">+                        bold=&quot;1&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;User keyword&quot;</span>
+<span class="gi">+                        index=&quot;9,10&quot;</span>
+<span class="gi">+                        fg=&quot;0,160,0&quot;</span>
+<span class="gi">+                        bold=&quot;1&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;String&quot;</span>
+<span class="gi">+                        index=&quot;3,4,5&quot;</span>
+<span class="gi">+                        fg=&quot;0,0,255&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Label&quot;</span>
+<span class="gi">+                        index=&quot;13&quot;</span>
+<span class="gi">+                        fg=&quot;0,0,255&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Continuation&quot;</span>
+<span class="gi">+                        index=&quot;14&quot;</span>
+<span class="gi">+                        fg=&quot;0,0,255&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Preprocessor&quot;</span>
+<span class="gi">+                        index=&quot;11&quot;</span>
+<span class="gi">+                        fg=&quot;0,160,0&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Operator&quot;</span>
+<span class="gi">+                        index=&quot;6,12&quot;</span>
+<span class="gi">+                        fg=&quot;255,0,0&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Selection&quot;</span>
+<span class="gi">+                        index=&quot;-99&quot;</span>
+<span class="gi">+                        bg=&quot;192,192,192&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Active line&quot;</span>
+<span class="gi">+                        index=&quot;-98&quot;</span>
+<span class="gi">+                        bg=&quot;255,255,160&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Breakpoint line&quot;</span>
+<span class="gi">+                        index=&quot;-2&quot;</span>
+<span class="gi">+                        bg=&quot;255,160,160&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Debugger active line&quot;</span>
+<span class="gi">+                        index=&quot;-3&quot;</span>
+<span class="gi">+                        bg=&quot;160,160,255&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Compiler error line&quot;</span>
+<span class="gi">+                        index=&quot;-4&quot;</span>
+<span class="gi">+                        bg=&quot;255,128,0&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Matching brace highlight&quot;</span>
+<span class="gi">+                        index=&quot;34&quot;</span>
+<span class="gi">+                        fg=&quot;255,0,0&quot;</span>
+<span class="gi">+                        bold=&quot;1&quot;</span>
+<span class="gi">+                        underlined=&quot;1&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;No matching brace highlight&quot;</span>
+<span class="gi">+                        index=&quot;35&quot;</span>
+<span class="gi">+                        bg=&quot;255,0,0&quot;/&gt;</span>
+<span class="gi">+                &lt;Keywords&gt;</span>
+<span class="gi">+                        &lt;!-- Primary keywords and input/output--&gt;</span>
+<span class="gi">+                        &lt;Set index=&quot;0&quot;</span>
+<span class="gi">+                            value=&quot;access action advance allocatable allocate</span>
+<span class="gi">+apostrophe assign assignment associate asynchronous backspace</span>
+<span class="gi">+bind blank blockdata call case character class close common</span>
+<span class="gi">+complex contains continue cycle data deallocate decimal delim</span>
+<span class="gi">+default dimension direct do dowhile double doubleprecision else</span>
+<span class="gi">+elseif elsewhere encoding end endassociate endblockdata enddo</span>
+<span class="gi">+endfile endforall endfunction endi</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mortenmacfly 2007-06-12 09:00:46</div>

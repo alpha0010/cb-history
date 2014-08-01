@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,137 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: plugins/codecompletion/parser/parserthread.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/codecompletion/parser/parserthread.h    (revision 5213)</span>
+<span class="gi">+++ plugins/codecompletion/parser/parserthread.h    (working copy)</span>
+<span class="gu">@@ -86,8 +86,9 @@</span>
+         void HandleIncludes();
+         void HandleDefines();
+         void HandlePreprocessorBlocks(const wxString&amp; preproc);
+<span class="gd">-        void HandleNamespace();</span>
+<span class="gd">-        void HandleClass(bool isClass = true);</span>
+<span class="gi">+        void HandleNamespace();</span>
+<span class="gi">+        void ReadVarNames();</span>
+<span class="gi">+        void HandleClass(int isType = 1 /* class */);</span>
+         void HandleFunction(const wxString&amp; name, bool isOperator = false);
+         void HandleEnum();
+         void HandleTypedef();
+<span class="gh">Index: plugins/codecompletion/parser/parserthread.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/codecompletion/parser/parserthread.cpp    (revision 5213)</span>
+<span class="gi">+++ plugins/codecompletion/parser/parserthread.cpp    (working copy)</span>
+<span class="gu">@@ -525,7 +525,7 @@</span>
+         {
+             m_Str.Clear();
+             if (m_Options.handleClasses)
+<span class="gd">-                HandleClass(false);</span>
+<span class="gi">+                HandleClass(0 /* structure */);</span>
+             else
+                 SkipToOneOfChars(ParserConsts::semicolonclbrace, true);
+         }
+<span class="gu">@@ -538,7 +538,8 @@</span>
+                 SkipToOneOfChars(ParserConsts::semicolonclbrace, true);
+         }
+         else if (token==ParserConsts::kw_union)
+<span class="gd">-        {</span>
+<span class="gi">+        {</span>
+<span class="gi">+#if 0</span>
+             SkipToOneOfChars(ParserConsts::opbracesemicolon);
+ //            if (m_Tokenizer.GetToken() == &quot;{&quot;)
+             {
+<span class="gu">@@ -546,7 +547,14 @@</span>
+                 DoParse();
+                 m_Str.Clear();
+                 m_pLastParent = oldparent;
+<span class="gd">-            }</span>
+<span class="gi">+            }</span>
+<span class="gi">+#endif</span>
+<span class="gi">+</span>
+<span class="gi">+            m_Str.Clear();</span>
+<span class="gi">+            if (m_Options.handleClasses)</span>
+<span class="gi">+                HandleClass(2 /* union */);</span>
+<span class="gi">+            else</span>
+<span class="gi">+                SkipToOneOfChars(ParserConsts::semicolonclbrace, true);</span>
+         }
+ #if 1
+         else if (token==ParserConsts::kw_operator)
+<span class="gu">@@ -1101,9 +1109,31 @@</span>
+             SkipToOneOfChars(ParserConsts::semicolonopbrace); // some kind of error in code ?
+         }
+     }
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+void ParserThread::ReadVarNames()</span>
+<span class="gi">+{</span>
+<span class="gi">+    while (1)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        wxString current = m_Tokenizer.GetToken();</span>
+<span class="gi">+</span>
+<span class="gi">+        if (current.IsEmpty())</span>
+<span class="gi">+            break;</span>
+<span class="gi">+        if (current==ParserConsts::comma)</span>
+<span class="gi">+            continue;</span>
+<span class="gi">+        else if (current==ParserConsts::semicolon)</span>
+<span class="gi">+            break;</span>
+<span class="gi">+        else if (wxIsalpha(current.GetChar(0)))</span>
+<span class="gi">+        {</span>
+<span class="gi">+            Manager::Get()-&gt;GetLogManager()-&gt;DebugLog(F(_T(&quot;Adding variable &#39;%s&#39; as &#39;%s&#39; to &#39;%s&#39;&quot;), current.c_str(), m_Str.c_str(), (m_pLastParent?m_pLastParent-&gt;m_Name.c_str():_T(&quot;&lt;no-parent&gt;&quot;))));</span>
+<span class="gi">+            DoAddToken(tkVariable, current, m_Tokenizer.GetLineNumber());</span>
+<span class="gi">+        }</span>
+<span class="gi">+        else // unexpected</span>
+<span class="gi">+            break;</span>
+<span class="gi">+    }</span>
+ }
+ 
+<span class="gd">-void ParserThread::HandleClass(bool isClass)</span>
+<span class="gi">+void ParserThread::HandleClass(int isType) // 0 - structure, 1 - class, 2 - union</span>
+ {
+     // need to force the tokenizer _not_ skip anything
+     // as we &#39;re manually parsing class decls
+<span class="gu">@@ -1188,29 +1218,40 @@</span>
+ //                Manager::Get()-&gt;GetLogManager()-&gt;DebugLog(F(_T(&quot;Ancestors: &quot;) + ancestors));
+             }
+ 
+<span class="gd">-            if (current==ParserConsts::opbrace) // unnamed class/struct</span>
+<span class="gi">+            if (current==ParserConsts::opbrace) // unnamed class/struct/union</span>
+             {
+                 static size_t num = 0;
+                 wxString unnamedTmp;
+<span class="gd">-                unnamedTmp.Printf(_T(&quot;Unnamed-%s-%d&quot;), isClass ? _T(&quot;Class&quot;) : _T(&quot;Struct&quot;), num++);</span>
+<span class="gi">+                unnamedTmp.Printf(_T(&quot;Unnamed-%s-%d&quot;), isType == 1 ? _T(&quot;Class&quot;) : isType == 2 ? _T(&quot;Union&quot;) : _T(&quot;Struct&quot;), num++);</span>
+ 
+                 Token* newToken = DoAddToken(tkClass, unnamedTmp, lineNr);
+ 
+                 Token* lastParent = m_pLastParent;
+<span class="gd">-                TokenScope lastScope = m_LastScope;</span>
+<span class="gi">+                TokenScope lastScope = m_LastScope;</span>
+<span class="gi">+                bool parsingTypedef = m_ParsingTypedef;</span>
+ 
+                 m_pLastParent = newToken;
+<span class="gd">-                // default scope is: private for classes, public for structs</span>
+<span class="gd">-                m_LastScope = isClass ? tsPrivate : tsPublic;</span>
+<span class="gi">+                // default scope is: private for classes, public for structs, public for unions</span>
+<span class="gi">+                m_LastScope = isType == 1 ? tsPrivate : tsPublic;</span>
+<span class="gi">+                m_ParsingTypedef = false;</span>
+ 
+<span class="gd">-                DoParse();</span>
+<span class="gd">-</span>
+<span class="gd">-                m_pLastParent = lastParent;</span>
+<span class="gi">+                DoParse();</span>
+<span class="gi">+</span>
+<span class="gi">+                m_ParsingTypedef = parsingTypedef;</span>
+<span class="gi">+                m_pLastParent = lastParent;</span>
+                 m_LastScope = lastScope;
+ 
+<span class="gd">-                m_LastUnnamedTokenName = unnamedTmp; // used for typedef&#39;ing anonymous class/struct/union</span>
+<span class="gi">+                m_LastUnnamedTokenName = unnamedTmp; // used for typedef&#39;ing anonymous class/struct/union</span>
+ 
+<span class="gd">-                // we should now be right after the closing brace: read the var name</span>
+<span class="gi">+                // w</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">geister 2008-09-21 08:17:41</div>

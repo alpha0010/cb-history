@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,176 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/debuggergdb/debuggergdb.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/debuggergdb/debuggergdb.cpp    (revision 3466)</span>
+<span class="gi">+++ src/plugins/debuggergdb/debuggergdb.cpp    (working copy)</span>
+<span class="gu">@@ -336,7 +336,7 @@</span>
+ 
+ void DebuggerGDB::OnRelease(bool appShutDown)
+ {
+<span class="gd">-    if (m_State.GetDriver())</span>
+<span class="gi">+    if (m_State.HasDriver())</span>
+         m_State.GetDriver()-&gt;SetDebugWindows(0, 0, 0, 0, 0);
+ 
+     if (m_pThreadsDlg)
+<span class="gu">@@ -722,7 +722,7 @@</span>
+ 
+ bool DebuggerGDB::IsStopped()
+ {
+<span class="gd">-    return !m_State.GetDriver() || m_State.GetDriver()-&gt;IsStopped();</span>
+<span class="gi">+    return !m_State.HasDriver() || m_State.GetDriver()-&gt;IsStopped();</span>
+ }
+ 
+ int DebuggerGDB::Debug()
+<span class="gu">@@ -952,14 +952,14 @@</span>
+ 
+     // Don&#39;t issue &#39;run&#39; if attaching to a process (Bug #1391904)
+     if (m_PidToAttach == 0)
+<span class="gd">-        m_State.GetDriver()-&gt;Start(false);</span>
+<span class="gi">+        m_State.GetDriver()-&gt;Start(m_BreakOnEntry);</span>
+ 
+     return 0;
+<span class="gd">-}</span>
+<span class="gi">+} // Debug</span>
+ 
+ void DebuggerGDB::AddSourceDir(const wxString&amp; dir)
+ {
+<span class="gd">-    if (!m_State.GetDriver() || dir.IsEmpty())</span>
+<span class="gi">+    if (!m_State.HasDriver() || dir.IsEmpty())</span>
+         return;
+     wxString filename = dir;
+     Manager::Get()-&gt;GetMacrosManager()-&gt;ReplaceEnvVars(filename); // apply env vars
+<span class="gu">@@ -1102,7 +1102,7 @@</span>
+     {
+         case CMD_CONTINUE:
+             ClearActiveMarkFromAllEditors();
+<span class="gd">-            if (m_State.GetDriver())</span>
+<span class="gi">+            if (m_State.HasDriver())</span>
+             {
+                 Manager::Get()-&gt;GetMessageManager()-&gt;Log(m_PageIndex, _(&quot;Continuing...&quot;));
+                 m_State.GetDriver()-&gt;Continue();
+<span class="gu">@@ -1112,7 +1112,7 @@</span>
+ 
+         case CMD_STEP:
+             ClearActiveMarkFromAllEditors();
+<span class="gd">-            if (m_State.GetDriver())</span>
+<span class="gi">+            if (m_State.HasDriver())</span>
+                 m_State.GetDriver()-&gt;Step();
+ //            QueueCommand(new DebuggerCmd(this, _T(&quot;next&quot;)));
+             break;
+<span class="gu">@@ -1124,35 +1124,35 @@</span>
+                 // first time users should have some help from us ;)
+                 Disassemble();
+             }
+<span class="gd">-            if (m_State.GetDriver())</span>
+<span class="gi">+            if (m_State.HasDriver())</span>
+                 m_State.GetDriver()-&gt;StepInstruction();
+ //            QueueCommand(new DebuggerCmd(this, _T(&quot;nexti&quot;)));
+             break;
+ 
+         case CMD_STEPIN:
+             ClearActiveMarkFromAllEditors();
+<span class="gd">-            if (m_State.GetDriver())</span>
+<span class="gi">+            if (m_State.HasDriver())</span>
+                 m_State.GetDriver()-&gt;StepIn();
+ //            QueueCommand(new DebuggerCmd(this, _T(&quot;step&quot;)));
+             break;
+ 
+         case CMD_STOP:
+             ClearActiveMarkFromAllEditors();
+<span class="gd">-            if (m_State.GetDriver())</span>
+<span class="gi">+            if (m_State.HasDriver())</span>
+                 m_State.GetDriver()-&gt;Stop();
+ //            QueueCommand(new DebuggerCmd(this, _T(&quot;quit&quot;)));
+             break;
+ 
+         case CMD_BACKTRACE:
+ //            Manager::Get()-&gt;GetMessageManager()-&gt;Log(m_PageIndex, &quot;Running back-trace...&quot;);
+<span class="gd">-            if (m_State.GetDriver())</span>
+<span class="gi">+            if (m_State.HasDriver())</span>
+                 m_State.GetDriver()-&gt;Backtrace();
+             break;
+ 
+         case CMD_DISASSEMBLE:
+         {
+ //            Manager::Get()-&gt;GetMessageManager()-&gt;Log(m_PageIndex, &quot;Disassemblying...&quot;);
+<span class="gd">-            if (m_State.GetDriver())</span>
+<span class="gi">+            if (m_State.HasDriver())</span>
+                 m_State.GetDriver()-&gt;Disassemble();
+             break;
+         }
+<span class="gu">@@ -1160,20 +1160,20 @@</span>
+         case CMD_REGISTERS:
+         {
+ //            Manager::Get()-&gt;GetMessageManager()-&gt;Log(m_PageIndex, &quot;Displaying registers...&quot;);
+<span class="gd">-            if (m_State.GetDriver())</span>
+<span class="gi">+            if (m_State.HasDriver())</span>
+                 m_State.GetDriver()-&gt;CPURegisters();
+             break;
+         }
+ 
+         case CMD_MEMORYDUMP:
+         {
+<span class="gd">-            if (m_State.GetDriver())</span>
+<span class="gi">+            if (m_State.HasDriver())</span>
+                 m_State.GetDriver()-&gt;MemoryDump();
+         }
+ 
+         case CMD_RUNNINGTHREADS:
+         {
+<span class="gd">-            if (m_State.GetDriver())</span>
+<span class="gi">+            if (m_State.HasDriver())</span>
+                 m_State.GetDriver()-&gt;RunningThreads();
+         }
+ 
+<span class="gu">@@ -1467,7 +1467,7 @@</span>
+ 
+ void DebuggerGDB::ParseOutput(const wxString&amp; output)
+ {
+<span class="gd">-    if (m_State.GetDriver())</span>
+<span class="gi">+    if (m_State.HasDriver())</span>
+     {
+         m_State.GetDriver()-&gt;ParseOutput(output);
+     }
+<span class="gu">@@ -1796,7 +1796,7 @@</span>
+ 
+ void DebuggerGDB::OnInfoFrame(wxCommandEvent&amp; event)
+ {
+<span class="gd">-    if (m_State.GetDriver())</span>
+<span class="gi">+    if (m_State.HasDriver())</span>
+     {
+         m_State.GetDriver()-&gt;InfoFrame();
+     }
+<span class="gu">@@ -1804,7 +1804,7 @@</span>
+ 
+ void DebuggerGDB::OnInfoDLL(wxCommandEvent&amp; event)
+ {
+<span class="gd">-    if (m_State.GetDriver())</span>
+<span class="gi">+    if (m_State.HasDriver())</span>
+     {
+         m_State.GetDriver()-&gt;InfoDLL();
+     }
+<span class="gu">@@ -1812,7 +1812,7 @@</span>
+ 
+ void DebuggerGDB::OnInfoFiles(wxCommandEvent&amp; event)
+ {
+<span class="gd">-    if (m_State.GetDriver())</span>
+<span class="gi">+    if (m_State.HasDriver())</span>
+     {
+         m_State.GetDriver()-&gt;InfoFiles();
+     }
+<span class="gu">@@ -1820,7 +1820,7 @@</span>
+ 
+ void DebuggerGDB::OnInfoFPU(wxCommandEvent&amp; event)
+ {
+<span class="gd">-    if (m_State.GetDriver())</span>
+<span class="gi">+    if (m_State.HasDriver())</span>
+     {
+         m_State
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mortenmacfly 2007-01-09 12:03:31</div>

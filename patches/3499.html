@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,113 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/codesnippets/codesnippetsapp.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/codesnippets/codesnippetsapp.cpp    (revision 9374)</span>
+<span class="gi">+++ src/plugins/contrib/codesnippets/codesnippetsapp.cpp    (working copy)</span>
+<span class="gu">@@ -95,7 +95,11 @@</span>
+ END_EVENT_TABLE()
+ 
+ #ifdef __WXMAC__
+<span class="gd">-    #include &quot;wx/mac/corefoundation/cfstring.h&quot;</span>
+<span class="gi">+    #if wxCHECK_VERSION(2,9,0)</span>
+<span class="gi">+        #include &quot;wx/osx/core/cfstring.h&quot;</span>
+<span class="gi">+    #else</span>
+<span class="gi">+        #include &quot;wx/mac/corefoundation/cfstring.h&quot;</span>
+<span class="gi">+    #endif</span>
+     #include &quot;wx/intl.h&quot;
+ 
+     #include &lt;CoreFoundation/CFBundle.h&gt;
+<span class="gu">@@ -112,7 +116,11 @@</span>
+         CFRelease(resourcesURL);
+         CFStringRef cfStrPath = CFURLCopyFileSystemPath(absoluteURL,kCFURLPOSIXPathStyle);
+         CFRelease(absoluteURL);
+<span class="gd">-        return wxMacCFStringHolder(cfStrPath).AsString(wxLocale::GetSystemEncoding());</span>
+<span class="gi">+        #if wxCHECK_VERSION(2,9,0)</span>
+<span class="gi">+          return wxCFStringRef(cfStrPath).AsString(wxLocale::GetSystemEncoding());</span>
+<span class="gi">+        #else</span>
+<span class="gi">+          return wxMacCFStringHolder(cfStrPath).AsString(wxLocale::GetSystemEncoding());</span>
+<span class="gi">+        #endif</span>
+     }
+ #endif
+ 
+<span class="gh">Index: src/plugins/contrib/wxContribItems/wxTreeList/src/treelistctrl.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxContribItems/wxTreeList/src/treelistctrl.cpp    (revision 9374)</span>
+<span class="gi">+++ src/plugins/contrib/wxContribItems/wxTreeList/src/treelistctrl.cpp    (working copy)</span>
+<span class="gu">@@ -49,8 +49,12 @@</span>
+ #include &lt;wx/hashmap.h&gt;
+ 
+ #ifdef __WXMAC__
+<span class="gi">+#if wxCHECK_VERSION(2,9,0)</span>
+<span class="gi">+#include &quot;wx/osx/private.h&quot;</span>
+<span class="gi">+#else</span>
+ #include &quot;wx/mac/private.h&quot;
+ #endif
+<span class="gi">+#endif</span>
+ 
+ #include &quot;wx/treelistctrl.h&quot;
+ 
+<span class="gh">Index: src/sdk/configmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/configmanager.cpp    (revision 9374)</span>
+<span class="gi">+++ src/sdk/configmanager.cpp    (working copy)</span>
+<span class="gu">@@ -36,7 +36,11 @@</span>
+ #endif
+ 
+ #ifdef __WXMAC__
+<span class="gi">+#if wxCHECK_VERSION(2,9,0)</span>
+<span class="gi">+#include &quot;wx/osx/core/cfstring.h&quot;</span>
+<span class="gi">+#else</span>
+ #include &quot;wx/mac/corefoundation/cfstring.h&quot;
+<span class="gi">+#endif</span>
+ #include &quot;wx/intl.h&quot;
+ 
+ #include &lt;CoreFoundation/CFBundle.h&gt;
+<span class="gu">@@ -121,7 +125,11 @@</span>
+             CFRelease(resourcesURL);
+             CFStringRef cfStrPath = CFURLCopyFileSystemPath(absoluteURL,kCFURLPOSIXPathStyle);
+             CFRelease(absoluteURL);
+<span class="gd">-            wxString str = wxMacCFStringHolder(cfStrPath).AsString(wxLocale::GetSystemEncoding());</span>
+<span class="gi">+            #if wxCHECK_VERSION(2,9,0)</span>
+<span class="gi">+              wxString str = wxCFStringRef(cfStrPath).AsString(wxLocale::GetSystemEncoding());</span>
+<span class="gi">+            #else</span>
+<span class="gi">+              wxString str = wxMacCFStringHolder(cfStrPath).AsString(wxLocale::GetSystemEncoding());</span>
+<span class="gi">+            #endif</span>
+             if (!str.Contains(wxString(_T(&quot;/Resources&quot;))))
+                return ::DetermineExecutablePath() + _T(&quot;/..&quot;); // not a bundle, use relative path
+             return str;
+<span class="gh">Index: src/src/app.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/app.cpp    (revision 9374)</span>
+<span class="gi">+++ src/src/app.cpp    (working copy)</span>
+<span class="gu">@@ -273,7 +273,11 @@</span>
+ END_EVENT_TABLE()
+ 
+ #ifdef __WXMAC__
+<span class="gi">+#if wxCHECK_VERSION(2,9,0)</span>
+<span class="gi">+#include &quot;wx/osx/core/cfstring.h&quot;</span>
+<span class="gi">+#else</span>
+ #include &quot;wx/mac/corefoundation/cfstring.h&quot;
+<span class="gi">+#endif</span>
+ #include &quot;wx/intl.h&quot;
+ 
+ #include &lt;CoreFoundation/CFBundle.h&gt;
+<span class="gu">@@ -288,7 +292,11 @@</span>
+     CFRelease(resourcesURL);
+     CFStringRef cfStrPath = CFURLCopyFileSystemPath(absoluteURL,kCFURLPOSIXPathStyle);
+     CFRelease(absoluteURL);
+<span class="gd">-    return wxMacCFStringHolder(cfStrPath).AsString(wxLocale::GetSystemEncoding());</span>
+<span class="gi">+    #if wxCHECK_VERSION(2,9,0)</span>
+<span class="gi">+      return wxCFStringRef(cfStrPath).AsString(wxLocale::GetSystemEncoding());</span>
+<span class="gi">+    #else</span>
+<span class="gi">+      return wxMacCFStringHolder(cfStrPath).AsString(wxLocale::GetSystemEncoding());</span>
+<span class="gi">+    #endif</span>
+ }
+ #endif
+ 
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mojca 2013-09-29 17:37:42</div>

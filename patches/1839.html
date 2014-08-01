@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,109 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 3508)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -2290,16 +2336,33 @@</span>
+             wxString indent = GetLineIndentString(currLine - 1);
+             if (smartIndent)
+             {
+<span class="gd">-                // if the last entered char before newline was an opening curly brace,</span>
+<span class="gd">-                // increase indentation level (the closing brace is handled in another block)</span>
+<span class="gi">+                cbStyledTextCtrl* stc = GetControl();</span>
+<span class="gi">+                 // if the last entered char before newline was an opening curly brace,</span>
+<span class="gi">+                 // increase indentation level (the closing brace is handled in another block)</span>
+<span class="gi">+</span>
+<span class="gi">+                // SMART INDENTING - THIS IS LANGUAGE SPECIFIC, BUT CURRENTLY ONLY IMPLEMENTED FOR C/C++ AND PYTHON</span>
+                 wxChar b = m_pData-&gt;GetLastNonWhitespaceChar();
+<span class="gd">-                if (b == _T(&#39;{&#39;))</span>
+<span class="gi">+                switch(stc-&gt;GetLexer())</span>
+                 {
+<span class="gd">-                    if(control-&gt;GetUseTabs())</span>
+<span class="gd">-                        indent &lt;&lt; _T(&#39;\t&#39;); // 1 tab</span>
+<span class="gd">-                    else</span>
+<span class="gd">-                        indent &lt;&lt; wxString(_T(&#39; &#39;), control-&gt;GetTabWidth()); // n spaces</span>
+<span class="gd">-                }</span>
+<span class="gi">+                    case wxSCI_LEX_CPP:</span>
+<span class="gi">+                        if (b == _T(&#39;{&#39;))</span>
+<span class="gi">+                        {</span>
+<span class="gi">+                            if(control-&gt;GetUseTabs())</span>
+<span class="gi">+                                indent &lt;&lt; _T(&#39;\t&#39;); // 1 tab</span>
+<span class="gi">+                            else</span>
+<span class="gi">+                                indent &lt;&lt; wxString(_T(&#39; &#39;), control-&gt;GetTabWidth()); // n spaces</span>
+<span class="gi">+                        }</span>
+<span class="gi">+                        break;</span>
+<span class="gi">+                    case wxSCI_LEX_PYTHON:</span>
+<span class="gi">+                        if (b == _T(&#39;:&#39;))</span>
+<span class="gi">+                        {</span>
+<span class="gi">+                            if(control-&gt;GetUseTabs())</span>
+<span class="gi">+                                indent &lt;&lt; _T(&#39;\t&#39;); // 1 tab</span>
+<span class="gi">+                            else</span>
+<span class="gi">+                                indent &lt;&lt; wxString(_T(&#39; &#39;), control-&gt;GetTabWidth()); // n spaces</span>
+<span class="gi">+                        }</span>
+<span class="gi">+                        break;</span>
+<span class="gi">+                 }</span>
+             }
+             control-&gt;InsertText(pos, indent);
+             control-&gt;GotoPos(pos + indent.Length());
+<span class="gh">Index: src/src/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/main.cpp    (revision 3508)</span>
+<span class="gi">+++ src/src/main.cpp    (working copy)</span>
+<span class="gu">@@ -2693,6 +2693,87 @@</span>
+         ed-&gt;GetControl()-&gt;SelectAll();
+ }
+
+<span class="gi">+</span>
+<span class="gi">+wxString GetCommentToken(cbStyledTextCtrl* stc)</span>
+<span class="gi">+{</span>
+<span class="gi">+    wxString comment;</span>
+<span class="gi">+    switch(stc-&gt;GetLexer())</span>
+<span class="gi">+    {</span>
+<span class="gi">+        case wxSCI_LEX_CONTAINER: comment = _T(&quot;&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_NULL: comment = _T(&quot;&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_PYTHON: comment = _T(&quot;#&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_CPP: comment = _T(&quot;//&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_HTML: comment = _T(&quot;&quot;); break; // uses pairs &lt;!-- and --&gt;</span>
+<span class="gi">+        case wxSCI_LEX_XML: comment = _T(&quot;&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_PERL: comment = _T(&quot;#&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_SQL: comment = _T(&quot;--&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_VB: comment = _T(&quot;&#39;&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_PROPERTIES: comment = _T(&quot;#&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_ERRORLIST: comment = _T(&quot;&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_MAKEFILE: comment = _T(&quot;#&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_BATCH: comment = _T(&quot;REM &quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_XCODE: comment = _T(&quot;&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_LATEX: comment = _T(&quot;%&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_LUA: comment = _T(&quot;--&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_DIFF: comment = _T(&quot;&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_CONF: comment = _T(&quot;&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_PASCAL: comment = _T(&quot;//&quot;); break;  //delphi style comments, otherwise use { } or (* and *)</span>
+<span class="gi">+        case wxSCI_LEX_AVE: comment = _T(&quot;&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_ADA: comment = _T(&quot;--&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_LISP: comment = _T(&quot;;&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_RUBY: comment = _T(&quot;#&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_EIFFEL: comment = _T(&quot;--&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_EIFFELKW: comment = _T(&quot;--&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_TCL: comment = _T(&quot;&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_NNCRONTAB: comment = _T(&quot;&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_BULLANT: comment = _T(&quot;&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_VBSCRIPT: comment = _T(&quot;&#39;&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_BAAN: comment = _T(&quot;&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_MATLAB: comment = _T(&quot;%&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_SCRIPTOL: comment = _T(&quot;`&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_ASM: comment = _T(&quot;#&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_CPPNOCASE: comment = _T(&quot;//&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_FORTRAN: comment = _T(&quot;!&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_CSS: comment = _T(&quot;&quot;); break; // uses /* and */</span>
+<span class="gi">+        case wxSCI_LEX_POV: comment = _T(&quot;//@-&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_LOUT: comment = _T(&quot;#&quot;); break;</span>
+<span class="gi">+        case wxSCI_LEX_ESCRIPT: comment = _T(&quot;&quot;); break; //couldn&#39;t find</span>
+<span class="gi">+        case wxSCI_LEX_PS: comment = _T(&quot;%&quot;); break; // not sure</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">dmoore 2007-01-19 17:19:06</div>

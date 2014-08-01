@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,34 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/uservarmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/uservarmanager.cpp    (revision 5986)</span>
+<span class="gi">+++ src/sdk/uservarmanager.cpp    (working copy)</span>
+<span class="gu">@@ -541,7 +541,10 @@</span>
+     for(unsigned int i = 0; i &lt; builtinMembers.GetCount(); ++i)
+     {
+         ((wxTextCtrl*) FindWindow(builtinMembers[i]))-&gt;SetValue(cfg-&gt;Read(path + builtinMembers[i]));
+<span class="gd">-        knownMembers.RemoveAt(knownMembers.Index(builtinMembers[i], false));</span>
+<span class="gi">+        </span>
+<span class="gi">+        int index = knownMembers.Index(builtinMembers[i], false);</span>
+<span class="gi">+        if (index != wxNOT_FOUND)</span>
+<span class="gi">+            knownMembers.RemoveAt(index);</span>
+     }
+ 
+     for(unsigned int i = 0; i &lt; 7; ++i)
+<span class="gu">@@ -608,8 +611,7 @@</span>
+     selVar-&gt;Clear();
+     selVar-&gt;Append(vars);
+ 
+<span class="gd">-</span>
+<span class="gd">-    if(currentVar.IsEmpty())</span>
+<span class="gi">+    if(currentVar.IsEmpty() &amp;&amp; selVar-&gt;GetCount() &gt; 0)</span>
+         currentVar = selVar-&gt;GetString(0);
+ 
+     selSet-&gt;SetStringSelection(currentSet);
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">techy 2009-12-27 18:44:35</div>

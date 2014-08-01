@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,132 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/editorconfigurationdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorconfigurationdlg.cpp    (revision 2487)</span>
+<span class="gi">+++ src/sdk/editorconfigurationdlg.cpp    (working copy)</span>
+<span class="gu">@@ -122,6 +122,7 @@</span>
+        XRCCTRL(*this, &quot;chkWordWrap&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/word_wrap&quot;), false));
+        XRCCTRL(*this, &quot;chkShowLineNumbers&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/show_line_numbers&quot;), true));
+        XRCCTRL(*this, &quot;chkHighlightCaretLine&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/highlight_caret_line&quot;), false));
+<span class="gi">+       XRCCTRL(*this, &quot;chkDynamicColumnWidth&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/dynamic_column_width&quot;), false));</span>
+        XRCCTRL(*this, &quot;spnTabSize&quot;, wxSpinCtrl)-&gt;SetValue(cfg-&gt;ReadInt(_T(&quot;/tab_size&quot;), 4));
+        XRCCTRL(*this, &quot;cmbViewWS&quot;, wxComboBox)-&gt;SetSelection(cfg-&gt;ReadInt(_T(&quot;/view_whitespace&quot;), 0));
+        XRCCTRL(*this, &quot;rbTabText&quot;, wxRadioBox)-&gt;SetSelection(cfg-&gt;ReadBool(_T(&quot;/tab_text_relative&quot;), true) ? 1 : 0);
+<span class="gu">@@ -817,6 +818,7 @@</span>
+         cfg-&gt;Write(_T(&quot;/word_wrap&quot;),             XRCCTRL(*this, &quot;chkWordWrap&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/show_line_numbers&quot;),     XRCCTRL(*this, &quot;chkShowLineNumbers&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/highlight_caret_line&quot;), XRCCTRL(*this, &quot;chkHighlightCaretLine&quot;, wxCheckBox)-&gt;GetValue());
+<span class="gi">+        cfg-&gt;Write(_T(&quot;/dynamic_column_width&quot;), XRCCTRL(*this, &quot;chkDynamicColumnWidth&quot;, wxCheckBox)-&gt;GetValue());</span>
+         cfg-&gt;Write(_T(&quot;/tab_size&quot;),             XRCCTRL(*this, &quot;spnTabSize&quot;, wxSpinCtrl)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/view_whitespace&quot;),      XRCCTRL(*this, &quot;cmbViewWS&quot;, wxComboBox)-&gt;GetSelection());
+         cfg-&gt;Write(_T(&quot;/tab_text_relative&quot;),    XRCCTRL(*this, &quot;rbTabText&quot;, wxRadioBox)-&gt;GetSelection() ? true : false);
+<span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 2487)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -123,7 +123,8 @@</span>
+         m_ensure_consistent_line_ends(true),
+         m_LastMarginMenuLine(-1),
+         m_LastDebugLine(-1),
+<span class="gd">-        m_useByteOrderMark(false)</span>
+<span class="gi">+        m_useByteOrderMark(false),</span>
+<span class="gi">+        m_lineNumbersWidth(0)</span>
+     {
+         m_encoding = wxLocale::GetSystemEncoding();
+     }
+<span class="gu">@@ -248,6 +249,39 @@</span>
+         control-&gt;ConvertEOLs(control-&gt;GetEOLMode());
+     }
+ 
+<span class="gi">+    /** Set line number column width */</span>
+<span class="gi">+    void SetLineNumberColWidth()</span>
+<span class="gi">+    {</span>
+<span class="gi">+        ConfigManager* cfg = Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;));</span>
+<span class="gi">+        int numberWidth = 0;</span>
+<span class="gi">+        int dummy = 0;</span>
+<span class="gi">+</span>
+<span class="gi">+        // Gets the width of a &#39;0&#39; in pixels</span>
+<span class="gi">+        m_pOwner-&gt;GetTextExtent(_T(&quot;0&quot;), &amp;numberWidth, &amp;dummy);</span>
+<span class="gi">+</span>
+<span class="gi">+        int lineNumWidth = 1;</span>
+<span class="gi">+        if(cfg-&gt;ReadBool(_T(&quot;/dynamic_column_width&quot;), false))</span>
+<span class="gi">+        {</span>
+<span class="gi">+            int lineCount = m_pOwner-&gt;m_pControl-&gt;GetLineCount();</span>
+<span class="gi">+</span>
+<span class="gi">+            while (lineCount &gt;= 10)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                lineCount /= 10;</span>
+<span class="gi">+                ++lineNumWidth;</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+<span class="gi">+        else</span>
+<span class="gi">+        {</span>
+<span class="gi">+            lineNumWidth = 6;</span>
+<span class="gi">+        }</span>
+<span class="gi">+</span>
+<span class="gi">+        if (lineNumWidth != m_lineNumbersWidth) {</span>
+<span class="gi">+            int pixels = 5 + lineNumWidth * numberWidth;</span>
+<span class="gi">+            m_pOwner-&gt;m_pControl-&gt;SetMarginWidth(0, pixels);</span>
+<span class="gi">+            m_lineNumbersWidth = lineNumWidth;</span>
+<span class="gi">+        }</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+     //vars
+     bool m_strip_trailing_spaces;
+     bool m_ensure_final_line_end;
+<span class="gu">@@ -259,6 +293,8 @@</span>
+     wxFontEncoding m_encoding;
+     bool m_useByteOrderMark;
+ 
+<span class="gi">+    int m_lineNumbersWidth;</span>
+<span class="gi">+</span>
+ };
+ ////////////////////////////////////////////////////////////////////////////////
+ 
+<span class="gu">@@ -350,8 +386,8 @@</span>
+ //    Manager::Get()-&gt;GetMessageManager()-&gt;DebugLog(_T(&quot;ctor: Filename=%s\nShort=%s&quot;), m_Filename.c_str(), m_Shortname.c_str());
+ 
+     CreateEditor();
+<span class="gi">+    m_IsOK = Open();</span>
+     SetEditorStyle();
+<span class="gd">-    m_IsOK = Open();</span>
+ 
+     // if !m_IsOK then it&#39;s a new file, so set the modified flag ON
+     if (!m_IsOK &amp;&amp; filename.IsEmpty())
+<span class="gu">@@ -579,8 +615,7 @@</span>
+     // line numbering
+     m_pControl-&gt;SetMarginType(0, wxSCI_MARGIN_NUMBER);
+        if (mgr-&gt;ReadBool(_T(&quot;/show_line_numbers&quot;), true))
+<span class="gd">-        m_pControl-&gt;SetMarginWidth(0, mgr-&gt;ReadInt(_T(&quot;/margin/width&quot;), 48));</span>
+<span class="gd">-</span>
+<span class="gi">+        m_pData-&gt;SetLineNumberColWidth();</span>
+     else
+         m_pControl-&gt;SetMarginWidth(0, 0);
+ 
+<span class="gu">@@ -1871,6 +1906,9 @@</span>
+ 
+             line = m_pControl-&gt;MarkerPrevious(line - 1, 1 &lt;&lt; BREAKPOINT_MARKER);
+         }
+<span class="gi">+</span>
+<span class="gi">+        // Adjust line numbers column</span>
+<span class="gi">+        m_pData-&gt;SetLineNumberColWidth();</span>
+     }
+ }
+ 
+<span class="gh">Index: src/sdk/resources/editor_configuration.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/editor_configuration.xrc    (revision 2487)</span>
+<span class="gi">+++ src/sdk/resources/editor_configuration.xrc    (working copy)</span>
+<span class="gu">@@ -319,6 +319,12 @@</span>
+                                 &lt;checked&gt;1&lt;/checked&gt;
+                               &lt;/object&gt;
+                             &lt;/object&gt;
+<span class="gi">+                            &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gi">+</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">game_ender 2006-05-23 04:27:58</div>

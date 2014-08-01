@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,122 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/propgrid/Makefile.am</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/propgrid/Makefile.am    (revision 3747)</span>
+<span class="gi">+++ src/sdk/propgrid/Makefile.am    (working copy)</span>
+<span class="gu">@@ -1,15 +1,18 @@</span>
+ INCLUDES = $(WX_CXXFLAGS) \
+         -I$(top_srcdir)/src/include/propgrid/include
+ 
+<span class="gi">+AM_CPPFLAGS = -DWXMAKINGLIB_PROPGRID -DwxPG_USE_WXMODULE=0 -DwxPG_COMPATIBILITY_1_0_0</span>
+<span class="gi">+</span>
+ noinst_LTLIBRARIES = libpropgrid.la
+ 
+ libpropgrid_la_LDFLAGS = -module -version-info 0:1:0 -shared -no-undefined -avoid-version
+ 
+ libpropgrid_la_SOURCES = ./src/propgrid/advprops.cpp \
+<span class="gd">-            ./src/propgrid/custctrl.cpp \</span>
+<span class="gi">+            ./src/propgrid/extras.cpp \</span>
+             ./src/propgrid/manager.cpp \
+             ./src/propgrid/odcombo.cpp \
+<span class="gd">-            ./src/propgrid/propgrid.cpp</span>
+<span class="gi">+            ./src/propgrid/propgrid.cpp \</span>
+<span class="gi">+             ./src/propgrid/props.cpp</span>
+ 
+ EXTRA_DIST = readme-propgrid.txt \
+             CHANGES-propgrid.txt
+<span class="gh">Index: src/plugins/contrib/wxSmith/wxSmith-unix.cbp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/wxSmith-unix.cbp    (revision 3747)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/wxSmith-unix.cbp    (working copy)</span>
+<span class="gu">@@ -29,6 +29,8 @@</span>
+             &lt;Add option=&quot;-fPIC&quot; /&gt;
+             &lt;Add option=&quot;-DcbDEBUG&quot; /&gt;
+             &lt;Add option=&quot;-DCB_PRECOMP&quot; /&gt;
+<span class="gi">+            &lt;Add option=&quot;-DWXMAKINGLIB_PROPGRID&quot; /&gt;</span>
+<span class="gi">+            &lt;Add option=&quot;-DwxPG_COMPATIBILITY_1_0_0&quot; /&gt;</span>
+             &lt;Add directory=&quot;../../../include&quot; /&gt;
+             &lt;Add directory=&quot;../../../include/wxscintilla/include&quot; /&gt;
+             &lt;Add directory=&quot;../../../include/propgrid/include&quot; /&gt;
+<span class="gh">Index: src/plugins/contrib/wxSmith/wxSmith.cbp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/wxSmith.cbp    (revision 3747)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/wxSmith.cbp    (working copy)</span>
+<span class="gu">@@ -40,6 +40,8 @@</span>
+             &lt;Add option=&quot;-DWX_PRECOMP&quot; /&gt;
+             &lt;Add option=&quot;-DBUILDING_PLUGIN&quot; /&gt;
+             &lt;Add option=&quot;-DwxUSE_UNICODE&quot; /&gt;
+<span class="gi">+            &lt;Add option=&quot;-DWXMAKINGLIB_PROPGRID&quot; /&gt;</span>
+<span class="gi">+            &lt;Add option=&quot;-DwxPG_COMPATIBILITY_1_0_0&quot; /&gt;</span>
+             &lt;Add directory=&quot;$(#WX.lib)\gcc_dll$(WX_CFG)\msw$(WX_SUFFIX)&quot; /&gt;
+             &lt;Add directory=&quot;$(#CB.include)&quot; /&gt;
+             &lt;Add directory=&quot;$(#CB.include)\wxscintilla\include&quot; /&gt;
+<span class="gh">Index: src/plugins/contrib/wxSmith/Makefile.am</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/Makefile.am    (revision 3747)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/Makefile.am    (working copy)</span>
+<span class="gu">@@ -1,5 +1,7 @@</span>
+ SUBDIRS = properties wxwidgets
+ 
+<span class="gi">+AM_CPPFLAGS = -DWXMAKINGLIB_PROPGRID -DwxPG_COMPATIBILITY_1_0_0</span>
+<span class="gi">+</span>
+ INCLUDES = $(WX_CXXFLAGS) \
+         -I$(top_srcdir)/src/include \
+         -I$(top_srcdir)/src/include/wxFlatNotebook/include \
+<span class="gh">Index: src/CodeBlocks-unix.cbp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/CodeBlocks-unix.cbp    (revision 3747)</span>
+<span class="gi">+++ src/CodeBlocks-unix.cbp    (working copy)</span>
+<span class="gu">@@ -120,6 +120,9 @@</span>
+                 &lt;Option projectResourceIncludeDirsRelation=&quot;2&quot; /&gt;
+                 &lt;Compiler&gt;
+                     &lt;Add directory=&quot;include/propgrid/include&quot; /&gt;
+<span class="gi">+                    &lt;Add option=&quot;-DWXMAKINGLIB_PROPGRID&quot; /&gt;</span>
+<span class="gi">+                    &lt;Add option=&quot;-DwxPG_USE_WXMODULE=0&quot; /&gt;</span>
+<span class="gi">+                    &lt;Add option=&quot;-DwxPG_COMPATIBILITY_1_0_0&quot; /&gt;</span>
+                 &lt;/Compiler&gt;
+             &lt;/Target&gt;
+             &lt;Target title=&quot;sdk&quot;&gt;
+<span class="gu">@@ -679,7 +682,7 @@</span>
+         &lt;Unit filename=&quot;include/propgrid/include/wx/propgrid/advprops.h&quot;&gt;
+             &lt;Option target=&quot;sdk&quot; /&gt;
+         &lt;/Unit&gt;
+<span class="gd">-        &lt;Unit filename=&quot;include/propgrid/include/wx/propgrid/custctrl.h&quot;&gt;</span>
+<span class="gi">+        &lt;Unit filename=&quot;include/propgrid/include/wx/propgrid/extras.h&quot;&gt;</span>
+             &lt;Option target=&quot;sdk&quot; /&gt;
+         &lt;/Unit&gt;
+         &lt;Unit filename=&quot;include/propgrid/include/wx/propgrid/manager.h&quot;&gt;
+<span class="gu">@@ -2046,7 +2049,7 @@</span>
+         &lt;Unit filename=&quot;sdk/propgrid/src/propgrid/advprops.cpp&quot;&gt;
+             &lt;Option target=&quot;wxPropertyGrid&quot; /&gt;
+         &lt;/Unit&gt;
+<span class="gd">-        &lt;Unit filename=&quot;sdk/propgrid/src/propgrid/custctrl.cpp&quot;&gt;</span>
+<span class="gi">+        &lt;Unit filename=&quot;sdk/propgrid/src/propgrid/extras.cpp&quot;&gt;</span>
+             &lt;Option target=&quot;wxPropertyGrid&quot; /&gt;
+         &lt;/Unit&gt;
+         &lt;Unit filename=&quot;sdk/propgrid/src/propgrid/manager.cpp&quot;&gt;
+<span class="gu">@@ -2058,6 +2061,9 @@</span>
+         &lt;Unit filename=&quot;sdk/propgrid/src/propgrid/propgrid.cpp&quot;&gt;
+             &lt;Option target=&quot;wxPropertyGrid&quot; /&gt;
+         &lt;/Unit&gt;
+<span class="gi">+        &lt;Unit filename=&quot;sdk/propgrid/src/propgrid/props.cpp&quot;&gt;</span>
+<span class="gi">+            &lt;Option target=&quot;wxPropertyGrid&quot; /&gt;</span>
+<span class="gi">+        &lt;/Unit&gt;</span>
+         &lt;Unit filename=&quot;sdk/replacedlg.cpp&quot;&gt;
+             &lt;Option target=&quot;sdk&quot; /&gt;
+         &lt;/Unit&gt;
+<span class="gh">Index: src/CodeBlocks.cbp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/CodeBlocks.cbp    (revision 3747)</span>
+<span class="gi">+++ src/CodeBlocks.cbp    (working copy)</span>
+<span class="gu">@@ -115,6 +115,11 @@</span>
+                 &lt;Option object_output=&quot;.objs\2.6&quot; /&gt;
+                 &lt;Option type=&quot;2&quot; /&gt;
+                 &lt;Optio
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">stahta01 2007-03-01 17:13:20</div>

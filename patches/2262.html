@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,108 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/src/compilersettingsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/compilersettingsdlg.cpp    (revision 4685)</span>
+<span class="gi">+++ src/src/compilersettingsdlg.cpp    (working copy)</span>
+<span class="gu">@@ -76,6 +76,7 @@</span>
+     }
+     wxCheckListBox* clb = XRCCTRL(*this, &quot;chkBBPlugins&quot;, wxCheckListBox);
+     clb-&gt;Clear();
+<span class="gi">+    clb-&gt;SetMinSize(wxSize(-1, 150));</span>
+     const PluginElementsArray&amp; plugins = Manager::Get()-&gt;GetPluginManager()-&gt;GetPlugins();
+     for (size_t i = 0; i &lt; plugins.GetCount(); ++i)
+     {
+<span class="gh">Index: src/src/resources/app_compiler_settings.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/resources/app_compiler_settings.xrc    (revision 4685)</span>
+<span class="gi">+++ src/src/resources/app_compiler_settings.xrc    (working copy)</span>
+<span class="gu">@@ -32,21 +32,25 @@</span>
+             &lt;object class=&quot;wxPanel&quot; name=&quot;tabBatchBuilds&quot;&gt;
+               &lt;object class=&quot;wxBoxSizer&quot;&gt;
+                 &lt;orient&gt;wxVERTICAL&lt;/orient&gt;
+<span class="gd">-                &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                  &lt;object class=&quot;wxStaticText&quot; name=&quot;&quot;&gt;</span>
+<span class="gd">-                    &lt;label&gt;Extra command-line arguments for batch-builds through shell extensions:&lt;/label&gt;</span>
+<span class="gd">-                  &lt;/object&gt;</span>
+<span class="gd">-                  &lt;flag&gt;wxLEFT|wxEXPAND&lt;/flag&gt;</span>
+<span class="gd">-                  &lt;border&gt;8&lt;/border&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+<span class="gd">-                &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                  &lt;object class=&quot;wxTextCtrl&quot; name=&quot;txtBatchBuildsCmdLine&quot;/&gt;</span>
+<span class="gd">-                  &lt;flag&gt;wxLEFT|wxEXPAND&lt;/flag&gt;</span>
+<span class="gd">-                  &lt;border&gt;8&lt;/border&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+<span class="gd">-                &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                  &lt;object class=&quot;wxStaticText&quot; name=&quot;&quot;&gt;</span>
+<span class="gd">-                    &lt;label&gt;If you right-click a Code::Blocks project/workspace in explorer, you will see</span>
+<span class="gi">+                  &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gi">+                    &lt;option&gt;0&lt;/option&gt;</span>
+<span class="gi">+                      &lt;object class=&quot;wxBoxSizer&quot;&gt;</span>
+<span class="gi">+                        &lt;orient&gt;wxVERTICAL&lt;/orient&gt;</span>
+<span class="gi">+                        &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gi">+                          &lt;object class=&quot;wxStaticText&quot; name=&quot;&quot;&gt;</span>
+<span class="gi">+                            &lt;label&gt;Extra command-line arguments for batch-builds through shell extensions:&lt;/label&gt;</span>
+<span class="gi">+                          &lt;/object&gt;</span>
+<span class="gi">+                          &lt;flag&gt;wxLEFT|wxEXPAND&lt;/flag&gt;</span>
+<span class="gi">+                          &lt;border&gt;8&lt;/border&gt;</span>
+<span class="gi">+                        &lt;/object&gt;</span>
+<span class="gi">+                        &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gi">+                          &lt;object class=&quot;wxTextCtrl&quot; name=&quot;txtBatchBuildsCmdLine&quot;/&gt;</span>
+<span class="gi">+                          &lt;flag&gt;wxLEFT|wxEXPAND&lt;/flag&gt;</span>
+<span class="gi">+                          &lt;border&gt;8&lt;/border&gt;</span>
+<span class="gi">+                        &lt;/object&gt;</span>
+<span class="gi">+                        &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gi">+                          &lt;object class=&quot;wxStaticText&quot; name=&quot;&quot;&gt;</span>
+<span class="gi">+                            &lt;label&gt;If you right-click a Code::Blocks project/workspace in explorer, you will see</span>
+ two extensions: &amp;quot;Build&amp;quot; and &amp;quot;Rebuild (clean)&amp;quot; (windows only).
+ The arguments configured here, are used by those two extensions.
+ You could specify, for example, a profile/personality to use for batch builds.
+<span class="gu">@@ -61,16 +65,20 @@</span>
+ --target: work only on &amp;lt;target&amp;gt; for &amp;quot;Build&amp;quot; or &amp;quot;Rebuild (clean)&amp;quot;
+ --no-batch-window-close: do not auto-close log window when batch build is done
+ --batch-build-notify: show message when batch build is done&lt;/label&gt;
+<span class="gi">+                          &lt;/object&gt;</span>
+<span class="gi">+                          &lt;flag&gt;wxLEFT|wxEXPAND&lt;/flag&gt;</span>
+<span class="gi">+                          &lt;border&gt;8&lt;/border&gt;</span>
+<span class="gi">+                        &lt;/object&gt;</span>
+<span class="gi">+                      &lt;/object&gt;</span>
+                   &lt;/object&gt;
+<span class="gd">-                  &lt;flag&gt;wxLEFT|wxEXPAND&lt;/flag&gt;</span>
+<span class="gd">-                  &lt;border&gt;8&lt;/border&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+                 &lt;object class=&quot;sizeritem&quot;&gt;
+<span class="gi">+                  &lt;option&gt;1&lt;/option&gt;</span>
+                   &lt;object class=&quot;wxStaticBoxSizer&quot;&gt;
+                     &lt;label&gt;Plugins to load in batch-build mode&lt;/label&gt;
+                     &lt;orient&gt;wxVERTICAL&lt;/orient&gt;
+                     &lt;object class=&quot;sizeritem&quot;&gt;
+                       &lt;object class=&quot;wxCheckListBox&quot; name=&quot;chkBBPlugins&quot;&gt;
+<span class="gi">+                        &lt;style&gt;wxLB_NEEDED_SB&lt;/style&gt;</span>
+                         &lt;content/&gt;
+                       &lt;/object&gt;
+                       &lt;option&gt;1&lt;/option&gt;
+<span class="gu">@@ -89,18 +97,24 @@</span>
+                   &lt;flag&gt;wxTOP|wxBOTTOM|wxLEFT|wxGROW&lt;/flag&gt;
+                   &lt;border&gt;8&lt;/border&gt;
+                 &lt;/object&gt;
+<span class="gd">-                &lt;object class=&quot;spacer&quot;&gt;</span>
+<span class="gd">-                  &lt;size&gt;0,0&lt;/size&gt;</span>
+<span class="gd">-                  &lt;option&gt;1&lt;/option&gt;</span>
+<span class="gd">-                  &lt;flag&gt;wxGROW&lt;/flag&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+                 &lt;object class=&quot;sizeritem&quot;&gt;
+<span class="gd">-                  &lt;object class=&quot;wxStaticText&quot;&gt;</span>
+<span class="gd">-                    &lt;label&gt;For more info on profiles/personalities, read the Code::Blocks WiKi at</span>
+<span class="gi">+                  &lt;option&gt;0&lt;/option&gt;</span>
+<span class="gi">+                  &lt;object class=&quot;wxBoxSizer&quot;&gt;</span>
+<span class="gi">+                    &lt;orient&gt;wxVERTICAL&lt;/orient&gt;</span>
+<span class="gi">+                    &lt;object class=&quot;spacer&quot;&gt;</span>
+<span class="gi">+                      &lt;size&gt;0,0&lt;/size&gt;</span>
+<span class="gi">+                      &lt;option&gt;1&lt;/opti</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">artoj 2007-11-29 12:40:43</div>

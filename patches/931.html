@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,127 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 2227)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -89,7 +89,7 @@</span>
+          */
+         const bool is_right_click = event.GetPosition()!=wxDefaultPosition;
+         const wxPoint mp(is_right_click ? event.GetPosition() : wxDefaultPosition);
+<span class="gd">-        reinterpret_cast&lt;cbEditor*&gt;(m_pParent)-&gt;DisplayContextMenu(mp);</span>
+<span class="gi">+        reinterpret_cast&lt;cbEditor*&gt;(m_pParent)-&gt;DisplayContextMenu(mp,mtEditorManager); //pecan 2006/03/22</span>
+     }
+ }
+ 
+<span class="gu">@@ -1441,8 +1441,9 @@</span>
+ }
+ 
+ // Adds menu items to context menu (both before and after loading plugins&#39; items)
+<span class="gd">-void cbEditor::AddToContextMenu(wxMenu* popup,bool noeditor,bool pluginsdone)</span>
+<span class="gi">+void cbEditor::AddToContextMenu(wxMenu* popup,ModuleType type,bool pluginsdone) //pecan 2006/03/22</span>
+ {
+<span class="gi">+    bool noeditor = (type != mtEditorManager);                              //pecan 2006/03/22</span>
+     if(!pluginsdone)
+     {
+         wxMenu *bookmarks = 0, *folding = 0, *editsubmenu = 0, *insert = 0;
+<span class="gu">@@ -1488,8 +1489,9 @@</span>
+     }
+ }
+ 
+<span class="gd">-bool cbEditor::OnBeforeBuildContextMenu(const wxPoint&amp; position, bool noeditor)</span>
+<span class="gi">+bool cbEditor::OnBeforeBuildContextMenu(const wxPoint&amp; position, ModuleType type)   //pecan 2006/03/22</span>
+ {
+<span class="gi">+    bool noeditor = (type != mtEditorManager);                              //pecan 2006/03/22</span>
+     if (!noeditor &amp;&amp; position!=wxDefaultPosition)
+     {
+         // right mouse click inside the editor
+<span class="gu">@@ -1550,10 +1552,10 @@</span>
+     }
+ 
+     // follow default strategy
+<span class="gd">-    return EditorBase::OnBeforeBuildContextMenu(position, noeditor);</span>
+<span class="gi">+    return EditorBase::OnBeforeBuildContextMenu(position, type);        //pecan 2006/03/22</span>
+ }
+ 
+<span class="gd">-void cbEditor::OnAfterBuildContextMenu(bool noeditor)</span>
+<span class="gi">+void cbEditor::OnAfterBuildContextMenu(ModuleType type)                //pecan 2006/03/22</span>
+ {
+     // we don&#39;t care
+ }
+<span class="gh">Index: src/sdk/cbeditor.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.h    (revision 2227)</span>
+<span class="gi">+++ src/sdk/cbeditor.h    (working copy)</span>
+<span class="gu">@@ -194,7 +194,7 @@</span>
+ 
+         // misc. functions
+         virtual wxMenu* CreateContextSubMenu(long id);
+<span class="gd">-        virtual void AddToContextMenu(wxMenu* popup,bool noeditor,bool pluginsdone);</span>
+<span class="gi">+        virtual void AddToContextMenu(wxMenu* popup,ModuleType type,bool pluginsdone);  //pecan 2006/03/22</span>
+ 
+         HighlightLanguage GetLanguage( ) { return m_lang; }
+         void SetLanguage( HighlightLanguage lang = HL_AUTO );
+<span class="gu">@@ -237,8 +237,8 @@</span>
+ 
+         // one event handler for all popup menu entries
+         void OnContextMenuEntry(wxCommandEvent&amp; event);
+<span class="gd">-        bool OnBeforeBuildContextMenu(const wxPoint&amp; position, bool noeditor);</span>
+<span class="gd">-        void OnAfterBuildContextMenu(bool noeditor);</span>
+<span class="gi">+        bool OnBeforeBuildContextMenu(const wxPoint&amp; position, ModuleType type);    //pecan 2006/03/22</span>
+<span class="gi">+        void OnAfterBuildContextMenu(ModuleType type);                              //pecan 2006/03/22</span>
+ 
+         // variables
+         bool m_IsOK;
+<span class="gh">Index: src/sdk/editorbase.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorbase.cpp    (revision 2227)</span>
+<span class="gi">+++ src/sdk/editorbase.cpp    (working copy)</span>
+<span class="gu">@@ -38,22 +38,22 @@</span>
+ const int idSwitchFile1 = wxNewId();
+ const int idSwitchFileMax = editorbase_RegisterId(idSwitchFile1 + EditorMaxSwitchTo -1);
+ 
+<span class="gd">-//const int idCloseMe = wxNewId();</span>
+<span class="gd">-//const int idCloseAll = wxNewId();</span>
+<span class="gd">-//const int idCloseAllOthers = wxNewId();</span>
+<span class="gd">-//const int idSaveMe = wxNewId();</span>
+<span class="gd">-//const int idSaveAll = wxNewId();</span>
+<span class="gi">+const int idCloseMe = wxNewId();</span>
+<span class="gi">+const int idCloseAll = wxNewId();</span>
+<span class="gi">+const int idCloseAllOthers = wxNewId();</span>
+<span class="gi">+const int idSaveMe = wxNewId();</span>
+<span class="gi">+const int idSaveAll = wxNewId();</span>
+ const int idSwitchTo = wxNewId();
+ const int idGoogle = wxNewId();
+ const int idMsdn = wxNewId();
+ 
+ BEGIN_EVENT_TABLE(EditorBase, wxPanel)
+     EVT_MENU_RANGE(idSwitchFile1, idSwitchFileMax,EditorBase::OnContextMenuEntry)
+<span class="gd">-//    EVT_MENU(idCloseMe, EditorBase::OnContextMenuEntry)</span>
+<span class="gd">-//    EVT_MENU(idCloseAll, EditorBase::OnContextMenuEntry)</span>
+<span class="gd">-//    EVT_MENU(idCloseAllOthers, EditorBase::OnContextMenuEntry)</span>
+<span class="gd">-//    EVT_MENU(idSaveMe, EditorBase::OnContextMenuEntry)</span>
+<span class="gd">-//    EVT_MENU(idSaveAll, EditorBase::OnContextMenuEntry)</span>
+<span class="gi">+    EVT_MENU(idCloseMe, EditorBase::OnContextMenuEntry)</span>
+<span class="gi">+    EVT_MENU(idCloseAll, EditorBase::OnContextMenuEntry)</span>
+<span class="gi">+    EVT_MENU(idCloseAllOthers, EditorBase::OnContextMenuEntry)</span>
+<span class="gi">+    EVT_MENU(idSaveMe, EditorBase::OnContextMenuEntry)</span>
+<span class="gi">+    EVT_MENU(idSaveAll, EditorBase::OnContextMenuEntry)</span>
+     EVT_MENU(idGoogle, EditorBase::OnContextMenuEntry)
+     EVT_MENU(idMsdn, EditorBase::OnContextMenuEntry)
+ END_EVENT_TABLE()
+<span class="gu">@@ -178,24 +178,25 @@</span>
+     return menu;
+ }
+ 
+<span class="gd">-void EditorBase::BasicAddToContextMenu(wxMenu* popup,bool noeditor)</span>
+<span class="gi">+void EditorBase::BasicAddToContextMenu(wxMenu* popup,ModuleType type)   //pecan 2006/03/22</span>
+ {
+<span class="gd">-    //NOTE: removed these, since they &#39;ve been added in eidtor tabs context menu</span>
+<span class="gi">+    bool noeditor = (type != mtEditorM</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">pecan 2006-03-16 23:47:19</div>

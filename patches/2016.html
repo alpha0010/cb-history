@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,142 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/CodeBlocks.cbp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/CodeBlocks.cbp    (revision 3975)</span>
+<span class="gi">+++ src/CodeBlocks.cbp    (working copy)</span>
+<span class="gu">@@ -1198,6 +1198,12 @@</span>
+         &lt;Unit filename=&quot;plugins\compilergcc\compilerGNUARM.h&quot;&gt;
+             &lt;Option target=&quot;Compiler&quot; /&gt;
+         &lt;/Unit&gt;
+<span class="gi">+        &lt;Unit filename=&quot;plugins\compilergcc\compilerGNUAVR.cpp&quot;&gt;</span>
+<span class="gi">+            &lt;Option target=&quot;Compiler&quot; /&gt;</span>
+<span class="gi">+        &lt;/Unit&gt;</span>
+<span class="gi">+        &lt;Unit filename=&quot;plugins\compilergcc\compilerGNUAVR.h&quot;&gt;</span>
+<span class="gi">+            &lt;Option target=&quot;Compiler&quot; /&gt;</span>
+<span class="gi">+        &lt;/Unit&gt;</span>
+         &lt;Unit filename=&quot;plugins\compilergcc\compilerICC.cpp&quot;&gt;
+             &lt;Option target=&quot;Compiler&quot; /&gt;
+         &lt;/Unit&gt;
+<span class="gh">Index: src/plugins/compilergcc/compilergcc.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilergcc.cpp    (revision 3975)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilergcc.cpp    (working copy)</span>
+<span class="gu">@@ -68,6 +68,7 @@</span>
+     #include &quot;compilerGDC.h&quot;
+     #include &quot;compilerDMD.h&quot;
+     #include &quot;compilerGNUARM.h&quot;
+<span class="gi">+    #include &quot;compilerGNUAVR.h&quot;</span>
+     #include &quot;compilerCYGWIN.h&quot;
+ #endif
+ #ifdef __WXMAC__
+<span class="gu">@@ -318,6 +319,7 @@</span>
+     CompilerFactory::RegisterCompiler(new CompilerDMC);
+     CompilerFactory::RegisterCompiler(new CompilerOW);
+     CompilerFactory::RegisterCompiler(new CompilerGNUARM);
+<span class="gi">+    CompilerFactory::RegisterCompiler(new CompilerGNUAVR);</span>
+     CompilerFactory::RegisterCompiler(new CompilerCYGWIN);
+ #endif
+     CompilerFactory::RegisterCompiler(new CompilerICC);
+<span class="gh">Index: src/plugins/compilergcc/compilerGNUAVR.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilerGNUAVR.cpp    (revision 0)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilerGNUAVR.cpp    (revision 0)</span>
+<span class="gu">@@ -0,0 +1,213 @@</span>
+<span class="gi">+#include &lt;sdk.h&gt;</span>
+<span class="gi">+#include &lt;wx/intl.h&gt;</span>
+<span class="gi">+#include &lt;wx/regex.h&gt;</span>
+<span class="gi">+#include &lt;wx/config.h&gt;</span>
+<span class="gi">+#include &lt;wx/fileconf.h&gt;</span>
+<span class="gi">+#include &lt;wx/msgdlg.h&gt;</span>
+<span class="gi">+#include &lt;wx/log.h&gt;</span>
+<span class="gi">+#include &quot;manager.h&quot;</span>
+<span class="gi">+#include &quot;messagemanager.h&quot;</span>
+<span class="gi">+#include &quot;configmanager.h&quot;</span>
+<span class="gi">+#include &quot;compilerGNUAVR.h&quot;</span>
+<span class="gi">+</span>
+<span class="gi">+CompilerGNUAVR::CompilerGNUAVR()</span>
+<span class="gi">+    : Compiler(_(&quot;GNU AVR GCC Compiler&quot;),_T(&quot;avr-gcc&quot;))</span>
+<span class="gi">+{</span>
+<span class="gi">+    Reset();</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+CompilerGNUAVR::~CompilerGNUAVR()</span>
+<span class="gi">+{</span>
+<span class="gi">+    //dtor</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+Compiler * CompilerGNUAVR::CreateCopy()</span>
+<span class="gi">+{</span>
+<span class="gi">+    Compiler* c = new CompilerGNUAVR(*this);</span>
+<span class="gi">+    c-&gt;SetExtraPaths(m_ExtraPaths); // wxArrayString doesn&#39;t seem to be copied with the default copy ctor...</span>
+<span class="gi">+    return c;</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+void CompilerGNUAVR::Reset()</span>
+<span class="gi">+{</span>
+<span class="gi">+#ifdef __WXMSW__</span>
+<span class="gi">+    m_Programs.C = _T(&quot;avr-gcc.exe&quot;);</span>
+<span class="gi">+    m_Programs.CPP = _T(&quot;avr-g++.exe&quot;);</span>
+<span class="gi">+    m_Programs.LD = _T(&quot;avr-g++.exe&quot;);</span>
+<span class="gi">+    m_Programs.DBG = _T(&quot;avr-gdb.exe&quot;);</span>
+<span class="gi">+    m_Programs.LIB = _T(&quot;avr-ar.exe&quot;);</span>
+<span class="gi">+    m_Programs.WINDRES = _T(&quot;&quot;);</span>
+<span class="gi">+    m_Programs.MAKE = _T(&quot;make.exe&quot;);</span>
+<span class="gi">+#else</span>
+<span class="gi">+    m_Programs.C = _T(&quot;avr-gcc&quot;);</span>
+<span class="gi">+    m_Programs.CPP = _T(&quot;avr-g++&quot;);</span>
+<span class="gi">+    m_Programs.LD = _T(&quot;avr-g++&quot;);</span>
+<span class="gi">+    m_Programs.DBG = _T(&quot;avr-gdb&quot;);</span>
+<span class="gi">+    m_Programs.LIB = _T(&quot;avr-ar&quot;);</span>
+<span class="gi">+    m_Programs.WINDRES = _T(&quot;&quot;);</span>
+<span class="gi">+    m_Programs.MAKE = _T(&quot;make&quot;);</span>
+<span class="gi">+#endif</span>
+<span class="gi">+    m_Switches.includeDirs = _T(&quot;-I&quot;);</span>
+<span class="gi">+    m_Switches.libDirs = _T(&quot;-L&quot;);</span>
+<span class="gi">+    m_Switches.linkLibs = _T(&quot;-l&quot;);</span>
+<span class="gi">+    m_Switches.defines = _T(&quot;-D&quot;);</span>
+<span class="gi">+    m_Switches.genericSwitch = _T(&quot;-&quot;);</span>
+<span class="gi">+    m_Switches.objectExtension = _T(&quot;o&quot;);</span>
+<span class="gi">+    m_Switches.needDependencies = true;</span>
+<span class="gi">+    m_Switches.forceCompilerUseQuotes = false;</span>
+<span class="gi">+    m_Switches.forceLinkerUseQuotes = false;</span>
+<span class="gi">+    m_Switches.logging = clogSimple;</span>
+<span class="gi">+    m_Switches.libPrefix = _T(&quot;lib&quot;);</span>
+<span class="gi">+    m_Switches.libExtension = _T(&quot;a&quot;);</span>
+<span class="gi">+    m_Switches.linkerNeedsLibPrefix = false;</span>
+<span class="gi">+    m_Switches.linkerNeedsLibExtension = false;</span>
+<span class="gi">+    m_Switches.buildMethod = cbmDirect;</span>
+<span class="gi">+</span>
+<span class="gi">+    // Summary of GCC options: http://gcc.gnu.org/onlinedocs/gcc/Option-Summary.html</span>
+<span class="gi">+</span>
+<span class="gi">+    m_Options.ClearOptions();</span>
+<span class="gi">+    m_Options.AddOption(_(&quot;Produce debugging symbols&quot;),</span>
+<span class="gi">+                _T(&quot;-g&quot;),</span>
+<span class="gi">+                _(&quot;Debugging&quot;),</span>
+<span class="gi">+                _T(&quot;&quot;),</span>
+<span class="gi">+                true,</span>
+<span class="gi">+                _T(&quot;-O -O1 -O2 -O3 -Os&quot;),</span>
+<span class="gi">+                _(&quot;You have optimizations enabled. This is Not A Good Thing(tm) when producing debugging symbols...&quot;));</span>
+<span class="gi">+#ifdef __WXMSW__</span>
+<span class="gi">+    #define GPROF_LINK _T(&quot;-pg -lgmon&quot;)</span>
+<span class="gi">+#else</span>
+<span class="gi">+    #define GPROF_LINK _T(&quot;-pg&quot;)</span>
+<span class="gi">+#endif</span>
+<span class="gi">+    m_Options.AddOption(_(&quot;Profile code when executed&quot;), _T(&quot;-pg&quot;), _(&quot;Profiling&quot;), GPROF_LINK);</span>
+<span class="gi">+</span>
+<span class="gi">+    wxString category = _(&quot;Warnings&quot;);</span>
+<span class="gi">+</span>
+<span class="gi">+    // warnings</span>
+<span class="gi">+    m_Options.AddOption(_(&quot;In C mode, support all ISO C90 programs. In C++ mode, remove GNU extensions that conflict with ISO C++&quot;), _T(&quot;-ansi&quot;), category);</span>
+<span class="gi">+    m_Options.AddOption(_(&quot;Enable all compiler warnings (overrides every other setting)&quot;), _T(&quot;-Wall&quot;), category);</span>
+<span class="gi">+    m_Options.AddOption(_(&quot;Enable standard compiler warnings&quot;), _T(&quot;-W&quot;), category);</span>
+<span class="gi">+    m_Options.AddOption(_(&quot;Stop compiling after first error&quot;), _T(&quot;-Wfatal-errors&quot;), category);</span>
+<span class="gi">+    m_Options.AddOption(_(&quot;Inhibit all warning messages&quot;), _T(&quot;-w&quot;), category);</span>
+<span class="gi">+    m_Options.AddOption(_(&quot;Enable warnings demanded by strict ISO C and ISO C++&quot;), _T(&quot;-pedantic&quot;), c</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mandrav 2007-05-22 09:33:21</div>

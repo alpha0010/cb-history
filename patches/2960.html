@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,139 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/main.cpp    (revision 6196)</span>
+<span class="gi">+++ src/main.cpp    (working copy)</span>
+<span class="gu">@@ -240,6 +240,8 @@</span>
+ int idStartHerePageLink = wxNewId();
+ int idStartHerePageVarSubst = wxNewId();
+ 
+<span class="gi">+int idHighlightButton = wxNewId();</span>
+<span class="gi">+</span>
+ BEGIN_EVENT_TABLE(MainFrame, wxFrame)
+     EVT_ERASE_BACKGROUND(MainFrame::OnEraseBackground)
+     EVT_SIZE(MainFrame::OnSize)
+<span class="gu">@@ -448,6 +450,7 @@</span>
+ 
+     EVT_NOTEBOOK_PAGE_CHANGED(ID_NBEditorManager, MainFrame::OnPageChanged)
+ 
+<span class="gi">+    EVT_BUTTON(idHighlightButton, MainFrame::OnHighlightMenu)</span>
+     /// CloseFullScreen event handling
+     EVT_BUTTON( idCloseFullScreen, MainFrame::OnToggleFullScreen )
+ 
+<span class="gu">@@ -1648,6 +1651,7 @@</span>
+ 
+     width[num++] = -1; // main field
+ //    width[num++] = 128; // progress bar
+<span class="gi">+    dc.GetTextExtent(_(&quot; Nassi Shneiderman &quot;), &amp;width[num++], &amp;h);</span>
+     dc.GetTextExtent(_(&quot; WINDOWS-1252 &quot;), &amp;width[num++], &amp;h);
+     dc.GetTextExtent(_(&quot; Line 12345, Column 123 &quot;), &amp;width[num++], &amp;h);
+     dc.GetTextExtent(_(&quot; Overwrite &quot;),  &amp;width[num++], &amp;h);
+<span class="gu">@@ -1657,7 +1661,10 @@</span>
+ 
+     CreateStatusBar(num);
+     SetStatusWidths(num, width);
+<span class="gd">-</span>
+<span class="gi">+    wxRect rect;</span>
+<span class="gi">+    GetStatusBar()-&gt;GetFieldRect(1, rect);</span>
+<span class="gi">+    m_pHighlightButton = new wxButton(GetStatusBar(),idHighlightButton,_(&quot;&quot;),</span>
+<span class="gi">+                                      rect.GetPosition(),rect.GetSize(),wxNO_BORDER|wxBU_LEFT);</span>
+     // here for later usage
+ //    m_pProgressBar = new wxGauge(GetStatusBar(), -1, 100);
+ #endif // wxUSE_STATUSBAR
+<span class="gu">@@ -1677,6 +1684,11 @@</span>
+         wxString msg;
+         msg.Printf(_(&quot;Line %d, Column %d&quot;), ed-&gt;GetControl()-&gt;GetCurrentLine() + 1, ed-&gt;GetControl()-&gt;GetColumn(pos) + 1);
+         SetStatusText(ed-&gt;GetFilename(), panel++);                    //tiwag 050917
+<span class="gi">+        // Highlightbutton</span>
+<span class="gi">+        EditorColourSet* theme = Manager::Get()-&gt;GetEditorManager()-&gt;GetColourSet();</span>
+<span class="gi">+        m_pHighlightButton-&gt;SetLabel(theme-&gt;GetLanguageName(ed-&gt;GetLanguage()));</span>
+<span class="gi">+        panel++;</span>
+<span class="gi">+</span>
+         SetStatusText(ed-&gt;GetEncodingName(), panel++);
+         SetStatusText(msg, panel++);
+         SetStatusText(ed-&gt;GetControl()-&gt;GetOvertype() ? _(&quot;Overwrite&quot;) : _(&quot;Insert&quot;), panel++);
+<span class="gu">@@ -1692,6 +1704,8 @@</span>
+     {
+         int panel = 0;
+         SetStatusText(_(&quot;Welcome to &quot;) + appglobals::AppName + _T(&quot;!&quot;), panel++);
+<span class="gi">+        m_pHighlightButton-&gt;SetLabel(wxEmptyString);</span>
+<span class="gi">+        panel++;</span>
+         SetStatusText(wxEmptyString, panel++);
+         SetStatusText(wxEmptyString, panel++);
+         SetStatusText(wxEmptyString, panel++);
+<span class="gu">@@ -2749,6 +2763,13 @@</span>
+         m_pProgressBar-&gt;SetSize(r.GetSize());
+     }
+ 
+<span class="gi">+    if(m_pHighlightButton)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        wxRect rect;</span>
+<span class="gi">+        GetStatusBar()-&gt;GetFieldRect(1, rect);</span>
+<span class="gi">+        m_pHighlightButton-&gt;SetPosition(rect.GetPosition());</span>
+<span class="gi">+        m_pHighlightButton-&gt;SetSize(rect.GetSize());</span>
+<span class="gi">+    }</span>
+     // for flicker-free display
+     event.Skip();
+ }
+<span class="gu">@@ -3417,6 +3438,7 @@</span>
+                     #endif
+                 }
+             }
+<span class="gi">+            m_pHighlightButton-&gt;SetLabel(theme-&gt;GetLanguageName(lang));</span>
+             ed-&gt;SetLanguage(lang);
+         }
+     }
+<span class="gu">@@ -4382,6 +4404,44 @@</span>
+     }
+ }
+ 
+<span class="gi">+void MainFrame::OnHighlightMenu(wxCommandEvent&amp; event)</span>
+<span class="gi">+{</span>
+<span class="gi">+  cbEditor* ed = Manager::Get()-&gt;GetEditorManager()-&gt;GetBuiltinActiveEditor();</span>
+<span class="gi">+  if (ed)</span>
+<span class="gi">+  {</span>
+<span class="gi">+      EditorColourSet* theme = Manager::Get()-&gt;GetEditorManager()-&gt;GetColourSet();</span>
+<span class="gi">+      if (theme)</span>
+<span class="gi">+      {</span>
+<span class="gi">+          wxMenu mm;</span>
+<span class="gi">+          wxMenu* hl = 0;</span>
+<span class="gi">+          GetMenuBar()-&gt;FindItem(idEditHighlightModeText, &amp;hl);</span>
+<span class="gi">+          wxArrayString langs = theme-&gt;GetAllHighlightLanguages();</span>
+<span class="gi">+</span>
+<span class="gi">+          mm.AppendRadioItem(idEditHighlightModeText, _(&quot;Plain text&quot;),</span>
+<span class="gi">+                             _(&quot;Switch highlighting mode for current document to \&quot;Plain text\&quot;&quot;));</span>
+<span class="gi">+          Connect(hl-&gt;FindItem(_(&quot;Plain text&quot;)), -1, wxEVT_COMMAND_MENU_SELECTED,</span>
+<span class="gi">+                      (wxObjectEventFunction) (wxEventFunction) (wxCommandEventFunction)</span>
+<span class="gi">+                      &amp;MainFrame::OnEditHighlightMode);</span>
+<span class="gi">+          for (size_t i = 0; i &lt; langs.GetCount(); ++i)</span>
+<span class="gi">+          {</span>
+<span class="gi">+              if (i &gt; 0 &amp;&amp; !(i % 20))</span>
+<span class="gi">+                  mm.Break(); // break into columns every 20 items</span>
+<span class="gi">+              mm.AppendRadioItem(hl-&gt;FindItem(langs[i]), langs[i],</span>
+<span class="gi">+                          wxString::Format(_(&quot;Switch highlighting mode for current document to \&quot;%s\&quot;&quot;), langs[i].c_str()));</span>
+<span class="gi">+              Connect(hl-&gt;FindItem(langs[i]), -1, wxEVT_COMMAND_MENU_SELECTED,</span>
+<span class="gi">+                      (wxObjectEventFunction) (wxEventFunction) (wxCommandEventFunction)</span>
+<span class="gi">+                      &amp;MainFrame::OnEditHighlightMode);</span>
+<span class="gi">+          }</span>
+<span class="gi">+          int checkeditem = -1;</span>
+<span class="gi">+          checkeditem = hl-&gt;FindItem(theme-&gt;GetLanguageName(ed-&gt;GetLanguage()));</span>
+<span class="gi">+          mm.Check(checkeditem,true);</span>
+<span class="gi">+          wxRect rect;</span>
+<span class="gi">+          GetStatusBar()-&gt;GetFieldRect(1, rect);</span>
+<span class="gi">+          PopupMenu(&amp;mm, GetStatusBar()-&gt;GetPosition()+rect.GetPosition());</span>
+<span class="gi">+      }</span>
+<span class="gi">+  }</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ void MainFrame::StartupDone()
+ {
+     m_StartupDone = true;
+<span class="gh">Index: src/ma</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

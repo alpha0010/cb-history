@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,211 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: search.c</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- search.c    (Revision 2879)</span>
+<span class="gi">+++ search.c    (Arbeitskopie)</span>
+<span class="gu">@@ -8,6 +8,9 @@</span>
+  * are clearly marked.
+  *
+  * ALL WARRANTIES ARE HEREBY DISCLAIMED.
+<span class="gi">+ * </span>
+<span class="gi">+ * Modifications:</span>
+<span class="gi">+ * - D support (search for &quot;D support&quot;)</span>
+  */
+ #include &quot;jam.h&quot;
+ #include &quot;hash.h&quot;
+<span class="gu">@@ -39,6 +42,12 @@</span>
+     char buf3[MAXJPATH];
+     int system = (_header[0] == &#39;&lt;&#39;);
+     LIST *list = searchdirs-&gt;next;
+<span class="gi">+    </span>
+<span class="gi">+    //D support</span>
+<span class="gi">+    int dMode=0;</span>
+<span class="gi">+    int fnlen=strlen(source);</span>
+<span class="gi">+    if(source[fnlen-2]==&#39;.&#39; &amp;&amp; source[fnlen-1]==&#39;d&#39;)</span>
+<span class="gi">+        dMode=1;</span>
+ 
+     /* &lt;foo.h&gt; --&gt; foo.h */
+     strcpy(header, _header + 1);
+<span class="gu">@@ -131,33 +140,37 @@</span>
+             return newstr(buf);
+     }
+ 
+<span class="gd">-#if 1</span>
+<span class="gi">+    if(!dMode)</span>
+<span class="gi">+    {</span>
+ #ifdef SEARCH_OPTIM
+<span class="gd">-    // remember that this file could not be found</span>
+<span class="gd">-    {</span>
+<span class="gd">-        char key[MAXJPATH] = &quot;&quot;;</span>
+<span class="gd">-        SEARCH search, *s = &amp;search;</span>
+<span class="gd">-        if (!system)</span>
+<span class="gi">+        // remember that this file could not be found</span>
+         {
+<span class="gd">-            strcpy(key, buf3);</span>
+<span class="gd">-            strcat(key, &quot;,&quot;);</span>
+<span class="gi">+            char key[MAXJPATH] = &quot;&quot;;</span>
+<span class="gi">+            SEARCH search, *s = &amp;search;</span>
+<span class="gi">+            if (!system)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                strcpy(key, buf3);</span>
+<span class="gi">+                strcat(key, &quot;,&quot;);</span>
+<span class="gi">+            }</span>
+<span class="gi">+            strcat(key, _header);</span>
+<span class="gi">+            s-&gt;key = newstr(key);</span>
+<span class="gi">+            s-&gt;time = 0;</span>
+<span class="gi">+            s-&gt;path = NULL;</span>
+<span class="gi">+            (void) hashenter(searchhash, (HASHDATA **)&amp;s);</span>
+         }
+<span class="gd">-        strcat(key, _header);</span>
+<span class="gd">-        s-&gt;key = newstr(key);</span>
+<span class="gd">-        s-&gt;time = 0;</span>
+<span class="gd">-        s-&gt;path = NULL;</span>
+<span class="gd">-        (void) hashenter(searchhash, (HASHDATA **)&amp;s);</span>
+<span class="gd">-    }</span>
+ #endif
+ 
+<span class="gd">-    /* C compilers do *not* look in the current directory for #include files */</span>
+<span class="gd">-    *time = 0;</span>
+<span class="gd">-    return NULL;</span>
+<span class="gd">-#else</span>
+<span class="gd">-    f-&gt;f_root.ptr = 0;</span>
+<span class="gd">-    f-&gt;f_root.len = 0;</span>
+<span class="gi">+        /* C compilers do *not* look in the current directory for #include files */</span>
+<span class="gi">+        *time = 0;</span>
+<span class="gi">+        return NULL;</span>
+<span class="gi">+    }</span>
+<span class="gi">+    //D support (look in current directory)</span>
+<span class="gi">+    else</span>
+<span class="gi">+    {</span>
+<span class="gi">+        f-&gt;f_root.ptr = 0;</span>
+<span class="gi">+        f-&gt;f_root.len = 0;</span>
+ 
+<span class="gd">-    path_build( f, buf, 1 );</span>
+<span class="gi">+        path_build( f, buf, 1 );</span>
+ 
+ {
+ PATHSPLIT f;
+<span class="gu">@@ -168,13 +181,54 @@</span>
+ strcpy(buf, buf2);
+ }
+ 
+<span class="gd">-    if( DEBUG_SEARCH )</span>
+<span class="gd">-        printf( &quot;search %s: %s\n&quot;, _header, buf );</span>
+<span class="gi">+        if( DEBUG_SEARCH )</span>
+<span class="gi">+            printf( &quot;search %s: %s\n&quot;, _header, buf );</span>
+ 
+<span class="gd">-    timestamp( buf, time );</span>
+<span class="gi">+        timestamp( buf, time );</span>
+ 
+<span class="gd">-    return newstr( buf );</span>
+<span class="gi">+</span>
+<span class="gi">+#ifdef SEARCH_OPTIM</span>
+<span class="gi">+        if (*time)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            char key[MAXJPATH] = &quot;&quot;;</span>
+<span class="gi">+            SEARCH search, *s = &amp;search;</span>
+<span class="gi">+            if (!system)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                strcpy(key, buf3);</span>
+<span class="gi">+                strcat(key, &quot;,&quot;);</span>
+<span class="gi">+            }</span>
+<span class="gi">+            strcat(key, _header);</span>
+<span class="gi">+            s-&gt;key = newstr(key);</span>
+<span class="gi">+            s-&gt;time = *time;</span>
+<span class="gi">+            s-&gt;path = newstr(buf);</span>
+<span class="gi">+            (void) hashenter(searchhash, (HASHDATA **)&amp;s);</span>
+<span class="gi">+        }</span>
+ #endif
+<span class="gi">+</span>
+<span class="gi">+        if (*time)</span>
+<span class="gi">+            return newstr(buf);</span>
+<span class="gi">+        </span>
+<span class="gi">+#ifdef SEARCH_OPTIM</span>
+<span class="gi">+        // remember that this file could not be found</span>
+<span class="gi">+        {</span>
+<span class="gi">+            char key[MAXJPATH] = &quot;&quot;;</span>
+<span class="gi">+            SEARCH search, *s = &amp;search;</span>
+<span class="gi">+            if (!system)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                strcpy(key, buf3);</span>
+<span class="gi">+                strcat(key, &quot;,&quot;);</span>
+<span class="gi">+            }</span>
+<span class="gi">+            strcat(key, _header);</span>
+<span class="gi">+            s-&gt;key = newstr(key);</span>
+<span class="gi">+            s-&gt;time = 0;</span>
+<span class="gi">+            s-&gt;path = NULL;</span>
+<span class="gi">+            (void) hashenter(searchhash, (HASHDATA **)&amp;s);</span>
+<span class="gi">+        }</span>
+<span class="gi">+#endif</span>
+<span class="gi">+</span>
+<span class="gi">+        *time = 0;</span>
+<span class="gi">+        return NULL;</span>
+<span class="gi">+    }</span>
+ }
+ 
+ void search_adddir(const char *path)
+<span class="gh">Index: headers.c</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- headers.c    (Revision 2879)</span>
+<span class="gi">+++ headers.c    (Arbeitskopie)</span>
+<span class="gu">@@ -8,6 +8,12 @@</span>
+  * are clearly marked.
+  *
+  * ALL WARRANTIES ARE HEREBY DISCLAIMED.
+<span class="gi">+ * </span>
+<span class="gi">+ * Modifications:</span>
+<span class="gi">+ * - D support (search for &quot;D support&quot;)</span>
+<span class="gi">+ * - Depth level counting (needed for D support)</span>
+<span class="gi">+ * - Simple optimization by avoiding regexec most of the time</span>
+<span class="gi">+ * - Special cache keys for source files (needed for D support)</span>
+  */
+ #include &quot;jam.h&quot;
+ #include &quot;alloc.h&quot;
+<span class="gu">@@ -25,13 +31,26 @@</span>
+ 
+ struct hash *headerhash = 0;
+ static regexp *hdrre = 0;
+<span class="gi">+//D support</span>
+<span class="gi">+static regexp *dimpre = 0;</span>
+ 
+<span class="gd">-LIST *headers1(const char *file)</span>
+<span class="gi">+LIST *headers1(const char *file, int depth)</span>
+ {
+     FILE *f;
+     regexp *re;
+     LIST *result = 0;
+     char buf[1024];
+<span class="gi">+    int fnlen=strlen(file);</span>
+<span class="gi">+    </span>
+<span class="gi">+    //D support</span>
+<span class="gi">+    int dMode=0;</span>
+<span class="gi">+    int dState=0;</span>
+<span class="gi">+    if(file[fnlen-2] == &#39;.&#39; &amp;&amp; file[fnlen-1] == &#39;d&#39;)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        dMode=1;</span>
+<span class="gi">+        if( DEBUG_HEADER )</span>
+<span class="gi">+            printf(&quot;D file detected\n&quot;);</span>
+<span class="gi">+    }</span>
+ 
+     if (!(f = fopen(file, &quot;r&quot;)))
+         return result;
+<span class="gu">@@ -42,21 +61,91 @@</span>
+     if (!hdrre)
+         hdrre = my_regcomp(&quot;^[     ]*#[     ]*include[     ]*([&lt;\&quot;])([^\&quot;&gt;]*)([\&quot;&gt;]).*$&quot;);
+     re = hdrre;
+<span class="gd">-</span>
+<span class="gi">+    </span>
+<span class="gi">+    //D support</span>
+<span class="gi">+    if(dMode)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        if(!dimpre)</span>
+<span class="gi">+            dimpre = my_regcomp(</span>
+<span class="gi">+                &quot;^.*import[ \t]*([[A-Za-z_ \t]+=[ \t]*</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">jthedering 2006-08-20 17:51:48</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,140 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: compilergcc.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- compilergcc.cpp    (revision 9131)</span>
+<span class="gi">+++ compilergcc.cpp    (working copy)</span>
+<span class="gu">@@ -859,7 +859,8 @@</span>
+         CompilerFactory::RegisterCompiler(new CompilerLCC);
+         CompilerFactory::RegisterCompiler(new CompilerKeilC51);
+         CompilerFactory::RegisterCompiler(new CompilerKeilCX51);
+<span class="gd">-        CompilerFactory::RegisterCompiler(new CompilerIAR8051);</span>
+<span class="gi">+        CompilerFactory::RegisterCompiler(new CompilerIAR(wxT(&quot;8051&quot;)));</span>
+<span class="gi">+        CompilerFactory::RegisterCompiler(new CompilerIAR(wxT(&quot;ARM&quot;)));</span>
+     }
+     CompilerFactory::RegisterCompiler(new CompilerICC);
+     CompilerFactory::RegisterCompiler(new CompilerGDC);
+<span class="gh">Index: compilerIAR.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- compilerIAR.cpp    (revision 9131)</span>
+<span class="gi">+++ compilerIAR.cpp    (working copy)</span>
+<span class="gu">@@ -21,24 +21,25 @@</span>
+     #include &lt;wx/msw/registry.h&gt;
+ #endif
+ 
+<span class="gd">-CompilerIAR8051::CompilerIAR8051()</span>
+<span class="gd">-    : Compiler(_(&quot;IAR 8051 Compiler&quot;), _T(&quot;iar8051&quot;))</span>
+<span class="gi">+CompilerIAR::CompilerIAR(wxString arch)</span>
+<span class="gi">+    : Compiler(_(&quot;IAR &quot;) + arch + _(&quot; Compiler&quot;), _T(&quot;iar&quot;) + arch)</span>
+ {
+     m_Weight = 75;
+<span class="gi">+    m_Arch = arch;</span>
+     Reset();
+ }
+ 
+<span class="gd">-CompilerIAR8051::~CompilerIAR8051()</span>
+<span class="gi">+CompilerIAR::~CompilerIAR()</span>
+ {
+     //dtor
+ }
+ 
+<span class="gd">-Compiler * CompilerIAR8051::CreateCopy()</span>
+<span class="gi">+Compiler * CompilerIAR::CreateCopy()</span>
+ {
+<span class="gd">-    return (new CompilerIAR8051(*this));</span>
+<span class="gi">+    return (new CompilerIAR(*this));</span>
+ }
+ 
+<span class="gd">-AutoDetectResult CompilerIAR8051::AutoDetectInstallationDir()</span>
+<span class="gi">+AutoDetectResult CompilerIAR::AutoDetectInstallationDir()</span>
+ {
+     if (platform::windows)
+     {
+<span class="gu">@@ -69,9 +70,10 @@</span>
+             }
+         }
+ #endif // __WXMSW__
+<span class="gi">+        wxString env_path = wxGetenv(_T(&quot;ProgramFiles(x86)&quot;));</span>
+         if (m_MasterPath.IsEmpty())
+         {
+<span class="gd">-            wxDir dir(wxT(&quot;C:\\Program Files\\IAR Systems&quot;));</span>
+<span class="gi">+            wxDir dir(env_path + wxT(&quot;\\IAR Systems&quot;));</span>
+             if (wxDirExists(dir.GetName()) &amp;&amp; dir.IsOpened())
+             {
+                 wxString filename;
+<span class="gu">@@ -81,11 +83,11 @@</span>
+                     if ( filename.StartsWith(wxT(&quot;Embedded Workbench&quot;)) )
+                     {
+                         wxFileName fn(dir.GetName() + wxFILE_SEP_PATH + filename + wxFILE_SEP_PATH +
+<span class="gd">-                                      wxT(&quot;8051&quot;) + wxFILE_SEP_PATH + wxT(&quot;bin&quot;) + wxFILE_SEP_PATH + m_Programs.C);</span>
+<span class="gi">+                                      m_Arch + wxFILE_SEP_PATH + wxT(&quot;bin&quot;) + wxFILE_SEP_PATH + m_Programs.C);</span>
+                         if (   wxFileName::IsFileExecutable(fn.GetFullPath())
+                             &amp;&amp; (m_MasterPath.IsEmpty() || fn.GetPath() &gt; m_MasterPath) )
+                         {
+<span class="gd">-                            m_MasterPath = dir.GetName() + wxFILE_SEP_PATH + filename + wxFILE_SEP_PATH + wxT(&quot;8051&quot;);</span>
+<span class="gi">+                            m_MasterPath = dir.GetName() + wxFILE_SEP_PATH + filename + wxFILE_SEP_PATH + m_Arch;</span>
+                         }
+                     }
+                     cont = dir.GetNext(&amp;filename);
+<span class="gu">@@ -95,7 +97,7 @@</span>
+         if (m_MasterPath.IsEmpty())
+         {
+             // just a guess; the default installation dir
+<span class="gd">-            m_MasterPath = wxT(&quot;C:\\Program Files\\IAR Systems\\Embedded Workbench\\8051&quot;);</span>
+<span class="gi">+            m_MasterPath = env_path + wxT(&quot;\\IAR Systems\\Embedded Workbench\\&quot; + m_Arch);</span>
+         }
+ 
+         if ( wxDirExists(m_MasterPath) )
+<span class="gu">@@ -109,9 +111,15 @@</span>
+     {
+         m_MasterPath=_T(&quot;/usr/local&quot;); // default
+     }
+<span class="gd">-    AddLinkerOption(wxT(&quot;-f \&quot;&quot;) + m_MasterPath + wxFILE_SEP_PATH + wxT(&quot;config&quot;) + wxFILE_SEP_PATH +</span>
+<span class="gd">-                    wxT(&quot;devices&quot;) + wxFILE_SEP_PATH + wxT(&quot;_generic&quot;) + wxFILE_SEP_PATH +</span>
+<span class="gd">-                    wxT(&quot;lnk51ew_plain.xcl\&quot;&quot;));</span>
+<span class="gd">-</span>
+<span class="gi">+    if (m_Arch == wxT(&quot;8051&quot;))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        AddLinkerOption(wxT(&quot;-f \&quot;&quot;) + m_MasterPath + wxFILE_SEP_PATH + wxT(&quot;config&quot;) + wxFILE_SEP_PATH +</span>
+<span class="gi">+                        wxT(&quot;devices&quot;) + wxFILE_SEP_PATH + wxT(&quot;_generic&quot;) + wxFILE_SEP_PATH +</span>
+<span class="gi">+                        wxT(&quot;lnk51ew_plain.xcl\&quot;&quot;));</span>
+<span class="gi">+    }</span>
+<span class="gi">+    if (m_Arch == wxT(&quot;IAR&quot;))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        AddCompilerOption(wxT(&quot;--no_wrap_diagnostics&quot;));</span>
+<span class="gi">+    }</span>
+     return wxFileExists(m_MasterPath + wxFILE_SEP_PATH + wxT(&quot;bin&quot;) + wxFILE_SEP_PATH + m_Programs.C) ? adrDetected : adrGuessed;
+ }
+<span class="gh">Index: compilerIAR.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- compilerIAR.h    (revision 9131)</span>
+<span class="gi">+++ compilerIAR.h    (working copy)</span>
+<span class="gu">@@ -8,14 +8,15 @@</span>
+ 
+ #include &lt;compiler.h&gt;
+ 
+<span class="gd">-class CompilerIAR8051 : public Compiler</span>
+<span class="gi">+class CompilerIAR : public Compiler</span>
+ {
+     public:
+<span class="gd">-        CompilerIAR8051();</span>
+<span class="gd">-        virtual ~CompilerIAR8051();</span>
+<span class="gi">+        CompilerIAR(wxString arch);</span>
+<span class="gi">+        virtual ~CompilerIAR();</span>
+         virtual AutoDetectResult AutoDetectInstallationDir();
+     protected:
+         virtual Compiler* CreateCopy();
+<span class="gi">+        wxString m_Arch;</span>
+     private:
+ };
+ 
+<span class="gh">Index: resources/compilers/options_iararm.xml</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- resources/compilers/option</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">alpha0010 2013-07-08 16:06:28</div>

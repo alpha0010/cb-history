@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,106 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- sdk/cbeditor.cpp    (revision 5153)</span>
+<span class="gi">+++ sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -271,6 +271,45 @@</span>
+         }
+     }
+ 
+<span class="gi">+    void HighlightOccurrences()</span>
+<span class="gi">+    {</span>
+<span class="gi">+        wxString selectedText = m_pOwner-&gt;m_pControl-&gt;GetSelectedText();</span>
+<span class="gi">+        int eof = m_pOwner-&gt;m_pControl-&gt;GetLength();</span>
+<span class="gi">+        ConfigManager* cfg = Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;));</span>
+<span class="gi">+</span>
+<span class="gi">+        // Set Styling:</span>
+<span class="gi">+        m_pOwner-&gt;m_pControl-&gt;IndicatorSetStyle(0, wxSCI_INDIC_BOX);</span>
+<span class="gi">+        m_pOwner-&gt;m_pControl-&gt;IndicatorSetForeground( 0, wxColour(0xff, 0x00, 0x00) );</span>
+<span class="gi">+</span>
+<span class="gi">+        // clear all style indications set in a previous run</span>
+<span class="gi">+        m_pOwner-&gt;m_pControl-&gt;StartStyling( 0, 0x20 );</span>
+<span class="gi">+        m_pOwner-&gt;m_pControl-&gt;SetStyling( eof, 0x00 );</span>
+<span class="gi">+</span>
+<span class="gi">+        // check that feature is enabled,</span>
+<span class="gi">+        // selected text has a minimal length of 3 and contains no spaces</span>
+<span class="gi">+        if( cfg-&gt;ReadBool(_T(&quot;/highlight_occurrences&quot;), true)</span>
+<span class="gi">+               &amp;&amp; selectedText.Len() &gt; 2</span>
+<span class="gi">+               &amp;&amp; selectedText.Find(_T(&#39; &#39;)) == wxNOT_FOUND</span>
+<span class="gi">+               &amp;&amp; selectedText.Find(_T(&#39;\t&#39;)) == wxNOT_FOUND</span>
+<span class="gi">+               &amp;&amp; selectedText.Find(_T(&#39;\n&#39;)) == wxNOT_FOUND</span>
+<span class="gi">+        )</span>
+<span class="gi">+        {</span>
+<span class="gi">+            // search for every occurence</span>
+<span class="gi">+            for ( int pos = m_pOwner-&gt;m_pControl-&gt;FindText(0, eof, selectedText);</span>
+<span class="gi">+                pos != wxSCI_INVALID_POSITION ;</span>
+<span class="gi">+                pos = m_pOwner-&gt;m_pControl-&gt;FindText(pos+=selectedText.Len(), eof, selectedText) )</span>
+<span class="gi">+            {</span>
+<span class="gi">+                // check that the found occurrence is not the same as the selected</span>
+<span class="gi">+                if ( pos != m_pOwner-&gt;m_pControl-&gt;GetSelectionStart() )</span>
+<span class="gi">+                {</span>
+<span class="gi">+                    // highlight it</span>
+<span class="gi">+                    m_pOwner-&gt;m_pControl-&gt;StartStyling(pos, 0x20);</span>
+<span class="gi">+                    m_pOwner-&gt;m_pControl-&gt;SetStyling(selectedText.Len(), 0x20);</span>
+<span class="gi">+                }</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+     //vars
+     bool m_strip_trailing_spaces;
+     bool m_ensure_final_line_end;
+<span class="gu">@@ -2416,6 +2455,7 @@</span>
+     {
+         NotifyPlugins(cbEVT_EDITOR_UPDATE_UI);
+         HighlightBraces(); // brace highlighting
+<span class="gi">+        m_pData-&gt;HighlightOccurrences();</span>
+     }
+     OnScintillaEvent(event);
+ }
+<span class="gh">Index: sdk/editorconfigurationdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- sdk/editorconfigurationdlg.cpp    (revision 5153)</span>
+<span class="gi">+++ sdk/editorconfigurationdlg.cpp    (working copy)</span>
+<span class="gu">@@ -121,6 +121,7 @@</span>
+        XRCCTRL(*this, &quot;spnTabSize&quot;, wxSpinCtrl)-&gt;SetValue(cfg-&gt;ReadInt(_T(&quot;/tab_size&quot;), 4));
+        XRCCTRL(*this, &quot;cmbViewWS&quot;, wxComboBox)-&gt;SetSelection(cfg-&gt;ReadInt(_T(&quot;/view_whitespace&quot;), 0));
+        XRCCTRL(*this, &quot;rbTabText&quot;, wxRadioBox)-&gt;SetSelection(cfg-&gt;ReadBool(_T(&quot;/tab_text_relative&quot;), true) ? 1 : 0);
+<span class="gi">+    XRCCTRL(*this, &quot;chkHighlightOccurrences&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/highlight_occurrences&quot;), true));</span>
+ 
+     // NOTE: duplicate line in cbeditor.cpp (CreateEditor)
+     const int default_eol = platform::windows ? wxSCI_EOL_CRLF : wxSCI_EOL_LF; // Windows takes CR+LF, other platforms LF only
+<span class="gu">@@ -857,6 +858,7 @@</span>
+         cfg-&gt;Write(_T(&quot;/tab_size&quot;),             XRCCTRL(*this, &quot;spnTabSize&quot;, wxSpinCtrl)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/view_whitespace&quot;),      XRCCTRL(*this, &quot;cmbViewWS&quot;, wxComboBox)-&gt;GetSelection());
+         cfg-&gt;Write(_T(&quot;/tab_text_relative&quot;),    XRCCTRL(*this, &quot;rbTabText&quot;, wxRadioBox)-&gt;GetSelection() ? true : false);
+<span class="gi">+        cfg-&gt;Write(_T(&quot;/highlight_occurrences&quot;),XRCCTRL(*this, &quot;chkHighlightOccurrences&quot;, wxCheckBox)-&gt;GetValue());</span>
+ 
+         // find &amp; replace, regex searches
+ 
+<span class="gh">Index: sdk/resources/editor_configuration.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- sdk/resources/editor_configuration.xrc    (revision 5153)</span>
+<span class="gi">+++ sdk/resources/editor_configuration.xrc    (working copy)</span>
+<span class="gu">@@ -330,6 +330,15 @@</span>
+                                                             &lt;/object&gt;
+                                                             &lt;flag&gt;wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;
+                                                         &lt;/object&gt;
+<span class="gi">+                                                        &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gi">+                                                            &lt;object class=&quot;wxCheckBox&quot; name=&quot;chkHighlightOccurrences&quot;&gt;</span>
+<span class="gi">+                                                                &lt;label&gt;Highlight occurrences&lt;/label&gt;</span>
+<span class="gi">+                                                                &lt;checked&gt;1&lt;/checked&gt;</span>
+<span class="gi">+                                                            &lt;/object&gt;</span>
+<span class="gi">+                                                            &lt;flag&gt;wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;</span>
+<span class="gi">+                                                            &lt;border&gt;5&lt;/border&gt;</span>
+<span class="gi">+                                                            &lt;option&gt;1&lt;/option&gt;</span>
+<span class="gi">+                                                        &lt;/object&gt;</span>
+                                                     &lt;/object&gt;
+                                                     &lt;flag&gt;wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;
+                                                     &lt;border&gt;4&lt;/border&gt;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">biplab 2008-07-23 13:08:18</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,65 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/scripting/bindings/scriptbindings.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/scripting/bindings/scriptbindings.cpp    (revision 5859)</span>
+<span class="gi">+++ src/sdk/scripting/bindings/scriptbindings.cpp    (working copy)</span>
+<span class="gu">@@ -281,6 +281,43 @@</span>
+         }
+         return sa.ThrowError(&quot;Invalid arguments to \&quot;ProjectManager::AddFileToProject\&quot;&quot;);
+     }
+<span class="gi">+</span>
+<span class="gi">+    SQInteger ProjectManager_GetProjectCount(HSQUIRRELVM v)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        StackHandler sa(v);</span>
+<span class="gi">+        int count = sa.GetParamCount();</span>
+<span class="gi">+        if (count != 1)</span>
+<span class="gi">+            return sa.ThrowError(&quot;Invalid arguments to \&quot;ProjectManager::GetProjectCount\&quot;&quot;);</span>
+<span class="gi">+        else</span>
+<span class="gi">+        {</span>
+<span class="gi">+            ProjectManager *manager = SqPlus::GetInstance&lt;ProjectManager, false&gt;(v, 1);</span>
+<span class="gi">+            int project_count = manager-&gt;GetProjects()-&gt;GetCount();</span>
+<span class="gi">+            return sa.Return((SQInteger)project_count);</span>
+<span class="gi">+        }</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+<span class="gi">+    SQInteger ProjectManager_GetProject(HSQUIRRELVM v)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        StackHandler sa(v);</span>
+<span class="gi">+        int count = sa.GetParamCount();</span>
+<span class="gi">+        if (count != 2)</span>
+<span class="gi">+            return sa.ThrowError(&quot;Invalid arguments to \&quot;ProjectManager::GetProject\&quot;&quot;);</span>
+<span class="gi">+        else</span>
+<span class="gi">+        {</span>
+<span class="gi">+            ProjectManager *manager = SqPlus::GetInstance&lt;ProjectManager, false&gt;(v, 1);</span>
+<span class="gi">+            int index = sa.GetInt(2);</span>
+<span class="gi">+            int project_count = manager-&gt;GetProjects()-&gt;GetCount();</span>
+<span class="gi">+            if(index &gt;= project_count)</span>
+<span class="gi">+                return sa.ThrowError(&quot;Index out of bounds in \&quot;ProjectManager::GetProject\&quot;&quot;);</span>
+<span class="gi">+            else</span>
+<span class="gi">+            {</span>
+<span class="gi">+                cbProject *project = (*manager-&gt;GetProjects())[index];</span>
+<span class="gi">+                SqPlus::Push(v, project);</span>
+<span class="gi">+                return 1;</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+     SQInteger cbEditor_SetText(HSQUIRRELVM v)
+     {
+         StackHandler sa(v);
+<span class="gu">@@ -520,6 +557,8 @@</span>
+                 func(&amp;ProjectManager::GetDefaultPath, &quot;GetDefaultPath&quot;).
+                 func(&amp;ProjectManager::SetDefaultPath, &quot;SetDefaultPath&quot;).
+                 func(&amp;ProjectManager::GetActiveProject, &quot;GetActiveProject&quot;).
+<span class="gi">+                staticFuncVarArgs(&amp;ProjectManager_GetProjectCount, &quot;GetProjectCount&quot;, &quot;*&quot;).</span>
+<span class="gi">+                staticFuncVarArgs(&amp;ProjectManager_GetProject, &quot;GetProject&quot;, &quot;*&quot;).</span>
+                 func(&amp;ProjectManager::SetProject, &quot;SetProject&quot;).
+                 func(&amp;ProjectManager::LoadWorkspace, &quot;LoadWorkspace&quot;).
+                 func(&amp;ProjectManager::SaveWorkspace, &quot;SaveWorkspace&quot;).
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

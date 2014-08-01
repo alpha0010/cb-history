@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,127 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/batch_rebuild_plugins.bat</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/batch_rebuild_plugins.bat    (revision 8096)</span>
+<span class="gi">+++ src/batch_rebuild_plugins.bat    (working copy)</span>
+<span class="gu">@@ -2,35 +2,39 @@</span>
+ rem ----------------------------------------
+ rem Setup C::B root folder of *binaries* (!)
+ rem ----------------------------------------
+<span class="gd">-set CB_ROOT=C:\Devel\CodeBlocks</span>
+<span class="gi">+if not defined CB_ROOT set CB_ROOT=C:\Devel\CodeBlocks</span>
+ rem ------------------------------------------
+ rem Setup GCC root folder with &quot;bin&quot; subfolder
+ rem ------------------------------------------
+<span class="gd">-set GCC_ROOT=C:\Devel\GCC46TDM</span>
+<span class="gi">+if not defined GCC_ROOT set GCC_ROOT=C:\Devel\GCC46TDM</span>
+<span class="gi">+rem change this name to suit your needs</span>
+<span class="gi">+if not defined CB_RUN_UPDATE_BAT set CB_RUN_UPDATE_BAT=0</span>
+ 
+ rem -------------------------------------------
+ rem Usually below here no changes are required.
+ rem -------------------------------------------
+ if not exist &quot;%CB_ROOT%&quot;  goto ErrNoCB
+ if not exist &quot;%GCC_ROOT%&quot; goto ErrNoGCC
+<span class="gd">-set PATH=%CB_ROOT%;%GCC_ROOT%;%PATH%</span>
+<span class="gi">+rem quotes are here to prevent problems with spaces in paths</span>
+<span class="gi">+set &quot;PATH=%CB_ROOT%;%GCC_ROOT%;%PATH%&quot;</span>
+ 
+<span class="gd">-set START_CMD=start &quot;Code::Blocks Build&quot; /D%~dp0 /min /b</span>
+<span class="gi">+if not defined START_CMD set &quot;START_CMD=start &quot;Code::Blocks Build&quot; /D%~dp0 /min /b&quot;</span>
+ set CB_EXE=&quot;%CB_ROOT%\codeblocks.exe&quot;
+<span class="gd">-set CB_PARAMS=--batch-build-notify --no-batch-window-close</span>
+<span class="gi">+if not defined CB_PARAMS set CB_PARAMS=--batch-build-notify --no-batch-window-close</span>
+ set CB_CMD=--rebuild &quot;%~dp0ContribPlugins.workspace&quot;
+ 
+<span class="gd">-set CB_TARGET=--target=All</span>
+<span class="gi">+if not defined CB_TARGET set CB_TARGET=--target=All</span>
+ %START_CMD% %CB_EXE% %CB_PARAMS% %CB_TARGET% %CB_CMD%
+<span class="gd">-echo Do not forget to run &quot;update.bat&quot; after successful build!</span>
+<span class="gi">+echo.</span>
+<span class="gi">+if %CB_RUN_UPDATE_BAT% NEQ 0 call &quot;%~dp0update.bat&quot; else echo Do not forget to run &quot;update.bat&quot; after successful build!</span>
+ goto TheEnd
+ 
+ :ErrNoCB
+<span class="gd">-echo Error: C::B root folder not found. Adjust batch file accordingly</span>
+<span class="gi">+echo Error: C::B root folder not found. Adjust batch file or supply parameter accordingly</span>
+ goto TheEnd
+ 
+ :ErrNoGCC
+<span class="gd">-echo Error: GCC root folder not found. Adjust batch file accordingly</span>
+<span class="gi">+echo Error: GCC root folder not found. Adjust batch file or supply parameter accordingly</span>
+ goto TheEnd
+ 
+ :TheEnd
+<span class="gh">Index: src/batch_build_all.bat</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/batch_build_all.bat    (revision 8096)</span>
+<span class="gi">+++ src/batch_build_all.bat    (working copy)</span>
+<span class="gu">@@ -2,35 +2,39 @@</span>
+ rem ----------------------------------------
+ rem Setup C::B root folder of *binaries* (!)
+ rem ----------------------------------------
+<span class="gd">-set CB_ROOT=C:\Devel\CodeBlocks</span>
+<span class="gi">+if not defined CB_ROOT set CB_ROOT=C:\Devel\CodeBlocks</span>
+ rem ------------------------------------------
+ rem Setup GCC root folder with &quot;bin&quot; subfolder
+ rem ------------------------------------------
+<span class="gd">-set GCC_ROOT=C:\Devel\GCC46TDM</span>
+<span class="gi">+if not defined GCC_ROOT set GCC_ROOT=C:\Devel\GCC46TDM</span>
+<span class="gi">+rem change this name to suit your needs</span>
+<span class="gi">+if not defined CB_RUN_UPDATE_BAT set CB_RUN_UPDATE_BAT=0</span>
+ 
+ rem -------------------------------------------
+ rem Usually below here no changes are required.
+ rem -------------------------------------------
+ if not exist &quot;%CB_ROOT%&quot;  goto ErrNoCB
+ if not exist &quot;%GCC_ROOT%&quot; goto ErrNoGCC
+<span class="gd">-set PATH=%CB_ROOT%;%GCC_ROOT%;%PATH%</span>
+<span class="gi">+rem quotes are here to prevent problems with spaces in paths</span>
+<span class="gi">+set &quot;PATH=%CB_ROOT%;%GCC_ROOT%;%PATH%&quot;</span>
+ 
+<span class="gd">-set START_CMD=start &quot;Code::Blocks Build&quot; /D%~dp0 /min /b</span>
+<span class="gi">+if not defined START_CMD set &quot;START_CMD=start &quot;Code::Blocks Build&quot; /D%~dp0 /min /b&quot;</span>
+ set CB_EXE=&quot;%CB_ROOT%\codeblocks.exe&quot;
+<span class="gd">-set CB_PARAMS=--batch-build-notify --no-batch-window-close</span>
+<span class="gi">+if not defined CB_PARAMS set CB_PARAMS=--batch-build-notify --no-batch-window-close</span>
+ set CB_CMD=--build &quot;%~dp0CodeBlocks.workspace&quot;
+ 
+<span class="gd">-set CB_TARGET=--target=All</span>
+<span class="gi">+if not defined CB_TARGET set CB_TARGET=--target=All</span>
+ %START_CMD% %CB_EXE% %CB_PARAMS% %CB_TARGET% %CB_CMD%
+<span class="gd">-echo Do not forget to run &quot;update.bat&quot; after successful build!</span>
+<span class="gi">+echo.</span>
+<span class="gi">+if %CB_RUN_UPDATE_BAT% NEQ 0 call &quot;%~dp0update.bat&quot; else echo Do not forget to run &quot;update.bat&quot; after successful build!</span>
+ goto TheEnd
+ 
+ :ErrNoCB
+<span class="gd">-echo Error: C::B root folder not found. Adjust batch file accordingly</span>
+<span class="gi">+echo Error: C::B root folder not found. Adjust batch file or supply parameter accordingly</span>
+ goto TheEnd
+ 
+ :ErrNoGCC
+<span class="gd">-echo Error: GCC root folder not found. Adjust batch file accordingly</span>
+<span class="gi">+echo Error: GCC root folder not found. Adjust batch file or supply parameter accordingly</span>
+ goto TheEnd
+ 
+ :TheEnd
+<span class="gh">Index: src/batch_build_core.bat</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/batch_build_core.bat    (revision 8096)</span>
+<span class="gi">+++ src/batch_build_core.bat    (working copy)</span>
+<span class="gu">@@ -2,35 +2,39 @@</span>
+ rem ----------------------------------------
+ rem Setup C::B root folder of *binaries* (!)
+ rem ----------------------------------------
+<span class="gd">-set CB_ROOT=C:\Devel\CodeBlocks</span>
+<span class="gi">+if not defined CB_ROOT set CB_ROOT=C:\Devel\CodeBlocks</span>
+ rem ------------------------------------------
+ rem
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

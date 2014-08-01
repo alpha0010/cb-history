@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,120 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: debuggergdb.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- debuggergdb.cpp    (revision 7632)</span>
+<span class="gi">+++ debuggergdb.cpp    (working copy)</span>
+<span class="gu">@@ -2110,21 +2110,33 @@</span>
+         else
+             wxKill(pid, wxSIGINT);
+     #else
+<span class="gd">-        // windows gdb can interrupt the running process too. yay!</span>
+<span class="gd">-        bool done = false;</span>
+<span class="gd">-        if (DebugBreakProcessFunc &amp;&amp; pid &gt; 0)</span>
+<span class="gd">-        {</span>
+<span class="gd">-            Log(_(&quot;Trying to pause the running process...&quot;));</span>
+<span class="gd">-            HANDLE proc = OpenProcess(PROCESS_ALL_ACCESS, FALSE, (DWORD)pid);</span>
+<span class="gd">-            if (proc)</span>
+<span class="gd">-            {</span>
+<span class="gd">-                DebugBreakProcessFunc(proc); // yay!</span>
+<span class="gd">-                CloseHandle(proc);</span>
+<span class="gd">-                done = true;</span>
+<span class="gd">-            }</span>
+<span class="gd">-            else</span>
+<span class="gd">-                Log(_(&quot;Failed.&quot;));</span>
+<span class="gd">-        }</span>
+<span class="gi">+</span>
+<span class="gi">+        wxString run_tool_on_break = Manager::Get()-&gt;GetConfigManager(_T(&quot;debugger&quot;))-&gt;Read(_T(&quot;run_tool_on_break&quot;), wxEmptyString);</span>
+<span class="gi">+</span>
+<span class="gi">+        // Sometimes with embedded systems you need to run some other tool to trigger an asynchronous break</span>
+<span class="gi">+        if (run_tool_on_break != wxEmptyString)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            Log(wxString::Format(_T(&quot;Starting external tool to break execution (%s)...&quot;), run_tool_on_break.c_str()));</span>
+<span class="gi">+            system(run_tool_on_break.ToAscii());</span>
+<span class="gi">+        }</span>
+<span class="gi">+        else</span>
+<span class="gi">+        {</span>
+<span class="gi">+            // windows gdb can interrupt the running process too. yay!</span>
+<span class="gi">+            bool done = false;</span>
+<span class="gi">+            if (DebugBreakProcessFunc &amp;&amp; pid &gt; 0)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                Log(_(&quot;Trying to pause the running process...&quot;));</span>
+<span class="gi">+                HANDLE proc = OpenProcess(PROCESS_ALL_ACCESS, FALSE, (DWORD)pid);</span>
+<span class="gi">+                if (proc)</span>
+<span class="gi">+                {</span>
+<span class="gi">+                    DebugBreakProcessFunc(proc); // yay!</span>
+<span class="gi">+                    CloseHandle(proc);</span>
+<span class="gi">+                    done = true;</span>
+<span class="gi">+                }</span>
+<span class="gi">+                else</span>
+<span class="gi">+                    Log(_(&quot;Failed.&quot;));</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+     #endif
+         // Notify debugger plugins for end of debug session
+         PluginManager *plm = Manager::Get()-&gt;GetPluginManager();
+<span class="gh">Index: debuggeroptionsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- debuggeroptionsdlg.cpp    (revision 7632)</span>
+<span class="gi">+++ debuggeroptionsdlg.cpp    (working copy)</span>
+<span class="gu">@@ -39,6 +39,7 @@</span>
+     XRCCTRL(*this, &quot;choDisassemblyFlavor&quot;, wxChoice)-&gt;SetSelection(cfg-&gt;ReadInt(_T(&quot;disassembly_flavor&quot;), 0));
+     XRCCTRL(*this, &quot;txtInstructionSet&quot;, wxTextCtrl)-&gt;SetValue(cfg-&gt;Read(_T(&quot;instruction_set&quot;), wxEmptyString));
+     XRCCTRL(*this, &quot;spnArrayElems&quot;,     wxSpinCtrl)-&gt;SetValue(cfg-&gt;ReadInt(_T(&quot;single_line_array_elem_count&quot;), 8));
+<span class="gi">+    XRCCTRL(*this, &quot;txtRunExtToolOnBreak&quot;, wxTextCtrl)-&gt;SetValue(cfg-&gt;Read(_T(&quot;run_tool_on_break&quot;), wxEmptyString));</span>
+ }
+ 
+ DebuggerOptionsDlg::~DebuggerOptionsDlg()
+<span class="gu">@@ -62,6 +63,7 @@</span>
+     cfg-&gt;Write(_T(&quot;disassembly_flavor&quot;),    XRCCTRL(*this, &quot;choDisassemblyFlavor&quot;, wxChoice)-&gt;GetSelection());
+     cfg-&gt;Write(_T(&quot;instruction_set&quot;),       XRCCTRL(*this, &quot;txtInstructionSet&quot;, wxTextCtrl)-&gt;GetValue());
+     cfg-&gt;Write(_T(&quot;single_line_array_elem_count&quot;), XRCCTRL(*this, &quot;spnArrayElems&quot;, wxSpinCtrl)-&gt;GetValue());
+<span class="gi">+    cfg-&gt;Write(_T(&quot;run_tool_on_break&quot;),     XRCCTRL(*this, &quot;txtRunExtToolOnBreak&quot;, wxTextCtrl)-&gt;GetValue());</span>
+ 
+     m_pPlugin-&gt;RefreshConfiguration();
+ }
+<span class="gh">Index: gdb_commands.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- gdb_commands.h    (revision 7632)</span>
+<span class="gi">+++ gdb_commands.h    (working copy)</span>
+<span class="gu">@@ -150,13 +150,13 @@</span>
+ //  ebx at 0x22ff6c, ebp at 0x22ff78, esi at 0x22ff70, edi at 0x22ff74, eip at 0x22ff7c
+ static wxRegEx reDisassemblyInit(_T(&quot;^Stack level [0-9]+, frame at (0x[A-Fa-f0-9]+):&quot;));
+ static wxRegEx reDisassemblyInitFunc(_T(&quot;eip = (0x[A-Fa-f0-9]+) in ([^;]*)&quot;));
+<span class="gd">-// or32 variant</span>
+<span class="gi">+// or32/mips variant</span>
+ #ifdef __WXMSW__
+<span class="gd">-static wxRegEx reDisassemblyInitFuncOR32(_T(&quot;PC = (0x[A-Fa-f0-9]+) in ([^;]*)&quot;));</span>
+<span class="gi">+static wxRegEx reDisassemblyInitFuncOR32_MIPS(_T(&quot;PC = (0x[A-Fa-f0-9]+) in ([^;]*)&quot;));</span>
+ #else
+ // not used on linux, but make sure it exists otherwise compilation fails on linux
+ // if(platform::windows &amp;&amp; m_disassemblyFlavor == _T(&quot;set disassembly-flavor or32&quot;)) blabla
+<span class="gd">-static wxRegEx reDisassemblyInitFuncOR32(_T(&quot;PC = (0x[A-Fa-f0-9]+) in ([^;]*)&quot;));</span>
+<span class="gi">+static wxRegEx reDisassemblyInitFuncOR32_MIPS(_T(&quot;PC = (0x[A-Fa-f0-9]+) in ([^;]*)&quot;));</span>
+ #endif
+ //    Using the running image of child Thread 46912568064384 (LWP 7051).
+ static wxRegEx reInfoProgramThread(_T(&quot;\\(LWP[ \t]([0-9]+)\\)&quot;));
+<span class="gu">@@ -1135,6 +1135,11 @@</span>
+             {
+                 ParseOutputFromOR32gdbPort(output);
+             }
+<span class="gi">+            // MIPS register string parser</span>
+<span class="gi">+            if(m_disassemblyFlavor == _T(&quot;set disassembly-flavor mips&quot;))</span>
+<span class="gi">+            {</span>
+<span class="gi">+                ParseOutputFromMIPSgdbPort(output);</span>
+<span class="gi">+            }</span>
+             else
+             // use generic parser - this may work for other platforms or you may have to write your own
+             {
+<span class="gu">@@ -1153,6 +1158,77 @@</span>
+ //            m_pDriver-&gt;DebugLog(output);
+         }
+ 
+<span class="gi">+        void ParseOutputFromMIPSgdb</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">nevelo 2011-12-11 15:34:10</div>

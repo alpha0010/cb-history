@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,27 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: sdk/editormanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- sdk/editormanager.cpp    (revision 6202)</span>
+<span class="gi">+++ sdk/editormanager.cpp    (working copy)</span>
+<span class="gu">@@ -969,6 +969,14 @@</span>
+         if (    ((ftActive == ftHeader) &amp;&amp; (ftTested == ftSource))
+              || ((ftActive == ftSource) &amp;&amp; (ftTested == ftHeader)) )
+         {
+<span class="gi">+            if(candidateFile.GetPath() != activeFile.GetPath()) // Check if we are not in the same Directory</span>
+<span class="gi">+            {</span>
+<span class="gi">+                wxArrayString fileArray;</span>
+<span class="gi">+                wxDir::GetAllFiles(candidateFile.GetPath(wxPATH_GET_VOLUME), &amp;fileArray, candidateFile.GetName() + _T(&quot;.*&quot;), wxDIR_FILES | wxDIR_HIDDEN);</span>
+<span class="gi">+                for (unsigned i = 0; i&lt; fileArray.GetCount(); i++)                          // if in this directory there is already</span>
+<span class="gi">+                    if(wxFileName(fileArray[i]).GetFullName() == activeFile.GetFullName())  // a headerfile (or sourcefile) for our candidatefile</span>
+<span class="gi">+                        return false;                                                       // it can&#39;t be our candidatefile</span>
+<span class="gi">+            }</span>
+             if (candidateFile.FileExists())
+                 return true;
+         }
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mortenmacfly 2010-08-01 09:49:57</div>

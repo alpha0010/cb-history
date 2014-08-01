@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,141 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/codecompletion/ccoptionsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/ccoptionsdlg.cpp    (revision 6194)</span>
+<span class="gi">+++ src/plugins/codecompletion/ccoptionsdlg.cpp    (working copy)</span>
+<span class="gu">@@ -119,8 +119,8 @@</span>
+     XRCCTRL(*this, &quot;sliderDelay&quot;, wxSlider)-&gt;SetValue(timerDelay / 100);
+     UpdateSliderLabel();
+ 
+<span class="gd">-    const ConfigManagerContainer::StringToStringMap&amp; repl = Tokenizer::GetTokenReplacementsMap();</span>
+<span class="gd">-    ConfigManagerContainer::StringToStringMap::const_iterator it = repl.begin();</span>
+<span class="gi">+    const wxStringHashMap&amp; repl = Tokenizer::GetTokenReplacementsMap();</span>
+<span class="gi">+    wxStringHashMap::const_iterator it = repl.begin();</span>
+     while (it != repl.end())
+     {
+         XRCCTRL(*this, &quot;lstRepl&quot;, wxListBox)-&gt;Append(it-&gt;first + _T(&quot; -&gt; &quot;) + it-&gt;second);
+<span class="gh">Index: src/plugins/codecompletion/codecompletion.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/codecompletion.cpp    (revision 6194)</span>
+<span class="gi">+++ src/plugins/codecompletion/codecompletion.cpp    (working copy)</span>
+<span class="gu">@@ -188,10 +188,8 @@</span>
+ void CodeCompletion::LoadTokenReplacements()
+ {
+     ConfigManager* cfg = Manager::Get()-&gt;GetConfigManager(_T(&quot;code_completion&quot;));
+<span class="gi">+    ConfigManagerContainer::StringToStringMap repl;</span>
+ 
+<span class="gd">-    ConfigManagerContainer::StringToStringMap&amp; repl = Tokenizer::GetTokenReplacementsMap();</span>
+<span class="gd">-    repl.clear();</span>
+<span class="gd">-</span>
+     if (!cfg-&gt;Exists(_T(&quot;token_replacements&quot;)))
+     {
+         // first run; add default replacements string
+<span class="gu">@@ -208,13 +206,21 @@</span>
+     }
+     else
+         cfg-&gt;Read(_T(&quot;token_replacements&quot;), &amp;repl);
+<span class="gi">+    </span>
+<span class="gi">+    Tokenizer::ConvertToHashReplacementMap(repl);</span>
+ }
+ 
+ void CodeCompletion::SaveTokenReplacements()
+ {
+     ConfigManager* cfg = Manager::Get()-&gt;GetConfigManager(_T(&quot;code_completion&quot;));
+ 
+<span class="gd">-    const ConfigManagerContainer::StringToStringMap&amp; repl = Tokenizer::GetTokenReplacementsMap();</span>
+<span class="gi">+    const wxStringHashMap&amp; hashRepl = Tokenizer::GetTokenReplacementsMap();</span>
+<span class="gi">+    ConfigManagerContainer::StringToStringMap repl;</span>
+<span class="gi">+    wxStringHashMap::const_iterator it = hashRepl.begin();</span>
+<span class="gi">+    for (; it != hashRepl.end(); it++)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        repl[it-&gt;first] = it-&gt;second;</span>
+<span class="gi">+    }</span>
+     cfg-&gt;Write(_T(&quot;token_replacements&quot;), repl);
+ }
+ 
+<span class="gh">Index: src/plugins/codecompletion/parser/tokenizer.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/parser/tokenizer.cpp    (revision 6194)</span>
+<span class="gi">+++ src/plugins/codecompletion/parser/tokenizer.cpp    (working copy)</span>
+<span class="gu">@@ -37,7 +37,7 @@</span>
+ };
+ 
+ // static
+<span class="gd">-ConfigManagerContainer::StringToStringMap Tokenizer::s_Replacements;</span>
+<span class="gi">+wxStringHashMap Tokenizer::s_Replacements;</span>
+ 
+ Tokenizer::Tokenizer(const wxString&amp; filename)
+     : m_Filename(filename),
+<span class="gu">@@ -789,7 +789,7 @@</span>
+ 
+ wxString Tokenizer::MacroReplace(const wxString str)
+ {
+<span class="gd">-    ConfigManagerContainer::StringToStringMap::const_iterator it = s_Replacements.find(str);</span>
+<span class="gi">+    wxStringHashMap::const_iterator it = s_Replacements.find(str);</span>
+ 
+     if (it != s_Replacements.end())
+     {
+<span class="gh">Index: src/plugins/codecompletion/parser/tokenizer.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/parser/tokenizer.h    (revision 6194)</span>
+<span class="gi">+++ src/plugins/codecompletion/parser/tokenizer.h    (working copy)</span>
+<span class="gu">@@ -7,10 +7,39 @@</span>
+ #define TOKENIZER_H
+ 
+ #include &lt;wx/string.h&gt;
+<span class="gi">+#include &lt;wx/hashmap.h&gt;</span>
+ #include &lt;configmanager.h&gt;
+ #include &lt;filemanager.h&gt;
+ 
+<span class="gi">+class HashForWxStringMap</span>
+<span class="gi">+{</span>
+<span class="gi">+public:</span>
+<span class="gi">+    HashForWxStringMap() {}</span>
+<span class="gi">+    unsigned long operator()(const wxString&amp; x) const</span>
+<span class="gi">+    {</span>
+<span class="gi">+        const size_t len = x.length();</span>
+<span class="gi">+        const size_t intWxChar = sizeof(unsigned int) / sizeof(wxChar);</span>
+<span class="gi">+        const size_t shortWxChar = sizeof(unsigned short) / sizeof(wxChar);</span>
+<span class="gi">+        if (len &gt;= intWxChar)</span>
+<span class="gi">+            return size_t((128 ^ len) + *((unsigned int*)(x.c_str() + len - intWxChar)));</span>
+<span class="gi">+        else if (len &gt;= shortWxChar)</span>
+<span class="gi">+            return size_t((256 ^ len) + *((unsigned short*)(x.c_str() + len - shortWxChar)));</span>
+<span class="gi">+        else</span>
+<span class="gi">+            return size_t((512 ^ len) + *(x.c_str() + len - 1));</span>
+<span class="gi">+    }</span>
+<span class="gi">+    HashForWxStringMap&amp; operator=(const HashForWxStringMap&amp;) { return *this; }</span>
+<span class="gi">+};</span>
+ 
+<span class="gi">+class EqualForWxStringMap</span>
+<span class="gi">+{</span>
+<span class="gi">+public:</span>
+<span class="gi">+    EqualForWxStringMap() { }</span>
+<span class="gi">+    bool operator()(const wxString&amp; a, const wxString&amp; b) const { return a == b; }</span>
+<span class="gi">+    EqualForWxStringMap&amp; operator=(const EqualForWxStringMap&amp;) { return *this; }</span>
+<span class="gi">+};</span>
+<span class="gi">+</span>
+<span class="gi">+WX_DECLARE_HASH_MAP(wxString, wxString, HashForWxStringMap, EqualForWxStringMap, wxStringHashMap);</span>
+<span class="gi">+</span>
+ enum TokenizerState
+ {
+     tsSkipEqual        = 0x0001,
+<span class="gu">@@ -100,20 +129,29 @@</span>
+ 
+     static void SetReplacementString(const wxString&amp; from, const wxString&amp; to)
+     {
+<span class="gd">-        s_Replacements.insert(s_Replacements.end(), std::make_pair(from, to));</span>
+<span class="gi">+        s_Replacements[from] = to;</span>
+     };
+ 
+     static void RemoveReplacementString(const wxString&amp; from)
+     {
+<span class="gd">-        ConfigManagerContainer::StringToStringMap::iterator it = s_Replacements.find(from);</span>
+<span class="gi">+        wxStringHashMap::iterator it =</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">loaden 2010-03-29 00:59:32</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,52 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: /home/techy/Downloads/codeblocks/trunk/src/plugins/debuggergdb/debuggertree.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- /home/techy/Downloads/codeblocks/trunk/src/plugins/debuggergdb/debuggertree.cpp    (revision 5987)</span>
+<span class="gi">+++ /home/techy/Downloads/codeblocks/trunk/src/plugins/debuggergdb/debuggertree.cpp    (working copy)</span>
+<span class="gu">@@ -589,24 +589,29 @@</span>
+     wxMenu menu(wxEmptyString);
+ 
+     // if we right-clicked on a pointer, add a &quot;dereference pointer&quot; entry
+<span class="gd">-    wxString itemtext = m_pTree-&gt;GetItemText(id);</span>
+<span class="gd">-    if (itemtext.Find(_T(&#39;*&#39;)) != wxNOT_FOUND)</span>
+<span class="gi">+    if (id.IsOk())</span>
+     {
+<span class="gd">-        menu.Append(idDereferenceValue, wxString::Format(_(&quot;Dereference pointer &#39;%s&#39;&quot;), itemtext.BeforeFirst(_T(&#39;=&#39;)).c_str()));</span>
+<span class="gd">-        menu.AppendSeparator();</span>
+<span class="gi">+        wxString itemtext = m_pTree-&gt;GetItemText(id);</span>
+<span class="gi">+        if (itemtext.Find(_T(&#39;*&#39;)) != wxNOT_FOUND)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            menu.Append(idDereferenceValue, wxString::Format(_(&quot;Dereference pointer &#39;%s&#39;&quot;), itemtext.BeforeFirst(_T(&#39;=&#39;)).c_str()));</span>
+<span class="gi">+            menu.AppendSeparator();</span>
+<span class="gi">+        }</span>
+     }
+<span class="gd">-</span>
+<span class="gi">+    </span>
+     // add watch always visible
+     menu.Append(idAddWatch, _(&quot;&amp;Add watch&quot;));
+     menu.Append(idWatchThis, _(&quot;Watch &#39;*&amp;this&#39;&quot;));
+ 
+     // we have to have a valid id for the following to be enabled
+<span class="gd">-    WatchTreeData* data = dynamic_cast&lt;WatchTreeData*&gt;(m_pTree-&gt;GetItemData(id));</span>
+<span class="gd">-    if (id.IsOk() &amp;&amp; // valid item</span>
+<span class="gd">-        data &amp;&amp; data-&gt;m_pWatch) // *is* a watch</span>
+<span class="gi">+    if (id.IsOk()) // valid item</span>
+     {
+<span class="gd">-        menu.Append(idEditWatch, _(&quot;&amp;Edit watch&quot;));</span>
+<span class="gd">-        menu.Append(idDeleteWatch, _(&quot;&amp;Delete watch&quot;));</span>
+<span class="gi">+        WatchTreeData* data = dynamic_cast&lt;WatchTreeData*&gt;(m_pTree-&gt;GetItemData(id));</span>
+<span class="gi">+        if (data &amp;&amp; data-&gt;m_pWatch) // *is* a watch</span>
+<span class="gi">+        {</span>
+<span class="gi">+            menu.Append(idEditWatch, _(&quot;&amp;Edit watch&quot;));</span>
+<span class="gi">+            menu.Append(idDeleteWatch, _(&quot;&amp;Delete watch&quot;));</span>
+<span class="gi">+        }</span>
+     }
+     menu.AppendSeparator();
+     menu.Append(idChangeValue, _(&quot;&amp;Change value...&quot;));
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">techy 2009-12-29 21:59:05</div>

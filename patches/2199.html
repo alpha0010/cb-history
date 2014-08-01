@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,153 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/resources/lexers/lexer_verilog.sample</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/lexers/lexer_verilog.sample    (revision 0)</span>
+<span class="gi">+++ src/sdk/resources/lexers/lexer_verilog.sample    (revision 0)</span>
+<span class="gu">@@ -0,0 +1,14 @@</span>
+<span class="gi">+// D flip-flop</span>
+<span class="gi">+module d_ff ( d, clk, q, q_bar);</span>
+<span class="gi">+input d ,clk;</span>
+<span class="gi">+output q, q_bar;</span>
+<span class="gi">+wire d ,clk;</span>
+<span class="gi">+reg q, q_bar;</span>
+<span class="gi">+</span>
+<span class="gi">+always @ (posedge clk)</span>
+<span class="gi">+begin</span>
+<span class="gi">+    q &lt;= d;</span>
+<span class="gi">+    q_bar &lt;=  ! d;</span>
+<span class="gi">+end</span>
+<span class="gi">+</span>
+<span class="gi">+endmodule</span>
+<span class="gh">Index: src/sdk/resources/lexers/lexer_vhdl.sample</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/lexers/lexer_vhdl.sample    (revision 0)</span>
+<span class="gi">+++ src/sdk/resources/lexers/lexer_vhdl.sample    (revision 0)</span>
+<span class="gu">@@ -0,0 +1,42 @@</span>
+<span class="gi">+--</span>
+<span class="gi">+-- Sample preview code</span>
+<span class="gi">+--</span>
+<span class="gi">+library ieee;</span>
+<span class="gi">+use ieee.std_logic_1164.all;</span>
+<span class="gi">+use ieee.numeric_std.all;</span>
+<span class="gi">+</span>
+<span class="gi">+entity shiftregister is</span>
+<span class="gi">+    generic</span>
+<span class="gi">+    (</span>
+<span class="gi">+        left          : boolean := false -- so shift right</span>
+<span class="gi">+    )</span>
+<span class="gi">+    port</span>
+<span class="gi">+    (</span>
+<span class="gi">+        clk           : in  std_logic;</span>
+<span class="gi">+        rst           : in  std_logic;</span>
+<span class="gi">+        en            : in  std_logic;</span>
+<span class="gi">+        d             : in  std_logic</span>
+<span class="gi">+        q             : out std_logic_vector</span>
+<span class="gi">+    );</span>
+<span class="gi">+end shiftregister;</span>
+<span class="gi">+</span>
+<span class="gi">+architecture behavioral of shiftregister is</span>
+<span class="gi">+    constant crcpoly   : std_logic_vector(7 downto 0) := x&quot;8D&quot;;</span>
+<span class="gi">+</span>
+<span class="gi">+    type   utxstates   is (idle, data, parity, stop);</span>
+<span class="gi">+    signal utxstate    : utxstates;</span>
+<span class="gi">+begin</span>
+<span class="gi">+</span>
+<span class="gi">+    shift: process ( rst, clk ) begin</span>
+<span class="gi">+        if rst = &#39;1&#39; then</span>
+<span class="gi">+            q &lt;= (others =&gt; &#39;0&#39;);</span>
+<span class="gi">+        elsif clk&#39;event and clk = &#39;1&#39; then</span>
+<span class="gi">+            if left then</span>
+<span class="gi">+                q &lt;= q(q&#39;left - 1 downto q&#39;right) &amp; d;</span>
+<span class="gi">+            else</span>
+<span class="gi">+                q &lt;= d &amp; q(q&#39;left downto q&#39;right + 1);</span>
+<span class="gi">+            end if;</span>
+<span class="gi">+        end if;</span>
+<span class="gi">+    end process;</span>
+<span class="gi">+</span>
+<span class="gi">+end behavioral;</span>
+<span class="gh">Index: src/sdk/resources/lexers/lexer_vhdl.xml</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/lexers/lexer_vhdl.xml    (revision 0)</span>
+<span class="gi">+++ src/sdk/resources/lexers/lexer_vhdl.xml    (revision 0)</span>
+<span class="gu">@@ -0,0 +1,126 @@</span>
+<span class="gi">+&lt;?xml version=&quot;1.0&quot;?&gt;</span>
+<span class="gi">+&lt;!DOCTYPE CodeBlocks_lexer_properties&gt;</span>
+<span class="gi">+&lt;CodeBlocks_lexer_properties&gt;</span>
+<span class="gi">+        &lt;Lexer name=&quot;VHDL&quot;</span>
+<span class="gi">+                index=&quot;64&quot;</span>
+<span class="gi">+                filemasks=&quot;*.vhd,*.vhdl&quot;&gt;</span>
+<span class="gi">+                &lt;!-- #define wxSCI_VHDL_DEFAULT 0 --&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Default&quot;</span>
+<span class="gi">+                        index=&quot;0&quot;</span>
+<span class="gi">+                        fg=&quot;0,0,0&quot;</span>
+<span class="gi">+                        bg=&quot;255,255,255&quot;</span>
+<span class="gi">+                        bold=&quot;0&quot;</span>
+<span class="gi">+                        italics=&quot;0&quot;</span>
+<span class="gi">+                        underlined=&quot;0&quot;/&gt;</span>
+<span class="gi">+                &lt;!--#define wxSCI_VHDL_COMMENT 1</span>
+<span class="gi">+                #define wxSCI_VHDL_COMMENTLINEBANG 2--&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Comment&quot;</span>
+<span class="gi">+                        index=&quot;1,2&quot;</span>
+<span class="gi">+                        fg=&quot;34,138,34&quot;/&gt;</span>
+<span class="gi">+                        &lt;!--fg=&quot;160,160,160&quot;--&gt;</span>
+<span class="gi">+                &lt;!--#define wxSCI_VHDL_NUMBER 3--&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Number&quot;</span>
+<span class="gi">+                        index=&quot;3&quot;</span>
+<span class="gi">+                        fg=&quot;160,882,45&quot;/&gt;</span>
+<span class="gi">+                        &lt;!--fg=&quot;240,0,240&quot;/--&gt;</span>
+<span class="gi">+                &lt;!--#define wxSCI_VHDL_STRING 4</span>
+<span class="gi">+                #define wxSCI_VHDL_STRINGEOL 7--&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;String&quot;</span>
+<span class="gi">+                        index=&quot;4,7&quot;</span>
+<span class="gi">+                        fg=&quot;0,0,255&quot;/&gt;</span>
+<span class="gi">+                &lt;!--#define wxSCI_VHDL_OPERATOR 5</span>
+<span class="gi">+                #define wxSCI_VHDL_STDOPERATOR 9--&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Operator&quot;</span>
+<span class="gi">+                        index=&quot;5,9&quot;</span>
+<span class="gi">+                        fg=&quot;0,0,128&quot;</span>
+<span class="gi">+                        bold=&quot;1&quot;/&gt;</span>
+<span class="gi">+</span>
+<span class="gi">+                &lt;!--#define wxSCI_VHDL_KEYWORD 8--&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Keyword&quot;</span>
+<span class="gi">+                        index=&quot;8&quot;</span>
+<span class="gi">+                        fg=&quot;0,0,160&quot;</span>
+<span class="gi">+                        bold=&quot;1&quot;/&gt;</span>
+<span class="gi">+                &lt;!--#define wxSCI_VHDL_USERWORD 14--&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;User keyword&quot;</span>
+<span class="gi">+                        index=&quot;14&quot;</span>
+<span class="gi">+                        fg=&quot;0,160,0&quot;</span>
+<span class="gi">+                        bold=&quot;1&quot;/&gt;</span>
+<span class="gi">+                &lt;!--#define wxSCI_VHDL_ATTRIBUTE 10--&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Attribute&quot;</span>
+<span class="gi">+                        index=&quot;10&quot;</span>
+<span class="gi">+                        fg=&quot;95,159,159&quot;/&gt;</span>
+<span class="gi">+                &lt;!--#define wxSCI_VHDL_STDPACKAGE 12--&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Std Package&quot;</span>
+<span class="gi">+                        index=&quot;12&quot;</span>
+<span class="gi">+                        fg=&quot;255,0,255&quot;/&gt;</span>
+<span class="gi">+                &lt;!--#define wxSCI_VHDL_STDTYPE 13--&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Std Type&quot;</span>
+<span class="gi">+                        index=&quot;13&quot;</span>
+<span class="gi">+                        fg=&quot;159,159,95&quot;/&gt;</span>
+<span class="gi">+                &lt;!--#define wxSCI_VHDL_IDENTIFIER 6--&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Identifier&quot;</span>
+<span class="gi">+                        index=&quot;6&quot;</span>
+<span class="gi">+                        fg=&quot;0,0,0&quot;/&gt;</span>
+<span class="gi">+                &lt;!--#define wxSCI_VHDL_STDFUNCTION 11--&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Std Function&quot;</span>
+<span class="gi">+                        index=&quot;11&quot;</span>
+<span class="gi">+                        fg=&quot;0,0,255&quot;/&gt;</span>
+<span class="gi">+</span>
+<span class="gi">+                &lt;Style name=&quot;Selection&quot;</span>
+<span class="gi">+                        index=&quot;-99&quot;</span>
+<span class="gi">+                        bg=&quot;192,192,192&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Active line&quot;</span>
+<span class="gi">+                        index=&quot;-</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

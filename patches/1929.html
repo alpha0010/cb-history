@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,56 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/globals.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/globals.cpp    (revision 3758)</span>
+<span class="gi">+++ src/sdk/globals.cpp    (working copy)</span>
+<span class="gu">@@ -505,7 +505,7 @@</span>
+ }
+ 
+ // Return multibyte (C string) representation of the string
+<span class="gd">-wxWX2MBbuf cbU2C(const wxString&amp; str)</span>
+<span class="gi">+const wxWX2MBbuf cbU2C(const wxString&amp; str)</span>
+ {
+     if(platform::unicode)
+         return str.mb_str(wxConvUTF8);
+<span class="gh">Index: src/plugins/contrib/wxSmith/wxwidgets/wxsitemresdataobject.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/wxwidgets/wxsitemresdataobject.cpp    (revision 3758)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/wxwidgets/wxsitemresdataobject.cpp    (working copy)</span>
+<span class="gu">@@ -44,7 +44,7 @@</span>
+ bool wxsItemResDataObject::GetDataHere(const wxDataFormat&amp; format,void *buf) const
+ {
+     wxString XmlData = GetXmlData();
+<span class="gd">-    wxWX2MBbuf str = cbU2C(XmlData);</span>
+<span class="gi">+    const wxWX2MBbuf str = cbU2C(XmlData);</span>
+     memcpy(buf,str,strlen(str)+1);
+        return true;
+ }
+<span class="gu">@@ -52,7 +52,7 @@</span>
+ size_t wxsItemResDataObject::GetDataSize(const wxDataFormat&amp; format) const
+ {
+     wxString XmlData = GetXmlData();
+<span class="gd">-    wxWX2MBbuf str = cbU2C(XmlData);</span>
+<span class="gi">+    const wxWX2MBbuf str = cbU2C(XmlData);</span>
+     return strlen(str)+1;
+ }
+ 
+<span class="gh">Index: src/include/globals.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/globals.h    (revision 3758)</span>
+<span class="gi">+++ src/include/globals.h    (working copy)</span>
+<span class="gu">@@ -134,7 +134,7 @@</span>
+ /// Return @c str as a proper unicode-compatible string
+ extern DLLIMPORT wxString cbC2U(const char* str);
+ /// Return multibyte (C string) representation of the string
+<span class="gd">-extern DLLIMPORT wxWX2MBbuf cbU2C(const wxString&amp; str);</span>
+<span class="gi">+extern DLLIMPORT const wxWX2MBbuf cbU2C(const wxString&amp; str);</span>
+ /// Try converting a C-string from different encodings until a possible match is found.
+ /// This tries the following encoding converters (in the same order):
+ /// utf8, system, default and iso8859-1 to iso8859-15.
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">ondra_holub 2007-03-25 14:48:37</div>

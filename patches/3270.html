@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,142 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/resources/lexers/lexer_cmake.sample</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/lexers/lexer_cmake.sample    (revision 0)</span>
+<span class="gi">+++ src/sdk/resources/lexers/lexer_cmake.sample    (working copy)</span>
+<span class="gu">@@ -0,0 +1,60 @@</span>
+<span class="gi">+cmake_minimum_required(VERSION 2.8)</span>
+<span class="gi">+project(AnApp)</span>
+<span class="gi">+</span>
+<span class="gi">+if(CMAKE_BUILD_TYPE STREQUAL &quot;&quot;)</span>
+<span class="gi">+    set(CMAKE_BUILD_TYPE &quot;RelWithDebInfo&quot; CACHE STRING &quot;Choose the type of build, options are: None (CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel.&quot; FORCE)</span>
+<span class="gi">+endif()</span>
+<span class="gi">+</span>
+<span class="gi">+set(CMAKE_DEBUG_POSTFIX &quot;_d&quot;)</span>
+<span class="gi">+set(CMAKE_INSTALL_PREFIX &quot;${CMAKE_CURRENT_BINARY_DIR}/dist&quot;)</span>
+<span class="gi">+</span>
+<span class="gi">+# Find Boost</span>
+<span class="gi">+set(Boost_USE_STATIC_LIBS TRUE)</span>
+<span class="gi">+if(MINGW)</span>
+<span class="gi">+    # this is probably a bug in CMake: the boost find module tries to look for</span>
+<span class="gi">+    # boost libraries with name libboost_*, but CMake already prefixes library</span>
+<span class="gi">+    # search names with &quot;lib&quot;. This is the workaround.</span>
+<span class="gi">+    set(CMAKE_FIND_LIBRARY_PREFIXES ${CMAKE_FIND_LIBRARY_PREFIXES} &quot;&quot;)</span>
+<span class="gi">+endif()</span>
+<span class="gi">+set(Boost_ADDITIONAL_VERSIONS &quot;1.49&quot; &quot;1.49.0&quot; &quot;1.48&quot; &quot;1.48.0&quot; &quot;1.47&quot; &quot;1.47.0&quot; &quot;1.46.1&quot; &quot;1.46&quot; &quot;1.46.0&quot;)</span>
+<span class="gi">+find_package(Boost COMPONENTS thread date_time QUIET)</span>
+<span class="gi">+if(NOT Boost_FOUND)</span>
+<span class="gi">+    # Try again with the other type of libs</span>
+<span class="gi">+    set(Boost_USE_STATIC_LIBS FALSE)</span>
+<span class="gi">+    find_package(Boost COMPONENTS thread date_time QUIET)</span>
+<span class="gi">+endif()</span>
+<span class="gi">+find_package(Boost QUIET)</span>
+<span class="gi">+include_directories(${Boost_INCLUDE_DIR})</span>
+<span class="gi">+add_definitions(-DBOOST_ALL_NO_LIB)</span>
+<span class="gi">+</span>
+<span class="gi">+set(HDRS</span>
+<span class="gi">+    ./BaseApplication.h</span>
+<span class="gi">+    ./MainApplication.h</span>
+<span class="gi">+)</span>
+<span class="gi">+set(SRCS</span>
+<span class="gi">+    ./BaseApplication.cpp</span>
+<span class="gi">+    ./MainApplication.cpp</span>
+<span class="gi">+)</span>
+<span class="gi">+</span>
+<span class="gi">+include_directories(${Boost_INCLUDE_DIRS})</span>
+<span class="gi">+add_executable(AnApp ${HDRS} ${SRCS})</span>
+<span class="gi">+set_target_properties(AnApp PROPERTIES DEBUG_POSTFIX _d)</span>
+<span class="gi">+target_link_libraries(AnApp ${Boost_LIBRARIES})</span>
+<span class="gi">+</span>
+<span class="gi">+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/dist/bin)</span>
+<span class="gi">+install(TARGETS AnApp</span>
+<span class="gi">+    RUNTIME DESTINATION bin</span>
+<span class="gi">+    CONFIGURATIONS All</span>
+<span class="gi">+)</span>
+<span class="gi">+if(WIN32 AND NOT Boost_USE_STATIC_LIBS)</span>
+<span class="gi">+    install(FILES ${Boost_DATE_TIME_LIBRARY_RELEASE}</span>
+<span class="gi">+        ${Boost_THREAD_LIBRARY_RELEASE}</span>
+<span class="gi">+        DESTINATION bin</span>
+<span class="gi">+        CONFIGURATIONS Release RelWithDebInfo</span>
+<span class="gi">+    )</span>
+<span class="gi">+    install(FILES ${Boost_DATE_TIME_LIBRARY_DEBUG}</span>
+<span class="gi">+        ${Boost_THREAD_LIBRARY_DEBUG}</span>
+<span class="gi">+        DESTINATION bin</span>
+<span class="gi">+        CONFIGURATIONS Debug</span>
+<span class="gi">+    )</span>
+<span class="gi">+endif(WIN32)</span>
+<span class="gh">Index: src/sdk/resources/lexers/lexer_cmake.xml</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/lexers/lexer_cmake.xml    (revision 0)</span>
+<span class="gi">+++ src/sdk/resources/lexers/lexer_cmake.xml    (working copy)</span>
+<span class="gu">@@ -0,0 +1,546 @@</span>
+<span class="gi">+&lt;?xml version=&quot;1.0&quot;?&gt;</span>
+<span class="gi">+&lt;!DOCTYPE CodeBlocks_lexer_properties&gt;</span>
+<span class="gi">+&lt;CodeBlocks_lexer_properties&gt;</span>
+<span class="gi">+        &lt;Lexer name=&quot;CMake&quot;</span>
+<span class="gi">+               index=&quot;80&quot;</span>
+<span class="gi">+               filemasks=&quot;*CMakeLists.txt,*.cmake,*.cmake.in,*.ctest,*.ctest.in&quot;&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Default&quot;</span>
+<span class="gi">+                       index=&quot;0&quot;</span>
+<span class="gi">+                       fg=&quot;0,0,0&quot;</span>
+<span class="gi">+                       bg=&quot;255,255,255&quot;</span>
+<span class="gi">+                       bold=&quot;0&quot;</span>
+<span class="gi">+                       italics=&quot;0&quot;</span>
+<span class="gi">+                       underlined=&quot;0&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Comment&quot;</span>
+<span class="gi">+                       index=&quot;1&quot;</span>
+<span class="gi">+                       fg=&quot;160,160,160&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;String&quot;</span>
+<span class="gi">+                       index=&quot;2,3,4&quot;</span>
+<span class="gi">+                       fg=&quot;0,0,255&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Commands&quot;</span>
+<span class="gi">+                       index=&quot;5&quot;</span>
+<span class="gi">+                       fg=&quot;0,0,160&quot;</span>
+<span class="gi">+                       bold=&quot;1&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Parameters&quot;</span>
+<span class="gi">+                       index=&quot;6&quot;</span>
+<span class="gi">+                       fg=&quot;190,0,0&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Variable&quot;</span>
+<span class="gi">+                       index=&quot;7&quot;</span>
+<span class="gi">+                       fg=&quot;230,100,5&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;User defined&quot;</span>
+<span class="gi">+                       index=&quot;8&quot;</span>
+<span class="gi">+                       fg=&quot;50,115,50&quot;</span>
+<span class="gi">+                       bold=&quot;1&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Definitions&quot;</span>
+<span class="gi">+                       index=&quot;9,10,11,12&quot;</span>
+<span class="gi">+                       fg=&quot;100,0,100&quot;</span>
+<span class="gi">+                       bold=&quot;1&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Variable within a string&quot;</span>
+<span class="gi">+                       index=&quot;13&quot;</span>
+<span class="gi">+                       fg=&quot;100,55,200&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Number&quot;</span>
+<span class="gi">+                      index=&quot;14&quot;</span>
+<span class="gi">+                      fg=&quot;240,0,240&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Selection&quot;</span>
+<span class="gi">+                       index=&quot;-99&quot;</span>
+<span class="gi">+                       bg=&quot;192,192,192&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Active line&quot;</span>
+<span class="gi">+                       index=&quot;-98&quot;</span>
+<span class="gi">+                       bg=&quot;255,255,160&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Breakpoint line&quot;</span>
+<span class="gi">+                       index=&quot;-2&quot;</span>
+<span class="gi">+                       bg=&quot;255,160,160&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Debugger active line&quot;</span>
+<span class="gi">+                       index=&quot;-3&quot;</span>
+<span class="gi">+                       bg=&quot;160,160,255&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Compiler error line&quot;</span>
+<span class="gi">+                       index=&quot;-4&quot;</span>
+<span class="gi">+                       bg=&quot;255,128,0&quot;/&gt;</span>
+<span class="gi">+                &lt;Style name=&quot;Matching brace highlight&quot;</span>
+<span class="gi">+                       index=&quot;34&quot;</span>
+<span class="gi">+                       bg=&quot;128,255,255&quot;</span>
+<span class="gi">+                       bold=&quot;1&quot;/&gt;</span>
+<span class="gi">+</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

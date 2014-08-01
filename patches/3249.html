@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,105 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/compilergcc/compilerCYGWIN.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilerCYGWIN.cpp    (revision 7711)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilerCYGWIN.cpp    (working copy)</span>
+<span class="gu">@@ -35,9 +35,11 @@</span>
+ {
+     CompilerMINGW::Reset();
+ 
+<span class="gd">-    m_Programs.C = _T(&quot;gcc.exe&quot;);</span>
+<span class="gd">-    m_Programs.CPP = _T(&quot;g++.exe&quot;);</span>
+<span class="gd">-    m_Programs.LD = _T(&quot;g++.exe&quot;);</span>
+<span class="gi">+    // NOTE: Cygwin&#39;s gcc.exe is a file link and</span>
+<span class="gi">+    // is not a good default name for running via cmd.exe</span>
+<span class="gi">+    m_Programs.C = _T(&quot;gcc-3.exe&quot;);</span>
+<span class="gi">+    m_Programs.CPP = _T(&quot;g++-3.exe&quot;);</span>
+<span class="gi">+    m_Programs.LD = _T(&quot;g++-3.exe&quot;);</span>
+     m_Programs.DBG = _T(&quot;gdb.exe&quot;);
+     m_Programs.LIB = _T(&quot;ar.exe&quot;);
+     m_Programs.WINDRES = _T(&quot;windres.exe&quot;);
+<span class="gu">@@ -48,24 +50,68 @@</span>
+     m_Options.AddOption(_(&quot;Do not use cygwin specific functionality&quot;), _T(&quot;-mno-cygwin&quot;), _(&quot;General&quot;));
+ }
+ 
+<span class="gi">+bool isNormalFileNotSymlink(const wxString&amp; filename){</span>
+<span class="gi">+    if (wxFileExists(filename)){</span>
+<span class="gi">+        wxFile aFile(filename);</span>
+<span class="gi">+        if (aFile.IsOpened()){</span>
+<span class="gi">+            char buffer[10]={0};</span>
+<span class="gi">+            aFile.Read(buffer,10);</span>
+<span class="gi">+            if (memcmp(&quot;!&lt;symlink&gt;&quot;, buffer, 10) != 0){</span>
+<span class="gi">+                return true;</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+<span class="gi">+    }</span>
+<span class="gi">+    return false;</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ AutoDetectResult CompilerCYGWIN::AutoDetectInstallationDir()
+ {
+<span class="gd">-    m_MasterPath = _T(&quot;C:\\Cygwin&quot;); // just a guess</span>
+<span class="gi">+    AutoDetectResult ret = adrGuessed;</span>
+<span class="gi">+    wxString tempMasterPath = _T(&quot;C:\\Cygwin&quot;); // just a guess</span>
+<span class="gi">+    m_MasterPath = tempMasterPath;</span>
+<span class="gi">+    bool validInstallationDir = false;</span>
+ 
+     // look in registry for Cygwin
+ 
+     wxRegKey key; // defaults to HKCR
+<span class="gd">-    key.SetName(_T(&quot;HKEY_LOCAL_MACHINE\\Software\\Cygnus Solutions\\Cygwin\\mounts v2\\/&quot;));</span>
+<span class="gi">+    key.SetName(_T(&quot;HKEY_LOCAL_MACHINE\\Software\\Cygwin\\setup&quot;));</span>
+     if (key.Exists() &amp;&amp; key.Open(wxRegKey::Read))
+     {
+<span class="gd">-        // found; read it</span>
+<span class="gd">-        key.QueryValue(_T(&quot;native&quot;), m_MasterPath);</span>
+<span class="gi">+        // found CygWin version 1.7 or newer; read it</span>
+<span class="gi">+        key.QueryValue(_T(&quot;rootdir&quot;), tempMasterPath);</span>
+<span class="gi">+        if (wxDirExists(</span>
+<span class="gi">+                tempMasterPath + wxFILE_SEP_PATH +</span>
+<span class="gi">+                _T(&quot;bin&quot;))</span>
+<span class="gi">+        ){</span>
+<span class="gi">+                validInstallationDir = true;</span>
+<span class="gi">+        }</span>
+     }
+<span class="gd">-    AutoDetectResult ret = wxFileExists(m_MasterPath + wxFILE_SEP_PATH +</span>
+<span class="gd">-                                        _T(&quot;bin&quot;) + wxFILE_SEP_PATH +</span>
+<span class="gd">-                                        m_Programs.C)</span>
+<span class="gd">-                            ? adrDetected</span>
+<span class="gd">-                            : adrGuessed;</span>
+<span class="gi">+    if (!validInstallationDir){</span>
+<span class="gi">+        key.SetName(_T(&quot;HKEY_LOCAL_MACHINE\\Software\\Cygnus Solutions\\Cygwin\\mounts v2\\/&quot;));</span>
+<span class="gi">+        if (key.Exists() &amp;&amp; key.Open(wxRegKey::Read))</span>
+<span class="gi">+        {</span>
+<span class="gi">+            // found CygWin version 1.5 or older; read it</span>
+<span class="gi">+            key.QueryValue(_T(&quot;native&quot;), tempMasterPath);</span>
+<span class="gi">+            if (wxDirExists(</span>
+<span class="gi">+                    tempMasterPath + wxFILE_SEP_PATH +</span>
+<span class="gi">+                    _T(&quot;bin&quot;)</span>
+<span class="gi">+                )</span>
+<span class="gi">+            ){</span>
+<span class="gi">+                validInstallationDir = true;</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+<span class="gi">+    if (validInstallationDir){</span>
+<span class="gi">+        wxString cProgramDir = tempMasterPath + wxFILE_SEP_PATH +</span>
+<span class="gi">+            _T(&quot;bin&quot;) + wxFILE_SEP_PATH;</span>
+<span class="gi">+        wxString cProgramFullname = cProgramDir + m_Programs.C;</span>
+<span class="gi">+        if (isNormalFileNotSymlink(cProgramFullname)){</span>
+<span class="gi">+            m_MasterPath = tempMasterPath;</span>
+<span class="gi">+            ret = adrDetected;</span>
+<span class="gi">+        }</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+     return ret;
+ }
+ 
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">stahta01 2012-01-22 00:56:38</div>

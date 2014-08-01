@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,149 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/globals.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/globals.cpp    (revision 5986)</span>
+<span class="gi">+++ src/sdk/globals.cpp    (working copy)</span>
+<span class="gu">@@ -665,6 +665,64 @@</span>
+     return result;
+ }
+ 
+<span class="gi">+// Checks whether &#39;suffix&#39; could be a suffix of &#39;path&#39; and therefore represents </span>
+<span class="gi">+// the same path. This is used to check whether a relative path could represent</span>
+<span class="gi">+// the same path as absolute path. For instance, for </span>
+<span class="gi">+// suffix = sdk/globals.cpp</span>
+<span class="gi">+// path = /home/user/codeblocks/trunk/src/sdk/globals.cpp</span>
+<span class="gi">+// it returns true. The function expects that &#39;path&#39; is normalized and compares</span>
+<span class="gi">+// &#39;path&#39; with &#39;suffix&#39; starting from the end of the path. When it reaches .. in </span>
+<span class="gi">+// &#39;suffix&#39; it gives up (there is no way to check relative filename names </span>
+<span class="gi">+// exactly) and if the path compared so far is identical, it returns true</span>
+<span class="gi">+bool IsSuffixOfPath(wxFileName const &amp; suffix, wxFileName const &amp; path)</span>
+<span class="gi">+{</span>
+<span class="gi">+    if (path.GetFullName() != suffix.GetFullName())</span>
+<span class="gi">+    {</span>
+<span class="gi">+        return false;</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+<span class="gi">+    wxArrayString suffixDirArray = suffix.GetDirs();</span>
+<span class="gi">+    wxArrayString pathDirArray = path.GetDirs();</span>
+<span class="gi">+</span>
+<span class="gi">+    int j = pathDirArray.GetCount() - 1;</span>
+<span class="gi">+    for (int i = suffixDirArray.GetCount() - 1; i &gt;= 0; i--)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        if (suffixDirArray[i] == _T(&quot;.&quot;) || suffixDirArray[i] == _T(&quot;&quot;))</span>
+<span class="gi">+        {</span>
+<span class="gi">+            // skip paths like /./././ and ////</span>
+<span class="gi">+            continue;</span>
+<span class="gi">+        }</span>
+<span class="gi">+</span>
+<span class="gi">+        if (j &lt; 0)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            // suffix has more directories than path - cannot represent the same path</span>
+<span class="gi">+            return false;</span>
+<span class="gi">+        }</span>
+<span class="gi">+</span>
+<span class="gi">+        if (suffixDirArray[i] == _T(&quot;..&quot;))</span>
+<span class="gi">+        {</span>
+<span class="gi">+            // suffix contains &quot;..&quot; - from now on we cannot precisely determine </span>
+<span class="gi">+            // whether suffix and path match - we assume that they do</span>
+<span class="gi">+            return true;</span>
+<span class="gi">+        }</span>
+<span class="gi">+        else if (suffixDirArray[i] != pathDirArray[j])</span>
+<span class="gi">+        {</span>
+<span class="gi">+            // the corresponding directories of the two paths differ</span>
+<span class="gi">+            return false;</span>
+<span class="gi">+        }</span>
+<span class="gi">+</span>
+<span class="gi">+        j--;</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+<span class="gi">+    if (suffix.IsAbsolute() &amp;&amp; (j &gt;= 0 || suffix.GetVolume() != path.GetVolume()))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        return false;</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+<span class="gi">+    // &#39;suffix&#39; is a suffix of &#39;path&#39;</span>
+<span class="gi">+    return true;</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ // function to check the common controls version
+ // (should it be moved in sdk globals?)
+ #ifdef __WXMSW__
+<span class="gh">Index: src/include/globals.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/globals.h    (revision 5986)</span>
+<span class="gi">+++ src/include/globals.h    (working copy)</span>
+<span class="gu">@@ -184,6 +184,7 @@</span>
+                                           bool showCreateDirButton = false); // where supported
+ 
+ extern DLLIMPORT bool NormalizePath(wxFileName&amp; f,const wxString&amp; base);
+<span class="gi">+extern DLLIMPORT bool IsSuffixOfPath(wxFileName const &amp; suffix, wxFileName const &amp; path);</span>
+ 
+ extern DLLIMPORT wxString URLEncode(const wxString &amp;str);
+ 
+<span class="gh">Index: src/plugins/compilergcc/compilererrors.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilererrors.cpp    (revision 5986)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilererrors.cpp    (working copy)</span>
+<span class="gu">@@ -162,12 +162,52 @@</span>
+         }
+     }
+ 
+<span class="gd">-    // if we reached here and ed is NULL, either the error file doesn&#39;t belong to a project,</span>
+<span class="gd">-    // or can&#39;t be found for any other reason.</span>
+<span class="gd">-    // check if we can open it directly...</span>
+<span class="gi">+    // if we reached here and ed is NULL, the filename in the output isn&#39;t relative</span>
+<span class="gi">+    // to the project root directory or doesn&#39;t belong to the project</span>
+<span class="gi">+</span>
+<span class="gi">+    // first check if we can open it directly...</span>
+     if (!ed)
+         ed = Manager::Get()-&gt;GetEditorManager()-&gt;Open(error.filename);
+ 
+<span class="gi">+    // check if we find the file among opened files (highly probable for error</span>
+<span class="gi">+    // messages since we are getting error for something we have just screwed up)</span>
+<span class="gi">+    if (!ed)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        for (int i = 0; i &lt; Manager::Get()-&gt;GetEditorManager()-&gt;GetEditorsCount(); ++i)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            cbEditor* edit = Manager::Get()-&gt;GetEditorManager()-&gt;GetBuiltinEditor(i);</span>
+<span class="gi">+            if (!edit)</span>
+<span class="gi">+                continue;</span>
+<span class="gi">+</span>
+<span class="gi">+            ProjectFile* pf = edit-&gt;GetProjectFile();</span>
+<span class="gi">+            if (!pf)</span>
+<span class="gi">+                continue;</span>
+<span class="gi">+</span>
+<span class="gi">+            if (IsSuffixOfPath(error.filename, pf-&gt;file.GetFullPath()))</span>
+<span class="gi">+            {</span>
+<span class="gi">+                ed = Manager::Get()-&gt;GetEditorManager()-&gt;Open(pf-&gt;file.GetFullPath());</span>
+<span class="gi">+                break;</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+<span class="gi">+    // finally go through the project files and try to find the file there</span>
+<span class="gi">+    if (!ed &amp;&amp; project)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        for (int i = 0; i &lt; project-&gt;GetFilesCount(); ++i)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            ProjectFile* pf = project-&gt;GetFile(i);</span>
+<span class="gi">+            if (!pf)</span>
+<span class="gi">+                continue;</span>
+<span class="gi">+</span>
+<span class="gi">+            if (IsSuffixOfPath(error.filename, pf-&gt;file.GetFullPath()))</span>
+<span class="gi">+            {</span>
+<span class="gi">+                ed = Manager::Get()-&gt;GetEditorManager()-&gt;Open(pf-&gt;file.GetFullPath());</span>
+<span class="gi">+                break;</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+     if (ed)
+     {
+         ed-&gt;Activate();
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">techy 2009-12-20 20:18:49</div>

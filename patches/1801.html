@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,144 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 3459)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -74,6 +74,7 @@</span>
+     EVT_CONTEXT_MENU(cbStyledTextCtrl::OnContextMenu)
+     EVT_KILL_FOCUS(cbStyledTextCtrl::OnKillFocus)
+     EVT_MIDDLE_DOWN(cbStyledTextCtrl::OnGPM)
+<span class="gi">+    EVT_KEY_DOWN(cbStyledTextCtrl::OnKeyDown)</span>
+ END_EVENT_TABLE()
+ 
+ cbStyledTextCtrl::cbStyledTextCtrl(wxWindow* pParent, int id, const wxPoint&amp; pos, const wxSize&amp; size, long style)
+<span class="gu">@@ -136,8 +137,111 @@</span>
+ #endif
+ }
+ 
+<span class="gi">+void cbStyledTextCtrl::OnKeyDown (wxKeyEvent&amp; evt) //Used to check if code is unfolded before a delete</span>
+<span class="gi">+{</span>
+<span class="gi">+   int keyPressed = evt.GetKeyCode();</span>
+<span class="gi">+   if(keyPressed == WXK_DELETE || keyPressed == WXK_BACK)</span>
+<span class="gi">+   {</span>
+<span class="gi">+      ConfigManager* mgr = Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;));</span>
+<span class="gi">+      if(mgr-&gt;ReadBool(_T(&quot;/folding/show_folds&quot;), true)) //Only try to fix folds if the folds are used</span>
+<span class="gi">+      {</span>
+<span class="gi">+         int currentLine = GetCurrentLine();</span>
+<span class="gi">+         int currentSelectionStart = GetSelectionStart();</span>
+<span class="gi">+         int currentSelectionEnd = GetSelectionEnd();</span>
+<span class="gi">+         int selectionSize = currentSelectionEnd - currentSelectionStart;</span>
+<span class="gi">+         if(selectionSize != 0) //Determine if there is a selection involved</span>
+<span class="gi">+         {</span>
+<span class="gi">+            int selectionStartLine = LineFromPosition(currentSelectionStart);</span>
+<span class="gi">+            int selectionEndLine = LineFromPosition(currentSelectionEnd);</span>
+ 
+<span class="gi">+            int foldLevelStartLine = GetFoldLevel(selectionStartLine);</span>
+<span class="gi">+            int foldLevelEndLine = GetFoldLevel(selectionEndLine);</span>
+ 
+<span class="gi">+            int foldStartParent = GetFoldParent(selectionStartLine);</span>
+<span class="gi">+            int foldEndParent = GetFoldParent(selectionEndLine);</span>
+<span class="gi">+</span>
+<span class="gi">+            if ((foldLevelStartLine &amp; wxSCI_FOLDLEVELHEADERFLAG) &amp;&amp;</span>
+<span class="gi">+            (wxSCI_FOLDLEVELBASE &lt;= (foldLevelStartLine &amp; wxSCI_FOLDLEVELNUMBERMASK)))</span>
+<span class="gi">+            {</span>
+<span class="gi">+               foldStartParent = selectionStartLine;</span>
+<span class="gi">+            }</span>
+<span class="gi">+</span>
+<span class="gi">+            if ((foldLevelEndLine &amp; wxSCI_FOLDLEVELHEADERFLAG) &amp;&amp;</span>
+<span class="gi">+            (wxSCI_FOLDLEVELBASE &lt;= (foldLevelEndLine &amp; wxSCI_FOLDLEVELNUMBERMASK)))</span>
+<span class="gi">+            {</span>
+<span class="gi">+               foldEndParent = selectionEndLine;</span>
+<span class="gi">+            }</span>
+<span class="gi">+</span>
+<span class="gi">+            if(foldStartParent != -1)</span>
+<span class="gi">+            {</span>
+<span class="gi">+               if(GetFoldExpanded(foldStartParent) == false)</span>
+<span class="gi">+               {</span>
+<span class="gi">+                  ToggleFold(foldStartParent);</span>
+<span class="gi">+               }</span>
+<span class="gi">+            }</span>
+<span class="gi">+</span>
+<span class="gi">+            if(foldEndParent != -1)</span>
+<span class="gi">+            {</span>
+<span class="gi">+               if(GetFoldExpanded(foldEndParent) == false)</span>
+<span class="gi">+               {</span>
+<span class="gi">+                  ToggleFold(foldEndParent);</span>
+<span class="gi">+               }</span>
+<span class="gi">+            }</span>
+<span class="gi">+         }</span>
+<span class="gi">+         else //If no selection involved</span>
+<span class="gi">+         {</span>
+<span class="gi">+            int foldParent = GetFoldParent(currentLine);</span>
+<span class="gi">+            int foldLevel = GetFoldLevel(currentLine);</span>
+<span class="gi">+</span>
+<span class="gi">+            if ((foldLevel &amp; wxSCI_FOLDLEVELHEADERFLAG) &amp;&amp;</span>
+<span class="gi">+            (wxSCI_FOLDLEVELBASE &lt;= (foldLevel &amp; wxSCI_FOLDLEVELNUMBERMASK)))</span>
+<span class="gi">+            {</span>
+<span class="gi">+               foldParent = currentLine;</span>
+<span class="gi">+            }</span>
+<span class="gi">+</span>
+<span class="gi">+            if(foldParent != -1)</span>
+<span class="gi">+            {</span>
+<span class="gi">+               if(GetFoldExpanded(foldParent) == false)</span>
+<span class="gi">+               {</span>
+<span class="gi">+                  ToggleFold(foldParent);</span>
+<span class="gi">+               }</span>
+<span class="gi">+               else</span>
+<span class="gi">+               {</span>
+<span class="gi">+                  int prevLine = currentLine - 1;</span>
+<span class="gi">+                  if(prevLine &gt; 0)</span>
+<span class="gi">+                  {</span>
+<span class="gi">+                     int prevFoldParent = GetFoldParent(prevLine);</span>
+<span class="gi">+                     if( prevFoldParent != -1)</span>
+<span class="gi">+                     {</span>
+<span class="gi">+                        if(GetFoldExpanded(prevFoldParent) == false)</span>
+<span class="gi">+                        {</span>
+<span class="gi">+                           ToggleFold(prevFoldParent);</span>
+<span class="gi">+                        }</span>
+<span class="gi">+                     }</span>
+<span class="gi">+                  }</span>
+<span class="gi">+               }</span>
+<span class="gi">+            }</span>
+<span class="gi">+            else</span>
+<span class="gi">+            {</span>
+<span class="gi">+               int prevLine = currentLine - 1;</span>
+<span class="gi">+               if(prevLine &gt; 0)</span>
+<span class="gi">+               {</span>
+<span class="gi">+                  int prevFoldParent = GetFoldParent(prevLine);</span>
+<span class="gi">+                  if( prevFoldParent != -1)</span>
+<span class="gi">+                  {</span>
+<span class="gi">+                     if(GetFoldExpanded(prevFoldParent) == false)</span>
+<span class="gi">+                     {</span>
+<span class="gi">+                        ToggleFold(prevFoldParent);</span>
+<span class="gi">+                     }</span>
+<span class="gi">+                  }</span>
+<span class="gi">+               }</span>
+<span class="gi">+            }</span>
+<span class="gi">+         }</span>
+<span class="gi">+      }</span>
+<span class="gi">+   }</span>
+<span class="gi">+   evt.Skip();</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ /* This struct holds private data for the cbEditor class.
+  * It&#39;s a paradigm to avoid rebuilding the entire project (as cbEditor is a basic dependency)
+  * for just adding a private var or method.
+<span class="gh">Index: src/sdk/cbeditor.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.h    (revision 3459)</span>
+<span class="gi">+++ src/sdk/cbeditor.h    (working copy)</span>
+<span class="gu">@@ -28,6 +28,7 @@</span>
+         void OnContextMenu(wxContextMenuEvent&amp; event);
+         void OnKillFocus(wxFocusEvent&amp; event);
+         void OnGPM(wxMouseEvent&amp; event);
+<span class="gi">+        void OnKeyDown (wxKeyEvent&amp; evt);</span>
+     private:
+         wxWindow* m_pParent;
+         DECLARE_EVENT_TABLE()
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mcdave 2007-01-05 11:27:39</div>

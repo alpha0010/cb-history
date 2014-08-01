@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,131 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/globals.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/globals.cpp    (revision 3320)</span>
+<span class="gi">+++ src/sdk/globals.cpp    (arbetskopia)</span>
+<span class="gu">@@ -53,7 +53,12 @@</span>
+ 
+ const wxString DEFAULT_WORKSPACE     = _T(&quot;default.workspace&quot;);
+ const wxString DEFAULT_ARRAY_SEP     = _T(&quot;;&quot;);
+<span class="gi">+</span>
+<span class="gi">+#ifndef __WXMAC__</span>
+ const wxString DEFAULT_CONSOLE_TERM  = _T(&quot;xterm -T $TITLE -e&quot;);
+<span class="gi">+#else</span>
+<span class="gi">+const wxString DEFAULT_CONSOLE_TERM  = _T(&quot;osascript -e &#39;tell app \&quot;Terminal\&quot; to do script \&quot;$SCRIPT\&quot;&#39;&quot;);</span>
+<span class="gi">+#endif</span>
+ const wxString DEFAULT_CONSOLE_SHELL = _T(&quot;/bin/sh -c&quot;);
+ 
+ wxString GetStringFromArray(const wxArrayString&amp; array, const wxString&amp; separator)
+<span class="gh">Index: src/plugins/compilergcc/compilergcc.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilergcc.cpp    (revision 3320)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilergcc.cpp    (arbetskopia)</span>
+<span class="gu">@@ -1091,7 +1091,11 @@</span>
+         dir = m_CdRun;
+     #ifndef __WXMSW__
+         // setup dynamic linker path
+<span class="gi">+    #if defined(__APPLE__) &amp;&amp; defined(__MACH__)</span>
+<span class="gi">+        wxSetEnv(_T(&quot;DYLD_LIBRARY_PATH&quot;), _T(&quot;.:$DYLD_LIBRARY_PATH&quot;));</span>
+<span class="gi">+    #else</span>
+         wxSetEnv(_T(&quot;LD_LIBRARY_PATH&quot;), _T(&quot;.:$LD_LIBRARY_PATH&quot;));
+<span class="gi">+    #endif // __APPLE__ &amp;&amp; __MACH__</span>
+     #endif
+     }
+ 
+<span class="gu">@@ -1522,9 +1526,9 @@</span>
+     if (wxFileExists(baseDir + wxT(&quot;/&quot; CONSOLE_RUNNER)))
+         cmd &lt;&lt; baseDir &lt;&lt; wxT(&quot;/&quot; CONSOLE_RUNNER &quot; &quot;);
+ 
+<span class="gd">-    cmd &lt;&lt; _T(&quot;\&quot;&quot;);</span>
+<span class="gd">-    cmd &lt;&lt; exe_filename;</span>
+<span class="gd">-    cmd &lt;&lt; _T(&quot;\&quot;&quot;);</span>
+<span class="gi">+    if (!cmd.Replace(_T(&quot;$SCRIPT&quot;), exe_filename))</span>
+<span class="gi">+        // if they didn&#39;t specify $SCRIPT, append:</span>
+<span class="gi">+        cmd &lt;&lt; _T(&quot;\&quot;&quot;) &lt;&lt; exe_filename &lt;&lt; _T(&quot;\&quot;&quot;);</span>
+ 
+     Manager::Get()-&gt;GetMessageManager()-&gt;Log(m_PageIndex, _(&quot;Checking for existence: %s&quot;), exe_filename.c_str());
+     if (!wxFileExists(exe_filename))
+<span class="gu">@@ -1603,6 +1607,7 @@</span>
+     Manager::Get()-&gt;GetMacrosManager()-&gt;ReplaceEnvVars(out);
+ 
+     wxString cmd;
+<span class="gi">+    wxString command;</span>
+     wxFileName f(out);
+     f.MakeAbsolute(m_Project-&gt;GetBasePath());
+ 
+<span class="gu">@@ -1621,7 +1626,12 @@</span>
+         // for non-win platforms, use m_ConsoleTerm to run the console app
+         wxString term = Manager::Get()-&gt;GetConfigManager(_T(&quot;app&quot;))-&gt;Read(_T(&quot;/console_terminal&quot;), DEFAULT_CONSOLE_TERM);
+         term.Replace(_T(&quot;$TITLE&quot;), _T(&quot;&#39;&quot;) + m_Project-&gt;GetTitle() + _T(&quot;&#39;&quot;));
+<span class="gd">-        cmd &lt;&lt; term &lt;&lt; _T(&quot; &#39;LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH &quot;);</span>
+<span class="gi">+        cmd &lt;&lt; term;</span>
+<span class="gi">+    #if defined(__APPLE__) &amp;&amp; defined(__MACH__)</span>
+<span class="gi">+        command &lt;&lt; _T(&quot;&#39;DYLD_LIBRARY_PATH=.:$DYLD_LIBRARY_PATH &quot;);</span>
+<span class="gi">+    #else</span>
+<span class="gi">+        command &lt;&lt; _T(&quot;&#39;LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH &quot;);</span>
+<span class="gi">+    #endif // __APPLE__ &amp;&amp; __MACH__</span>
+ #endif
+         // should console runner be used?
+         if (target-&gt;GetUseConsoleRunner())
+<span class="gu">@@ -1633,7 +1643,7 @@</span>
+     #define CONSOLE_RUNNER &quot;cb_console_runner&quot;
+ #endif
+             if (wxFileExists(baseDir + wxT(&quot;/&quot; CONSOLE_RUNNER)))
+<span class="gd">-                cmd &lt;&lt; baseDir &lt;&lt; wxT(&quot;/&quot; CONSOLE_RUNNER &quot; &quot;);</span>
+<span class="gi">+                command &lt;&lt; baseDir &lt;&lt; wxT(&quot;/&quot; CONSOLE_RUNNER &quot; &quot;);</span>
+         }
+     }
+ 
+<span class="gu">@@ -1649,18 +1659,18 @@</span>
+         }
+         wxString tmp = target-&gt;GetHostApplication();
+         Manager::Get()-&gt;GetMacrosManager()-&gt;ReplaceEnvVars(tmp);
+<span class="gd">-        cmd &lt;&lt; _T(&quot;\&quot;&quot;) &lt;&lt; tmp &lt;&lt; _T(&quot;\&quot; &quot;) &lt;&lt; target-&gt;GetExecutionParameters();</span>
+<span class="gi">+        command &lt;&lt; _T(&quot;\&quot;&quot;) &lt;&lt; tmp &lt;&lt; _T(&quot;\&quot; &quot;);</span>
+<span class="gi">+        command &lt;&lt; target-&gt;GetExecutionParameters();</span>
+     }
+     else if (target-&gt;GetTargetType() != ttCommandsOnly)
+     {
+<span class="gd">-        cmd &lt;&lt; _T(&quot;\&quot;&quot;);</span>
+<span class="gd">-        cmd &lt;&lt; f.GetFullPath();</span>
+<span class="gd">-        cmd &lt;&lt; _T(&quot;\&quot; &quot;);</span>
+<span class="gd">-        cmd &lt;&lt; target-&gt;GetExecutionParameters();</span>
+<span class="gi">+        wxString tmp = f.GetFullPath();</span>
+<span class="gi">+        command &lt;&lt; _T(&quot;\&quot;&quot;) &lt;&lt; tmp &lt;&lt; _T(&quot;\&quot; &quot;);</span>
+<span class="gi">+        command &lt;&lt; target-&gt;GetExecutionParameters();</span>
+ #ifndef __WXMSW__
+         // closing single-quote for xterm command line
+         if (target-&gt;GetTargetType() == ttConsoleOnly)
+<span class="gd">-            cmd &lt;&lt; _T(&quot;&#39;&quot;);</span>
+<span class="gi">+            command &lt;&lt; _T(&quot;&#39;&quot;);</span>
+ #endif
+     }
+     else
+<span class="gu">@@ -1671,6 +1681,20 @@</span>
+         return -1;
+     }
+ 
+<span class="gi">+    wxString script = command;</span>
+<span class="gi">+</span>
+<span class="gi">+#ifdef __WXMAC__</span>
+<span class="gi">+    if (target-&gt;GetTargetType() == ttConsoleOnly)</span>
+<span class="gi">+        script = script.Mid(1,script.length()-2); // skip single-quotes</span>
+<span class="gi">+</span>
+<span class="gi">+    // convert embedded quotes to AppleScript syntax</span>
+<span class="gi">+    script.Replace(_T(&quot;\&quot;&quot;), _T(&quot;\&quot;&amp;quote&amp;\&quot;&quot;), true);</span>
+<span class="gi">+#endif</span>
+<span class="gi">+</span>
+<span class="gi">+    if (!cmd.Replace(_T(&quot;$SCRIPT&quot;), script))</span>
+<span class="gi">+        // if they didn&#39;t specify $SCRIPT, append:</span>
+<span class="gi">+        cmd &lt;&lt; _T(&quot; &quot;) &lt;&lt; command;</span>
+<span class="gi">+</span>
+     Manager::Get()-&gt;GetMessageManager()-&gt;Log(m_PageIndex, _(&quot;Checking for existence: %s&quot;), f.GetFullPath().c_str());
+     if (!wxFileExists(f.GetFullPath()))
+     {
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">afb 2006-12-01 08:50:13</div>

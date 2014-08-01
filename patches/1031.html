@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,76 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 2412)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -555,6 +555,7 @@</span>
+ 
+     m_pControl-&gt;SetCaretWidth(mgr-&gt;ReadInt(_T(&quot;/caret/width&quot;), 1));
+     m_pControl-&gt;SetCaretForeground(GetOptionColour(_T(&quot;/caret/color&quot;), *wxBLACK));
+<span class="gi">+    m_pControl-&gt;SetCaretPeriod(mgr-&gt;ReadInt(_T(&quot;/caret/period&quot;), 500));</span>
+     m_pControl-&gt;SetCaretLineVisible(mgr-&gt;ReadBool(_T(&quot;/highlight_caret_line&quot;), false));
+     m_pControl-&gt;SetCaretLineBackground(GetOptionColour(_T(&quot;/highlight_caret_line_color&quot;), wxColour(0xFF, 0xFF, 0x00)));
+ 
+<span class="gh">Index: src/sdk/editorconfigurationdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorconfigurationdlg.cpp    (revision 2412)</span>
+<span class="gi">+++ src/sdk/editorconfigurationdlg.cpp    (working copy)</span>
+<span class="gu">@@ -146,6 +146,7 @@</span>
+     wxColour caretColor = cfg-&gt;ReadColour(_T(&quot;/caret/color&quot;), *wxBLACK);
+     XRCCTRL(*this, &quot;spnCaretWidth&quot;, wxSpinCtrl)-&gt;SetValue(cfg-&gt;ReadInt(_T(&quot;/caret/width&quot;), 1));
+     XRCCTRL(*this, &quot;btnCaretColor&quot;, wxButton)-&gt;SetBackgroundColour(caretColor);
+<span class="gi">+    XRCCTRL(*this, &quot;slCaretPeriod&quot;, wxSlider)-&gt;SetValue(cfg-&gt;ReadInt(_T(&quot;/caret/period&quot;), 500));</span>
+ 
+     //folding
+        XRCCTRL(*this, &quot;chkEnableFolding&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/folding/show_folds&quot;), true));
+<span class="gu">@@ -819,8 +820,9 @@</span>
+         cfg-&gt;Write(_T(&quot;/auto_wrap_search&quot;),     XRCCTRL(*this, &quot;chkAutoWrapSearch&quot;, wxCheckBox)-&gt;GetValue());
+ 
+         //caret
+<span class="gd">-        cfg-&gt;Write(_T(&quot;/caret/width&quot;), XRCCTRL(*this, &quot;spnCaretWidth&quot;, wxSpinCtrl)-&gt;GetValue());</span>
+<span class="gd">-        cfg-&gt;Write(_T(&quot;/caret/color&quot;), XRCCTRL(*this, &quot;btnCaretColor&quot;, wxButton)-&gt;GetBackgroundColour());</span>
+<span class="gi">+        cfg-&gt;Write(_T(&quot;/caret/width&quot;),  XRCCTRL(*this, &quot;spnCaretWidth&quot;, wxSpinCtrl)-&gt;GetValue());</span>
+<span class="gi">+        cfg-&gt;Write(_T(&quot;/caret/color&quot;),  XRCCTRL(*this, &quot;btnCaretColor&quot;, wxButton)-&gt;GetBackgroundColour());</span>
+<span class="gi">+        cfg-&gt;Write(_T(&quot;/caret/period&quot;), XRCCTRL(*this, &quot;slCaretPeriod&quot;, wxSlider)-&gt;GetValue());</span>
+ 
+         //folding
+         cfg-&gt;Write(_T(&quot;/folding/show_folds&quot;),             XRCCTRL(*this, &quot;chkEnableFolding&quot;, wxCheckBox)-&gt;GetValue());
+<span class="gh">Index: src/sdk/resources/editor_configuration.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/editor_configuration.xrc    (revision 2412)</span>
+<span class="gi">+++ src/sdk/resources/editor_configuration.xrc    (working copy)</span>
+<span class="gu">@@ -517,6 +517,20 @@</span>
+                             &lt;label&gt;&lt;/label&gt;
+                           &lt;/object&gt;
+                         &lt;/object&gt;
+<span class="gi">+                        &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gi">+                          &lt;flag&gt;wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL&lt;/flag&gt;</span>
+<span class="gi">+                          &lt;object class=&quot;wxStaticText&quot;&gt;</span>
+<span class="gi">+                            &lt;label&gt;Period (in milliseconds):&lt;/label&gt;</span>
+<span class="gi">+                          &lt;/object&gt;</span>
+<span class="gi">+                        &lt;/object&gt;</span>
+<span class="gi">+                        &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gi">+                          &lt;flag&gt;wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;</span>
+<span class="gi">+                          &lt;object class=&quot;wxSlider&quot; name=&quot;slCaretPeriod&quot;&gt;</span>
+<span class="gi">+                            &lt;value&gt;500&lt;/value&gt;</span>
+<span class="gi">+                            &lt;max&gt;500&lt;/max&gt;</span>
+<span class="gi">+                            &lt;style&gt;wxSL_TOP|wxSL_LABELS|wxSL_INVERSE&lt;/style&gt;</span>
+<span class="gi">+                          &lt;/object&gt;</span>
+<span class="gi">+                        &lt;/object&gt;</span>
+                       &lt;/object&gt;
+                     &lt;/object&gt;
+                   &lt;/object&gt;
+<span class="gu">@@ -939,4 +953,4 @@</span>
+       &lt;/object&gt;
+     &lt;/object&gt;
+   &lt;/object&gt;
+<span class="gd">-&lt;/resource&gt;</span>
+\ No newline at end of file
+<span class="gi">+&lt;/resource&gt;</span>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">sethjackson 2006-05-05 18:02:17</div>

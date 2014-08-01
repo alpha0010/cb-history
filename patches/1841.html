@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,180 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 3507)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -1710,7 +1710,7 @@</span>
+ void cbEditor::Undo()
+ {
+     wxASSERT(m_pControl);
+<span class="gd">-    m_pControl-&gt;Undo();</span>
+<span class="gi">+    GetControl()-&gt;Undo();</span>
+ }
+ 
+ void cbEditor::Redo()
+<span class="gu">@@ -1740,32 +1740,45 @@</span>
+ bool cbEditor::CanUndo() const
+ {
+     wxASSERT(m_pControl);
+<span class="gd">-    return m_pControl-&gt;CanUndo();</span>
+<span class="gi">+    return GetControl()-&gt;CanUndo();</span>
+ }
+ 
+ bool cbEditor::CanRedo() const
+ {
+     wxASSERT(m_pControl);
+<span class="gd">-    return m_pControl-&gt;CanRedo();</span>
+<span class="gi">+    return GetControl()-&gt;CanRedo();</span>
+ }
+ 
+<span class="gd">-bool cbEditor::HasSelection() const</span>
+<span class="gi">+bool cbEditor::CanCut() const</span>
+ {
+     wxASSERT(m_pControl);
+<span class="gd">-    cbStyledTextCtrl* control = GetControl();</span>
+<span class="gd">-    return control-&gt;GetSelectionStart() != control-&gt;GetSelectionEnd();</span>
+<span class="gi">+    return HasSelection() &amp;&amp; !GetControl()-&gt;GetReadOnly();</span>
+ }
+ 
+<span class="gi">+bool cbEditor::CanCopy() const</span>
+<span class="gi">+{</span>
+<span class="gi">+    wxASSERT(m_pControl);</span>
+<span class="gi">+    return HasSelection();</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ bool cbEditor::CanPaste() const
+ {
+     wxASSERT(m_pControl);
+ #ifdef __WXGTK__
+     return true;
+ #else
+<span class="gd">-    return m_pControl-&gt;CanPaste();</span>
+<span class="gi">+    return GetControl()-&gt;CanPaste();</span>
+ #endif
+ }
+ 
+<span class="gi">+bool cbEditor::HasSelection() const</span>
+<span class="gi">+{</span>
+<span class="gi">+    wxASSERT(m_pControl);</span>
+<span class="gi">+    cbStyledTextCtrl* control = GetControl();</span>
+<span class="gi">+    return control-&gt;GetSelectionStart() != control-&gt;GetSelectionEnd();</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+ bool cbEditor::LineHasMarker(int marker, int line) const
+ {
+     if (line == -1)
+<span class="gh">Index: src/sdk/cbeditor.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.h    (revision 3507)</span>
+<span class="gi">+++ src/sdk/cbeditor.h    (working copy)</span>
+<span class="gu">@@ -273,8 +273,10 @@</span>
+         void Paste();
+         bool CanUndo() const;
+         bool CanRedo() const;
+<span class="gi">+        bool CanCut() const;</span>
+<span class="gi">+        bool CanCopy() const;</span>
+<span class="gi">+        bool CanPaste() const;</span>
+         bool HasSelection() const;
+<span class="gd">-        bool CanPaste() const;</span>
+ 
+         // Workaround for shift-tab bug in wx2.4.2
+         void DoIndent(); /// Indents current line/block
+<span class="gh">Index: src/sdk/editorbase.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorbase.h    (revision 3507)</span>
+<span class="gi">+++ src/sdk/editorbase.h    (working copy)</span>
+<span class="gu">@@ -224,17 +224,30 @@</span>
+           */
+         virtual bool CanRedo() const { return false; }
+ 
+<span class="gd">-        /** Is there a selection?</span>
+<span class="gi">+        /** Is there something to cut?</span>
+           *
+<span class="gd">-          * @return True if there is text/object selected, false if not.</span>
+<span class="gi">+          * @return True if there is something to cut and the document is not read only, false if not.</span>
+           */
+<span class="gd">-        virtual bool HasSelection() const { return false; }</span>
+<span class="gi">+        virtual bool CanCut() const { return false; }</span>
+ 
+<span class="gi">+        /** Is there something to copy?</span>
+<span class="gi">+          *</span>
+<span class="gi">+          * @return True if there is something to copy, false if not.</span>
+<span class="gi">+          */</span>
+<span class="gi">+        virtual bool CanCopy() const { return false; }</span>
+<span class="gi">+</span>
+         /** Is there something to paste?
+           *
+           * @return True if there is something to paste, false if not.
+           */
+         virtual bool CanPaste() const { return false; }
+<span class="gi">+</span>
+<span class="gi">+        /** Is there a selection?</span>
+<span class="gi">+          *</span>
+<span class="gi">+          * @return True if there is text/object selected, false if not.</span>
+<span class="gi">+          */</span>
+<span class="gi">+        virtual bool HasSelection() const { return false; }</span>
+<span class="gi">+</span>
+     protected:
+         /** Initializes filename data.
+           * @param filename The editor&#39;s filename for initialization.
+<span class="gh">Index: src/src/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/main.cpp    (revision 3507)</span>
+<span class="gi">+++ src/src/main.cpp    (working copy)</span>
+<span class="gu">@@ -3158,12 +3158,15 @@</span>
+         return;
+     }
+ 
+<span class="gd">-    cbEditor* ed = NULL;</span>
+<span class="gd">-    EditorBase* eb = NULL;</span>
+<span class="gd">-    bool hasSel = false;</span>
+<span class="gi">+    cbEditor* ed = 0;</span>
+<span class="gi">+    EditorBase* eb = 0;</span>
+<span class="gi">+</span>
+     bool canUndo = false;
+     bool canRedo = false;
+<span class="gi">+    bool canCut = false;</span>
+<span class="gi">+    bool canCopy = false;</span>
+     bool canPaste = false;
+<span class="gi">+</span>
+     int eolMode = -1;
+ 
+     if(Manager::Get()-&gt;GetEditorManager() &amp;&amp; !Manager::isappShuttingDown())
+<span class="gu">@@ -3180,14 +3183,15 @@</span>
+     {
+         canUndo = eb-&gt;CanUndo();
+         canRedo = eb-&gt;CanRedo();
+<span class="gd">-        hasSel = eb-&gt;HasSelection();</span>
+<span class="gi">+        canCut = eb-&gt;CanCut();</span>
+<span class="gi">+        canCopy = eb-&gt;CanCopy();</span>
+         canPaste = eb-&gt;CanPaste();
+     }
+ 
+     mbar-&gt;Enable(idEditUndo, eb &amp;&amp; canUndo);
+     mbar-&gt;Enable(idEditRedo, eb &amp;&amp; canRedo);
+<span class="gd">-    mbar-&gt;Enable(idEditCut, eb &amp;&amp; hasSel);</span>
+<span class="gd">-    mbar-&gt;Enable(idEditCopy, eb &amp;&amp; hasSel);</span>
+<span class="gi">+    mbar-&gt;Enable(idEditCut, eb &amp;&amp; canCut);</span>
+<span class="gi">+    mbar-&gt;Enable(idEditCopy, eb &amp;&amp; canCopy);</span>
+     mbar-&gt;Enable(idEditPaste, eb &amp;&amp; canPaste);
+     mbar-&gt;Enable(idEditSwapHeaderSource, ed);
+     mbar-&gt;Enable(idEditGotoMatchingBrace, ed);
+<span class="gu">@@ -3234,8 +3238,8 @@</span>
+     {
+         m_pToolbar-&gt;EnableTool(idEditUndo, eb &amp;&amp; canUndo);
+         m_pToolbar-&gt;EnableTool(idEditRedo, eb &amp;&amp; canRedo);
+<span class="gd">-        m_pToolbar-&gt;EnableTool(idEditCut, eb &amp;&amp; hasSel);</span>
+<span class="gd">-        m_pToolbar-&gt;EnableTool(idEditCopy, eb &amp;&amp; hasSel);</span>
+<span class="gi">+        m_pToolbar-&gt;EnableTool(idEditCut, eb &amp;&amp; canCut);</span>
+<span class="gi">+        m_pToolbar-&gt;EnableTool(idEditCopy, eb &amp;&amp; canCopy);</span>
+         m_pToolbar-&gt;EnableTool(idEditPaste, eb &amp;&amp; canPaste);
+     }
+ 
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">sethjackson 2007-01-19 20:07:31</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,134 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: compilergcc/compilergcc.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- compilergcc/compilergcc.cpp    (revision 2228)</span>
+<span class="gi">+++ compilergcc/compilergcc.cpp    (working copy)</span>
+<span class="gu">@@ -182,7 +182,6 @@</span>
+     m_ListPageIndex(-1),
+     m_Menu(0L),
+     m_TargetMenu(0L),
+<span class="gd">-    m_pToolbar(0L),</span>
+     m_TargetIndex(-1),
+     m_ErrorsMenu(0L),
+     m_Project(0L),
+<span class="gu">@@ -442,22 +441,6 @@</span>
+ //        delete m_Menu;
+ //        m_Menu = 0L;
+ //    }
+<span class="gd">-</span>
+<span class="gd">-    if (m_pToolbar)</span>
+<span class="gd">-    {</span>
+<span class="gd">-        m_pToolbar-&gt;DeleteTool(idMenuCompile);</span>
+<span class="gd">-        m_pToolbar-&gt;DeleteTool(idMenuRun);</span>
+<span class="gd">-        m_pToolbar-&gt;DeleteTool(idMenuCompileAndRun);</span>
+<span class="gd">-        m_pToolbar-&gt;DeleteTool(idMenuRebuild);</span>
+<span class="gd">-</span>
+<span class="gd">-        m_pToolbar-&gt;DeleteTool(idToolTarget);</span>
+<span class="gd">-        delete m_ToolTarget;</span>
+<span class="gd">-        m_ToolTarget = 0L;</span>
+<span class="gd">-</span>
+<span class="gd">-        m_pToolbar-&gt;DeleteTool(idToolTargetLabel);</span>
+<span class="gd">-        delete m_ToolTargetLabel;</span>
+<span class="gd">-        m_ToolTargetLabel = 0L;</span>
+<span class="gd">-    }</span>
+ }
+ 
+ int CompilerGCC::Configure(cbProject* project, ProjectBuildTarget* target)
+<span class="gu">@@ -2692,16 +2675,16 @@</span>
+     }
+ 
+     // enable/disable compiler toolbar buttons
+<span class="gd">-    wxToolBar* tbar = m_pTbar;//Manager::Get()-&gt;GetAppWindow()-&gt;GetToolBar();</span>
+<span class="gd">-    if (tbar)</span>
+<span class="gi">+    //wxToolBar* tbar = m_pTbar;//Manager::Get()-&gt;GetAppWindow()-&gt;GetToolBar();</span>
+<span class="gi">+    if (m_pTbar)</span>
+     {
+<span class="gd">-        tbar-&gt;EnableTool(idMenuCompile, !running &amp;&amp; (prj || ed));</span>
+<span class="gd">-        tbar-&gt;EnableTool(idMenuRun, !running &amp;&amp; (prj || ed));</span>
+<span class="gd">-        tbar-&gt;EnableTool(idMenuCompileAndRun, !running &amp;&amp; (prj || ed));</span>
+<span class="gd">-        tbar-&gt;EnableTool(idMenuRebuild, !running &amp;&amp; (prj || ed));</span>
+<span class="gd">-        tbar-&gt;EnableTool(idMenuKillProcess, running &amp;&amp; prj);</span>
+<span class="gi">+        m_pTbar-&gt;EnableTool(idMenuCompile, !running &amp;&amp; (prj || ed));</span>
+<span class="gi">+        m_pTbar-&gt;EnableTool(idMenuRun, !running &amp;&amp; (prj || ed));</span>
+<span class="gi">+        m_pTbar-&gt;EnableTool(idMenuCompileAndRun, !running &amp;&amp; (prj || ed));</span>
+<span class="gi">+        m_pTbar-&gt;EnableTool(idMenuRebuild, !running &amp;&amp; (prj || ed));</span>
+<span class="gi">+        m_pTbar-&gt;EnableTool(idMenuKillProcess, running &amp;&amp; prj);</span>
+ 
+<span class="gd">-        m_ToolTarget = XRCCTRL(*tbar, &quot;idToolTarget&quot;, wxComboBox);</span>
+<span class="gi">+        m_ToolTarget = XRCCTRL(*m_pTbar, &quot;idToolTarget&quot;, wxComboBox);</span>
+         if (m_ToolTarget)
+             m_ToolTarget-&gt;Enable(!running &amp;&amp; prj);
+     }
+<span class="gh">Index: compilergcc/compilergcc.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- compilergcc/compilergcc.h    (revision 2228)</span>
+<span class="gi">+++ compilergcc/compilergcc.h    (working copy)</span>
+<span class="gu">@@ -186,7 +186,6 @@</span>
+         int m_ListPageIndex;
+         wxMenu* m_Menu;
+         wxMenu* m_TargetMenu;
+<span class="gd">-        wxToolBar* m_pToolbar;</span>
+         int m_TargetIndex;
+         wxMenu* m_ErrorsMenu;
+         cbProject* m_Project;
+<span class="gh">Index: debuggergdb/debuggergdb.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- debuggergdb/debuggergdb.cpp    (revision 2228)</span>
+<span class="gi">+++ debuggergdb/debuggergdb.cpp    (working copy)</span>
+<span class="gu">@@ -498,11 +498,12 @@</span>
+ 
+ bool DebuggerGDB::BuildToolBar(wxToolBar* toolBar)
+ {
+<span class="gd">-    m_pTbar = toolBar;</span>
+<span class="gd">-    /* Loads toolbar using new Manager class functions */</span>
+ #ifdef implement_debugger_toolbar
+     if (!m_IsAttached || !toolBar)
+         return false;
+<span class="gi">+</span>
+<span class="gi">+    m_pTbar = toolBar;</span>
+<span class="gi">+    /* Loads toolbar using new Manager class functions */</span>
+     wxString my_16x16=Manager::isToolBar16x16(toolBar) ? _T(&quot;_16x16&quot;) : _T(&quot;&quot;);
+     Manager::AddonToolBar(toolBar,wxString(_T(&quot;debugger_toolbar&quot;))+my_16x16);
+     toolBar-&gt;Realize();
+<span class="gu">@@ -1449,15 +1450,18 @@</span>
+     }
+ 
+     #ifdef implement_debugger_toolbar
+<span class="gd">-    wxToolBar* tbar = m_pTbar;//Manager::Get()-&gt;GetAppWindow()-&gt;GetToolBar();</span>
+<span class="gd">-    tbar-&gt;EnableTool(idMenuDebug, (!m_pProcess || stopped) &amp;&amp; en);</span>
+<span class="gd">-    tbar-&gt;EnableTool(idMenuRunToCursor, en &amp;&amp; ed &amp;&amp; stopped);</span>
+<span class="gd">-    tbar-&gt;EnableTool(idMenuNext, m_pProcess &amp;&amp; en &amp;&amp; stopped);</span>
+<span class="gd">-    tbar-&gt;EnableTool(idMenuNextInstr, m_pProcess &amp;&amp; en &amp;&amp; stopped);</span>
+<span class="gd">-    tbar-&gt;EnableTool(idMenuStep, en &amp;&amp; stopped);</span>
+<span class="gd">-    tbar-&gt;EnableTool(idMenuStepOut, m_pProcess &amp;&amp; en &amp;&amp; stopped);</span>
+<span class="gd">-    tbar-&gt;EnableTool(idMenuStop, m_pProcess &amp;&amp; en);</span>
+<span class="gd">-    tbar-&gt;EnableTool(idDebuggerToolInfo, m_pProcess &amp;&amp; en);</span>
+<span class="gi">+    if (m_pTbar)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        //wxToolBar* tbar = m_pTbar;//Manager::Get()-&gt;GetAppWindow()-&gt;GetToolBar();</span>
+<span class="gi">+        m_pTbar-&gt;EnableTool(idMenuDebug, (!m_pProcess || stopped) &amp;&amp; en);</span>
+<span class="gi">+        m_pTbar-&gt;EnableTool(idMenuRunToCursor, en &amp;&amp; ed &amp;&amp; stopped);</span>
+<span class="gi">+        m_pTbar-&gt;EnableTool(idMenuNext, m_pProcess &amp;&amp; en &amp;&amp; stopped);</span>
+<span class="gi">+        m_pTbar-&gt;EnableTool(idMenuNextInstr, m_pProcess &amp;&amp; en &amp;&amp; stopped);</span>
+<span class="gi">+        m_pTbar-&gt;EnableTool(idMenuStep, en &amp;&amp; stopped);</span>
+<span class="gi">+        m_pTbar-&gt;EnableTool(idMenuStepOut, m_pProcess &amp;&amp; en &amp;&amp; stopped);</span>
+<span class="gi">+        m_pTbar-&gt;EnableTool(idMenuStop, m_pProcess &amp;&amp; en);</span>
+<span class="gi">+        m_pTbar-&gt;EnableTool(idDebuggerToolInfo, m_pProcess &amp;&amp; en);</span>
+<span class="gi">+    }</span>
+     #endif
+ 
+     // allow other UpdateUI handlers to process this event
+<span class="gh">Index: debuggergdb/examinememorydlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- debuggergdb/examinememorydlg.cpp    (revision 2228)</span>
+<span class="gi">+++ debuggergdb/examinememorydlg.cpp    (working copy)</span>
+<span class="gu">@@ -90,7 +90,7 @@</span>
+             m_pText-&gt;AppendText(
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mandrav 2006-03-23 19:07:50</div>

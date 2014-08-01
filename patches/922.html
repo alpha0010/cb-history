@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,93 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbplugin.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbplugin.h    (revision 2189)</span>
+<span class="gi">+++ src/sdk/cbplugin.h    (working copy)</span>
+<span class="gu">@@ -234,6 +234,19 @@</span>
+         /** Same as Clean(ProjectBuildTarget*) but with a wxString argument. */
+         virtual int Clean(const wxString&amp; target) = 0;
+ 
+<span class="gi">+        /** @brief DistClean the project/target.</span>
+<span class="gi">+          *</span>
+<span class="gi">+          * DistClean will typically remove any config files</span>
+<span class="gi">+          * and anything else that got created as part of</span>
+<span class="gi">+          * building a software package.</span>
+<span class="gi">+          *</span>
+<span class="gi">+          * @param target The specific build target to &quot;distclean&quot;. If NULL, it</span>
+<span class="gi">+          * cleans all the build targets of the current project.</span>
+<span class="gi">+          */</span>
+<span class="gi">+        virtual int DistClean(ProjectBuildTarget* target = 0L) = 0;</span>
+<span class="gi">+        /** Same as DistClean(ProjectBuildTarget*) but with a wxString argument. */</span>
+<span class="gi">+        virtual int DistClean(const wxString&amp; target) = 0;</span>
+<span class="gi">+</span>
+         /** @brief Build the project/target.
+           *
+           * @param target The specific build target to build. If NULL, it
+<span class="gh">Index: src/plugins/compilergcc/compilergcc.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilergcc.h    (revision 2189)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilergcc.h    (working copy)</span>
+<span class="gu">@@ -67,6 +67,8 @@</span>
+         virtual int RunSingleFile(const wxString&amp; filename);
+         virtual int Clean(ProjectBuildTarget* target = 0L);
+         virtual int Clean(const wxString&amp; target);
+<span class="gi">+        virtual int DistClean(ProjectBuildTarget* target = 0L);</span>
+<span class="gi">+        virtual int DistClean(const wxString&amp; target);</span>
+         virtual int Build(ProjectBuildTarget* target = 0L);
+         virtual int Build(const wxString&amp; target);
+         virtual int Rebuild(ProjectBuildTarget* target = 0L);
+<span class="gh">Index: src/plugins/compilergcc/compilergcc.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilergcc.cpp    (revision 2189)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilergcc.cpp    (working copy)</span>
+<span class="gu">@@ -1590,6 +1590,43 @@</span>
+     return 0;
+ }
+ 
+<span class="gi">+int CompilerGCC::DistClean(const wxString&amp; target)</span>
+<span class="gi">+{</span>
+<span class="gi">+    if (!CheckProject())</span>
+<span class="gi">+        return -1;</span>
+<span class="gi">+    return DistClean(m_Project-&gt;GetBuildTarget(target.IsEmpty() ? m_LastTargetName : target));</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+int CompilerGCC::DistClean(ProjectBuildTarget* target)</span>
+<span class="gi">+{</span>
+<span class="gi">+    // make sure all project files are saved</span>
+<span class="gi">+    if (m_Project &amp;&amp; !m_Project-&gt;SaveAllFiles())</span>
+<span class="gi">+        Manager::Get()-&gt;GetMessageManager()-&gt;Log(_(&quot;Could not save all files...&quot;));</span>
+<span class="gi">+</span>
+<span class="gi">+    DoPrepareQueue();</span>
+<span class="gi">+    if (!CompilerValid(target))</span>
+<span class="gi">+        return -1;</span>
+<span class="gi">+</span>
+<span class="gi">+//    Manager::Get()-&gt;GetMacrosManager()-&gt;Reset();</span>
+<span class="gi">+</span>
+<span class="gi">+    if (m_Project)</span>
+<span class="gi">+        wxSetWorkingDirectory(m_Project-&gt;GetBasePath());</span>
+<span class="gi">+    CompilerFactory::GetCompiler(m_CompilerId)-&gt;Init(m_Project);</span>
+<span class="gi">+</span>
+<span class="gi">+    if (UseMake(target))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        wxString cmd = GetMakeCommandFor(mcDistClean, target);</span>
+<span class="gi">+        m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, m_Project, target));</span>
+<span class="gi">+        return DoRunQueue();</span>
+<span class="gi">+    }</span>
+<span class="gi">+    else</span>
+<span class="gi">+    {</span>
+<span class="gi">+        NotImplemented(_T(&quot;CompilerGCC::Distclean() without a custom Makefile&quot;));</span>
+<span class="gi">+        return -1;</span>
+<span class="gi">+    }</span>
+<span class="gi">+    return 0;</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ void CompilerGCC::OnExportMakefile(wxCommandEvent&amp; event)
+ {
+     cbMessageBox(_(&quot;This functionality has been temporarily removed from Code::Blocks.\n&quot;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">yop 2006-03-13 21:30:46</div>

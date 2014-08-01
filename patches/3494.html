@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,145 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/codecompletion/parser/tokentree.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/parser/tokentree.cpp    (revision 9443)</span>
+<span class="gi">+++ src/plugins/codecompletion/parser/tokentree.cpp    (working copy)</span>
+<span class="gu">@@ -115,7 +115,7 @@</span>
+     if (!newToken)
+         return -1;
+ 
+<span class="gd">-    return AddToken(newToken, -1);</span>
+<span class="gi">+    return AddToken(newToken, -1); // -1 means we add a new slot to the Token list (vector)</span>
+ }
+ 
+ int TokenTree::insert(int loc, Token* newToken)
+<span class="gu">@@ -332,7 +332,33 @@</span>
+     return result.size();
+ }
+ 
+<span class="gd">-int TokenTree::AddToken(Token* newToken, int fileIdx)</span>
+<span class="gi">+void TokenTree::RenameToken(Token* token, const wxString&amp; newName)</span>
+<span class="gi">+{</span>
+<span class="gi">+    if (!token)</span>
+<span class="gi">+        return;</span>
+<span class="gi">+    // remove the old token index from the TokenIdxSet mapped by old name.</span>
+<span class="gi">+    int slotNo = m_Tree.GetItemNo(token-&gt;m_Name);</span>
+<span class="gi">+    if (slotNo)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(slotNo);</span>
+<span class="gi">+    // Note: As we have no way to actually delete keys in the TokenSearchTree,</span>
+<span class="gi">+    // the previous name index path of the token will still exist, as well as its TokenIdxSet slot,</span>
+<span class="gi">+    // but this slot will be empty and as result will lead to nothing.</span>
+<span class="gi">+    // This is the same thing the RemoveToken procedure does.</span>
+<span class="gi">+        curList.erase(token-&gt;m_Index);</span>
+<span class="gi">+    };</span>
+<span class="gi">+    token-&gt;m_Name = newName;</span>
+<span class="gi">+</span>
+<span class="gi">+    static TokenIdxSet tmpTokens = TokenIdxSet();</span>
+<span class="gi">+</span>
+<span class="gi">+    size_t tokenIdx = m_Tree.AddItem(newName, tmpTokens);</span>
+<span class="gi">+    TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(tokenIdx);</span>
+<span class="gi">+</span>
+<span class="gi">+    // add the old token index to the TokenIdxSet mapped by new name, note Token index is not changed</span>
+<span class="gi">+    curList.insert(token-&gt;m_Index);</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+int TokenTree::AddToken(Token* newToken, int forceIdx)</span>
+ {
+     if (!newToken)
+         return -1;
+<span class="gu">@@ -345,10 +371,10 @@</span>
+     size_t tokenIdx = m_Tree.AddItem(name, tmpTokens);
+     TokenIdxSet&amp; curList = m_Tree.GetItemAtPos(tokenIdx);
+ 
+<span class="gd">-    int newItem = AddTokenToList(newToken, fileIdx);</span>
+<span class="gi">+    int newItem = AddTokenToList(newToken, forceIdx);</span>
+     curList.insert(newItem);
+ 
+<span class="gd">-    size_t fIdx = (fileIdx&lt;0) ? newToken-&gt;m_FileIdx : (size_t)fileIdx;</span>
+<span class="gi">+    size_t fIdx = newToken-&gt;m_FileIdx;</span>
+     m_FileMap[fIdx].insert(newItem);
+ 
+     // Add Token (if applicable) to the namespaces indexes
+<span class="gu">@@ -464,7 +490,11 @@</span>
+ 
+     int result = -1;
+ 
+<span class="gd">-    if (forceidx &gt;= 0) // Reading from cache?</span>
+<span class="gi">+    // if the token index is specified, then just replace the specified slot to the newToken, this</span>
+<span class="gi">+    // usually happens we construct the whole TokenTree from cache.</span>
+<span class="gi">+    // other wise, we just append one to the vector or reused free slots stored in m_FreeTokens</span>
+<span class="gi">+    // so, it is normal cases in any parsing stages.</span>
+<span class="gi">+    if (forceidx &gt;= 0)</span>
+     {
+         if ((size_t)forceidx &gt;= m_Tokens.size())
+         {
+<span class="gu">@@ -474,7 +504,7 @@</span>
+         m_Tokens[forceidx] = newToken;
+         result = forceidx;
+     }
+<span class="gd">-    else // For real-time parsing</span>
+<span class="gi">+    else</span>
+     {
+         if (m_FreeTokens.size())
+         {
+<span class="gh">Index: src/plugins/codecompletion/parser/parserthread.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/parser/parserthread.cpp    (revision 9443)</span>
+<span class="gi">+++ src/plugins/codecompletion/parser/parserthread.cpp    (working copy)</span>
+<span class="gu">@@ -139,6 +139,7 @@</span>
+     const wxString kw__C_          (_T(&quot;\&quot;C\&quot;&quot;));
+     const wxString kw_for          (_T(&quot;for&quot;));
+     // length: 4
+<span class="gi">+    const wxString kw___at         (_T(&quot;__at&quot;));</span>
+     const wxString kw_else         (_T(&quot;else&quot;));
+     const wxString kw_enum         (_T(&quot;enum&quot;));
+     const wxString kw_elif         (_T(&quot;elif&quot;));
+<span class="gu">@@ -727,6 +728,10 @@</span>
+                 m_Str.Clear();
+                 SkipToOneOfChars(ParserConsts::colon, true, true);
+             }
+<span class="gi">+            else if (token == ParserConsts::kw___at)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                m_Tokenizer.GetToken(); // skip arguments</span>
+<span class="gi">+            }</span>
+             else
+                 switchHandled = false;
+             break;
+<span class="gu">@@ -1859,6 +1864,8 @@</span>
+             newToken-&gt;m_ImplLine = lineNr;
+             newToken-&gt;m_ImplLineStart = m_Tokenizer.GetLineNumber();
+ 
+<span class="gi">+            newToken-&gt;m_IsUnnamed = true;</span>
+<span class="gi">+</span>
+             DoParse(); // recursion
+ 
+             m_LastParent     = lastParent;
+<span class="gu">@@ -2380,7 +2387,10 @@</span>
+         }
+ 
+         if (!newEnum) // either named or first unnamed enum
+<span class="gi">+            {</span>
+             newEnum = DoAddToken(tkEnum, token, lineNr);
+<span class="gi">+            newEnum-&gt;m_IsUnnamed = true;</span>
+<span class="gi">+            };</span>
+         level = m_Tokenizer.GetNestingLevel();
+         m_Tokenizer.GetToken(); // skip {
+     }
+<span class="gu">@@ -2762,6 +2772,10 @@</span>
+                   token.wx_str(), m_Str.wx_str(),
+                   (m_LastParent ? m_LastParent-&gt;m_Name.wx_str() : _T(&quot;&lt;no-parent&gt;&quot;)));
+ 
+<span class="gi">+            // Detects anonymous ancestor and gives him a name based on the first found alias.</span>
+<span class="gi">+            if (m_Str.StartsWith(g_UnnamedSymbol))</span>
+<span class="gi">+                RefineUnnamedTypeToken(tkUndefined, token);</span>
+<span class="gi">+</span>
+             Token* newToken = DoAddToken(tkVariable, token, m_Tokenizer.GetLineNumber());
+             if (!newToken)
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">hovercraft 2013-08-31 11:38:24</div>

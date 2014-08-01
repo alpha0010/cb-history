@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,58 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/lib_finder/librariesdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/lib_finder/librariesdlg.cpp    (revision 9374)</span>
+<span class="gi">+++ src/plugins/contrib/lib_finder/librariesdlg.cpp    (working copy)</span>
+<span class="gu">@@ -14,6 +14,7 @@</span>
+ #include &lt;wx/string.h&gt;
+ //*)
+ 
+<span class="gi">+#include &lt;algorithm&gt;</span>
+ #include &lt;sdk.h&gt;
+ #include &lt;manager.h&gt;
+ #include &lt;configmanager.h&gt;
+<span class="gu">@@ -90,7 +91,6 @@</span>
+ 
+ LibrariesDlg::LibrariesDlg(wxWindow* parent, TypedResults&amp; knownLibraries)
+     : m_KnownLibraries(knownLibraries)
+<span class="gd">-    , m_WorkingCopy(knownLibraries)</span>
+     , m_SelectedConfig(0)
+     , m_WhileUpdating(false)
+ {
+<span class="gu">@@ -124,6 +124,8 @@</span>
+     wxBoxSizer* BoxSizer3;
+     wxStdDialogButtonSizer* StdDialogButtonSizer1;
+ 
+<span class="gi">+    std::copy(m_KnownLibraries, m_KnownLibraries+sizeof(m_WorkingCopy)/sizeof(m_WorkingCopy[0]), m_WorkingCopy);</span>
+<span class="gi">+</span>
+     Create(parent, wxID_ANY, _(&quot;Registered libraries&quot;), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER, _T(&quot;wxID_ANY&quot;));
+     BoxSizer1 = new wxBoxSizer(wxVERTICAL);
+     BoxSizer16 = new wxBoxSizer(wxHORIZONTAL);
+<span class="gh">Index: src/plugins/contrib/profiler/cbprofiler.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/profiler/cbprofiler.cpp    (revision 9374)</span>
+<span class="gi">+++ src/plugins/contrib/profiler/cbprofiler.cpp    (working copy)</span>
+<span class="gu">@@ -101,7 +101,7 @@</span>
+     if (project-&gt;GetBuildTargetsCount() &gt; 1)
+     {
+         // more than one executable target? ask...
+<span class="gd">-        wxString choices[project-&gt;GetBuildTargetsCount()];</span>
+<span class="gi">+        wxString *choices = new wxString[project-&gt;GetBuildTargetsCount()];</span>
+         wxString active_target = project-&gt;GetActiveBuildTarget();
+         int selected = 0;
+         for (int i=0; i&lt;project-&gt;GetBuildTargetsCount(); ++i)
+<span class="gu">@@ -114,6 +114,7 @@</span>
+                                     _(&quot;Select the target you want to profile&quot;),
+                                     _(&quot;Select Target&quot;),project-&gt;GetBuildTargetsCount(),choices);
+         dialog.SetSelection(selected);
+<span class="gi">+        delete [] choices;</span>
+         if (dialog.ShowModal() != wxID_OK)
+             return -1;
+         int targetIndex = dialog.GetSelection();
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mojca 2013-09-17 07:35:51</div>

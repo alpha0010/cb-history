@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,121 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/devpak_plugin/updatedlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/devpak_plugin/updatedlg.cpp    (revision 5106)</span>
+<span class="gi">+++ src/plugins/contrib/devpak_plugin/updatedlg.cpp    (working copy)</span>
+<span class="gu">@@ -94,11 +94,13 @@</span>
+     lst-&gt;InsertColumn(1, _(&quot;Version&quot;));
+     lst-&gt;InsertColumn(2, _(&quot;Installed&quot;));
+     lst-&gt;InsertColumn(3, _(&quot;Size&quot;), wxLIST_FORMAT_RIGHT);
+<span class="gi">+    lst-&gt;InsertColumn(4, _(&quot;Rev&quot;));</span>
+ 
+<span class="gd">-    lst-&gt;SetColumnWidth(0, lst-&gt;GetSize().x - (64 * 3) - 2); // 1st column takes all remaining space</span>
+<span class="gi">+    lst-&gt;SetColumnWidth(0, lst-&gt;GetSize().x - (64 * 3 + 40) - 6 ); // 1st column takes all remaining space</span>
+     lst-&gt;SetColumnWidth(1, 64);
+     lst-&gt;SetColumnWidth(2, 64);
+     lst-&gt;SetColumnWidth(3, 64);
+<span class="gi">+    lst-&gt;SetColumnWidth(4, 40);</span>
+ }
+ 
+ void UpdateDlg::AddRecordToList(UpdateRec* rec)
+<span class="gu">@@ -111,8 +113,20 @@</span>
+     lst-&gt;SetItem(idx, 1, rec-&gt;version);
+     lst-&gt;SetItem(idx, 2, rec-&gt;installed_version);
+     lst-&gt;SetItem(idx, 3, rec-&gt;size);
+<span class="gi">+    lst-&gt;SetItem(idx, 4, rec-&gt;revision);</span>
+ }
+ 
+<span class="gi">+wxString UpdateDlg::GetListColumnText(int idx, int col) {</span>
+<span class="gi">+    wxListCtrl* lst = XRCCTRL(*this, &quot;lvFiles&quot;, wxListCtrl);</span>
+<span class="gi">+    int index = idx == -1 ? lst-&gt;GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED) : idx;</span>
+<span class="gi">+    wxListItem info;</span>
+<span class="gi">+    info.SetId(index);</span>
+<span class="gi">+    info.SetColumn(col);</span>
+<span class="gi">+    info.SetMask(wxLIST_MASK_TEXT);</span>
+<span class="gi">+    lst-&gt;GetItem(info);</span>
+<span class="gi">+    return info.GetText();</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ void UpdateDlg::SetListColumnText(int idx, int col, const wxString&amp; text)
+ {
+     wxListCtrl* lst = XRCCTRL(*this, &quot;lvFiles&quot;, wxListCtrl);
+<span class="gu">@@ -393,7 +407,9 @@</span>
+     if (index == -1)
+         return 0;
+     wxString title = lst-&gt;GetItemText(index);
+<span class="gd">-    return FindRecByTitle(title, m_Recs, m_RecsCount);</span>
+<span class="gi">+    wxString version = GetListColumnText(index, 1);</span>
+<span class="gi">+    wxString revision = GetListColumnText(index, 4);</span>
+<span class="gi">+    return FindRec(title, version, revision, m_Recs, m_RecsCount);</span>
+ }
+ 
+ void UpdateDlg::DownloadFile(bool dontInstall)
+<span class="gh">Index: src/plugins/contrib/devpak_plugin/updatedlg.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/devpak_plugin/updatedlg.h    (revision 5106)</span>
+<span class="gi">+++ src/plugins/contrib/devpak_plugin/updatedlg.h    (working copy)</span>
+<span class="gu">@@ -49,6 +49,7 @@</span>
+         UpdateRec* GetRecFromListView();
+         void CreateListColumns();
+         void AddRecordToList(UpdateRec* rec);
+<span class="gi">+        wxString GetListColumnText(int idx, int col);</span>
+         void SetListColumnText(int idx, int col, const wxString&amp; text);
+ 
+         wxString GetConfFilename();
+<span class="gh">Index: src/plugins/contrib/devpak_plugin/manifest.xml</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/devpak_plugin/manifest.xml    (revision 5106)</span>
+<span class="gi">+++ src/plugins/contrib/devpak_plugin/manifest.xml    (working copy)</span>
+<span class="gu">@@ -2,18 +2,19 @@</span>
+ &lt;CodeBlocks_plugin_manifest_file&gt;
+     &lt;SdkVersion major=&quot;1&quot; minor=&quot;10&quot; release=&quot;0&quot; /&gt;
+     &lt;Plugin name=&quot;DevPakUpdater&quot;&gt;
+<span class="gd">-        &lt;Value title=&quot;Dev-C++ DevPak updater/installer&quot; /&gt;</span>
+<span class="gd">-        &lt;Value version=&quot;0.1&quot; /&gt;</span>
+<span class="gi">+        &lt;Value title=&quot;DevPak updater/installer&quot; /&gt;</span>
+<span class="gi">+        &lt;Value version=&quot;0.2&quot; /&gt;</span>
+         &lt;Value description=&quot;Installs selected DevPaks from the Internet&quot; /&gt;
+         &lt;Value author=&quot;Yiannis Mandravellos&quot; /&gt;
+         &lt;Value authorEmail=&quot;info@codeblocks.org&quot; /&gt;
+         &lt;Value authorWebsite=&quot;http://www.codeblocks.org/&quot; /&gt;
+         &lt;Value thanksTo=&quot;Dev-C++ community.
+<span class="gd">-                         Julian R Seward for libbzip2.</span>
+<span class="gd">-                         libbzip2 copyright notice:</span>
+<span class="gd">-                         bzip2 and associated library libbzip2, are</span>
+<span class="gd">-                         copyright (C) 1996-2000 Julian R Seward.</span>
+<span class="gd">-                         All rights reserved.&quot; /&gt;</span>
+<span class="gi">+        Julian R Seward for libbzip2.</span>
+<span class="gi">+</span>
+<span class="gi">+        libbzip2 copyright notice:</span>
+<span class="gi">+        bzip2 and associated library libbzip2, are</span>
+<span class="gi">+        copyright (C) 1996-2000 Julian R Seward.</span>
+<span class="gi">+        All rights reserved.&quot; /&gt;</span>
+         &lt;Value license=&quot;GPL&quot; /&gt;
+     &lt;/Plugin&gt;
+ &lt;/CodeBlocks_plugin_manifest_file&gt;
+<span class="gh">Index: src/plugins/contrib/devpak_plugin/conf.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/devpak_plugin/conf.cpp    (revision 5106)</span>
+<span class="gi">+++ src/plugins/contrib/devpak_plugin/conf.cpp    (working copy)</span>
+<span class="gu">@@ -46,10 +46,16 @@</span>
+         // fix title
+         // devpaks.org has changed the title to contain some extra info
+         // e.g.: [libunicows   Library version: 1.1.1   Devpak revision: 1sid]
+<span class="gd">-        // we don&#39;t need this extra info, so if we find it we remove it</span>
+<span class="gd">-        int pos = rec.title.Find(_T(&quot;Library version:&quot;));</span>
+<span class="gi">+        int pos = rec.title.Lower().Find(_T(&quot;library version:&quot;));</span>
+         if (pos != -1)
+         {
+<span class="gi">+            int revpos = rec.title.Lower().Find(_T(&quot;devpak revision:&quot;));</span>
+<span class="gi">+            if (revpos != -1) {</span>
+<span class="gi">+                rec.revision = rec.title.Mid(revpos).AfterFirst(_T(&#39;:&#39;)).Trim(false);</span>
+<span class="gi">+                rec.revision.Replace(_T(&quot;\t&quot;), _T(&quot; &quot;));</span>
+<span class="gi">+                rec.revision = rec.revision.BeforeFirst(_T(&#39; &#39;));</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,83 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/include/editorconfigurationdlg.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/editorconfigurationdlg.h    (revision 6187)</span>
+<span class="gi">+++ src/include/editorconfigurationdlg.h    (working copy)</span>
+<span class="gu">@@ -39,7 +39,6 @@</span>
+         void OnAutoCompDelete(wxCommandEvent&amp; event);
+         void OnDynamicCheck(wxCommandEvent&amp; event);
+         void OnHighlightOccurrences(wxCommandEvent&amp; event);
+<span class="gd">-        void OnMultipleSelections(wxCommandEvent&amp; event);</span>
+         void UpdateSampleFont(bool askForNewFont);
+ 
+         void EndModal(int retCode);
+<span class="gh">Index: src/sdk/editorconfigurationdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorconfigurationdlg.cpp    (revision 6187)</span>
+<span class="gi">+++ src/sdk/editorconfigurationdlg.cpp    (working copy)</span>
+<span class="gu">@@ -81,7 +81,6 @@</span>
+     EVT_BUTTON(XRCID(&quot;btnAutoCompDelete&quot;),      EditorConfigurationDlg::OnAutoCompDelete)
+     EVT_CHECKBOX(XRCID(&quot;chkDynamicWidth&quot;),      EditorConfigurationDlg::OnDynamicCheck)
+     EVT_CHECKBOX(XRCID(&quot;chkHighlightOccurrences&quot;),  EditorConfigurationDlg::OnHighlightOccurrences)
+<span class="gd">-    EVT_CHECKBOX(XRCID(&quot;chkEnableMultipleSelections&quot;),  EditorConfigurationDlg::OnMultipleSelections)</span>
+     EVT_BUTTON(XRCID(&quot;btnHighlightColour&quot;),         EditorConfigurationDlg::OnChooseColour)
+ 
+     EVT_LISTBOOK_PAGE_CHANGED(XRCID(&quot;nbMain&quot;), EditorConfigurationDlg::OnPageChanged)
+<span class="gu">@@ -159,10 +158,8 @@</span>
+ 
+     //selections
+     XRCCTRL(*this, &quot;chkEnableVirtualSpace&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/selection/use_vspace&quot;), false));
+<span class="gd">-    bool multiSelectEnabled = cfg-&gt;ReadBool(_T(&quot;/selection/multi_select&quot;), false);</span>
+<span class="gd">-    XRCCTRL(*this, &quot;chkEnableMultipleSelections&quot;, wxCheckBox)-&gt;SetValue(multiSelectEnabled);</span>
+<span class="gi">+    XRCCTRL(*this, &quot;chkEnableMultipleSelections&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/selection/multi_select&quot;), false));</span>
+     XRCCTRL(*this, &quot;chkEnableAdditionalSelectionTyping&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/selection/multi_typing&quot;), false));
+<span class="gd">-    XRCCTRL(*this, &quot;chkEnableAdditionalSelectionTyping&quot;, wxCheckBox)-&gt;Enable(multiSelectEnabled);</span>
+ 
+     //folding
+     XRCCTRL(*this, &quot;chkEnableFolding&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/folding/show_folds&quot;), true));
+<span class="gu">@@ -1038,8 +1035,3 @@</span>
+     XRCCTRL(*this, &quot;stHighlightColour&quot;, wxStaticText)-&gt;Enable( event.IsChecked() );
+     XRCCTRL(*this, &quot;btnHighlightColour&quot;, wxButton)-&gt;Enable( event.IsChecked() );
+ }
+<span class="gd">-</span>
+<span class="gd">-void EditorConfigurationDlg::OnMultipleSelections(wxCommandEvent&amp; event)</span>
+<span class="gd">-{</span>
+<span class="gd">-    XRCCTRL(*this, &quot;chkEnableAdditionalSelectionTyping&quot;, wxCheckBox)-&gt;Enable( event.IsChecked() );</span>
+<span class="gd">-}</span>
+<span class="gh">Index: src/sdk/resources/editor_configuration.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/editor_configuration.xrc    (revision 6187)</span>
+<span class="gi">+++ src/sdk/resources/editor_configuration.xrc    (working copy)</span>
+<span class="gu">@@ -776,21 +776,11 @@</span>
+                                             &lt;border&gt;4&lt;/border&gt;
+                                         &lt;/object&gt;
+                                         &lt;object class=&quot;sizeritem&quot;&gt;
+<span class="gd">-                                            &lt;object class=&quot;wxBoxSizer&quot;&gt;</span>
+<span class="gd">-                                                &lt;object class=&quot;spacer&quot;&gt;</span>
+<span class="gd">-                                                    &lt;flag&gt;wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL&lt;/flag&gt;</span>
+<span class="gd">-                                                    &lt;border&gt;6&lt;/border&gt;</span>
+<span class="gd">-                                                    &lt;size&gt;15,6&lt;/size&gt;</span>
+<span class="gd">-                                                &lt;/object&gt;</span>
+<span class="gd">-                                                &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                                                    &lt;object class=&quot;wxCheckBox&quot; name=&quot;chkEnableAdditionalSelectionTyping&quot;&gt;</span>
+<span class="gd">-                                                        &lt;label&gt;Enable typing (and deleting) in multiple selections simultaneously&lt;/label&gt;</span>
+<span class="gd">-                                                    &lt;/object&gt;</span>
+<span class="gd">-                                                    &lt;flag&gt;wxBOTTOM|wxLEFT|wxEXPAND|wxALIGN_LEFT|wxALIGN_BOTTOM&lt;/flag&gt;</span>
+<span class="gd">-                                                    &lt;border&gt;4&lt;/border&gt;</span>
+<span class="gd">-                                                &lt;/object&gt;</span>
+<span class="gi">+                                            &lt;object class=&quot;wxCheckBox&quot; name=&quot;chkEnableAdditionalSelectionTyping&quot;&gt;</span>
+<span class="gi">+                                                &lt;label&gt;Enable typing (and deleting) in multiple selections or in each line of rectangular selection simultaneously&lt;/label&gt;</span>
+                                             &lt;/object&gt;
+<span class="gd">-                                            &lt;flag&gt;wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_BOTTOM&lt;/flag&gt;</span>
+<span class="gi">+                                            &lt;flag&gt;wxBOTTOM|wxLEFT|wxEXPAND|wxALIGN_LEFT|wxALIGN_BOTTOM&lt;/flag&gt;</span>
+<span class="gi">+                                            &lt;border&gt;4&lt;/border&gt;</span>
+                                         &lt;/object&gt;
+                                     &lt;/object&gt;
+                                     &lt;flag&gt;wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_BOTTOM&lt;/flag&gt;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

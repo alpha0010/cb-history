@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,183 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: plugins/codecompletion/cclistctrl.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/codecompletion/cclistctrl.cpp    (Revision 2295)</span>
+<span class="gi">+++ plugins/codecompletion/cclistctrl.cpp    (Arbeitskopie)</span>
+<span class="gu">@@ -82,7 +82,7 @@</span>
+     return GetTokenAt(GetGridCursorRow());
+ }
+ 
+<span class="gd">-void CCListCtrl::PrepareTokens()</span>
+<span class="gi">+bool CCListCtrl::PrepareTokens()</span>
+ {
+     // don&#39;t do any GUI updates while we &#39;re building the tokens list
+     Freeze();
+<span class="gu">@@ -113,21 +113,24 @@</span>
+ 
+     // refresh list
+     ForceRefresh();
+<span class="gi">+</span>
+<span class="gi">+    /* return whether there are tokens (to hide control if no possible tokens */</span>
+<span class="gi">+    return (!m_CCTokens.empty());</span>
+ }
+ 
+<span class="gd">-void CCListCtrl::AddChar(const wxChar&amp; ch)</span>
+<span class="gi">+bool CCListCtrl::AddChar(const wxChar&amp; ch)</span>
+ {
+     wxString s;
+     s &lt;&lt; ch;
+     m_pEditor-&gt;InsertText(m_pEditor-&gt;GetCurrentPos(), s);
+     m_pEditor-&gt;GotoPos(m_pEditor-&gt;GetCurrentPos() + 1);
+     m_Initial &lt;&lt; s;
+<span class="gd">-    PrepareTokens();</span>
+<span class="gi">+    return PrepareTokens();</span>
+ }
+ 
+<span class="gd">-void CCListCtrl::RemoveLastChar()</span>
+<span class="gi">+bool CCListCtrl::RemoveLastChar()</span>
+ {
+     m_Initial.RemoveLast();
+     m_pEditor-&gt;CmdKeyExecute(wxSCI_CMD_DELETEBACKNOTLINE);
+<span class="gd">-    PrepareTokens();</span>
+<span class="gi">+    return PrepareTokens();</span>
+ }
+<span class="gh">Index: plugins/codecompletion/cclistctrl.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/codecompletion/cclistctrl.h    (Revision 2295)</span>
+<span class="gi">+++ plugins/codecompletion/cclistctrl.h    (Arbeitskopie)</span>
+<span class="gu">@@ -15,12 +15,12 @@</span>
+ 
+         Token* GetTokenAt(unsigned int pos);
+         Token* GetSelectedToken();
+<span class="gd">-        void AddChar(const wxChar&amp; ch);</span>
+<span class="gd">-        void RemoveLastChar();</span>
+<span class="gi">+        bool AddChar(const wxChar&amp; ch);</span>
+<span class="gi">+        bool RemoveLastChar();</span>
+     protected:
+         void OnChar(wxKeyEvent&amp; event);
+ 
+<span class="gd">-        void PrepareTokens();</span>
+<span class="gi">+        bool PrepareTokens();</span>
+     private:
+         wxWindow* m_pParent;
+         Parser* m_pParser;
+<span class="gh">Index: plugins/codecompletion/cclist.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/codecompletion/cclist.cpp    (Revision 2295)</span>
+<span class="gi">+++ plugins/codecompletion/cclist.cpp    (Arbeitskopie)</span>
+<span class="gu">@@ -88,7 +88,11 @@</span>
+     Manager::Get()-&gt;GetConfigManager(_T(&quot;code_completion&quot;))-&gt;Write(_T(&quot;/size/width&quot;), GetSize().GetWidth());
+     Manager::Get()-&gt;GetConfigManager(_T(&quot;code_completion&quot;))-&gt;Write(_T(&quot;/size/height&quot;), GetSize().GetHeight());
+     m_pEditor-&gt;SetFocus();
+<span class="gd">-    delete m_pList;</span>
+<span class="gi">+    if (m_pList)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        delete m_pList;</span>
+<span class="gi">+        m_pList = 0L;</span>
+<span class="gi">+    }</span>
+     g_CCList = 0L;
+ }
+ 
+<span class="gu">@@ -114,6 +118,8 @@</span>
+ 
+ void CCList::SelectCurrent(wxChar ch)
+ {
+<span class="gi">+    if (!m_pList)</span>
+<span class="gi">+        return;</span>
+     Token* token = m_pList-&gt;GetSelectedToken();
+     if (token)
+     {
+<span class="gu">@@ -188,6 +194,8 @@</span>
+     event.Skip(); // let the event proceed, anyway
+     if (!m_IsCtrlPressed)
+         return;
+<span class="gi">+    if (!m_pList)</span>
+<span class="gi">+        return;</span>
+     Token* token = m_pList-&gt;GetTokenAt(event.GetRow());
+     if (token)
+     {
+<span class="gu">@@ -249,8 +257,8 @@</span>
+ 
+         case WXK_SPACE:
+         {
+<span class="gd">-            m_pList-&gt;AddChar(c);</span>
+<span class="gd">-            Destroy();</span>
+<span class="gi">+            if (m_pList &amp;&amp; !m_pList-&gt;AddChar(c))</span>
+<span class="gi">+                Destroy();</span>
+             event.Skip();
+             break;
+         }
+<span class="gu">@@ -282,7 +290,10 @@</span>
+             if (m_pEditor-&gt;GetCurrentPos() &lt;= m_StartPos)
+                 Destroy();
+             else
+<span class="gd">-                m_pList-&gt;RemoveLastChar();</span>
+<span class="gi">+            {</span>
+<span class="gi">+                if (m_pList &amp;&amp; !m_pList-&gt;RemoveLastChar())</span>
+<span class="gi">+                    Destroy();</span>
+<span class="gi">+            }</span>
+             break;
+         }
+ 
+<span class="gu">@@ -293,21 +304,28 @@</span>
+         {
+             if (!event.ShiftDown())
+                 c += 32;
+<span class="gd">-            m_pList-&gt;AddChar(c);</span>
+<span class="gi">+            if (m_pList &amp;&amp; !m_pList-&gt;AddChar(c))</span>
+<span class="gi">+                Destroy();</span>
+             break;
+         }
+ 
+         case &#39;~&#39;:
+         {
+             if (event.ShiftDown())
+<span class="gd">-                m_pList-&gt;AddChar(c);</span>
+<span class="gi">+            {</span>
+<span class="gi">+                if (m_pList &amp;&amp; !m_pList-&gt;AddChar(c))</span>
+<span class="gi">+                    Destroy();</span>
+<span class="gi">+            }</span>
+             break;
+         }
+ 
+         case &#39;-&#39;:
+         {
+             if (event.ShiftDown())
+<span class="gd">-                m_pList-&gt;AddChar(&#39;_&#39;);</span>
+<span class="gi">+            {</span>
+<span class="gi">+                if (m_pList &amp;&amp; !m_pList-&gt;AddChar(&#39;_&#39;))</span>
+<span class="gi">+                    Destroy();</span>
+<span class="gi">+            }</span>
+             else
+                 SelectCurrent(c);
+             break;
+<span class="gu">@@ -318,14 +336,20 @@</span>
+         case &#39;8&#39;:
+         {
+             if (!event.ShiftDown())
+<span class="gd">-                m_pList-&gt;AddChar(c);</span>
+<span class="gi">+            {</span>
+<span class="gi">+                if (m_pList &amp;&amp; !m_pList-&gt;AddChar(c))</span>
+<span class="gi">+                    Destroy();</span>
+<span class="gi">+            }</span>
+             break;
+         }
+ 
+         case &#39;9&#39;:
+         {
+             if (!event.ShiftDown())
+<span class="gd">-                m_pList-&gt;AddChar(c);</span>
+<span class="gi">+            {</span>
+<span class="gi">+                if (m_pList &amp;&amp; !m_pList-&gt;AddChar(c))</span>
+<span class="gi">+                    Destroy();</span>
+<span class="gi">+            }</span>
+             else
+                 SelectCurrent(&#39;(&#39;);
+             break;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mortenmacfly 2006-04-04 18:13:56</div>

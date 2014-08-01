@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,127 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/editormanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editormanager.cpp    (revision 4103)</span>
+<span class="gi">+++ src/sdk/editormanager.cpp    (working copy)</span>
+<span class="gu">@@ -32,6 +32,7 @@</span>
+     #include &lt;wx/splitter.h&gt;
+     #include &lt;wx/imaglist.h&gt;
+     #include &lt;wx/regex.h&gt;
+<span class="gi">+    #include &lt;wx/listctrl.h&gt;</span>
+ 
+     #include &quot;editormanager.h&quot; // class&#39;s header file
+     #include &quot;configmanager.h&quot;
+<span class="gh">Index: src/plugins/debuggergdb/breakpointsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/debuggergdb/breakpointsdlg.cpp    (revision 4103)</span>
+<span class="gi">+++ src/plugins/debuggergdb/breakpointsdlg.cpp    (working copy)</span>
+<span class="gu">@@ -1,4 +1,5 @@</span>
+ #include &lt;sdk.h&gt;
+<span class="gi">+#include &lt;wx/listctrl.h&gt;</span>
+ #include &quot;breakpointsdlg.h&quot;
+ #include &lt;manager.h&gt;
+ #include &lt;editormanager.h&gt;
+<span class="gh">Index: src/plugins/debuggergdb/debuggerdriver.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/debuggergdb/debuggerdriver.h    (revision 4103)</span>
+<span class="gi">+++ src/plugins/debuggergdb/debuggerdriver.h    (working copy)</span>
+<span class="gu">@@ -1,6 +1,12 @@</span>
+ #ifndef DEBUGGERDRIVER_H
+ #define DEBUGGERDRIVER_H
+ 
+<span class="gi">+#ifndef WX_PRECOMP</span>
+<span class="gi">+#   ifdef __WXMSW__</span>
+<span class="gi">+#       include &lt;wx/msw/wrapwin.h&gt;  // Needed to prevent GetCommandLine define bug.</span>
+<span class="gi">+#   endif</span>
+<span class="gi">+#endif</span>
+<span class="gi">+</span>
+ #include &quot;debugger_defs.h&quot;
+ #include &lt;wx/regex.h&gt;
+ #include &lt;globals.h&gt;
+<span class="gh">Index: src/plugins/compilergcc/compilerBCC.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilerBCC.cpp    (revision 4103)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilerBCC.cpp    (working copy)</span>
+<span class="gu">@@ -6,6 +6,7 @@</span>
+ #include &lt;wx/intl.h&gt;
+ #include &lt;wx/regex.h&gt;
+ #include &lt;wx/msw/registry.h&gt;
+<span class="gi">+#include &lt;wx/log.h&gt;             // wxLogNull</span>
+ 
+ CompilerBCC::CompilerBCC()
+     : Compiler(_(&quot;Borland C++ Compiler (5.5, 5.82)&quot;), _T(&quot;bcc&quot;))
+<span class="gh">Index: src/plugins/compilergcc/compilergcc.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilergcc.cpp    (revision 4103)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilergcc.cpp    (working copy)</span>
+<span class="gu">@@ -26,6 +26,8 @@</span>
+ 
+ #include &lt;sdk.h&gt;
+ #include &lt;prep.h&gt;
+<span class="gi">+#include &lt;wx/gauge.h&gt;     // Needs to be before compilergcc.h if NOPCH on wxMSW</span>
+<span class="gi">+#include &lt;wx/listctrl.h&gt;</span>
+ #include &quot;compilergcc.h&quot;
+ #include &lt;manager.h&gt;
+ #include &lt;sdk_events.h&gt;
+<span class="gu">@@ -46,7 +48,6 @@</span>
+ #include &lt;wx/button.h&gt;
+ #include &lt;wx/stattext.h&gt;
+ #include &lt;wx/statline.h&gt;
+<span class="gd">-#include &lt;wx/gauge.h&gt;</span>
+ #include &quot;makefilegenerator.h&quot;
+ #include &quot;compileroptionsdlg.h&quot;
+ #include &quot;directcommands.h&quot;
+<span class="gh">Index: src/plugins/compilergcc/compilerOWgenerator.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilerOWgenerator.cpp    (revision 4103)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilerOWgenerator.cpp    (working copy)</span>
+<span class="gu">@@ -1,6 +1,13 @@</span>
+ #ifdef __WXMSW__ // For Windows Only
+ 
+ #include &lt;sdk.h&gt;
+<span class="gi">+#ifndef CB_PRECOMP</span>
+<span class="gi">+#   include &quot;compiler.h&quot;</span>
+<span class="gi">+#   include &quot;cbproject.h&quot;</span>
+<span class="gi">+#   include &quot;projectbuildtarget.h&quot;</span>
+<span class="gi">+#   include &quot;messagemanager.h&quot;</span>
+<span class="gi">+#   include &quot;macrosmanager.h&quot;</span>
+<span class="gi">+#endif</span>
+ #include &quot;compileoptionsbase.h&quot;
+ #include &quot;compilerOWgenerator.h&quot;
+ 
+<span class="gh">Index: src/include/manager.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/manager.h    (revision 4103)</span>
+<span class="gi">+++ src/include/manager.h    (working copy)</span>
+<span class="gu">@@ -9,6 +9,12 @@</span>
+ #ifndef MANAGER_H
+ #define MANAGER_H
+ 
+<span class="gi">+#ifndef WX_PRECOMP</span>
+<span class="gi">+#   ifdef __WXMSW__</span>
+<span class="gi">+#       include &lt;wx/msw/wrapwin.h&gt;  // Needed to prevent Yield define bug.</span>
+<span class="gi">+#   endif</span>
+<span class="gi">+#endif</span>
+<span class="gi">+</span>
+ #include &lt;wx/event.h&gt;
+ #include &lt;wx/cmdline.h&gt;
+ #include &quot;settings.h&quot;
+<span class="gh">Index: src/include/newfromtemplatedlg.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/newfromtemplatedlg.h    (revision 4103)</span>
+<span class="gi">+++ src/include/newfromtemplatedlg.h    (working copy)</span>
+<span class="gu">@@ -8,6 +8,7 @@</span>
+ 
+ class wxChoice;
+ class wxListCtrl;
+<span class="gi">+class wxListEvent;</span>
+ class ProjectTemplateLoader;
+ 
+ class NewFromTemplateDlg : public wxDialog
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">stahta01 2007-05-10 23:50:49</div>

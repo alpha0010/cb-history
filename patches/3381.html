@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,103 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/CodeBlocks-unix.cbp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/CodeBlocks-unix.cbp    (wersja 8785)</span>
+<span class="gi">+++ src/CodeBlocks-unix.cbp    (kopia robocza)</span>
+<span class="gu">@@ -1196,6 +1199,12 @@</span>
+         &lt;Unit filename=&quot;plugins/codecompletion/coderefactoring.h&quot;&gt;
+             &lt;Option target=&quot;Code-completion&quot; /&gt;
+         &lt;/Unit&gt;
+<span class="gi">+        &lt;Unit filename=&quot;plugins/codecompletion/doxygen_parser.cpp&quot;&gt;</span>
+<span class="gi">+            &lt;Option target=&quot;Code-completion&quot; /&gt;</span>
+<span class="gi">+        &lt;/Unit&gt;</span>
+<span class="gi">+        &lt;Unit filename=&quot;plugins/codecompletion/doxygen_parser.h&quot;&gt;</span>
+<span class="gi">+            &lt;Option target=&quot;Code-completion&quot; /&gt;</span>
+<span class="gi">+        &lt;/Unit&gt;</span>
+         &lt;Unit filename=&quot;plugins/codecompletion/insertclassmethoddlg.cpp&quot;&gt;
+             &lt;Option target=&quot;Code-completion&quot; /&gt;
+         &lt;/Unit&gt;
+<span class="gh">Index: src/CodeBlocks.cbp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/CodeBlocks.cbp    (wersja 8785)</span>
+<span class="gi">+++ src/CodeBlocks.cbp    (kopia robocza)</span>
+<span class="gu">@@ -1457,6 +1457,12 @@</span>
+         &lt;Unit filename=&quot;plugins/codecompletion/coderefactoring.h&quot;&gt;
+             &lt;Option target=&quot;Code-completion&quot; /&gt;
+         &lt;/Unit&gt;
+<span class="gi">+        &lt;Unit filename=&quot;plugins/codecompletion/doxygen_parser.cpp&quot;&gt;</span>
+<span class="gi">+            &lt;Option target=&quot;Code-completion&quot; /&gt;</span>
+<span class="gi">+        &lt;/Unit&gt;</span>
+<span class="gi">+        &lt;Unit filename=&quot;plugins/codecompletion/doxygen_parser.h&quot;&gt;</span>
+<span class="gi">+            &lt;Option target=&quot;Code-completion&quot; /&gt;</span>
+<span class="gi">+        &lt;/Unit&gt;</span>
+         &lt;Unit filename=&quot;plugins/codecompletion/insertclassmethoddlg.cpp&quot;&gt;
+             &lt;Option target=&quot;Code-completion&quot; /&gt;
+         &lt;/Unit&gt;
+<span class="gh">Index: src/plugins/abbreviations/abbreviations.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/abbreviations/abbreviations.cpp    (wersja 8785)</span>
+<span class="gi">+++ src/plugins/abbreviations/abbreviations.cpp    (kopia robocza)</span>
+<span class="gu">@@ -198,6 +198,7 @@</span>
+             control-&gt;RegisterImage(0, wxBitmap(abbrev_xpm));
+             items.Sort();
+             wxString itemsStr = GetStringFromArray(items, _T(&quot; &quot;));
+<span class="gi">+            control-&gt;AutoCompSetSeparator(_T(&#39; &#39;));</span>
+             control-&gt;AutoCompShow(endPos-startPos, itemsStr);
+         }
+         m_IsAutoCompVisible = control-&gt;AutoCompActive();
+<span class="gh">Index: src/plugins/codecompletion/ccoptionsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/ccoptionsdlg.cpp    (wersja 8785)</span>
+<span class="gi">+++ src/plugins/codecompletion/ccoptionsdlg.cpp    (kopia robocza)</span>
+<span class="gu">@@ -35,6 +35,7 @@</span>
+ 
+ #include &quot;ccoptionsdlg.h&quot;
+ #include &quot;codecompletion.h&quot;
+<span class="gi">+#include &quot;doxygen_parser.h&quot; // For DocumentationHelper</span>
+ 
+ static const wxString g_SampleClasses =
+     _T(&quot;class A_class&quot;
+<span class="gu">@@ -82,12 +83,16 @@</span>
+     EVT_BUTTON(XRCID(&quot;btnDelRepl&quot;),         CCOptionsDlg::OnDelRepl)
+     EVT_BUTTON(XRCID(&quot;btnColour&quot;),          CCOptionsDlg::OnChooseColour)
+     EVT_COMMAND_SCROLL(XRCID(&quot;sldCCDelay&quot;), CCOptionsDlg::OnCCDelayScroll)
+<span class="gi">+    EVT_BUTTON(XRCID(&quot;btnDocBgColor&quot;),      CCOptionsDlg::OnChooseColour)</span>
+<span class="gi">+    EVT_BUTTON(XRCID(&quot;btnDocTextColor&quot;),    CCOptionsDlg::OnChooseColour)</span>
+<span class="gi">+    EVT_BUTTON(XRCID(&quot;btnDocLinkColor&quot;),    CCOptionsDlg::OnChooseColour)</span>
+ END_EVENT_TABLE()
+ 
+<span class="gd">-CCOptionsDlg::CCOptionsDlg(wxWindow* parent, NativeParser* np, CodeCompletion* cc) :</span>
+<span class="gi">+CCOptionsDlg::CCOptionsDlg(wxWindow* parent, NativeParser* np, CodeCompletion* cc, DocumentationHelper* dh) :</span>
+     m_NativeParser(np),
+     m_CodeCompletion(cc),
+<span class="gd">-    m_Parser(np-&gt;GetParser())</span>
+<span class="gi">+    m_Parser(np-&gt;GetParser()),</span>
+<span class="gi">+    m_Documentation(dh)</span>
+ {
+     ConfigManager* cfg = Manager::Get()-&gt;GetConfigManager(_T(&quot;code_completion&quot;));
+ 
+<span class="gu">@@ -102,6 +107,7 @@</span>
+     XRCCTRL(*this, &quot;chkEvalTooltip&quot;,        wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/eval_tooltip&quot;),         true));
+     XRCCTRL(*this, &quot;chkAutoSelectOne&quot;,      wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/auto_select_one&quot;),      false));
+     XRCCTRL(*this, &quot;chkAutoAddParentheses&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/auto_add_parentheses&quot;), true));
+<span class="gi">+    XRCCTRL(*this, &quot;chkDetectImpl&quot;,         wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/detect_implementation&quot;),false));</span>
+     XRCCTRL(*this, &quot;chkAddDoxgenComment&quot;,   wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/add_doxgen_comment&quot;),   false));
+     XRCCTRL(*this, &quot;chkEnableHeaders&quot;,      wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/enable_headers&quot;),       true));
+     XRCCTRL(*this, &quot;chkAutoLaunch&quot;,         wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/auto_launch&quot;),          true));
+<span class="gu">@@ -172,6 +178,13 @@</span>
+     XRCCTRL(*this, &quot;chkInheritance&quot;,        wxCheckBox)-&gt;SetValue(m_Parser.ClassBrowserOptions().showInheritance);
+     XRCCTRL(*this, &quot;chkExpandNS&quot;,           wxCheckBox)-&gt;SetValue(m_Parser.ClassBrowserOptions().expandNS);
+     XRCCTRL(*this, &quot;chkTreeMembers&quot;,        wxCheckBox)-&gt;SetValue(m_Parser.ClassBrowserOptions().treeMembers);
+<span class="gi">+    </span>
+<span class="gi">+    //Page Documentation</span>
+<span class="gi">+    XRCCTRL(*this, &quot;chkDocumentation&quot;,      wxCheckBox)-&gt;SetValue(m_Documentation-&gt;Options().m_Enabled);</span>
+<span class="gi">+    XRCCTRL(*this, &quot;chkDocPopupAlways&quot;,     wxCheckBox)-&gt;SetValue(m_Documentation-&gt;Options().m_ShowAlways);</span>
+<span class="gi">+    XRCCTRL(*this, &quot;btnDocBgColor&quot;,     wxButton)-&gt;SetBackgroundColour</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">p2rkw 2012-11-30 16:51:52</div>

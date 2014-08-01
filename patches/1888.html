@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,93 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/src/app.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/app.h       (revision 3610)</span>
+<span class="gi">+++ src/src/app.h       (working copy)</span>
+<span class="gu">@@ -82,6 +82,7 @@</span>
+         bool m_BatchWindowAutoClose; // default: true
+         bool m_Build;
+         bool m_ReBuild;
+<span class="gi">+        bool m_Clean;</span>
+         bool m_HasProject;
+         bool m_HasWorkSpace;
+         bool m_NoSplash; // no splash screen
+<span class="gh">Index: src/src/app.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/app.cpp     (revision 3610)</span>
+<span class="gi">+++ src/src/app.cpp     (working copy)</span>
+<span class="gu">@@ -152,6 +152,7 @@</span>
+     { wxCMD_LINE_OPTION, _T(&quot;&quot;), _T(&quot;profile&quot;),  _T(&quot;synonym to personality&quot;), wxCMD_LINE_VAL_STRING, wxCMD_LINE_NEEDS_SEPARATOR },
+     { wxCMD_LINE_SWITCH, _T(&quot;&quot;), _T(&quot;rebuild&quot;), _T(&quot;clean and then build the project/workspace&quot;), wxCMD_LINE_VAL_NONE, wxCMD_LINE_PARAM_OPTIONAL },
+     { wxCMD_LINE_SWITCH, _T(&quot;&quot;), _T(&quot;build&quot;), _T(&quot;just build the project/workspace&quot;), wxCMD_LINE_VAL_NONE, wxCMD_LINE_PARAM_OPTIONAL },
+<span class="gi">+    { wxCMD_LINE_SWITCH, _T(&quot;&quot;), _T(&quot;clean&quot;), _T(&quot;clean the project/workspace&quot;), wxCMD_LINE_VAL_NONE, wxCMD_LINE_PARAM_OPTIONAL },</span>
+     { wxCMD_LINE_OPTION, _T(&quot;&quot;), _T(&quot;target&quot;),  _T(&quot;the target for the batch build&quot;), wxCMD_LINE_VAL_STRING, wxCMD_LINE_NEEDS_SEPARATOR },
+     { wxCMD_LINE_SWITCH, _T(&quot;&quot;), _T(&quot;no-batch-window-close&quot;),  _T(&quot;do not auto-close log window when batch build is done&quot;), wxCMD_LINE_VAL_NONE, wxCMD_LINE_PARAM_OPTIONAL },
+     { wxCMD_LINE_SWITCH, _T(&quot;&quot;), _T(&quot;batch-build-notify&quot;),  _T(&quot;show message when batch build is done&quot;), wxCMD_LINE_VAL_NONE, wxCMD_LINE_PARAM_OPTIONAL },
+<span class="gu">@@ -427,6 +428,7 @@</span>
+     m_BatchNotify = false;
+     m_Build = false;
+     m_ReBuild = false;
+<span class="gi">+    m_Clean = false;</span>
+     m_HasProject = false;
+     m_HasWorkSpace = false;
+ 
+<span class="gu">@@ -582,10 +584,10 @@</span>
+ #endif
+     if (m_pSingleInstance)
+         delete m_pSingleInstance;
+<span class="gd">-       </span>
+<span class="gi">+</span>
+        // ultimate shutdown...
+        Manager::Free();
+<span class="gd">-    </span>
+<span class="gi">+</span>
+     // WX docs say that this function&#39;s return value is ignored,
+     // but we return our value anyway. It might not be ignored at some point...
+     return m_Batch ? m_BatchExitCode : 0;
+<span class="gu">@@ -689,6 +691,17 @@</span>
+                compiler-&gt;BuildWorkspace(m_BatchTarget);
+        }
+     }
+<span class="gi">+    else if (m_Clean)</span>
+<span class="gi">+    {</span>
+<span class="gi">+       if(m_HasProject)</span>
+<span class="gi">+       {</span>
+<span class="gi">+               compiler-&gt;Clean(m_BatchTarget);</span>
+<span class="gi">+       }</span>
+<span class="gi">+       else if(m_HasWorkSpace)</span>
+<span class="gi">+       {</span>
+<span class="gi">+               compiler-&gt;CleanWorkspace(m_BatchTarget);</span>
+<span class="gi">+       }</span>
+<span class="gi">+    }</span>
+ 
+     // the batch build log might have been deleted in
+     // CodeBlocksApp::OnBatchBuildDone().
+<span class="gu">@@ -833,7 +846,7 @@</span>
+ 
+                     // batch jobs
+                     m_Batch = m_HasProject || m_HasWorkSpace;
+<span class="gd">-                    m_Batch = m_Batch &amp;&amp; (m_Build || m_ReBuild);</span>
+<span class="gi">+                    m_Batch = m_Batch &amp;&amp; (m_Build || m_ReBuild || m_Clean);</span>
+                 }
+                 else
+                 {
+<span class="gu">@@ -857,10 +870,11 @@</span>
+                     m_BatchWindowAutoClose = !parser.Found(_T(&quot;no-batch-window-close&quot;));
+                     m_Build = parser.Found(_T(&quot;build&quot;));
+                     m_ReBuild = parser.Found(_T(&quot;rebuild&quot;));
+<span class="gi">+                    m_Clean = parser.Found(_T(&quot;clean&quot;));</span>
+                     parser.Found(_T(&quot;target&quot;), &amp;m_BatchTarget);
+                     parser.Found(_T(&quot;script&quot;), &amp;m_Script);
+                     // initial setting for batch flag (will be reset when ParseCmdLine() is called again).
+<span class="gd">-                    m_Batch = m_Build || m_ReBuild;</span>
+<span class="gi">+                    m_Batch = m_Build || m_ReBuild || m_Clean;</span>
+                 }
+             }
+             break;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">dermeister 2007-02-16 18:56:53</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,179 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable">/*
+ * This file is part of the Code::Blocks IDE and licensed under the GNU General Public License, version 3
+ * http://www.gnu.org/licenses/gpl-3.0.html
+ *
+ * $Revision: 6201 $
+ * $Id: autorevision.cpp 6201 2010-04-04 08:21:27Z killerbot $
+ * $HeadURL: svn://svn.berlios.de/codeblocks/trunk/src/build_tools/autorevision/autorevision.cpp $
+ */
+ // Be careful with this file, be sure none of it&#39;s code is included in anything proprietary, as it&#39;s covered by the GPL.
+
+#include &lt;stdio.h&gt;
+#include &lt;string&gt;
+#include &lt;vector&gt;
+#include &lt;fstream&gt;
+
+#include &quot;tinyxml/tinystr.h&quot;
+#include &quot;tinyxml/tinyxml.h&quot;
+
+using namespace std;
+
+#ifdef __WIN32__
+    #define WIN32_LEAN_AND_MEAN 1
+    #define NOGDI
+    #include &lt;windows.h&gt;
+    inline void set_env(const char* k, const char* v) { SetEnvironmentVariable(k, v); };
+#ifdef __MSVC__
+    // Why windows likes to add the underscore but otherwise keep the function I&#39;ll never know. 
+#define popen(A,B) _popen(A,B)
+#define pclose(A) _pclose(A)
+#endif
+#else
+    #include &lt;stdlib.h&gt;
+    inline void set_env(const char* k, const char* v) { setenv(k, v, 1); };
+#endif
+
+// Const definitions
+/// This is what the slashes (\) will be converted to.
+const std::string desired_slashes(&quot;/&quot;);
+//const std::string desired_slashes(&quot;\\\\&quot;);
+
+// Structure to hold settings rather then use half global, half passed variables.  It&#39;s inconsistent.
+struct ProgramSettings
+{
+   bool do_int ;
+   bool do_std ;
+   bool do_wx  ;
+   bool do_translate  ;
+   bool be_verbose  ;
+   bool do_error  ;
+   bool do_mod ;
+   bool do_external ;
+   bool do_updated;
+   bool do_forced;
+   int error_level;
+
+   string outputFile;
+   string workingDir;
+   vector&lt;string&gt; Namespaces; // If empty, use autoversion.
+   string inconsistentFiles;
+   string revision;
+   string date;
+   string externalFiles;
+};
+
+/// Get the subversion revision, and revision date.
+bool QuerySvn(ProgramSettings&amp; set);
+/// Determine if any files are modified.
+bool QuerySvnStatus(ProgramSettings&amp; set);
+bool ParseFile(const string&amp; docFile, ProgramSettings&amp; set);
+bool WriteOutput(ProgramSettings&amp; set);
+string ChangePathInfo(string data);
+int main(int argc, char** argv);
+
+
+
+int main(int argc, char** argv)
+{
+     ProgramSettings set;
+   set.do_int = false;
+   set.do_std = false;
+   set.do_wx  = false;
+   set.do_translate  = false;
+   set.be_verbose  = false;
+   set.do_error  = false;
+   set.do_mod  = false;
+   set.do_updated  = false;
+   set.do_external = false;
+   set.do_forced = false;
+   set.error_level  = 0;
+
+
+    for(int i = 1; i &lt; argc; ++i)
+    {
+        if(strcmp(&quot;+int&quot;, argv[i]) == 0)
+            set.do_int = true;
+        else if(strcmp(&quot;+std&quot;, argv[i]) == 0)
+            set.do_std = true;
+        else if(strcmp(&quot;+mod&quot;, argv[i]) == 0)
+            set.do_mod = true;
+        else if(strcmp(&quot;+ext&quot;, argv[i]) == 0)
+            set.do_external = true;
+        else if(strcmp(&quot;+mode&quot;, argv[i]) == 0)
+          {
+            set.do_mod = true;
+            set.do_error = true;
+          }
+        else if(strcmp(&quot;+modu&quot;, argv[i]) == 0)
+          {
+            set.do_mod = true;
+            set.do_updated = true;
+          }
+        else if(strcmp(&quot;+wx&quot;, argv[i]) == 0)
+            set.do_wx = true;
+        else if(strcmp(&quot;+t&quot;, argv[i]) == 0)
+            set.do_translate = true;
+        else if(strcmp(&quot;-v&quot;, argv[i]) == 0)
+            set.be_verbose = true;
+        else if(strcmp(&quot;-f&quot;, argv[i]) == 0)
+            set.do_forced = true;
+        else if(set.workingDir.empty())
+            set.workingDir.assign(argv[i]);
+        else if(set.outputFile.empty())
+            set.outputFile.assign(argv[i]);
+        else
+            set.Namespaces.push_back(string(argv[i]));
+    }
+
+    if (set.workingDir.empty())
+    {
+        puts(&quot;Usage: autorevision [options] directory [autorevision.h] [namespaces*]&quot;);
+        puts(&quot;Options:&quot;);
+        puts(&quot;         +int assign const unsigned int&quot;);
+        puts(&quot;         +std assign const std::string&quot;);
+        puts(&quot;         +wx  assing const wxString&quot;);
+        puts(&quot;         +mod generate a list of modified files.&quot;);
+        puts(&quot;         +modu Include non-updated files as modified.&quot;);
+        puts(&quot;         +ext generate a list of external repositories.&quot;);
+        puts(&quot;         +mode treat any files other then unversioned in the tree as an error.&quot;);
+        puts(&quot;         +t   add Unicode translation macros to strings&quot;);
+        puts(&quot;         -v   be verbose&quot;);
+        puts(&quot;         -f   force update, even if revisions are the same.&quot;);
+        return 1;
+    }
+
+    if(set.outputFile.empty())
+        set.outputFile.assign(&quot;autorevision.h&quot;);
+
+
+    QuerySvn(set);
+    if ((set.do_mod) ||(set.do_external))
+       QuerySvnStatus(set);
+    WriteOutput(set);
+
+    return set.error_level;
+}
+
+
+
+bool QuerySvn( ProgramSettings&amp; set)
+{
+    set.revision = &quot;0&quot;;
+    set.date = &quot;unknown date&quot;;
+    string svncmd(&quot;svn info --xml --non-interactive &quot;);
+    svncmd.append(set.workingDir);
+
+    FILE *svn = popen(svncmd.c_str(), &quot;r&quot;);
+
+    if(svn)
+    {
+        char
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,132 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/globals.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/globals.cpp    (revision 1964)</span>
+<span class="gi">+++ src/sdk/globals.cpp    (arbetskopia)</span>
+<span class="gu">@@ -34,6 +34,7 @@</span>
+     #include &quot;globals.h&quot;
+     #include &lt;wx/filename.h&gt;
+     #include &lt;wx/file.h&gt;
+<span class="gi">+    #include &lt;wx/image.h&gt;</span>
+     #include &quot;cbexception.h&quot;
+ #endif
+ 
+<span class="gh">Index: src/sdk/editorconfigurationdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorconfigurationdlg.cpp    (revision 1964)</span>
+<span class="gi">+++ src/sdk/editorconfigurationdlg.cpp    (arbetskopia)</span>
+<span class="gu">@@ -47,6 +47,7 @@</span>
+ #include &lt;wx/fontmap.h&gt;
+ #include &lt;wx/textctrl.h&gt;
+ #include &lt;wx/listbook.h&gt;
+<span class="gi">+#include &lt;wx/listctrl.h&gt;</span>
+ 
+ #include &quot;editorcolorset.h&quot;
+ #include &quot;editorconfigurationdlg.h&quot;
+<span class="gh">Index: src/sdk/blockallocated.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/blockallocated.h    (revision 1964)</span>
+<span class="gi">+++ src/sdk/blockallocated.h    (arbetskopia)</span>
+<span class="gu">@@ -83,9 +83,9 @@</span>
+     ~BlockAllocator()
+     {
+         if(debug)
+<span class="gd">-            BlkAllc::DebugLog(_U(typeid(T).name()), allocBlocks.size(), pool_size, max_refs, total_refs, ref_count);</span>
+<span class="gi">+            BlkAllc::DebugLog(cbC2U(typeid(T).name()), allocBlocks.size(), pool_size, max_refs, total_refs, ref_count);</span>
+         else if(BlkAllc::enable_global_debug &amp;&amp; (BlkAllc::verbose || ref_count != 0))
+<span class="gd">-            BlkAllc::DebugLog(_U(typeid(T).name()), allocBlocks.size(), pool_size, max_refs, total_refs, ref_count);</span>
+<span class="gi">+            BlkAllc::DebugLog(cbC2U(typeid(T).name()), allocBlocks.size(), pool_size, max_refs, total_refs, ref_count);</span>
+ 
+         for(unsigned int i = 0; i &lt; allocBlocks.size(); ++i)
+             delete[] allocBlocks[i];
+<span class="gh">Index: src/sdk/propgrid/src/propgrid/odcombo.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/propgrid/src/propgrid/odcombo.cpp    (revision 1964)</span>
+<span class="gi">+++ src/sdk/propgrid/src/propgrid/odcombo.cpp    (arbetskopia)</span>
+<span class="gu">@@ -37,6 +37,7 @@</span>
+     #include &quot;wx/textctrl.h&quot;
+     #include &quot;wx/dcclient.h&quot;
+     #include &quot;wx/settings.h&quot;
+<span class="gi">+    #include &quot;wx/dialog.h&quot;</span>
+ 
+ #endif
+ 
+<span class="gh">Index: src/sdk/propgrid/src/propgrid/propgrid.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/propgrid/src/propgrid/propgrid.cpp    (revision 1964)</span>
+<span class="gi">+++ src/sdk/propgrid/src/propgrid/propgrid.cpp    (arbetskopia)</span>
+<span class="gu">@@ -5891,6 +5891,8 @@</span>
+ 
+         Refresh();
+     }
+<span class="gi">+</span>
+<span class="gi">+    return res;</span>
+ #else
+     // ** wxMAC Only **
+     // TODO: Remove after SetFont crash fixed.
+<span class="gu">@@ -5900,8 +5902,6 @@</span>
+     }
+     return false;
+ #endif
+<span class="gd">-</span>
+<span class="gd">-    return res;</span>
+ }
+ 
+ // -----------------------------------------------------------------------
+<span class="gh">Index: src/sdk/projectoptionsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/projectoptionsdlg.cpp    (revision 1964)</span>
+<span class="gi">+++ src/sdk/projectoptionsdlg.cpp    (arbetskopia)</span>
+<span class="gu">@@ -30,6 +30,7 @@</span>
+     #include &quot;manager.h&quot;
+     #include &quot;pluginmanager.h&quot;
+     #include &quot;projectmanager.h&quot;
+<span class="gi">+    #include &quot;scriptingmanager.h&quot;</span>
+     #include &quot;compilerfactory.h&quot;
+     #include &quot;globals.h&quot;
+ 
+<span class="gh">Index: src/src/environmentsettingsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/environmentsettingsdlg.cpp    (revision 1964)</span>
+<span class="gi">+++ src/src/environmentsettingsdlg.cpp    (arbetskopia)</span>
+<span class="gu">@@ -17,6 +17,7 @@</span>
+ #include &lt;pluginmanager.h&gt;
+ #include &lt;wx/intl.h&gt;
+ #include &lt;wx/listbook.h&gt;
+<span class="gi">+#include &lt;wx/listctrl.h&gt;</span>
+ #include &lt;wx/combobox.h&gt;
+ #include &lt;wx/checkbox.h&gt;
+ #include &lt;wx/checklst.h&gt;
+<span class="gh">Index: src/src/app.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/app.cpp    (revision 1964)</span>
+<span class="gi">+++ src/src/app.cpp    (arbetskopia)</span>
+<span class="gu">@@ -636,6 +636,9 @@</span>
+     GetModuleFileName(0L, name, MAX_PATH);
+     wxFileName fname(name);
+     base = fname.GetPath(wxPATH_GET_VOLUME);
+<span class="gi">+#elif defined(__WXMAC__)</span>
+<span class="gi">+    // TODO: get the path</span>
+<span class="gi">+    base = _T(&quot;.&quot;);</span>
+ #else
+     if (!m_Prefix.IsEmpty())
+         return m_Prefix;
+<span class="gh">Index: src/src/compilersettingsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/compilersettingsdlg.cpp    (revision 1964)</span>
+<span class="gi">+++ src/src/compilersettingsdlg.cpp    (arbetskopia)</span>
+<span class="gu">@@ -18,6 +18,7 @@</span>
+ #include &lt;cbplugin.h&gt;
+ #include &lt;wx/intl.h&gt;
+ #include &lt;wx/listbook.h&gt;
+<span class="gi">+#include &lt;wx/listctrl.h&gt;</span>
+ 
+ #include &quot;compilersettingsdlg.h&quot;
+ #include &quot;appglobals.h&quot;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">thomasdenk 2006-02-12 15:17:59</div>

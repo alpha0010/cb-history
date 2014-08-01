@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,99 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/SpellChecker/Thesaurus.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/SpellChecker/Thesaurus.cpp    (revision 8236)</span>
+<span class="gi">+++ src/plugins/contrib/SpellChecker/Thesaurus.cpp    (working copy)</span>
+<span class="gu">@@ -56,7 +56,48 @@</span>
+         m_pT = new wxThes( idxpath, datpath );
+     }
+     else
+<span class="gi">+    {</span>
+         Manager::Get()-&gt;GetLogManager()-&gt;Log(_T(&quot;SpellChecker: Thesaurus files &#39;&quot;) + idxpath + _T(&quot;&#39; not found!&quot;));
+<span class="gi">+        wxString altIdx = wxFindFirstFile(idxpath.BeforeLast(wxT(&#39;.&#39;)) + wxT(&quot;*.idx&quot;), wxFILE); // &quot;*_v2.idx&quot;</span>
+<span class="gi">+        if (altIdx.IsEmpty()) // try again with more wildcards</span>
+<span class="gi">+        {</span>
+<span class="gi">+            altIdx = idxpath.AfterLast(wxFILE_SEP_PATH).BeforeLast(wxT(&#39;.&#39;)) + wxT(&quot;*.idx&quot;);</span>
+<span class="gi">+            altIdx.Replace(wxT(&quot;_&quot;), wxT(&quot;*&quot;));</span>
+<span class="gi">+            altIdx.Replace(wxT(&quot;-&quot;), wxT(&quot;*&quot;));</span>
+<span class="gi">+            altIdx = wxFindFirstFile(idxpath.BeforeLast(wxFILE_SEP_PATH) + wxFILE_SEP_PATH + altIdx, wxFILE);</span>
+<span class="gi">+        }</span>
+<span class="gi">+        if (altIdx.IsEmpty()) // try to find the thesaurus of a related language (something is better than nothing)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            altIdx = idxpath.AfterLast(wxFILE_SEP_PATH);</span>
+<span class="gi">+            altIdx.Replace(wxT(&quot;_&quot;), wxT(&quot;*&quot;));</span>
+<span class="gi">+            altIdx.Replace(wxT(&quot;-&quot;), wxT(&quot;*&quot;));</span>
+<span class="gi">+            altIdx = altIdx.BeforeLast(wxT(&#39;*&#39;)) + wxT(&quot;*.idx&quot;);</span>
+<span class="gi">+            altIdx = wxFindFirstFile(idxpath.BeforeLast(wxFILE_SEP_PATH) + wxFILE_SEP_PATH + altIdx, wxFILE);</span>
+<span class="gi">+        }</span>
+<span class="gi">+</span>
+<span class="gi">+        wxString altDat = wxFindFirstFile(datpath.BeforeLast(wxT(&#39;.&#39;)) + wxT(&quot;*.dat&quot;), wxFILE); // &quot;*_v2.dat&quot;</span>
+<span class="gi">+        if (altDat.IsEmpty()) // try again with more wildcards</span>
+<span class="gi">+        {</span>
+<span class="gi">+            altDat = datpath.AfterLast(wxFILE_SEP_PATH).BeforeLast(wxT(&#39;.&#39;)) + wxT(&quot;*.dat&quot;);</span>
+<span class="gi">+            altDat.Replace(wxT(&quot;_&quot;), wxT(&quot;*&quot;));</span>
+<span class="gi">+            altDat.Replace(wxT(&quot;-&quot;), wxT(&quot;*&quot;));</span>
+<span class="gi">+            altDat = wxFindFirstFile(datpath.BeforeLast(wxFILE_SEP_PATH) + wxFILE_SEP_PATH + altDat, wxFILE);</span>
+<span class="gi">+        }</span>
+<span class="gi">+        if (altDat.IsEmpty()) // try to find the thesaurus of a related language (something is better than nothing)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            altDat = datpath.AfterLast(wxFILE_SEP_PATH);</span>
+<span class="gi">+            altDat.Replace(wxT(&quot;_&quot;), wxT(&quot;*&quot;));</span>
+<span class="gi">+            altDat.Replace(wxT(&quot;-&quot;), wxT(&quot;*&quot;));</span>
+<span class="gi">+            altDat = altDat.BeforeLast(wxT(&#39;*&#39;)) + wxT(&quot;*.dat&quot;);</span>
+<span class="gi">+            altDat = wxFindFirstFile(datpath.BeforeLast(wxFILE_SEP_PATH) + wxFILE_SEP_PATH + altDat, wxFILE);</span>
+<span class="gi">+        }</span>
+<span class="gi">+</span>
+<span class="gi">+        if (!altIdx.IsEmpty() &amp;&amp; !altDat.IsEmpty() &amp;&amp; wxFileExists(altIdx) &amp;&amp; wxFileExists(altDat))</span>
+<span class="gi">+        {</span>
+<span class="gi">+            m_pT = new  wxThes(altIdx, altDat);</span>
+<span class="gi">+            Manager::Get()-&gt;GetLogManager()-&gt;Log(wxT(&quot;SpellChecker: Loading &#39;&quot;) + altIdx + wxT(&quot;&#39; instead...&quot;));</span>
+<span class="gi">+        }</span>
+<span class="gi">+    }</span>
+ }
+ 
+ 
+<span class="gh">Index: src/plugins/contrib/SpellChecker/StatusField.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/SpellChecker/StatusField.cpp    (revision 8236)</span>
+<span class="gi">+++ src/plugins/contrib/SpellChecker/StatusField.cpp    (working copy)</span>
+<span class="gu">@@ -26,7 +26,10 @@</span>
+     //ctor
+     m_text = new wxStaticText(this, wxID_ANY, m_sccfg-&gt;GetDictionaryName());
+ 
+<span class="gd">-    wxBitmap bm(wxImage( m_sccfg-&gt;GetBitmapPath() + wxFILE_SEP_PATH + m_sccfg-&gt;GetDictionaryName() + _T(&quot;.png&quot;), wxBITMAP_TYPE_PNG ));</span>
+<span class="gi">+    wxString name = m_sccfg-&gt;GetDictionaryName();</span>
+<span class="gi">+    if (!wxFileExists(m_sccfg-&gt;GetBitmapPath() + wxFILE_SEP_PATH + name + _T(&quot;.png&quot;)))</span>
+<span class="gi">+        name.Replace(wxT(&quot;-&quot;), wxT(&quot;_&quot;)); // some dictionaries are distributed with hyphens</span>
+<span class="gi">+    wxBitmap bm(wxImage( m_sccfg-&gt;GetBitmapPath() + wxFILE_SEP_PATH + name + _T(&quot;.png&quot;), wxBITMAP_TYPE_PNG ));</span>
+     m_bitmap = new wxStaticBitmap(this, wxID_ANY, bm);
+ 
+     if ( bm.IsOk() )
+<span class="gu">@@ -41,6 +44,9 @@</span>
+     m_text-&gt;Connect(wxEVT_RIGHT_UP, wxMouseEventHandler(SpellCheckerStatusField::OnRightUp), NULL, this);
+     m_bitmap-&gt;Connect(wxEVT_RIGHT_UP, wxMouseEventHandler(SpellCheckerStatusField::OnRightUp), NULL, this);
+     Connect(wxEVT_RIGHT_UP, wxMouseEventHandler(SpellCheckerStatusField::OnRightUp), NULL, this);
+<span class="gi">+    m_text-&gt;Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(SpellCheckerStatusField::OnRightUp), NULL, this);</span>
+<span class="gi">+    m_bitmap-&gt;Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(SpellCheckerStatusField::OnRightUp), NULL, this);</span>
+<span class="gi">+    Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(SpellCheckerStatusField::OnRightUp), NULL, this);</span>
+ }
+ 
+ SpellCheckerStatusField::~SpellCheckerStatusField()
+<span class="gu">@@ -58,7 +64,10 @@</span>
+ void SpellCheckerStatusField::Update()
+ {
+     m_text-&gt;SetLabel(m_sccfg-&gt;GetDictionaryName() );
+<span class="gd">-    wxBitmap bm(wxImage( m_sccfg-&gt;GetBitmapPath() + wxFILE_SEP_PATH + m_sccfg-&gt;GetDictionaryName()  + _T(&quot;.png&quot;), wxBITMAP_TYPE_PNG ));</span>
+<span class="gi">+    wxString name = m_sccfg-&gt;GetDictionaryName();</span>
+<span class="gi">+    if (!wxFileExists(m_sccfg-&gt;GetBitmapPath() + wxFILE_SEP_PATH + name + _T(&quot;.png&quot;)))</span>
+<span class="gi">+        name.Replace(wxT(&quot;-&quot;), wxT(&quot;_&quot;)); // some dictionaries are distributed with hyphens</span>
+<span class="gi">+    wxBitmap bm(wxImage( m_sccfg-&gt;GetBitmapPath() + wxFILE_SEP_PATH + name + _T(&quot;.png&quot;), wxBITMAP_TYPE_PNG ));</span>
+     if ( bm.IsOk() )
+     {
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">alpha0010 2012-08-16 17:26:45</div>

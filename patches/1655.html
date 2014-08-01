@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,136 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/src/scriptingsettingsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/scriptingsettingsdlg.cpp    (revision 3395)</span>
+<span class="gi">+++ src/src/scriptingsettingsdlg.cpp    (working copy)</span>
+<span class="gu">@@ -242,7 +242,11 @@</span>
+                             XRCCTRL(*this, &quot;txtScript&quot;, wxTextCtrl)-&gt;GetValue(),
+                             XRCCTRL(*this, &quot;txtScript&quot;, wxTextCtrl)-&gt;GetValue(),
+                             FileFilters::GetFilterString(_T(&quot;.script&quot;)),
+<span class="gd">-                            wxOPEN | wxHIDE_READONLY);</span>
+<span class="gi">+                            wxOPEN</span>
+<span class="gi">+#if (WXWIN_COMPATIBILITY_2_4)</span>
+<span class="gi">+                            | wxHIDE_READONLY</span>
+<span class="gi">+#endif</span>
+<span class="gi">+    );</span>
+     PlaceWindow(dlg);
+     if (dlg-&gt;ShowModal() == wxID_OK)
+     {
+<span class="gh">Index: src/sdk/scripting/bindings/sc_io.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/scripting/bindings/sc_io.cpp    (revision 3353)</span>
+<span class="gi">+++ src/sdk/scripting/bindings/sc_io.cpp    (working copy)</span>
+<span class="gu">@@ -66,7 +66,11 @@</span>
+                             wxEmptyString,
+                             Manager::Get()-&gt;GetMacrosManager()-&gt;ReplaceMacros(defaultFile),
+                             filter,
+<span class="gd">-                            wxOPEN | wxHIDE_READONLY);</span>
+<span class="gi">+                            wxOPEN</span>
+<span class="gi">+#if (WXWIN_COMPATIBILITY_2_4)</span>
+<span class="gi">+                            | wxHIDE_READONLY</span>
+<span class="gi">+#endif</span>
+<span class="gi">+            );</span>
+             PlaceWindow(&amp;dlg);
+             if (dlg.ShowModal() == wxID_OK)
+                 return dlg.GetPath();
+<span class="gh">Index: src/sdk/editpairdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editpairdlg.cpp    (revision 3353)</span>
+<span class="gi">+++ src/sdk/editpairdlg.cpp    (working copy)</span>
+<span class="gu">@@ -62,7 +62,11 @@</span>
+                             XRCCTRL(*this, &quot;txtValue&quot;, wxTextCtrl)-&gt;GetValue(),
+                             _T(&quot;&quot;),
+                             FileFilters::GetFilterAll(),
+<span class="gd">-                            wxOPEN | wxHIDE_READONLY);</span>
+<span class="gi">+                            wxOPEN</span>
+<span class="gi">+#if (WXWIN_COMPATIBILITY_2_4)</span>
+<span class="gi">+                            | wxHIDE_READONLY</span>
+<span class="gi">+#endif</span>
+<span class="gi">+            );</span>
+             PlaceWindow(&amp;dlg);
+             if (dlg.ShowModal() == wxID_OK)
+                 XRCCTRL(*this, &quot;txtValue&quot;, wxTextCtrl)-&gt;SetValue(dlg.GetPath());
+<span class="gh">Index: src/sdk/selecttargetdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/selecttargetdlg.cpp    (revision 3353)</span>
+<span class="gi">+++ src/sdk/selecttargetdlg.cpp    (working copy)</span>
+<span class="gu">@@ -119,7 +119,11 @@</span>
+                             #else
+                             _(&quot;All files (*)|*&quot;),
+                             #endif
+<span class="gd">-                            wxOPEN | wxFILE_MUST_EXIST | wxHIDE_READONLY);</span>
+<span class="gi">+                            wxOPEN | wxFILE_MUST_EXIST</span>
+<span class="gi">+#if (WXWIN_COMPATIBILITY_2_4)</span>
+<span class="gi">+                            | wxHIDE_READONLY</span>
+<span class="gi">+#endif</span>
+<span class="gi">+        );</span>
+         dlg-&gt;SetFilterIndex(0);
+         PlaceWindow(dlg);
+         if (dlg-&gt;ShowModal() != wxID_OK)
+<span class="gh">Index: src/sdk/editarrayfiledlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editarrayfiledlg.cpp    (revision 3353)</span>
+<span class="gi">+++ src/sdk/editarrayfiledlg.cpp    (working copy)</span>
+<span class="gu">@@ -84,7 +84,11 @@</span>
+                     m_BasePath,
+                     _T(&quot;&quot;),
+                     FileFilters::GetFilterAll(),
+<span class="gd">-                    wxOPEN | wxHIDE_READONLY);</span>
+<span class="gi">+                    wxOPEN</span>
+<span class="gi">+#if (WXWIN_COMPATIBILITY_2_4)</span>
+<span class="gi">+                    | wxHIDE_READONLY</span>
+<span class="gi">+#endif</span>
+<span class="gi">+    );</span>
+ 
+     PlaceWindow(&amp;dlg);
+     if (dlg.ShowModal() != wxID_OK)
+<span class="gu">@@ -104,7 +108,11 @@</span>
+                     m_BasePath,
+                     list-&gt;GetStringSelection(),
+                     FileFilters::GetFilterAll(),
+<span class="gd">-                    wxOPEN | wxHIDE_READONLY);</span>
+<span class="gi">+                    wxOPEN</span>
+<span class="gi">+#if (WXWIN_COMPATIBILITY_2_4)</span>
+<span class="gi">+                    | wxHIDE_READONLY</span>
+<span class="gi">+#endif</span>
+<span class="gi">+    );</span>
+ 
+     PlaceWindow(&amp;dlg);
+     if (dlg.ShowModal() != wxID_OK)
+<span class="gh">Index: src/sdk/projectmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/projectmanager.cpp    (revision 3353)</span>
+<span class="gi">+++ src/sdk/projectmanager.cpp    (working copy)</span>
+<span class="gu">@@ -1875,7 +1875,12 @@</span>
+                     prj-&gt;GetBasePath(),
+                     wxEmptyString,
+                     FileFilters::GetFilterString(),
+<span class="gd">-                    wxOPEN | wxMULTIPLE | wxFILE_MUST_EXIST | wxHIDE_READONLY);</span>
+<span class="gi">+                    wxOPEN | wxMULTIPLE | wxFILE_MUST_EXIST</span>
+<span class="gi">+#if (WXWIN_COMPATIBILITY_2_4)</span>
+<span class="gi">+                    | wxHIDE_READONLY</span>
+<span class="gi">+#endif</span>
+<span class="gi">+    );</span>
+<span class="gi">+</span>
+     dlg.SetFilterIndex(FileFilters::GetIndexForFilterAll());
+ 
+     PlaceWindow(&amp;dlg);
+<span class="gh">Index: src/sdk/projectoptionsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/projectoptionsdlg.cpp    (revision 3353)</span>
+<span class="gi">+++ src/sdk/projectoptionsdlg.cpp    (working copy)</span>
+<span class="gu">@@ -852,7 +852,11 @@</span>
+                     fname.GetPath(),
+                     fname.GetFullName(),
+                     _(&quot;Script files (*.script)|*.script&quot;),
+<span class="gd">-                    wxOPEN | wxMULTIPLE | wxHIDE_READONLY);</span>
+<span class="gi">+                    wxOPEN | wxMULTIPLE</span>
+<span class="gi">+#if (WXWIN_COMPATIBILITY_2_4</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">stahta01 2006-11-24 09:58:01</div>

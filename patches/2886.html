@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,60 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/BrowseTracker/BrowseTracker.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/BrowseTracker/BrowseTracker.cpp    (revision 5986)</span>
+<span class="gi">+++ src/plugins/contrib/BrowseTracker/BrowseTracker.cpp    (working copy)</span>
+<span class="gu">@@ -215,8 +215,7 @@</span>
+     m_InitDone = false;
+     m_CurrEditorIndex = 0;
+     m_LastEditorIndex = MaxEntries-1;
+<span class="gd">-    m_apEditors.Alloc(MaxEntries);</span>
+<span class="gd">-    for (int i=0; i&lt;MaxEntries ; ++i ) m_apEditors[i] = 0;</span>
+<span class="gi">+    m_apEditors.SetCount(MaxEntries, 0);</span>
+     m_nBrowsedEditorCount = 0;
+     m_UpdateUIFocusEditor = 0;
+     m_nRemoveEditorSentry = 0;
+<span class="gu">@@ -504,11 +503,11 @@</span>
+         int menuId = item-&gt;GetId();
+         wxString menuLabel = item-&gt;GetLabel();
+         ///LOGIT( _T(&quot;BT OnContextMenu insert[%s]&quot;),menuLabel.c_str() );
+<span class="gd">-        wxMenuItem* pContextItem= new wxMenuItem(0, menuId, menuLabel);</span>
+<span class="gi">+        wxMenuItem* pContextItem= new wxMenuItem(sub_menu, menuId, menuLabel);</span>
+         sub_menu-&gt;Append( pContextItem );
+     }
+     popup-&gt;AppendSeparator();
+<span class="gd">-    pbtMenuItem = new wxMenuItem(0, wxID_ANY, _(&quot;Browse Tracker&quot;), _T(&quot;&quot;), wxITEM_NORMAL);</span>
+<span class="gi">+    pbtMenuItem = new wxMenuItem(sub_menu, wxID_ANY, _(&quot;Browse Tracker&quot;), _T(&quot;&quot;), wxITEM_NORMAL);</span>
+     pbtMenuItem-&gt;SetSubMenu(sub_menu);
+     popup-&gt;Append(pbtMenuItem);
+ 
+<span class="gu">@@ -2181,7 +2180,7 @@</span>
+         tmpArray.Alloc(MaxEntries);
+         // copy current editors &amp; clear for compression
+         for (int i = 0; i&lt;MaxEntries; ++i)
+<span class="gd">-        {   tmpArray[i] = m_apEditors[i];</span>
+<span class="gi">+        {   tmpArray.Add(m_apEditors[i]);</span>
+             m_apEditors[i] = 0;
+         }//for
+         m_CurrEditorIndex = 0;
+<span class="gh">Index: src/plugins/contrib/BrowseTracker/BrowseMarks.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/BrowseTracker/BrowseMarks.cpp    (revision 5986)</span>
+<span class="gi">+++ src/plugins/contrib/BrowseTracker/BrowseMarks.cpp    (working copy)</span>
+<span class="gu">@@ -65,9 +65,7 @@</span>
+     //LOGIT( _T(&quot;BT BrowseMarks[%s][%s]&quot;),m_filePath.c_str() ,m_fileShortName.c_str() );
+     //#endif
+ 
+<span class="gd">-    m_EdPosnArray.Alloc(MaxEntries);</span>
+<span class="gd">-    for (int i=0; i &lt; MaxEntries; ++i )</span>
+<span class="gd">-        m_EdPosnArray[i] = -1;</span>
+<span class="gi">+    m_EdPosnArray.SetCount(MaxEntries, -1);</span>
+     m_currIndex = 0;    //index of current entry
+     m_lastIndex = MaxEntries-1;    //index for insertion of new browse marks
+     m_pEdMgr = Manager::Get()-&gt;GetEditorManager();
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">techy 2009-12-27 22:00:05</div>

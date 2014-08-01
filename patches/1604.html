@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,165 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: bootstrap</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- bootstrap    (revision 3309)</span>
+<span class="gi">+++ bootstrap    (arbetskopia)</span>
+<span class="gu">@@ -10,7 +10,9 @@</span>
+ if [ -f ./update_revision.sh ]; then
+     ./update_revision.sh;
+ elif [ ! -f ./revision.m4 ]; then
+<span class="gd">-    echo &quot;m4_define([SVN_REVISION], trunk-r0)&quot; &gt; ./revision.m4;</span>
+<span class="gi">+    echo &quot;m4_define([SVN_REV], 0)&quot; &gt; ./revision.m4;</span>
+<span class="gi">+    echo &quot;m4_define([SVN_REVISION], trunk-r0)&quot; &gt;&gt; ./revision.m4;</span>
+<span class="gi">+    echo &quot;m4_define([SVN_DATE], )&quot; &gt;&gt; ./revision.m4;</span>
+ fi
+ 
+ # Deal with some gentoo-specific issues
+<span class="gh">Index: update_revision.sh</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- update_revision.sh    (revision 3309)</span>
+<span class="gi">+++ update_revision.sh    (arbetskopia)</span>
+<span class="gu">@@ -1,15 +1,25 @@</span>
+ #!/bin/sh
+ 
+ REV_FILE=./revision.m4
+<span class="gd">-M4_START=&quot;m4_define([SVN_REVISION], trunk-r&quot;</span>
+<span class="gd">-M4_END=&quot;)&quot;</span>
+ 
+<span class="gd">-REV=0</span>
+<span class="gi">+LANG=C</span>
+<span class="gi">+export LANG</span>
+ 
+<span class="gd">-if [ -f /usr/bin/svn ]; then</span>
+<span class="gd">-    REV=`svn info | grep Revision: | cut -d&quot; &quot; -f2`;</span>
+<span class="gd">-elif [ -f .svn/entries ]; then</span>
+<span class="gd">-    REV=`cat ./.svn/entries | grep revision= | cut -d\&quot; -f2 | head -n1`;</span>
+<span class="gi">+if svn --xml info &gt;/dev/null 2&gt;&amp;1; then</span>
+<span class="gi">+    REV=`svn --xml info | tr -d &#39;\r\n&#39; | sed -e &#39;s/.*&lt;commit.*revision=&quot;\([0-9]*\)&quot;.*&lt;\/commit&gt;.*/\1/&#39;`</span>
+<span class="gi">+    LCD=`svn --xml info | tr -d &#39;\r\n&#39; | sed -e &#39;s/.*&lt;commit.*&lt;date&gt;\([0-9\-]*\)\T\([0-9\:]*\)\..*&lt;\/date&gt;.*&lt;\/commit&gt;.*/\1 \2/&#39;`</span>
+<span class="gi">+elif svn --version --quiet &gt;/dev/null 2&gt;&amp;1; then</span>
+<span class="gi">+    REV=`svn info | grep &quot;^Revision:&quot; | cut -d&quot; &quot; -f2`</span>
+<span class="gi">+    LCD=`svn info | grep &quot;^Last Changed Date:&quot; | cut -d&quot; &quot; -f4,5`</span>
+<span class="gi">+else</span>
+<span class="gi">+    REV=0</span>
+<span class="gi">+    LCD=&quot;&quot;</span>
+ fi
+ 
+<span class="gd">-echo &quot;m4_define([SVN_REVISION], trunk-r$REV)&quot; &gt; $REV_FILE</span>
+<span class="gi">+if [ &quot;x$REV&quot; != &quot;x0&quot; -o ! -r $REV_FILE ]; then</span>
+<span class="gi">+echo &quot;m4_define([SVN_REV], $REV)&quot; &gt; $REV_FILE</span>
+<span class="gi">+echo &quot;m4_define([SVN_REVISION], trunk-r$REV)&quot; &gt;&gt; $REV_FILE</span>
+<span class="gi">+echo &quot;m4_define([SVN_DATE], $LCD)&quot; &gt;&gt; $REV_FILE</span>
+<span class="gi">+fi</span>
+<span class="gi">+</span>
+<span class="gi">+exit 0</span>
+<span class="gh">Index: configure.in</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- configure.in    (revision 3309)</span>
+<span class="gi">+++ configure.in    (arbetskopia)</span>
+<span class="gu">@@ -107,12 +107,16 @@</span>
+ AM_CONDITIONAL([DARWIN], [test `uname` = &quot;Darwin&quot;])
+ 
+ AC_MSG_NOTICE([Configuring Code::Blocks...])
+<span class="gi">+AC_MSG_NOTICE(SVN revision SVN_REVISION (SVN_DATE))</span>
+<span class="gi">+AC_SUBST(REVISION, SVN_REV)</span>
+<span class="gi">+AC_SUBST(DATE, &quot;SVN_DATE&quot;)</span>
+ 
+ AC_CONFIG_FILES([Makefile
+     src/Makefile
+     src/build_tools/Makefile
+     src/build_tools/autorevision/Makefile
+     src/sdk/Makefile
+<span class="gi">+    src/sdk/autorevision.h</span>
+     src/sdk/scripting/Makefile
+     src/sdk/scripting/bindings/Makefile
+     src/sdk/scripting/squirrel/Makefile
+<span class="gu">@@ -235,6 +239,7 @@</span>
+     src/wxsmith/Makefile
+     codeblocks.pc
+     codeblocks.spec
+<span class="gi">+    codeblocks.plist</span>
+ ])
+ 
+ AC_OUTPUT
+<span class="gh">Index: Makefile.am</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- Makefile.am    (revision 3309)</span>
+<span class="gi">+++ Makefile.am    (arbetskopia)</span>
+<span class="gu">@@ -4,6 +4,8 @@</span>
+ pkgconfig_DATA = codeblocks.pc
+ 
+ EXTRA_DIST = $(top_srcdir)/bootstrap \
+<span class="gi">+        codeblocks.spec \</span>
+<span class="gi">+        codeblocks.plist \</span>
+         $(top_srcdir)/BUGS \
+         $(top_srcdir)/BUILD \
+         $(top_srcdir)/COMPILERS
+<span class="gh">Index: src/sdk/autorevision.h.in</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- /dev/null    2006-11-29 20:20:36.000000000 +0100</span>
+<span class="gi">+++ src/sdk/autorevision.h.in    2006-11-06 10:43:06.000000000 +0100</span>
+<span class="gu">@@ -0,0 +1,20 @@</span>
+<span class="gi">+/*@REVISION@*/</span>
+<span class="gi">+#ifndef AUTOREVISION_H</span>
+<span class="gi">+#define AUTOREVISION_H</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+<span class="gi">+#include &lt;wx/string.h&gt;</span>
+<span class="gi">+</span>
+<span class="gi">+#define SVN_REVISION &quot;@REVISION@&quot;</span>
+<span class="gi">+</span>
+<span class="gi">+#define SVN_DATE     &quot;@DATE@&quot;</span>
+<span class="gi">+</span>
+<span class="gi">+namespace autorevision</span>
+<span class="gi">+{</span>
+<span class="gi">+    const unsigned int svn_revision = @REVISION@;</span>
+<span class="gi">+    const wxString svnRevision(_T(&quot;@REVISION@&quot;));</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+<span class="gi">+#endif</span>
+<span class="gh">Index: codeblocks.spec.in</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- codeblocks.spec.in    (revision 3309)</span>
+<span class="gi">+++ codeblocks.spec.in    (arbetskopia)</span>
+<span class="gu">@@ -1,4 +1,4 @@</span>
+<span class="gd">-%define _svnrev        %(echo @VERSION@ | cut -c 8-)</span>
+<span class="gi">+%define _svnrev        @REVISION@</span>
+ %define req_wxgtk    2.6.0
+ %define _fedora        %(if [ -f /etc/fedora-release ]; then echo 1; else echo 0; fi)
+ %define _redhat        %(if [ -f /etc/redhat-release ]; then echo 1; else echo 0; fi)
+<span class="gh">Index: codeblocks.plist.in</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- /dev/null    2006-11-29 20:20:36.000000000 +0100</span>
+<span class="gi">+++ codeblocks.plist.in    2006-11-14 00:10:20.000000000 +0100</span>
+<span class="gu">@@ -0,0 +1,155 @@</span>
+<span class="gi">+&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span>
+<span class="gi">+&lt;!DOCTYPE plist SYSTEM &quot;file://localhost/System/Library/DTDs/PropertyList.dtd&quot;&gt;</span>
+<span class="gi">+&lt;plist version=&quot;0.9&quot;&gt;</span>
+<span class="gi">+&lt;dict&gt;</span>
+<span class="gi">+    &lt;key&gt;CFBundleInfoDictionaryVersion&lt;/key&gt;</span>
+<span class="gi">+    &lt;string&gt;6.0&lt;/string&gt;</span>
+<span class="gi">+    &lt;key&gt;CFBundleIdentifier&lt;/key&gt;</span>
+<span class="gi">+    &lt;string&gt;org.codeblocks.app&lt;/string&gt;</span>
+<span class="gi">+    &lt;key&gt;CFBundleDevelopmentRegion&lt;/key&gt;</span>
+<span class="gi">+    &lt;string&gt;English&lt;/string&gt;</span>
+<span class="gi">+    &lt;key&gt;CFBundleDocumentTypes&lt;/key&gt;</span>
+<span class="gi">+    &lt;array&gt;</span>
+<span class="gi">+        &lt;dict&gt;</span>
+<span class="gi">+            &lt;key&gt;CFBundleTypeExtensions&lt;/key&gt;</span>
+<span class="gi">+            &lt;array&gt;</span>
+<span class="gi">+                &lt;string&gt;cbp&lt;/string&gt;</span>
+<span class="gi">+            &lt;/array&gt;</span>
+<span class="gi">+            &lt;key&gt;CFBundleTypeIconFile&lt;/key&gt;</span>
+<span class="gi">+            &lt;string&gt;cbp.icns&lt;/string&gt;</span>
+<span class="gi">+            &lt;key&gt;CFBundleTypeName&lt;/key&gt;</span>
+<span class="gi">+            &lt;string&gt;CodeBl</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">afb 2006-10-31 14:45:57</div>

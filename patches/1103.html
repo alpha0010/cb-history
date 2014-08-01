@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,63 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/compilergcc/compilergcc.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilergcc.cpp    (revision 2530)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilergcc.cpp    (working copy)</span>
+<span class="gu">@@ -201,6 +201,7 @@</span>
+     m_RunAfterCompile(false),
+     m_LastExitCode(0),
+     m_HasTargetAll(false),
+<span class="gi">+    m_NotifiedMaxErrors(false),</span>
+     m_pBuildingProject(0),
+     m_BuildingProjectIdx(0),
+     m_BuildingTargetIdx(0),
+<span class="gu">@@ -1355,6 +1356,7 @@</span>
+ {
+     m_Errors.Clear();
+     m_pListLog-&gt;Clear();
+<span class="gi">+    m_NotifiedMaxErrors = false;</span>
+ }
+ 
+ int CompilerGCC::RunSingleFile(const wxString&amp; filename)
+<span class="gu">@@ -2802,17 +2804,17 @@</span>
+ 
+     // if max_errors reached, display a one-time message and do not log anymore
+     size_t maxErrors = Manager::Get()-&gt;GetConfigManager(_T(&quot;compiler&quot;))-&gt;ReadInt(_T(&quot;/max_reported_errors&quot;), 50);
+<span class="gd">-    if (maxErrors &gt; 0)</span>
+<span class="gi">+    if (maxErrors &gt; 0 &amp;&amp; m_Errors.GetCount(cltError) == maxErrors)</span>
+     {
+<span class="gd">-        if (m_Errors.GetCount(cltError) &gt; maxErrors)</span>
+<span class="gd">-            return;</span>
+<span class="gd">-        else if (m_Errors.GetCount(cltError) == maxErrors)</span>
+<span class="gi">+        if (!m_NotifiedMaxErrors)</span>
+         {
+<span class="gi">+            m_NotifiedMaxErrors = true;</span>
+<span class="gi">+</span>
+             // if we reached the max errors count, notify about it
+             LogWarningOrError(cltNormal, 0, wxEmptyString, wxEmptyString, _(&quot;More errors follow but not being shown.&quot;));
+             LogWarningOrError(cltNormal, 0, wxEmptyString, wxEmptyString, _(&quot;Edit the max errors limit in compiler options...&quot;));
+<span class="gd">-            return;</span>
+         }
+<span class="gi">+        return;</span>
+     }
+ 
+     Compiler* compiler = CompilerFactory::GetCompiler(m_CompilerId);
+<span class="gh">Index: src/plugins/compilergcc/compilergcc.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilergcc.h    (revision 2530)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilergcc.h    (working copy)</span>
+<span class="gu">@@ -209,6 +209,7 @@</span>
+         CompilerErrors m_Errors;
+         bool m_HasTargetAll;
+         wxString m_LastTargetName;
+<span class="gi">+        bool m_NotifiedMaxErrors;</span>
+ 
+         // state management
+         cbProject* m_pBuildingProject;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">kkez 2006-06-07 15:11:15</div>

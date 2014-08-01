@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,112 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/wxSmithContribItems/wxchart/wxschart.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmithContribItems/wxchart/wxschart.cpp    (revision 5710)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmithContribItems/wxchart/wxschart.cpp    (working copy)</span>
+<span class="gu">@@ -104,7 +104,11 @@</span>
+             if ( StyleCode.IsEmpty() ) StyleCode = _T(&quot;0&quot;);
+             else                       StyleCode.RemoveLast();
+ 
+<span class="gi">+            #if wxCHECK_VERSION(2, 9, 0)</span>
+<span class="gi">+            Codef(_T(&quot;%C(%W,%I,(STYLE)(%s),%P,%S,%T);\n&quot;),StyleCode.wx_str());</span>
+<span class="gi">+            #else</span>
+             Codef(_T(&quot;%C(%W,%I,(STYLE)(%s),%P,%S,%T);\n&quot;),StyleCode.c_str());
+<span class="gi">+            #endif</span>
+ 
+             Codef(_T(&quot;{\n&quot;));
+             for ( size_t i=0; i&lt;m_ChartPointsDesc.Count(); i++ )
+<span class="gu">@@ -129,15 +133,27 @@</span>
+ 
+                 wxString VarStr = wxString::Format(_T(&quot;PointSet%d&quot;),(int)i);
+ 
+<span class="gi">+                #if wxCHECK_VERSION(2, 9, 0)</span>
+<span class="gi">+                Codef(_T(&quot;\twxChartPoints* %v = %s(%t);\n&quot;),VarStr.wx_str(),GenStr.wx_str(),Desc-&gt;Name.wx_str());</span>
+<span class="gi">+                #else</span>
+                 Codef(_T(&quot;\twxChartPoints* %v = %s(%t);\n&quot;),VarStr.c_str(),GenStr.c_str(),Desc-&gt;Name.c_str());
+<span class="gi">+                #endif</span>
+ 
+                 for ( size_t j=0; j&lt;Desc-&gt;Points.Count(); j++ )
+                 {
+                     wxString PointStr = wxString::Format(_T(&quot;%lf,%lf&quot;),Desc-&gt;Points[j]-&gt;X,Desc-&gt;Points[j]-&gt;Y);
+<span class="gi">+                    #if wxCHECK_VERSION(2, 9, 0)</span>
+<span class="gi">+                    Codef(_T(&quot;\t%v-&gt;Add(%t,%s);\n&quot;),VarStr.wx_str(),Desc-&gt;Points[j]-&gt;Name.wx_str(),PointStr.wx_str());</span>
+<span class="gi">+                    #else</span>
+                     Codef(_T(&quot;\t%v-&gt;Add(%t,%s);\n&quot;),VarStr.c_str(),Desc-&gt;Points[j]-&gt;Name.c_str(),PointStr.c_str());
+<span class="gi">+                    #endif</span>
+                 }
+ 
+<span class="gi">+                #if wxCHECK_VERSION(2, 9, 0)</span>
+<span class="gi">+                Codef(_T(&quot;\t%AAdd(%v);\n&quot;),VarStr.wx_str());</span>
+<span class="gi">+                #else</span>
+                 Codef(_T(&quot;\t%AAdd(%v);\n&quot;),VarStr.c_str());
+<span class="gi">+                #endif</span>
+             }
+             Codef(_T(&quot;}\n&quot;));
+ 
+<span class="gh">Index: src/plugins/contrib/wxSmithContribItems/wxflatnotebook/wxFlatNotebook/src/wxFlatNotebook/wxFlatNotebook.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmithContribItems/wxflatnotebook/wxFlatNotebook/src/wxFlatNotebook/wxFlatNotebook.cpp    (revision 5710)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmithContribItems/wxflatnotebook/wxFlatNotebook/src/wxFlatNotebook/wxFlatNotebook.cpp    (working copy)</span>
+<span class="gu">@@ -488,7 +488,11 @@</span>
+         if ( GetParent() )
+         {
+             event.SetCurrentFocus(this);
+<span class="gi">+            #if wxCHECK_VERSION(2, 9, 0)</span>
+<span class="gi">+            GetParent()-&gt;GetEventHandler()-&gt;ProcessEvent(event);</span>
+<span class="gi">+            #else</span>
+             GetParent()-&gt;ProcessEvent(event);
+<span class="gi">+            #endif</span>
+         }
+     }
+ }
+<span class="gh">Index: src/plugins/contrib/wxSmithContribItems/wxflatnotebook/wxsFlatNotebook.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmithContribItems/wxflatnotebook/wxsFlatNotebook.cpp    (revision 5710)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmithContribItems/wxflatnotebook/wxsFlatNotebook.cpp    (working copy)</span>
+<span class="gu">@@ -324,7 +324,11 @@</span>
+             for ( int i=0; i&lt;GetChildCount(); i++ )
+             {
+                 wxsFlatNotebookExtra* Extra = (wxsFlatNotebookExtra*)GetChildExtra(i);
+<span class="gi">+                #if wxCHECK_VERSION(2, 9, 0)</span>
+<span class="gi">+                Codef(_T(&quot;%AAddPage(%o, %t, %b);\n&quot;),i,Extra-&gt;m_Label.wx_str(),Extra-&gt;m_Selected);</span>
+<span class="gi">+                #else</span>
+                 Codef(_T(&quot;%AAddPage(%o, %t, %b);\n&quot;),i,Extra-&gt;m_Label.c_str(),Extra-&gt;m_Selected);
+<span class="gi">+                #endif</span>
+             }
+ 
+             break;
+<span class="gh">Index: src/plugins/contrib/wxSmithContribItems/wxthings/wxscustombutton.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmithContribItems/wxthings/wxscustombutton.cpp    (revision 5710)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmithContribItems/wxthings/wxscustombutton.cpp    (working copy)</span>
+<span class="gu">@@ -123,7 +123,11 @@</span>
+                 Style = _T(&quot;0&quot;);
+             }
+ 
+<span class="gi">+            #if wxCHECK_VERSION(2, 9, 0)</span>
+<span class="gi">+            Codef(_T(&quot;%C(%W,%I,%t,%i,%P,%S,%s,%V,%N);\n&quot;),m_Label.wx_str(),&amp;m_Bitmap,wxART_OTHER,Style.wx_str());</span>
+<span class="gi">+            #else</span>
+             Codef(_T(&quot;%C(%W,%I,%t,%i,%P,%S,%s,%V,%N);\n&quot;),m_Label.c_str(),&amp;m_Bitmap,wxART_OTHER,Style.c_str());
+<span class="gi">+            #endif</span>
+ 
+             if ( !m_BitmapSelected.IsEmpty() )
+             {
+<span class="gh">Index: src/plugins/contrib/wxSmithAui/wxAuiToolBar/wxsAuiToolBar.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmithAui/wxAuiToolBar/wxsAuiToolBar.cpp    (revision 5710)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmithAui/wxAuiToolBar/wxsAuiToolBar.cpp    (working copy)</span>
+<span class="gu">@@ -309,16 +309,31 @@</span>
+                     }
+ 
+                     Codef(_T(&quot;%AAddTool(%s, %t, %i, %i, %s, %t, %t, NULL);\n&quot;),
+<span class="gi">+                        #if wxCHECK_VERSION(2, 9, 0)</span>
+<span class="gi">+                        Child-&gt;GetIdName().wx_str(),</span>
+<span class="gi">+                        Extra-&gt;m_</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">stahta01 2009-07-21 07:09:34</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,101 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gd">--- tokenizer.cpp    2007-03-29 06:09:12.000000000 -0700</span>
+<span class="gi">+++ tokenizer.cpp    2007-03-29 06:05:37.000000000 -0700</span>
+<span class="gu">@@ -301,36 +301,34 @@</span>
+         default : return false;
+     }
+
+<span class="gd">-    MoveToNextChar();</span>
+     int count = 1; // counter for nested blocks (xxx())
+<span class="gi">+</span>
+     while (NotEOF())
+     {
+         bool noMove = false;
+<span class="gd">-        if (CurrentChar() == &#39;/&#39;)</span>
+<span class="gd">-            SkipComment(); // this will decide if it is a comment</span>
+<span class="gi">+      if (CurrentChar() == &#39;/&#39;)</span>
+<span class="gi">+      {</span>
+<span class="gi">+          SkipComment(); // this will decide if it is a comment</span>
+<span class="gi">+      }</span>
+
+<span class="gd">-        if (CurrentChar() == &#39;&quot;&#39; || CurrentChar() == &#39;\&#39;&#39;)</span>
+<span class="gd">-        {</span>
+<span class="gd">-            // this is the case that match is inside a string!</span>
+<span class="gd">-            char ch = CurrentChar();</span>
+<span class="gd">-            MoveToNextChar();</span>
+<span class="gd">-            SkipToChar(ch);</span>
+<span class="gd">-            MoveToNextChar();</span>
+<span class="gd">-            // don&#39;t move to next char below if concatenating strings (e.g. printf(&quot;&quot; &quot;&quot;))</span>
+<span class="gd">-            if (CurrentChar() == &#39;&quot;&#39; || CurrentChar() == &#39;\&#39;&#39;)</span>
+<span class="gd">-                noMove = true;</span>
+<span class="gd">-        }</span>
+<span class="gd">-        if (CurrentChar() == ch)</span>
+<span class="gd">-            ++count;</span>
+<span class="gd">-        else if (CurrentChar() == match)</span>
+<span class="gd">-            --count;</span>
+<span class="gd">-        if (!noMove)</span>
+<span class="gd">-            MoveToNextChar();</span>
+<span class="gd">-        if (count == 0)</span>
+<span class="gd">-            break;</span>
+<span class="gi">+      if (CurrentChar() == &#39;&quot;&#39; || CurrentChar() == &#39;\&#39;&#39;)</span>
+<span class="gi">+      {</span>
+<span class="gi">+          // this is the case that match is inside a string!</span>
+<span class="gi">+          char tch = CurrentChar();</span>
+<span class="gi">+          MoveToNextChar();</span>
+<span class="gi">+          SkipToChar(tch);</span>
+<span class="gi">+          MoveToNextChar();</span>
+<span class="gi">+</span>
+<span class="gi">+          // don&#39;t move to next char below if concatenating strings (e.g. printf(&quot;&quot; &quot;&quot;))</span>
+<span class="gi">+          if (CurrentChar() == &#39;&quot;&#39; || CurrentChar() == &#39;\&#39;&#39; || CurrentChar() == &#39;+&#39;) noMove = true;</span>
+<span class="gi">+      }</span>
+<span class="gi">+</span>
+<span class="gi">+      if (CurrentChar() == match) return true;</span>
+<span class="gi">+      if (!noMove) MoveToNextChar();</span>
+<span class="gi">+      if (count == 0) break;</span>
+     }
+<span class="gd">-    if (IsEOF())</span>
+<span class="gd">-        return false;</span>
+<span class="gi">+</span>
+<span class="gi">+    if (IsEOF()) return false;</span>
+     return true;
+ }
+
+<span class="gu">@@ -338,8 +336,7 @@</span>
+ {
+     // C/C++ style comments
+     bool is_comment = CurrentChar() == &#39;/&#39; &amp;&amp; (NextChar() == &#39;/&#39; || NextChar() == &#39;*&#39;);
+<span class="gd">-    if (!is_comment)</span>
+<span class="gd">-        return true;</span>
+<span class="gi">+    if (!is_comment)return true;</span>
+
+     bool cstyle = NextChar() == &#39;*&#39;;
+     MoveToNextChar(2);
+<span class="gu">@@ -348,8 +345,7 @@</span>
+     {
+         if (!cstyle)
+         {
+<span class="gd">-            if (!SkipToEOL(false))</span>
+<span class="gd">-                return false;</span>
+<span class="gi">+            if (!SkipToEOL(false)) return false;</span>
+             MoveToNextChar();
+             break;
+         }
+<span class="gu">@@ -368,10 +364,8 @@</span>
+                 return false;
+         }
+     }
+<span class="gd">-    if (IsEOF())</span>
+<span class="gd">-        return false;</span>
+<span class="gd">-    if (!SkipWhiteSpace())</span>
+<span class="gd">-        return false;</span>
+<span class="gi">+    if (IsEOF()) return false;</span>
+<span class="gi">+    if (!SkipWhiteSpace()) return false;</span>
+     return true;
+ }
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">devilsclaw 2007-03-29 21:36:38</div>

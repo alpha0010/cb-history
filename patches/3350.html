@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,122 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/codecompletion/codecompletion.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/codecompletion.cpp    (revision 8456)</span>
+<span class="gi">+++ src/plugins/codecompletion/codecompletion.cpp    (working copy)</span>
+<span class="gu">@@ -2723,20 +2723,22 @@</span>
+     PlaceWindow(&amp;dlg);
+     if (dlg.ShowModal() == wxID_OK)
+     {
+<span class="gd">-        int pos = ed-&gt;GetControl()-&gt;GetCurrentPos();</span>
+<span class="gd">-        int line = ed-&gt;GetControl()-&gt;LineFromPosition(pos);</span>
+<span class="gd">-        ed-&gt;GetControl()-&gt;GotoPos(ed-&gt;GetControl()-&gt;PositionFromLine(line));</span>
+<span class="gi">+        cbStyledTextCtrl* control = ed-&gt;GetControl();</span>
+<span class="gi">+        int pos = control-&gt;GetCurrentPos();</span>
+<span class="gi">+        int line = control-&gt;LineFromPosition(pos);</span>
+<span class="gi">+        control-&gt;GotoPos(control-&gt;PositionFromLine(line));</span>
+ 
+         wxArrayString result = dlg.GetCode();
+         for (unsigned int i = 0; i &lt; result.GetCount(); ++i)
+         {
+<span class="gd">-            pos = ed-&gt;GetControl()-&gt;GetCurrentPos();</span>
+<span class="gd">-            line = ed-&gt;GetControl()-&gt;LineFromPosition(pos);</span>
+<span class="gi">+            pos = control-&gt;GetCurrentPos();</span>
+<span class="gi">+            line = control-&gt;LineFromPosition(pos);</span>
+             wxString str = ed-&gt;GetLineIndentString(line - 1) + result[i];
+<span class="gd">-            ed-&gt;GetControl()-&gt;SetTargetStart(pos);</span>
+<span class="gd">-            ed-&gt;GetControl()-&gt;SetTargetEnd(pos);</span>
+<span class="gd">-            ed-&gt;GetControl()-&gt;ReplaceTarget(str);</span>
+<span class="gd">-            ed-&gt;GetControl()-&gt;GotoPos(pos + str.Length());// - 3);</span>
+<span class="gi">+            MatchCodeStyle(str, control-&gt;GetEOLMode(), ed-&gt;GetLineIndentString(line - 1), control-&gt;GetUseTabs(), control-&gt;GetTabWidth());</span>
+<span class="gi">+            control-&gt;SetTargetStart(pos);</span>
+<span class="gi">+            control-&gt;SetTargetEnd(pos);</span>
+<span class="gi">+            control-&gt;ReplaceTarget(str);</span>
+<span class="gi">+            control-&gt;GotoPos(pos + str.Length());// - 3);</span>
+         }
+         success = 0;
+     }
+<span class="gu">@@ -2848,7 +2850,8 @@</span>
+             wxString str;
+             if (i &gt; 0)
+                 str &lt;&lt; _T(&quot;\n&quot;);
+<span class="gd">-            str &lt;&lt; ed-&gt;GetLineIndentString(line - 1);</span>
+<span class="gi">+            else</span>
+<span class="gi">+                str &lt;&lt; ed-&gt;GetLineIndentString(line - 1);</span>
+             if (addDoxgenComment)
+                 str &lt;&lt; _T(&quot;/** @brief &quot;) &lt;&lt; token-&gt;m_Name &lt;&lt; _T(&quot;\n  *\n  * @todo: document this function\n  */\n&quot;);
+             wxString type = token-&gt;m_BaseType;
+<span class="gu">@@ -2868,14 +2871,22 @@</span>
+             str &lt;&lt; token-&gt;m_Name &lt;&lt; token-&gt;GetStrippedArgs();
+             if (token-&gt;m_IsConst)
+                 str &lt;&lt; _T(&quot; const&quot;);
+<span class="gd">-            str &lt;&lt; _T(&quot;\n{\n}\n&quot;);</span>
+<span class="gi">+            str &lt;&lt; _T(&quot;\n{\n\t\n}\n&quot;);</span>
+ 
+<span class="gi">+            MatchCodeStyle(str, control-&gt;GetEOLMode(), ed-&gt;GetLineIndentString(line - 1), control-&gt;GetUseTabs(), control-&gt;GetTabWidth());</span>
+<span class="gi">+</span>
+             // add code in editor
+             control-&gt;SetTargetStart(pos);
+             control-&gt;SetTargetEnd(pos);
+             control-&gt;ReplaceTarget(str);
+             control-&gt;GotoPos(pos + str.Length());
+         }
+<span class="gi">+        if (!indices.IsEmpty())</span>
+<span class="gi">+        {</span>
+<span class="gi">+            pos  = control-&gt;GetCurrentPos();</span>
+<span class="gi">+            line = control-&gt;LineFromPosition(pos);</span>
+<span class="gi">+            control-&gt;GotoPos(control-&gt;GetLineEndPosition(line - 2));</span>
+<span class="gi">+        }</span>
+         success = 0;
+     }
+ 
+<span class="gu">@@ -2884,6 +2895,17 @@</span>
+     return success;
+ }
+ 
+<span class="gi">+void CodeCompletion::MatchCodeStyle(wxString&amp; str, int eolStyle, const wxString&amp; indent, bool useTabs, int tabSize)</span>
+<span class="gi">+{</span>
+<span class="gi">+    str.Replace(wxT(&quot;\n&quot;), (eolStyle == wxSCI_EOL_LF   ? wxT(&quot;\n&quot;)   :</span>
+<span class="gi">+                            eolStyle == wxSCI_EOL_CRLF ? wxT(&quot;\r\n&quot;) :</span>
+<span class="gi">+                          /*eolStyle == wxSCI_EOL_CR ?*/ wxT(&quot;\r&quot;)   ) + indent );</span>
+<span class="gi">+    if (!useTabs)</span>
+<span class="gi">+        str.Replace(wxT(&quot;\t&quot;), wxString(wxT(&#39; &#39;), tabSize));</span>
+<span class="gi">+    if (!indent.IsEmpty())</span>
+<span class="gi">+        str.RemoveLast(indent.Length());</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ // help method in finding the function position in the vector for the function containing the current line
+ void CodeCompletion::FunctionPosition(int &amp;scopeItem, int &amp;functionItem) const
+ {
+<span class="gh">Index: src/plugins/codecompletion/insertclassmethoddlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/insertclassmethoddlg.cpp    (revision 8456)</span>
+<span class="gi">+++ src/plugins/codecompletion/insertclassmethoddlg.cpp    (working copy)</span>
+<span class="gu">@@ -121,7 +121,7 @@</span>
+             }
+             str &lt;&lt; clb-&gt;GetString(i);
+             str.Replace(_T(&quot;&amp;&amp;&quot;), _T(&quot;&amp;&quot;));
+<span class="gd">-            array.Add(str + (m_Decl ? _T(&quot;;\n&quot;) : _T(&quot;\n{\n\n}\n\n&quot;)));</span>
+<span class="gi">+            array.Add(str + (m_Decl ? _T(&quot;;\n&quot;) : _T(&quot;\n{\n\t\n}\n\n&quot;)));</span>
+         }
+     }
+ 
+<span class="gh">Index: src/plugins/codecompletion/codecompletion.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/codecompletion.h    (revision 8456)</span>
+<span class="gi">+++ src/plugins/codecompletion/codecompletion.h    (working copy)</span>
+<span class="gu">@@ -202,6 +202,8 @@</span>
+     /** ContextMenu-&gt;Insert-&gt; All class methods*/
+     int DoAllMethodsImpl();
+ 
+<span class="gi">+    void MatchCodeStyle(wxString&amp; str, int eolStyle = wxSCI_EOL_LF, const wxString&amp; indent = wxEmptyString, bool useTabs = false, int tabSize = 4);</span>
+<span class="gi">+</span>
+     // CC&#39;s toolbar related functions
+     /** help method in finding the function position in the vector for the function containing the current line*/
+     void FunctionPosition(int &amp;scopeItem, int &amp;functionItem) const;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

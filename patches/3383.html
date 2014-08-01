@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,83 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/abbreviations/abbreviations.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/abbreviations/abbreviations.cpp    (revision 8640)</span>
+<span class="gi">+++ src/plugins/abbreviations/abbreviations.cpp    (working copy)</span>
+<span class="gu">@@ -33,6 +33,33 @@</span>
+ 
+ Abbreviations* Abbreviations::m_Singleton = nullptr;
+ 
+<span class="gi">+/* XPM */</span>
+<span class="gi">+static const char* abbrev_xpm[] = {</span>
+<span class="gi">+&quot;16 16 7 1&quot;,</span>
+<span class="gi">+&quot;   c None&quot;,</span>
+<span class="gi">+&quot;.  c #B00000&quot;,</span>
+<span class="gi">+&quot;+  c #F70000&quot;,</span>
+<span class="gi">+&quot;@  c #DD3F3F&quot;,</span>
+<span class="gi">+&quot;#  c #FF3A39&quot;,</span>
+<span class="gi">+&quot;$  c #D56D6C&quot;,</span>
+<span class="gi">+&quot;%  c #F5A8A8&quot;,</span>
+<span class="gi">+&quot;                &quot;,</span>
+<span class="gi">+&quot;                &quot;,</span>
+<span class="gi">+&quot;          +.    &quot;,</span>
+<span class="gi">+&quot;   %%#++++++    &quot;,</span>
+<span class="gi">+&quot;  %%#++++++++   &quot;,</span>
+<span class="gi">+&quot; $%@+++++++++   &quot;,</span>
+<span class="gi">+&quot; %@++. +++++++  &quot;,</span>
+<span class="gi">+&quot; #++.  +++####  &quot;,</span>
+<span class="gi">+&quot; +++   .@$$%%$@ &quot;,</span>
+<span class="gi">+&quot;++++            &quot;,</span>
+<span class="gi">+&quot;+++.            &quot;,</span>
+<span class="gi">+&quot;+++             &quot;,</span>
+<span class="gi">+&quot;++.             &quot;,</span>
+<span class="gi">+&quot;+..             &quot;,</span>
+<span class="gi">+&quot;                &quot;,</span>
+<span class="gi">+&quot;                &quot;};</span>
+<span class="gi">+</span>
+ // events handling
+ BEGIN_EVENT_TABLE(Abbreviations, cbPlugin)
+     // add any events you want to handle here
+<span class="gu">@@ -163,11 +190,16 @@</span>
+         for (acm_it = acm.begin(); acm_it != acm.end(); ++acm_it)
+         {
+             if (acm_it-&gt;first.Lower().StartsWith(keyword))
+<span class="gd">-                items.Add(acm_it-&gt;first);</span>
+<span class="gi">+                items.Add(acm_it-&gt;first + _T(&quot;?0&quot;));</span>
+         }
+<span class="gd">-        items.Sort();</span>
+<span class="gd">-        wxString itemsStr = GetStringFromArray(items, _T(&quot; &quot;));</span>
+<span class="gd">-        control-&gt;AutoCompShow(endPos-startPos, itemsStr);</span>
+<span class="gi">+        if (!items.IsEmpty())</span>
+<span class="gi">+        {</span>
+<span class="gi">+            control-&gt;ClearRegisteredImages();</span>
+<span class="gi">+            control-&gt;RegisterImage(0, wxBitmap(abbrev_xpm));</span>
+<span class="gi">+            items.Sort();</span>
+<span class="gi">+            wxString itemsStr = GetStringFromArray(items, _T(&quot; &quot;));</span>
+<span class="gi">+            control-&gt;AutoCompShow(endPos-startPos, itemsStr);</span>
+<span class="gi">+        }</span>
+         m_IsAutoCompVisible = control-&gt;AutoCompActive();
+     }
+ 
+<span class="gu">@@ -269,6 +301,7 @@</span>
+             control-&gt;SetSelectionVoid(curPos + caretPos, curPos + caretPos + 1);
+             control-&gt;ReplaceSelection(wxEmptyString);
+         }
+<span class="gi">+        control-&gt;ChooseCaretX();</span>
+ 
+         control-&gt;EndUndoAction();
+     }
+<span class="gu">@@ -312,6 +345,7 @@</span>
+         (*pAutoCompleteMap)[_T(&quot;guard&quot;)]  = _T(&quot;#ifndef $(Guard token)\n#define $(Guard token)\n\n|\n\n#endif // $(Guard token)\n&quot;);
+         (*pAutoCompleteMap)[_T(&quot;while&quot;)]  = _T(&quot;while (|)\n\t;&quot;);
+         (*pAutoCompleteMap)[_T(&quot;whileb&quot;)] = _T(&quot;while (|)\n{\n\t\n}&quot;);
+<span class="gi">+        (*pAutoCompleteMap)[_T(&quot;do&quot;)]     = _T(&quot;do\n{\n\t\n} while (|);&quot;);</span>
+         (*pAutoCompleteMap)[_T(&quot;switch&quot;)] = _T(&quot;switch (|)\n{\ncase :\n\tbreak;\n\ndefault:\n\tbreak;\n}\n&quot;);
+         (*pAutoCompleteMap)[_T(&quot;for&quot;)]    = _T(&quot;for (|; ; )\n\t;&quot;);
+         (*pAutoCompleteMap)[_T(&quot;forb&quot;)]   = _T(&quot;for (|; ; )\n{\n\t\n}&quot;);
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

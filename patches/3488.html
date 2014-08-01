@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,128 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: plugins/classwizard/classwizard.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/classwizard/classwizard.cpp    (revision 9225)</span>
+<span class="gi">+++ plugins/classwizard/classwizard.cpp    (working copy)</span>
+<span class="gu">@@ -118,6 +118,28 @@</span>
+             prjMan-&gt;AddFileToProject(dlg.GetHeaderFilename(), prj, targets);
+             if ( (targets.GetCount() != 0) &amp;&amp; (dlg.IsValidImplementationFilename()) )
+                 prjMan-&gt;AddFileToProject(dlg.GetImplementationFilename(), prj, targets);
+<span class="gi">+            if(dlg.AddPathToProject())</span>
+<span class="gi">+            {</span>
+<span class="gi">+                // Add the include Path to the Build targets....</span>
+<span class="gi">+                for(int i = 0; i &lt; targets.GetCount();i++)</span>
+<span class="gi">+                {</span>
+<span class="gi">+                    ProjectBuildTarget* build_target;</span>
+<span class="gi">+                    build_target = prj-&gt;GetBuildTarget(targets[i]);  // Get the top level build Target</span>
+<span class="gi">+                    if(build_target == NULL)</span>
+<span class="gi">+                    {</span>
+<span class="gi">+                        wxString information;</span>
+<span class="gi">+                        information.Printf(_(&quot;Could not find build target ID = %i.\nThe include directory won&#39;t be added to this target. Please do it manually&quot;),targets[i]);</span>
+<span class="gi">+                         cbMessageBox(  information  ,</span>
+<span class="gi">+                                        _(&quot;Information&quot;),</span>
+<span class="gi">+                                        wxOK | wxICON_INFORMATION,</span>
+<span class="gi">+                                        Manager::Get()-&gt;GetAppWindow());</span>
+<span class="gi">+                    }</span>
+<span class="gi">+                    else</span>
+<span class="gi">+                    {</span>
+<span class="gi">+                        build_target-&gt;AddIncludeDir(dlg.GetIncludeDir());</span>
+<span class="gi">+                    }</span>
+<span class="gi">+                }</span>
+<span class="gi">+            }</span>
+             prjMan-&gt;GetUI().RebuildTree();
+         }
+     }
+<span class="gh">Index: plugins/classwizard/classwizarddlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/classwizard/classwizarddlg.cpp    (revision 9225)</span>
+<span class="gi">+++ plugins/classwizard/classwizarddlg.cpp    (working copy)</span>
+<span class="gu">@@ -43,6 +43,7 @@</span>
+     EVT_BUTTON   (XRCID(&quot;btnRemoveMemberVar&quot;), ClassWizardDlg::OnRemoveMemberVar)
+     EVT_BUTTON   (XRCID(&quot;btnCommonDir&quot;),       ClassWizardDlg::OnCommonDirClick)
+     EVT_CHECKBOX (XRCID(&quot;chkLowerCase&quot;),       ClassWizardDlg::OnLowerCaseClick)
+<span class="gi">+    EVT_CHECKBOX (XRCID(&quot;chkAddPathToProject&quot;),ClassWizardDlg::OnAddPathToProjectClick)</span>
+     EVT_BUTTON   (XRCID(&quot;btnIncludeDir&quot;),      ClassWizardDlg::OnIncludeDirClick)
+     EVT_BUTTON   (XRCID(&quot;btnImplDir&quot;),         ClassWizardDlg::OnImplDirClick)
+     EVT_TEXT     (XRCID(&quot;txtHeader&quot;),          ClassWizardDlg::OnHeaderChange)
+<span class="gu">@@ -245,6 +246,15 @@</span>
+     }
+ }
+ 
+<span class="gi">+void ClassWizardDlg::OnAddPathToProjectClick(wxCommandEvent&amp; event)</span>
+<span class="gi">+{</span>
+<span class="gi">+    if(event.IsChecked())</span>
+<span class="gi">+        XRCCTRL(*this, &quot;chkRelativePath&quot;, wxCheckBox)-&gt;Enable();</span>
+<span class="gi">+    else</span>
+<span class="gi">+        XRCCTRL(*this, &quot;chkRelativePath&quot;, wxCheckBox)-&gt;Disable();</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+ void ClassWizardDlg::OnLowerCaseClick(wxCommandEvent&amp; WXUNUSED(event))
+ {
+     DoFileNames();
+<span class="gu">@@ -328,6 +338,9 @@</span>
+ 
+     m_Documentation = XRCCTRL(*this, &quot;chkDocumentation&quot;, wxCheckBox)-&gt;GetValue();
+ 
+<span class="gi">+    m_AddPathToProject = XRCCTRL(*this, &quot;chkAddPathToProject&quot;, wxCheckBox)-&gt;GetValue();</span>
+<span class="gi">+    m_UseRelativePath = XRCCTRL(*this, &quot;chkRelativePath&quot;, wxCheckBox)-&gt;GetValue();</span>
+<span class="gi">+</span>
+     m_CommonDir = XRCCTRL(*this, &quot;chkCommonDir&quot;, wxCheckBox)-&gt;GetValue();
+     if (m_CommonDir)
+     {
+<span class="gu">@@ -720,3 +733,20 @@</span>
+ {
+     return (_T(&quot;[&quot;) + typ + _T(&quot;] : &quot;) + var);
+ }
+<span class="gi">+</span>
+<span class="gi">+wxString ClassWizardDlg::GetIncludeDir()</span>
+<span class="gi">+{</span>
+<span class="gi">+    if(!m_UseRelativePath)</span>
+<span class="gi">+        return m_IncludeDir;</span>
+<span class="gi">+</span>
+<span class="gi">+    wxString basePath;</span>
+<span class="gi">+    basePath = Manager::Get()-&gt;GetProjectManager()-&gt;GetActiveProject()-&gt;GetCommonTopLevelPath();</span>
+<span class="gi">+    wxString relative = m_IncludeDir;</span>
+<span class="gi">+    wxFileName fname = m_IncludeDir;</span>
+<span class="gi">+    if (fname.IsAbsolute())</span>
+<span class="gi">+    {</span>
+<span class="gi">+        fname.MakeRelativeTo(basePath);</span>
+<span class="gi">+        relative = fname.GetFullPath();</span>
+<span class="gi">+    }</span>
+<span class="gi">+    return relative;</span>
+<span class="gi">+}</span>
+<span class="gh">Index: plugins/classwizard/classwizarddlg.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/classwizard/classwizarddlg.h    (revision 9225)</span>
+<span class="gi">+++ plugins/classwizard/classwizarddlg.h    (working copy)</span>
+<span class="gu">@@ -26,6 +26,8 @@</span>
+         const wxString&amp; GetHeaderFilename()         const { return m_Header;         }
+         bool  IsValidImplementationFilename()       const { return m_GenerateImplementation &amp;&amp; m_Implementation != _T(&quot;&quot;); }
+         const wxString&amp; GetImplementationFilename() const { return m_Implementation; }
+<span class="gi">+        bool  AddPathToProject()                    const { return m_AddPathToProject; }</span>
+<span class="gi">+        wxString GetIncludeDir();</span>
+ 
+     private:
+         struct MemberVar_impl { wxString Typ; wxString Var; wxString Get; wxString Set; };
+<span class="gu">@@ -45,6 +47,7 @@</span>
+         void OnHeaderChange(wxCommandEvent&amp; event);
+         void OnOKClick(wxCommandEvent&amp; event);
+         void OnCancelClick(wxCommandEvent&amp; event);
+<span class="gi">+        void OnAddPathToProjectClick(wxCommandEvent&amp; event);</span>
+ 
+         // methods
+         bool DoHeader();
+<span class="gu">@@ -77,6 +80,9 @@</span>
+ 
+         bool            m_Documentation;
+ 
+<span class="gi">+        bool            m_AddPathToProject;</span>
+<span class="gi">+        bool</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">bluehazzard 2013-07-23 16:51:20</div>

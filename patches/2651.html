@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,144 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: include/editorcolourset.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- include/editorcolourset.h    (revision 5414)</span>
+<span class="gi">+++ include/editorcolourset.h    (working copy)</span>
+<span class="gu">@@ -39,6 +39,15 @@</span>
+ };
+ WX_DEFINE_ARRAY(OptionColour*, OptionColours);
+ 
+<span class="gi">+struct CommentToken {</span>
+<span class="gi">+    wxString lineComment;</span>
+<span class="gi">+    wxString streamCommentStart;</span>
+<span class="gi">+    wxString streamCommentEnd;</span>
+<span class="gi">+    wxString boxCommentStart;</span>
+<span class="gi">+    wxString boxCommentMid;</span>
+<span class="gi">+    wxString boxCommentEnd;</span>
+<span class="gi">+};</span>
+<span class="gi">+</span>
+ struct OptionSet
+ {
+     wxString m_Langs;
+<span class="gu">@@ -53,6 +62,9 @@</span>
+ 
+     wxString m_originalKeywords[wxSCI_KEYWORDSET_MAX + 1]; // wxSCI_KEYWORDSET_MAX+1 keyword sets
+     wxArrayString m_originalFileMasks;
+<span class="gi">+</span>
+<span class="gi">+    CommentToken comment;</span>
+<span class="gi">+    bool m_CaseSensitive;</span>
+ };
+ WX_DECLARE_STRING_HASH_MAP(OptionSet, OptionSetsMap);
+ 
+<span class="gu">@@ -97,6 +109,10 @@</span>
+         void SetFileMasks(HighlightLanguage lang, const wxString&amp; masks, const wxString&amp; = _(&quot;,&quot;));
+         wxString GetSampleCode(HighlightLanguage lang, int* breakLine, int* debugLine, int* errorLine);
+         void SetSampleCode(HighlightLanguage lang, const wxString&amp; sample, int breakLine, int debugLine, int errorLine);
+<span class="gi">+        CommentToken GetCommentToken(HighlightLanguage lang);</span>
+<span class="gi">+        void SetCommentToken(HighlightLanguage lang, CommentToken token);</span>
+<span class="gi">+        bool GetCaseSensitivity(HighlightLanguage lang);</span>
+<span class="gi">+        void SetCaseSensitivity(HighlightLanguage lang, bool CaseSensitive);</span>
+     protected:
+     private:
+         void DoApplyStyle(cbStyledTextCtrl* control, int value, OptionColour* option);
+<span class="gh">Index: include/editorlexerloader.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- include/editorlexerloader.h    (revision 5414)</span>
+<span class="gi">+++ include/editorlexerloader.h    (working copy)</span>
+<span class="gu">@@ -25,6 +25,7 @@</span>
+         void DoKeywords(HighlightLanguage language, TiXmlElement* node);
+         void DoSingleKeywordNode(HighlightLanguage language, TiXmlElement* node, const wxString&amp; nodename);
+         void DoSampleCode(HighlightLanguage language, TiXmlElement* node);
+<span class="gi">+        void DoLangAttributes(HighlightLanguage language, TiXmlElement* node);</span>
+         EditorColourSet* m_pTarget;
+     private:
+ };
+<span class="gh">Index: sdk/editorcolourset.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- sdk/editorcolourset.cpp    (revision 5414)</span>
+<span class="gi">+++ sdk/editorcolourset.cpp    (working copy)</span>
+<span class="gu">@@ -797,3 +797,41 @@</span>
+     mset.m_DebugLine = debugLine;
+     mset.m_ErrorLine = errorLine;
+ }
+<span class="gi">+</span>
+<span class="gi">+void EditorColourSet::SetCommentToken(HighlightLanguage lang, CommentToken token)</span>
+<span class="gi">+{</span>
+<span class="gi">+    if (lang == HL_NONE)</span>
+<span class="gi">+        return;</span>
+<span class="gi">+    m_Sets[lang].comment = token;</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+CommentToken EditorColourSet::GetCommentToken(HighlightLanguage lang)</span>
+<span class="gi">+{</span>
+<span class="gi">+    CommentToken com;</span>
+<span class="gi">+    com.lineComment        = _T(&quot;&quot;);</span>
+<span class="gi">+    com.streamCommentStart = _T(&quot;&quot;);</span>
+<span class="gi">+    com.streamCommentEnd   = _T(&quot;&quot;);</span>
+<span class="gi">+    com.boxCommentStart    = _T(&quot;&quot;);</span>
+<span class="gi">+    com.boxCommentMid      = _T(&quot;&quot;);</span>
+<span class="gi">+    com.boxCommentEnd      = _T(&quot;&quot;);</span>
+<span class="gi">+</span>
+<span class="gi">+    if (lang != HL_NONE)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        com = m_Sets[lang].comment;</span>
+<span class="gi">+    }</span>
+<span class="gi">+    return com;</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+void EditorColourSet::SetCaseSensitivity(HighlightLanguage lang, bool CaseSensitive)</span>
+<span class="gi">+{</span>
+<span class="gi">+    if ( lang == HL_NONE )</span>
+<span class="gi">+        return;</span>
+<span class="gi">+    m_Sets[lang].m_CaseSensitive = CaseSensitive;</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+bool EditorColourSet::GetCaseSensitivity(HighlightLanguage lang)</span>
+<span class="gi">+{</span>
+<span class="gi">+    if ( lang == HL_NONE )</span>
+<span class="gi">+        return false;</span>
+<span class="gi">+    return m_Sets[lang].m_CaseSensitive;</span>
+<span class="gi">+}</span>
+<span class="gh">Index: sdk/editorlexerloader.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- sdk/editorlexerloader.cpp    (revision 5414)</span>
+<span class="gi">+++ sdk/editorlexerloader.cpp    (working copy)</span>
+<span class="gu">@@ -90,6 +90,7 @@</span>
+     DoStyles(style, node);
+     DoKeywords(style, node);
+     DoSampleCode(style, node);
+<span class="gi">+    DoLangAttributes(style, node);</span>
+ }
+ 
+ void EditorLexerLoader::DoStyles(HighlightLanguage language, TiXmlElement* node)
+<span class="gu">@@ -190,3 +191,24 @@</span>
+     int errorLine = sample-&gt;Attribute(&quot;error_line&quot;) ? atol(sample-&gt;Attribute(&quot;error_line&quot;)) : -1;
+     m_pTarget-&gt;SetSampleCode(language, code, breakLine, debugLine, errorLine);
+ }
+<span class="gi">+</span>
+<span class="gi">+void EditorLexerLoader::DoLangAttributes(HighlightLanguage language, TiXmlElement* node)</span>
+<span class="gi">+{</span>
+<span class="gi">+    TiXmlElement* attribs = node-&gt;FirstChildElement(&quot;LanguageAttributes&quot;);</span>
+<span class="gi">+    if ( !attribs )</span>
+<span class="gi">+        return;</span>
+<span class="gi">+</span>
+<span class="gi">+    bool CaseSensitive = attribs-&gt;Attribute(&quot;CaseSensitive&quot;) ? atol(attribs-&gt;Attribute(&quot;CaseSensitive&quot;)) != 0 : false;</span>
+<span class="gi">+    m_pTarget-&gt;SetCaseSensitivity(language, CaseSensitive);</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+<span class="gi">+    CommentToken token;</span>
+<span class="gi">+    token.lineComment = wxString( attribs-&gt;Attribute(&quot;LineComment&quot;), wxConvUTF8 );</span>
+<span class="gi">+    token.streamCommentStart = wxString( attribs-&gt;Attribute(&quot;StreamCommentStart&quot;), wxConvUTF8 );</span>
+<span class="gi">+    token.streamCommentEnd = wxString( attribs-&gt;Attribute(&quot;StreamCommentEnd&quot;), wxConvUTF8 );</span>
+<span class="gi">+    token.boxCommentStart = wxString( attribs-&gt;Attribute(&quot;BoxCommentStart&quot;), wxConvUTF8 );</span>
+<span class="gi">+    token.boxCommentMid = wxString( attribs-&gt;Attribute(&quot;BoxCommentMid&quot;), wxConvUTF8 );</span>
+<span class="gi">+    token.boxCommentEnd = wxString( attribs-&gt;Attribute(&quot;BoxCommentEnd&quot;), wxConvUTF8 );</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mortenmacfly 2009-06-11 17:08:48</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,40 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/include/prep.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/prep.h    (revision 9374)</span>
+<span class="gi">+++ src/include/prep.h    (working copy)</span>
+<span class="gu">@@ -406,14 +406,27 @@</span>
+ inline ID GetID() { return GetID&lt;void&gt;(); }
+ inline ID ConstructID(wxIntPtr i) { return ID(i); }
+ 
+<span class="gi">+// Just included to possibly set _LIBCPP_VERSION</span>
+<span class="gi">+#include &lt;ciso646&gt;</span>
+<span class="gi">+</span>
+<span class="gi">+#if __cplusplus &gt;= 201103L || defined(_LIBCPP_VERSION)</span>
+<span class="gi">+#include &lt;memory&gt;</span>
+<span class="gi">+#else</span>
+ #include &lt;tr1/memory&gt;
+<span class="gi">+#endif</span>
+ 
+ // Add std::shared_ptr in a namespace, so different implementations can be used with different compilers
+ namespace cb
+ {
+<span class="gi">+#if __cplusplus &gt;= 201103L || defined(_LIBCPP_VERSION)</span>
+<span class="gi">+    using std::shared_ptr;</span>
+<span class="gi">+    using std::static_pointer_cast;</span>
+<span class="gi">+    using std::weak_ptr;</span>
+<span class="gi">+#else</span>
+     using std::tr1::shared_ptr;
+     using std::tr1::static_pointer_cast;
+     using std::tr1::weak_ptr;
+<span class="gi">+#endif</span>
+ }
+ 
+ #if defined(__APPLE__) &amp;&amp; defined(__MACH__)
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mojca 2013-10-01 09:42:44</div>

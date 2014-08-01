@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,54 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp        (revision 3412)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp        (working copy)</span>
+<span class="gu">@@ -1248,16 +1248,33 @@</span>
+     int StoredIndex = 0;
+     wxString Filters = FileFilters::GetFilterString();
+     wxString Path = fname.GetPath();
+<span class="gd">-    if(mgr)</span>
+<span class="gi">+    wxString Extension = fname.GetExt();</span>
+<span class="gi">+       wxString Filter;</span>
+<span class="gi">+</span>
+<span class="gi">+    if (!Extension.IsEmpty())</span>
+     {
+<span class="gd">-        wxString Filter = mgr-&gt;Read(_T(&quot;/file_dialogs/save_file_as/filter&quot;), _T(&quot;C/C++ files&quot;));</span>
+<span class="gd">-        if(!Filter.IsEmpty())</span>
+<span class="gd">-        {</span>
+<span class="gd">-            FileFilters::GetFilterIndexFromName(Filters, Filter, StoredIndex);</span>
+<span class="gd">-        }</span>
+<span class="gd">-        if (Path.IsEmpty())</span>
+<span class="gd">-            Path = mgr-&gt;Read(_T(&quot;/file_dialogs/save_file_as/directory&quot;), Path);</span>
+<span class="gi">+       // Select filter belonging to this file type:</span>
+<span class="gi">+       Extension.Prepend(_T(&quot;.&quot;));</span>
+<span class="gi">+       Filter = FileFilters::GetFilterString(Extension);</span>
+     }
+<span class="gi">+    else if(mgr)</span>
+<span class="gi">+    {</span>
+<span class="gi">+       // File type is unknown. Select the last used filter:</span>
+<span class="gi">+        Filter = mgr-&gt;Read(_T(&quot;/file_dialogs/save_file_as/filter&quot;), _T(&quot;C/C++ files&quot;));</span>
+<span class="gi">+    }</span>
+<span class="gi">+       if(!Filter.IsEmpty())</span>
+<span class="gi">+       {</span>
+<span class="gi">+               // We found a filter, look up its index:</span>
+<span class="gi">+               int sep = Filter.find(_T(&quot;|&quot;));</span>
+<span class="gi">+               if (sep != wxNOT_FOUND)</span>
+<span class="gi">+                       Filter.Truncate(sep);</span>
+<span class="gi">+               if (!Filter.IsEmpty())</span>
+<span class="gi">+                       FileFilters::GetFilterIndexFromName(Filters, Filter, StoredIndex);</span>
+<span class="gi">+       }</span>
+<span class="gi">+</span>
+<span class="gi">+    if ((mgr) &amp;&amp; (Path.IsEmpty()))</span>
+<span class="gi">+               Path = mgr-&gt;Read(_T(&quot;/file_dialogs/save_file_as/directory&quot;), Path);</span>
+<span class="gi">+</span>
+     wxFileDialog* dlg = new wxFileDialog(Manager::Get()-&gt;GetAppWindow(),
+                                          _(&quot;Save file&quot;),
+                                          Path,
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">dermeister 2006-12-22 11:20:55</div>

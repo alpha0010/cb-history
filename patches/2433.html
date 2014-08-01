@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,129 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/codecompletion/insertclassmethoddlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/insertclassmethoddlg.cpp    (revision 4993)</span>
+<span class="gi">+++ src/plugins/codecompletion/insertclassmethoddlg.cpp    (working copy)</span>
+<span class="gu">@@ -78,6 +78,7 @@</span>
+     wxListBox* lb = XRCCTRL(*this, &quot;lstClasses&quot;, wxListBox);
+     lb-&gt;Freeze();
+     lb-&gt;Clear();
+<span class="gi">+</span>
+     TokensTree* tree = m_pParser-&gt;GetTokens();
+     for (size_t i = 0; i &lt; tree-&gt;size(); ++i)
+     {
+<span class="gu">@@ -85,8 +86,29 @@</span>
+         //Manager::Get()-&gt;GetLogManager()-&gt;DebugLog(&quot;m_Filename=%s, token=%s&quot;, m_Filename.c_str(), token-&gt;m_Filename.c_str());
+         if (token &amp;&amp; (token-&gt;m_TokenKind &amp; (tkClass | tkTypedef))) //&amp;&amp;
+             //token-&gt;m_Filename == UnixFilename(m_Filename))
+<span class="gi">+        {</span>
+             // TODO: check against file&#39;s pair too
+<span class="gd">-            lb-&gt;Append(token-&gt;m_Name, token);</span>
+<span class="gi">+            // Make sure we actually have something to implement</span>
+<span class="gi">+            TokensTree* treeChildren = token-&gt;GetTree();</span>
+<span class="gi">+            if (treeChildren)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                bool valid = false;</span>
+<span class="gi">+                for (TokenIdxSet::iterator it = token-&gt;m_Children.begin(); it != token-&gt;m_Children.end(); ++it)</span>
+<span class="gi">+                {</span>
+<span class="gi">+                    int idx = *it;</span>
+<span class="gi">+                    const Token* tokenChild = treeChildren-&gt;at(idx);</span>
+<span class="gi">+                    if (!tokenChild)</span>
+<span class="gi">+                        continue;</span>
+<span class="gi">+                    if (tokenChild-&gt;m_TokenKind &amp; (tkFunction | tkConstructor | tkDestructor))</span>
+<span class="gi">+                    {</span>
+<span class="gi">+                        valid = true;</span>
+<span class="gi">+                        break;</span>
+<span class="gi">+                    }</span>
+<span class="gi">+                }</span>
+<span class="gi">+                if (valid)</span>
+<span class="gi">+                    lb-&gt;Append(token-&gt;m_Name, token);</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+     }
+     lb-&gt;Thaw();
+     FillMethods();
+<span class="gh">Index: src/plugins/codecompletion/resources/insert_class_method.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/resources/insert_class_method.xrc    (revision 4993)</span>
+<span class="gi">+++ src/plugins/codecompletion/resources/insert_class_method.xrc    (working copy)</span>
+<span class="gu">@@ -1,140 +1,135 @@</span>
+ &lt;?xml version=&quot;1.0&quot; ?&gt;
+ &lt;resource&gt;
+<span class="gd">-  &lt;object class=&quot;wxDialog&quot; name=&quot;dlgInsertClassMethod&quot;&gt;</span>
+<span class="gd">-    &lt;title&gt;Insert class method...&lt;/title&gt;</span>
+<span class="gd">-    &lt;centered&gt;1&lt;/centered&gt;</span>
+<span class="gd">-    &lt;object class=&quot;wxBoxSizer&quot;&gt;</span>
+<span class="gd">-      &lt;orient&gt;wxVERTICAL&lt;/orient&gt;</span>
+<span class="gd">-      &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-        &lt;object class=&quot;wxFlexGridSizer&quot;&gt;</span>
+<span class="gd">-          &lt;cols&gt;2&lt;/cols&gt;</span>
+<span class="gd">-          &lt;rows&gt;2&lt;/rows&gt;</span>
+<span class="gd">-          &lt;vgap&gt;4&lt;/vgap&gt;</span>
+<span class="gd">-          &lt;hgap&gt;8&lt;/hgap&gt;</span>
+<span class="gd">-          &lt;growablecols&gt;1&lt;/growablecols&gt;</span>
+<span class="gd">-          &lt;growablerows&gt;1&lt;/growablerows&gt;</span>
+<span class="gd">-          &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-            &lt;object class=&quot;wxStaticText&quot;&gt;</span>
+<span class="gd">-              &lt;label&gt;Known classes:&lt;/label&gt;</span>
+<span class="gd">-            &lt;/object&gt;</span>
+<span class="gd">-          &lt;/object&gt;</span>
+<span class="gd">-          &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-            &lt;object class=&quot;wxStaticText&quot;&gt;</span>
+<span class="gd">-              &lt;label&gt;Class methods:&lt;/label&gt;</span>
+<span class="gd">-            &lt;/object&gt;</span>
+<span class="gd">-          &lt;/object&gt;</span>
+<span class="gd">-          &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-            &lt;object class=&quot;wxListBox&quot; name=&quot;lstClasses&quot;&gt;</span>
+<span class="gd">-              &lt;content/&gt;</span>
+<span class="gd">-            &lt;/object&gt;</span>
+<span class="gd">-            &lt;flag&gt;wxEXPAND&lt;/flag&gt;</span>
+<span class="gd">-            &lt;minsize&gt;196,-1&lt;/minsize&gt;</span>
+<span class="gd">-          &lt;/object&gt;</span>
+<span class="gd">-          &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-            &lt;object class=&quot;wxBoxSizer&quot;&gt;</span>
+<span class="gd">-              &lt;orient&gt;wxVERTICAL&lt;/orient&gt;</span>
+<span class="gd">-              &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxCheckListBox&quot; name=&quot;chklstMethods&quot;&gt;</span>
+<span class="gd">-                  &lt;content/&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+<span class="gd">-                &lt;option&gt;1&lt;/option&gt;</span>
+<span class="gd">-                &lt;flag&gt;wxEXPAND&lt;/flag&gt;</span>
+<span class="gd">-              &lt;/object&gt;</span>
+<span class="gd">-              &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxBoxSizer&quot;&gt;</span>
+<span class="gd">-                  &lt;orient&gt;wxHORIZONTAL&lt;/orient&gt;</span>
+<span class="gd">-                  &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                    &lt;object class=&quot;wxRadioBox&quot; name=&quot;rbCode&quot;&gt;</span>
+<span class="gd">-                      &lt;label&gt;Code output&lt;/label&gt;</span>
+<span class="gd">-                      &lt;content&gt;</span>
+<span class="gd">-                        &lt;item&gt;Declaration&lt;/item&gt;</span>
+<span class="gd">-                        &lt;item&gt;Implementation&lt;/item&gt;</span>
+<span class="gd">-                      &lt;/content&gt;</span>
+<span class="gd">-                      &lt;dimension&gt;1&lt;/dimension&gt;</span>
+<span class="gd">-                      &lt;style&gt;wxRA_SPECIFY_COLS&lt;/style&gt;</span>
+<span class="gd">-                    &lt;/object&gt;</span>
+<span class="gd">-                    &lt;flag&gt;wxRIGHT&lt;/flag&gt;</span>
+<span class="gd">-                    &lt;border&gt;8&lt;/border&gt;</span>
+<span class="gd">-                  &lt;/object&gt;</span>
+<span class="gd">-                  &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                    &lt;object class=&quot;wxStaticBoxSizer&quot;&gt;</span>
+<span class="gd">-                      &lt;label&gt;Filter methods&lt;/label&gt;</span>
+<span class="gd">-                      &lt;orient&gt;wxHORIZONTAL&lt;/orient&gt;</span>
+<span class="gd">-                      &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                        &lt;object class=&quot;wxCheckBox&quot; name=&quot;chkPrivate&quot;&gt;</span>
+<span class="gd">-                          &lt;label&gt;Private&lt;/label&gt;</span>
+<span class="gd">-                          &lt;checked&gt;0&lt;/checked&gt;</span>
+<span class="gd">-                        &lt;/object&gt;</span>
+<span class="gd">-                        &lt;flag&gt;wxALIGN_CENTRE_VERTICAL|wxLEFT&lt;/flag&gt;</span>
+<span class="gd">-                        &lt;border&gt;8&lt;/border&gt;</span>
+<span class="gd">-                      &lt;/object&gt;</span>
+<span class="gd">-                      &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                        &lt;object class=&quot;wxCheckBox</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">arkay 2008-04-05 15:57:53</div>

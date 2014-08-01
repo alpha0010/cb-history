@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,104 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 8435)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -2440,10 +2440,13 @@</span>
+             int depth = 1; // search forwards
+             for (int i = control-&gt;GetCurrentLine() + 1; i &lt; control-&gt;GetLineCount(); ++i)
+             {
+<span class="gd">-                if (ppIf.Matches(control-&gt;GetLine(i))) // ignore else&#39;s, elif&#39;s, ...</span>
+<span class="gd">-                    ++depth;</span>
+<span class="gd">-                else if (ppEnd.Matches(control-&gt;GetLine(i)))</span>
+<span class="gd">-                    --depth;</span>
+<span class="gi">+                if (control-&gt;GetLine(i).Find(wxT(&#39;#&#39;)) != wxNOT_FOUND) // limit testing due to performance cost</span>
+<span class="gi">+                {</span>
+<span class="gi">+                    if (ppIf.Matches(control-&gt;GetLine(i))) // ignore else&#39;s, elif&#39;s, ...</span>
+<span class="gi">+                        ++depth;</span>
+<span class="gi">+                    else if (ppEnd.Matches(control-&gt;GetLine(i)))</span>
+<span class="gi">+                        --depth;</span>
+<span class="gi">+                }</span>
+                 if (depth == 0)
+                 {
+                     pp.Matches(control-&gt;GetLine(i));
+<span class="gu">@@ -2457,10 +2460,13 @@</span>
+             int depth = -1; // search backwards
+             for (int i = control-&gt;GetCurrentLine() - 1; i &gt;= 0; --i)
+             {
+<span class="gd">-                if (ppIf.Matches(control-&gt;GetLine(i))) // ignore else&#39;s, elif&#39;s, ...</span>
+<span class="gd">-                    ++depth;</span>
+<span class="gd">-                else if (ppEnd.Matches(control-&gt;GetLine(i)))</span>
+<span class="gd">-                    --depth;</span>
+<span class="gi">+                if (control-&gt;GetLine(i).Find(wxT(&#39;#&#39;)) != wxNOT_FOUND) // limit testing due to performance cost</span>
+<span class="gi">+                {</span>
+<span class="gi">+                    if (ppIf.Matches(control-&gt;GetLine(i))) // ignore else&#39;s, elif&#39;s, ...</span>
+<span class="gi">+                        ++depth;</span>
+<span class="gi">+                    else if (ppEnd.Matches(control-&gt;GetLine(i)))</span>
+<span class="gi">+                        --depth;</span>
+<span class="gi">+                }</span>
+                 if (depth == 0)
+                 {
+                     pp.Matches(control-&gt;GetLine(i));
+<span class="gu">@@ -2473,7 +2479,10 @@</span>
+ 
+     // now, we either found it or not
+     if (matchingBrace != wxSCI_INVALID_POSITION)
+<span class="gi">+    {</span>
+         control-&gt;GotoPos(matchingBrace);
+<span class="gi">+        control-&gt;ChooseCaretX();</span>
+<span class="gi">+    }</span>
+ }
+ 
+ void cbEditor::HighlightBraces()
+<span class="gh">Index: src/sdk/resources/lexers/lexer_html.xml</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/lexers/lexer_html.xml    (revision 8435)</span>
+<span class="gi">+++ src/sdk/resources/lexers/lexer_html.xml    (working copy)</span>
+<span class="gu">@@ -270,6 +270,10 @@</span>
+                     BoxCommentStart=&quot;/* &quot;
+                     BoxCommentMid=&quot; * &quot;
+                     BoxCommentEnd=&quot; */&quot;
+<span class="gd">-                    CaseSensitive=&quot;0&quot;/&gt;</span>
+<span class="gi">+                    CaseSensitive=&quot;0&quot;</span>
+<span class="gi">+                    LexerCommentStyles=&quot;9,20,29,42,43,44,57,58,59,72,82,92,107,124,125&quot;</span>
+<span class="gi">+                    LexerCharacterStyles=&quot;&quot;</span>
+<span class="gi">+                    LexerStringStyles=&quot;5,6,7,17,24,25,48,49,63,64,75,77,85,87,94,95,109,110,119,120&quot;</span>
+<span class="gi">+                    LexerPreprocessorStyles=&quot;&quot;/&gt;</span>
+         &lt;/Lexer&gt;
+ &lt;/CodeBlocks_lexer_properties&gt;
+<span class="gh">Index: src/sdk/resources/lexers/lexer_java.xml</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/lexers/lexer_java.xml    (revision 8435)</span>
+<span class="gi">+++ src/sdk/resources/lexers/lexer_java.xml    (working copy)</span>
+<span class="gu">@@ -94,16 +94,22 @@</span>
+                                    char     final     interface  static    void
+                                    class    finally   long       strictfp  volatile
+                                    const    float     native     super     while
+<span class="gd">-                   true     false     null&quot;/&gt;</span>
+<span class="gi">+                                   true     false     null&quot;/&gt;</span>
+                         &lt;!-- Secondary keywords and identifiers --&gt;
+                         &lt;Set index=&quot;1&quot;
+<span class="gd">-                            value=&quot;String&quot;/&gt;</span>
+<span class="gi">+                            value=&quot;Boolean          Byte          Character         Class      ClassLoader</span>
+<span class="gi">+                                   Compiler         Double        Enum              Float      InheritableThreadLocal</span>
+<span class="gi">+                                   Integer          Long          Math              Number     Object</span>
+<span class="gi">+                                   Package          Process       ProcessBuilder    Runtime    RuntimePermission</span>
+<span class="gi">+                                   SecurityManager  Short         StackTraceElement StrictMath String</span>
+<span class="gi">+                                   StringBuffer     StringBuilder System            Thread     ThreadGroup</span>
+<span class="gi">+                                   ThreadLocal      Throwable&quot;/&gt;</span>
+                         &lt;!-- Documentation comment keywords --&gt;
+                         &lt;Set index=&quot;2&quot;
+                             value=&quot;author docRoot   deprecated  exception   inheritDoc
+<span class="gd">-                       link   linkplain literal     param       return</span>
+<span class="gd">-                   see    serial    serialData  serialField since</span>
+<span class="gd">-                   throws value     version     $ @ \ &amp; &lt; &gt; # { }&quot;/&gt;</span>
+<span class="gi">+                                   link   linkplain literal     param       return</span>
+<span class="gi">+                                   see    serial    serialData  serialField si</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,104 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/editorconfigurationdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorconfigurationdlg.cpp    (revision 3103)</span>
+<span class="gi">+++ src/sdk/editorconfigurationdlg.cpp    (working copy)</span>
+<span class="gu">@@ -127,7 +127,6 @@</span>
+        XRCCTRL(*this, &quot;spnTabSize&quot;, wxSpinCtrl)-&gt;SetValue(cfg-&gt;ReadInt(_T(&quot;/tab_size&quot;), 4));
+        XRCCTRL(*this, &quot;cmbViewWS&quot;, wxComboBox)-&gt;SetSelection(cfg-&gt;ReadInt(_T(&quot;/view_whitespace&quot;), 0));
+        XRCCTRL(*this, &quot;rbTabText&quot;, wxRadioBox)-&gt;SetSelection(cfg-&gt;ReadBool(_T(&quot;/tab_text_relative&quot;), true) ? 1 : 0);
+<span class="gd">-       XRCCTRL(*this, &quot;chkAutoWrapSearch&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/auto_wrap_search&quot;), true));</span>
+ 
+        // end-of-line
+ // NOTE: a same block of code is in cbeditor.cpp (CreateEditor)
+<span class="gu">@@ -841,7 +840,6 @@</span>
+         cfg-&gt;Write(_T(&quot;/tab_size&quot;),             XRCCTRL(*this, &quot;spnTabSize&quot;, wxSpinCtrl)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/view_whitespace&quot;),      XRCCTRL(*this, &quot;cmbViewWS&quot;, wxComboBox)-&gt;GetSelection());
+         cfg-&gt;Write(_T(&quot;/tab_text_relative&quot;),    XRCCTRL(*this, &quot;rbTabText&quot;, wxRadioBox)-&gt;GetSelection() ? true : false);
+<span class="gd">-        cfg-&gt;Write(_T(&quot;/auto_wrap_search&quot;),     XRCCTRL(*this, &quot;chkAutoWrapSearch&quot;, wxCheckBox)-&gt;GetValue());</span>
+ 
+         //caret
+         cfg-&gt;Write(_T(&quot;/caret/width&quot;), XRCCTRL(*this, &quot;spnCaretWidth&quot;, wxSpinCtrl)-&gt;GetValue());
+<span class="gh">Index: src/sdk/editormanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editormanager.cpp    (revision 3103)</span>
+<span class="gi">+++ src/sdk/editormanager.cpp    (working copy)</span>
+<span class="gu">@@ -97,6 +97,8 @@</span>
+     bool NewSearch;     //!&lt; only true when a new search has been started
+     int SearchInSelectionStart; //!&lt; keep track of the start of a &#39;search&#39; selection
+     int SearchInSelectionEnd;  //!&lt; keep track of the end of a &#39;search&#39; selection
+<span class="gi">+    bool autoWrapSearch;</span>
+<span class="gi">+    bool findUsesSelectedText;</span>
+ };
+ 
+ static const int idNBTabSplitHorz = wxNewId();
+<span class="gu">@@ -1252,6 +1254,8 @@</span>
+     m_LastFindReplaceData-&gt;startWord = dlg-&gt;GetStartWord();
+     m_LastFindReplaceData-&gt;matchCase = dlg-&gt;GetMatchCase();
+     m_LastFindReplaceData-&gt;regEx = dlg-&gt;GetRegEx();
+<span class="gi">+    m_LastFindReplaceData-&gt;autoWrapSearch = dlg-&gt;GetAutoWrapSearch();</span>
+<span class="gi">+    m_LastFindReplaceData-&gt;findUsesSelectedText = dlg-&gt;GetFindUsesSelectedText();</span>
+     m_LastFindReplaceData-&gt;directionDown = dlg-&gt;GetDirection() == 1;
+     m_LastFindReplaceData-&gt;originEntireScope = dlg-&gt;GetOrigin() == 1;
+     m_LastFindReplaceData-&gt;scope = dlg-&gt;GetScope();
+<span class="gu">@@ -1421,7 +1425,7 @@</span>
+                 else
+                     msg = _(&quot;Text not found.\nSearch from the end of the document?&quot;);
+ 
+<span class="gd">-                bool auto_wrap_around = Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;))-&gt;ReadBool(_T(&quot;/auto_wrap_search&quot;), true);</span>
+<span class="gi">+                bool auto_wrap_around = data-&gt;autoWrapSearch;</span>
+                 if (auto_wrap_around)
+                     wxBell();
+                 if (auto_wrap_around || cbMessageBox(msg, _(&quot;Result&quot;), wxOK | wxCANCEL | wxICON_QUESTION) == wxID_OK)
+<span class="gu">@@ -1892,7 +1896,7 @@</span>
+                         msg = _(&quot;Text not found.\nSearch from the end of the selection?&quot;);
+                 }
+ 
+<span class="gd">-                bool auto_wrap_around = Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;))-&gt;ReadBool(_T(&quot;/auto_wrap_search&quot;), true);</span>
+<span class="gi">+                bool auto_wrap_around = data-&gt;autoWrapSearch;</span>
+                 if (auto_wrap_around)
+                     wxBell();
+                 if (auto_wrap_around || cbMessageBox(msg, _(&quot;Result&quot;), wxOK | wxCANCEL | wxICON_QUESTION) == wxID_OK)
+<span class="gu">@@ -2175,11 +2179,23 @@</span>
+     if(!data-&gt;findInFiles)
+     {
+         wxString phraseAtCursor = control-&gt;GetSelectedText();
+<span class="gd">-        // NOTE (mandrav): it is not intuitive to change the search text</span>
+<span class="gd">-        //                  just because there&#39;s a selection present...</span>
+<span class="gd">-        // change findText to selected text (if any text is selected and no search text was set before)</span>
+<span class="gd">-        if (!phraseAtCursor.IsEmpty() &amp;&amp; data-&gt;findText.IsEmpty())</span>
+<span class="gd">-            data-&gt;findText = phraseAtCursor;</span>
+<span class="gi">+</span>
+<span class="gi">+        if ( not data-&gt;findUsesSelectedText )</span>
+<span class="gi">+        {   // The mandrav find behavior</span>
+<span class="gi">+            // change findText to selected text (if any text is selected and no search text was set before)</span>
+<span class="gi">+            if (!phraseAtCursor.IsEmpty() &amp;&amp; data-&gt;findText.IsEmpty())</span>
+<span class="gi">+                data-&gt;findText = phraseAtCursor;</span>
+<span class="gi">+        }</span>
+<span class="gi">+        else</span>
+<span class="gi">+        {   // The tiwag find behavior</span>
+<span class="gi">+            // change findText to selected text (if any text is selected)</span>
+<span class="gi">+            if (!phraseAtCursor.IsEmpty())</span>
+<span class="gi">+            {</span>
+<span class="gi">+                data-&gt;findText = phraseAtCursor;</span>
+<span class="gi">+                data-&gt;originEntireScope = false;  //search from cursor</span>
+<span class="gi">+                data-&gt;scope = 0; // global (&quot;selected text&quot; is useful only from Find Dialog)</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+     }
+ 
+     data-&gt;directionDown = goingDown;
+<span class="gh">Index: src/sdk/finddlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/finddlg.cpp    (revision 3103)</span>
+<span class="gi">+++ src/sdk/finddlg.cpp    (working copy)</span>
+<span class="gu">@@ -82,6 +82,9 @@</span>
+     XRCCT
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">killerbot 2006-10-26 20:45:00</div>

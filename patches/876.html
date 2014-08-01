@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,30 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable">When using wxWidgets with WXDEBUG enabled, a segfault occurs at 
+projectoptionsdlg.cpp line 864 because validation of the wxWindow pointer
+returns NULL. Line 864 is asking for a &quot;wxSpinButton&quot; in the code, but the
+xrc file specifies a &quot;wxButton&quot;. 
+
+Patch follows:
+
+C:\Usr\Proj\cbBeta\trunk&gt;svn diff 
+<span class="gh">Index: src/sdk/projectoptionsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/projectoptionsdlg.cpp    (revision 2092)</span>
+<span class="gi">+++ src/sdk/projectoptionsdlg.cpp    (working copy)</span>
+<span class="gu">@@ -861,7 +861,8 @@</span>
+     XRCCTRL(*this, &quot;btnAddPreScripts&quot;, wxButton)-&gt;Enable(scrsel);
+     XRCCTRL(*this, &quot;btnRemovePreScripts&quot;, wxButton)-&gt;Enable(scrsel &amp;&amp; presel);
+     XRCCTRL(*this, &quot;spnPreScripts&quot;, wxSpinButton)-&gt;Enable(scrsel &amp;&amp; presel &amp;&amp; lstPreScripts-&gt;GetCount() &gt; 1);
+<span class="gd">-    XRCCTRL(*this, &quot;btnCheckScripts&quot;, wxSpinButton)-&gt;Enable(!customMake);</span>
+<span class="gi">+    //-XRCCTRL(*this, &quot;btnCheckScripts&quot;, wxSpinButton)-&gt;Enable(!customMake); //pecan 2006/2/28</span>
+<span class="gi">+    XRCCTRL(*this, &quot;btnCheckScripts&quot;, wxButton)-&gt;Enable(!customMake);        //pecan 2006/2/28</span>
+ }
+ 
+ void ProjectOptionsDlg::EndModal(int retCode)
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

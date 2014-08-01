@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,58 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 7936)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -54,6 +54,8 @@</span>
+ #define BOOKMARK_STYLE        wxSCI_MARK_ARROW
+ #define BREAKPOINT_STYLE      wxSCI_MARK_CIRCLE
+ #define DEBUG_STYLE           wxSCI_MARK_ARROW
+<span class="gi">+#define DEBUG_STYLE_HL        wxSCI_MARK_BACKGROUND</span>
+<span class="gi">+//</span>
+ 
+ enum
+ {
+<span class="gu">@@ -62,7 +64,8 @@</span>
+     BREAKPOINT_MARKER,
+     BOOKMARK_MARKER,
+     ERROR_MARKER,
+<span class="gd">-    DEBUG_MARKER</span>
+<span class="gi">+    DEBUG_MARKER,</span>
+<span class="gi">+    DEBUG_MARKER_HL,</span>
+ };
+ 
+ 
+<span class="gu">@@ -1407,7 +1410,8 @@</span>
+                                          (1 &lt;&lt; BREAKPOINT_DISABLED_MARKER) |
+                                          (1 &lt;&lt; BREAKPOINT_OTHER_MARKER) |
+                                          (1 &lt;&lt; DEBUG_MARKER) |
+<span class="gd">-                                         (1 &lt;&lt; ERROR_MARKER));</span>
+<span class="gi">+                                         (1 &lt;&lt; ERROR_MARKER) |</span>
+<span class="gi">+                                         (1 &lt;&lt; DEBUG_MARKER_HL));</span>
+     control-&gt;MarkerDefine(BOOKMARK_MARKER, BOOKMARK_STYLE);
+     control-&gt;MarkerSetBackground(BOOKMARK_MARKER, wxColour(0xA0, 0xA0, 0xFF));
+ 
+<span class="gu">@@ -1438,6 +1442,8 @@</span>
+     }
+     control-&gt;MarkerDefine(DEBUG_MARKER, DEBUG_STYLE);
+     control-&gt;MarkerSetBackground(DEBUG_MARKER, wxColour(0xFF, 0xFF, 0x00));
+<span class="gi">+    control-&gt;MarkerDefine(DEBUG_MARKER_HL, DEBUG_STYLE_HL);</span>
+<span class="gi">+    control-&gt;MarkerSetBackground(DEBUG_MARKER_HL, wxColour(0x00, 0xFF, 0x00));</span>
+     control-&gt;MarkerDefine(ERROR_MARKER, ERROR_STYLE);
+     control-&gt;MarkerSetBackground(ERROR_MARKER, wxColour(0xFF, 0x00, 0x00));
+ 
+<span class="gu">@@ -2308,6 +2314,7 @@</span>
+ void cbEditor::SetDebugLine(int line)
+ {
+     MarkLine(DEBUG_MARKER, line);
+<span class="gi">+    MarkLine(DEBUG_MARKER_HL, line);</span>
+     m_pData-&gt;m_LastDebugLine = line;
+ }
+ 
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">ollydbg 2012-04-26 00:30:36</div>

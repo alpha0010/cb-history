@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,116 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/include/compiler.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/compiler.h    (revision 4101)</span>
+<span class="gi">+++ src/include/compiler.h    (working copy)</span>
+<span class="gu">@@ -47,6 +47,7 @@</span>
+ enum CompilerLineType
+ {
+     cltNormal,
+<span class="gi">+    cltInfo,</span>
+     cltWarning,
+     cltError
+ };
+<span class="gu">@@ -321,7 +322,7 @@</span>
+         CompilerCommandGenerator* m_pGenerator;
+         bool m_Valid; // &#39;valid&#39; flag
+         bool m_NeedValidityCheck; // flag to re-check validity (raised when changing compiler paths)
+<span class="gd">-        </span>
+<span class="gi">+</span>
+         // &quot;mirror&quot; default settings for comparing when saving (to save only those that differ from defaults)
+         struct MirrorSettings
+         {
+<span class="gu">@@ -329,7 +330,7 @@</span>
+             wxString MasterPath;
+             wxArrayString ExtraPaths;
+             CompilerPrograms Programs;
+<span class="gd">-            </span>
+<span class="gi">+</span>
+             // these are the CompileOptionsBase settings that each compiler keeps on a global level
+             wxArrayString CompilerOptions_;
+             wxArrayString LinkerOptions;
+<span class="gu">@@ -339,7 +340,7 @@</span>
+             wxArrayString LinkLibs;
+             wxArrayString CmdsBefore;
+             wxArrayString CmdsAfter;
+<span class="gd">-            </span>
+<span class="gi">+</span>
+             // below are the settings that the user is asked to revert to defaults (if defaults have changed)
+             wxString Commands[COMPILER_COMMAND_TYPES_COUNT];
+             CompilerSwitches Switches;
+<span class="gh">Index: src/plugins/compilergcc/advancedcompileroptionsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/advancedcompileroptionsdlg.cpp    (revision 4101)</span>
+<span class="gi">+++ src/plugins/compilergcc/advancedcompileroptionsdlg.cpp    (working copy)</span>
+<span class="gu">@@ -319,7 +319,7 @@</span>
+                 &quot;Filename: %s\n&quot;
+                 &quot;Line number: %s\n&quot;
+                 &quot;Message: %s&quot;),
+<span class="gd">-                clt == cltNormal ? _(&quot;Info&quot;) : (clt == cltError ? _(&quot;Error&quot;) : _(&quot;Warning&quot;)),</span>
+<span class="gi">+                clt == cltNormal ? _(&quot;Normal&quot;) : (clt == cltInfo ? _(&quot;Info&quot;) : (clt == cltError ? _(&quot;Error&quot;) : _(&quot;Warning&quot;))),</span>
+                 compiler-&gt;GetLastErrorFilename().c_str(),
+                 compiler-&gt;GetLastErrorLine().c_str(),
+                 compiler-&gt;GetLastError().c_str()
+<span class="gh">Index: src/plugins/compilergcc/compilergcc.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilergcc.cpp    (revision 4101)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilergcc.cpp    (working copy)</span>
+<span class="gu">@@ -2844,6 +2844,7 @@</span>
+ 
+ void CompilerGCC::OnCompileFile(wxCommandEvent&amp; event)
+ {
+<span class="gi">+    // TODO (Rick#1#): Clean the file so it will always recompile</span>
+     wxFileName file;
+     if (event.GetId() == idMenuCompileFileFromProjectManager)
+     {
+<span class="gu">@@ -3202,7 +3203,7 @@</span>
+     }
+ 
+     // log to build messages if warning/error
+<span class="gd">-    if (clt != cltNormal)</span>
+<span class="gi">+    if (clt &gt; cltNormal)</span>
+     {
+         // display current project/target &quot;header&quot; in build messages, if different since last warning/error
+         static ProjectBuildTarget* last_bt = 0;
+<span class="gu">@@ -3241,7 +3242,7 @@</span>
+     wxColour c;
+     switch (lt)
+     {
+<span class="gd">-        case cltNormal: c = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT); break;</span>
+<span class="gi">+        case cltNormal: case cltInfo: c = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT); break;</span>
+         case cltWarning: c = COLOUR_NAVY; break;
+         case cltError: c = *wxRED; break;
+     }
+<span class="gu">@@ -3271,7 +3272,7 @@</span>
+         if (isTitle)
+             m_BuildLogContents &lt;&lt; _T(&quot;&lt;/b&gt;&quot;);
+ 
+<span class="gd">-        if (lt != cltNormal)</span>
+<span class="gi">+        if (lt &gt;= cltWarning)</span>
+             m_BuildLogContents &lt;&lt; _T(&quot;&lt;/font&gt;&quot;);
+ 
+         m_BuildLogContents &lt;&lt; _T(&quot;&lt;br /&gt;\n&quot;);
+<span class="gh">Index: src/plugins/compilergcc/compilerMINGW.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilerMINGW.cpp    (revision 4101)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilerMINGW.cpp    (working copy)</span>
+<span class="gu">@@ -185,7 +185,8 @@</span>
+ {
+     m_RegExes.Clear();
+     m_RegExes.Add(RegExStruct(_(&quot;Fatal error&quot;), cltError, _T(&quot;FATAL:[ \t]*(.*)&quot;), 1));
+<span class="gd">-    m_RegExes.Add(RegExStruct(_(&quot;&#39;Instantiated from&#39; info&quot;), cltWarning, _T(&quot;(&quot;) + FilePathWithSpaces + _T(&quot;):([0-9]+):[ \t]+([iI]nstantiated from .*)&quot;), 3, 1, 2));</span>
+<span class="gi">+    m_RegExes.Add(RegExStruct(_(&quot;&#39;In function...&#39; info&quot;), cltInfo, _T(&quot;(&quot;) + FilePathWithSpaces + _T(&quot;):[ \t]+&quot;) + _T(&quot;([iI]n ([cC]lass|[cC]onstructor|[dD]estructor|[fF]unction|[mM]ember [fF]unction).*)&quot;), 2, 1));</span>
+<span class="gi">+    m_RegExes.Add(RegExStruct(_(&quot;&#39;Instantiated from&#39; info&quot;), cltInfo, _T(&quot;(&quot;) + FilePathWithSpaces + _T(&quot;):([0-9]+):[ \t]+([iI]nstantiated from .*)&quot;), 3, 1, 2));</span>
+     m_RegExes.Add(RegExStruct(_(&quot;Resource compiler error&quot;), cltError, _T(&quot;windres.exe:[ \t](&quot;) + FilePathWithSpaces + _T(&quot;):([0-9]+):[ \t](.*)&quot;), 3, 1, 2));
+     m_RegExes.Add(RegExStruct(_(&quot;Resource compiler error (2)&quot;), cltError, _T(&quot;windres.exe:[ \t](.*)&quot;), 1));
+     m_RegExes.Add(RegExStruct(_(&quot;Preprocessor warning&quot;), cltWarning, _T(&quot;(&quot;) + FilePathWithSpaces + _T(&quot;):([0-9]+):([0-9]+):[ \t]([Ww]arning:[ \t].*)&quot;), 4, 1, 2));
+<span class="gu">@@ -197,7 +198,7 @@</span>
+     m_RegExes.Add(RegExStruct(_(&quot;Linker error (lib not found)&quot;),
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

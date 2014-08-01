@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,138 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/confirmreplacedlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/confirmreplacedlg.cpp    (revision 2551)</span>
+<span class="gi">+++ src/sdk/confirmreplacedlg.cpp    (working copy)</span>
+<span class="gu">@@ -34,15 +34,20 @@</span>
+ #include &quot;confirmreplacedlg.h&quot;
+ 
+ BEGIN_EVENT_TABLE(ConfirmReplaceDlg, wxDialog)
+<span class="gd">-    EVT_BUTTON(XRCID(&quot;btnYes&quot;),     ConfirmReplaceDlg::OnYes)</span>
+<span class="gd">-    EVT_BUTTON(XRCID(&quot;btnNo&quot;),         ConfirmReplaceDlg::OnNo)</span>
+<span class="gd">-    EVT_BUTTON(XRCID(&quot;btnAll&quot;),     ConfirmReplaceDlg::OnAll)</span>
+<span class="gd">-    EVT_BUTTON(XRCID(&quot;btnCancel&quot;),    ConfirmReplaceDlg::OnCancel)</span>
+<span class="gi">+    EVT_BUTTON(XRCID(&quot;btnYes&quot;),         ConfirmReplaceDlg::OnYes)</span>
+<span class="gi">+    EVT_BUTTON(XRCID(&quot;btnNo&quot;),             ConfirmReplaceDlg::OnNo)</span>
+<span class="gi">+    EVT_BUTTON(XRCID(&quot;btnAllInFile&quot;),   ConfirmReplaceDlg::OnAllInFile)</span>
+<span class="gi">+    EVT_BUTTON(XRCID(&quot;btnSkipFile&quot;),    ConfirmReplaceDlg::OnSkipFile)</span>
+<span class="gi">+    EVT_BUTTON(XRCID(&quot;btnAll&quot;),         ConfirmReplaceDlg::OnAll)</span>
+<span class="gi">+    EVT_BUTTON(XRCID(&quot;btnCancel&quot;),        ConfirmReplaceDlg::OnCancel)</span>
+ END_EVENT_TABLE()
+ 
+<span class="gd">-ConfirmReplaceDlg::ConfirmReplaceDlg(wxWindow* parent, const wxString&amp; label)</span>
+<span class="gi">+ConfirmReplaceDlg::ConfirmReplaceDlg(wxWindow* parent, bool replaceInFiles, const wxString&amp; label)</span>
+ {
+<span class="gd">-    wxXmlResource::Get()-&gt;LoadDialog(this, parent, _T(&quot;dlgConfirmReplace&quot;));</span>
+<span class="gi">+    if (replaceInFiles)</span>
+<span class="gi">+        wxXmlResource::Get()-&gt;LoadDialog(this, parent, _T(&quot;dlgConfirmReplaceMultiple&quot;));</span>
+<span class="gi">+    else</span>
+<span class="gi">+        wxXmlResource::Get()-&gt;LoadDialog(this, parent, _T(&quot;dlgConfirmReplace&quot;));</span>
+     XRCCTRL(*this, &quot;lblMessage&quot;, wxStaticText)-&gt;SetLabel(label);
+ }
+ 
+<span class="gu">@@ -60,6 +65,16 @@</span>
+     EndModal(crNo);
+ }
+ 
+<span class="gi">+void ConfirmReplaceDlg::OnAllInFile(wxCommandEvent&amp; event)</span>
+<span class="gi">+{</span>
+<span class="gi">+    EndModal(crAllInFile);</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+void ConfirmReplaceDlg::OnSkipFile(wxCommandEvent&amp; event)</span>
+<span class="gi">+{</span>
+<span class="gi">+    EndModal(crSkipFile);</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ void ConfirmReplaceDlg::OnAll(wxCommandEvent&amp; event)
+ {
+     EndModal(crAll);
+<span class="gh">Index: src/sdk/confirmreplacedlg.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/confirmreplacedlg.h    (revision 2551)</span>
+<span class="gi">+++ src/sdk/confirmreplacedlg.h    (working copy)</span>
+<span class="gu">@@ -10,6 +10,8 @@</span>
+ {
+     crYes = 0,
+     crNo,
+<span class="gi">+    crAllInFile,</span>
+<span class="gi">+    crSkipFile,</span>
+     crAll,
+     crCancel
+ };
+<span class="gu">@@ -17,10 +19,13 @@</span>
+ class ConfirmReplaceDlg : public wxDialog
+ {
+     public:
+<span class="gd">-        ConfirmReplaceDlg(wxWindow* parent, const wxString&amp; label = _(&quot;Replace this occurence?&quot;));</span>
+<span class="gi">+        ConfirmReplaceDlg(wxWindow* parent, bool replaceInFiles = false, </span>
+<span class="gi">+            const wxString&amp; label = _(&quot;Replace this occurrence?&quot;));</span>
+         ~ConfirmReplaceDlg();
+         void OnYes(wxCommandEvent&amp; event);
+         void OnNo(wxCommandEvent&amp; event);
+<span class="gi">+        void OnAllInFile(wxCommandEvent&amp; event);</span>
+<span class="gi">+        void OnSkipFile(wxCommandEvent&amp; event);</span>
+         void OnAll(wxCommandEvent&amp; event);
+         void OnCancel(wxCommandEvent&amp; event);
+         void CalcPosition(cbStyledTextCtrl* ed);
+<span class="gh">Index: src/sdk/editormanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editormanager.cpp    (revision 2551)</span>
+<span class="gi">+++ src/sdk/editormanager.cpp    (working copy)</span>
+<span class="gu">@@ -951,7 +951,7 @@</span>
+                 wxString msg;
+                 msg.Printf(_(&quot;File %s is modified outside the IDE...\nDo you want to reload it (you will lose any unsaved work)?&quot;),
+                            ed-&gt;GetFilename().c_str());
+<span class="gd">-                ConfirmReplaceDlg dlg(Manager::Get()-&gt;GetAppWindow(), msg);</span>
+<span class="gi">+                ConfirmReplaceDlg dlg(Manager::Get()-&gt;GetAppWindow(), false, msg);</span>
+                 dlg.SetTitle(_(&quot;Reload file?&quot;));
+                 PlaceWindow(&amp;dlg);
+                 ret = dlg.ShowModal();
+<span class="gu">@@ -1161,7 +1161,7 @@</span>
+     if (!replace)
+         dlg = new FindDlg(Manager::Get()-&gt;GetAppWindow(), phraseAtCursor, hasSelection, !ed, explicitly_find_in_files);
+     else
+<span class="gd">-        dlg = new ReplaceDlg(Manager::Get()-&gt;GetAppWindow(), phraseAtCursor, hasSelection);</span>
+<span class="gi">+        dlg = new ReplaceDlg(Manager::Get()-&gt;GetAppWindow(), phraseAtCursor, hasSelection, !ed, explicitly_find_in_files);</span>
+ 
+     PlaceWindow(dlg);
+     if (dlg-&gt;ShowModal() == wxID_CANCEL)
+<span class="gu">@@ -1205,23 +1205,26 @@</span>
+     if (!replace)
+     {
+         if (m_LastFindReplaceData-&gt;findInFiles)
+<span class="gd">-        {</span>
+<span class="gd">-            int ans = FindInFiles(m_LastFindReplaceData);</span>
+<span class="gd">-            // FindInFiles() is done, default back to Find in Editor</span>
+<span class="gd">-            m_LastFindReplaceData-&gt;findInFiles = false;</span>
+<span class="gd">-            return ans;</span>
+<span class="gd">-        }</span>
+<span class="gi">+            return FindInFiles(m_LastFindReplaceData);</span>
+         else
+             return Find(control, m_LastFindReplaceData);
+     }
+     else
+     {
+         m_LastFindReplaceData-&gt;initialreplacing = true;
+<span class="gd">-        return Replace(control, m_LastFindReplaceData);</span>
+<span class="gi">+        </span>
+<span class="gi">+        if (m_LastFindReplaceData-&gt;findInFiles)</span>
+<span class="gi">+            return ReplaceInFiles(m_LastFindReplaceData);</span>
+<span class="gi">+        else</span>
+<span class="gi">+            return Replace(control, m_LastFindReplaceData);</span>
+     }
+<span class="gi">+    </span>
+<span class="gi">+    //Default back to find or replace in Editor</span>
+<span class="gi">+    if(m_LastFindReplaceData-&gt;findInFiles)</span>
+<span class="gi">+        m_LastFindReplaceData-&gt;findInFiles = false;</span>
+ }
+ 
+<span class="gd">-v</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">kkez 2006-06-12 18:26:30</div>

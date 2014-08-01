@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,59 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/sdk_events.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/sdk_events.cpp    (revision 6892)</span>
+<span class="gi">+++ src/sdk/sdk_events.cpp    (working copy)</span>
+<span class="gu">@@ -87,6 +87,7 @@</span>
+ const wxEventType cbEVT_EDITOR_BREAKPOINT_DELETE = wxNewEventType();
+ const wxEventType cbEVT_EDITOR_UPDATE_UI = wxNewEventType();
+ // project events
+<span class="gi">+const wxEventType cbEVT_PROJECT_NEW = wxNewEventType();</span>
+ const wxEventType cbEVT_PROJECT_CLOSE = wxNewEventType();
+ const wxEventType cbEVT_PROJECT_OPEN = wxNewEventType();
+ const wxEventType cbEVT_PROJECT_SAVE = wxNewEventType();
+<span class="gh">Index: src/include/sdk_events.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/sdk_events.h    (revision 6892)</span>
+<span class="gi">+++ src/include/sdk_events.h    (working copy)</span>
+<span class="gu">@@ -249,6 +249,8 @@</span>
+ #define EVT_EDITOR_UPDATE_UI(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_EDITOR_UPDATE_UI, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&amp;fn, (wxObject *) NULL ),
+ 
+ // project events
+<span class="gi">+extern EVTIMPORT const wxEventType cbEVT_PROJECT_NEW;</span>
+<span class="gi">+#define EVT_PROJECT_NEW(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_PROJECT_NEW, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&amp;fn, (wxObject *) NULL ),</span>
+ extern EVTIMPORT const wxEventType cbEVT_PROJECT_CLOSE;
+ #define EVT_PROJECT_CLOSE(fn) DECLARE_EVENT_TABLE_ENTRY( cbEVT_PROJECT_CLOSE, -1, -1, (wxObjectEventFunction)(wxEventFunction)(CodeBlocksEventFunction)&amp;fn, (wxObject *) NULL ),
+ extern EVTIMPORT const wxEventType cbEVT_PROJECT_OPEN;
+<span class="gh">Index: src/src/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/main.cpp    (revision 6892)</span>
+<span class="gi">+++ src/src/main.cpp    (working copy)</span>
+<span class="gu">@@ -2412,6 +2412,10 @@</span>
+         if (!prj &amp;&amp; filename.IsEmpty())
+             return;
+ 
+<span class="gi">+        // Send the new project event</span>
+<span class="gi">+        CodeBlocksEvent evtNew(cbEVT_PROJECT_NEW, 0, prj);</span>
+<span class="gi">+        Manager::Get()-&gt;GetPluginManager()-&gt;NotifyPlugins(evtNew);</span>
+<span class="gi">+</span>
+         if (prj)
+         {
+             prj-&gt;Save();
+<span class="gu">@@ -2427,8 +2431,8 @@</span>
+         }
+         if (prj &amp;&amp; tot == totProject) // Created project should be parsed
+         {
+<span class="gd">-            CodeBlocksEvent evt(cbEVT_PROJECT_OPEN, 0, prj);</span>
+<span class="gd">-            Manager::Get()-&gt;GetPluginManager()-&gt;NotifyPlugins(evt);</span>
+<span class="gi">+            CodeBlocksEvent evtOpen(cbEVT_PROJECT_OPEN, 0, prj);</span>
+<span class="gi">+            Manager::Get()-&gt;GetPluginManager()-&gt;NotifyPlugins(evtOpen);</span>
+         }
+         return;
+     }
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mortenmacfly 2010-12-18 13:10:22</div>

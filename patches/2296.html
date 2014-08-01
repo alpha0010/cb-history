@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,42 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gd">--- codeblocks-1.0svn.orig/src/scripts/make_dist.script    2007-12-20 14:20:59.000000000 +0100</span>
+<span class="gi">+++ codeblocks-1.0svn.work/src/scripts/make_dist.script    2007-12-21 11:28:48.000000000 +0100</span>
+<span class="gu">@@ -53,6 +53,10 @@</span>
+             return -1;
+         }
+         
+<span class="gi">+        // if there is more then one project in the workspace the current working dir is the one of the last loaded project,</span>
+<span class="gi">+        // so we have to set it explicitely to make the zip-command find the files</span>
+<span class="gi">+        IO.SetCwd(prj.GetCommonTopLevelPath());</span>
+<span class="gi">+</span>
+         // good, now let&#39;s get the project&#39;s filename
+         local prj_fname = wxFileName();
+         prj_fname.Assign(prj.GetFilename(), ::wxPATH_NATIVE);
+<span class="gu">@@ -71,7 +75,10 @@</span>
+         }
+         
+         // all that&#39;s left is to replace the variables in the command
+<span class="gd">-        local cmd = Cmd;</span>
+<span class="gi">+        // local cmd = Cmd;</span>
+<span class="gi">+        // we have to copy Cmd into cmd or both are two names for the same instance and the placeholders get overwritten</span>
+<span class="gi">+        local cmd = wxString();</span>
+<span class="gi">+        cmd += Cmd;</span>
+         cmd.Replace(_T(&quot;$ARCHIVE&quot;), prj_fname.GetName());
+         cmd.Replace(_T(&quot;$FILES_LIST&quot;), file_list);
+         
+<span class="gd">--- codeblocks-1.0svn.orig/src/scripts/Makefile.am    2007-11-15 12:49:38.000000000 +0100</span>
+<span class="gi">+++ codeblocks-1.0svn.work/src/scripts/Makefile.am    2007-12-20 17:54:38.000000000 +0100</span>
+<span class="gu">@@ -3,4 +3,5 @@</span>
+ dist_pkgdata_DATA = startup.script \
+             gdb_types.script \
+             edit_startup_script.script \
+<span class="gd">-            wx_help.script</span>
+<span class="gi">+            wx_help.script \</span>
+<span class="gi">+            make_dist.script</span>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">jenslody 2007-12-21 18:14:41</div>

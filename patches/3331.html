@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,109 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbplugin.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbplugin.cpp    (wersja 8330)</span>
+<span class="gi">+++ src/sdk/cbplugin.cpp    (kopia robocza)</span>
+<span class="gu">@@ -219,19 +219,88 @@</span>
+             return selected_text;
+     }
+ 
+<span class="gi">+    int pos = control-&gt;GetCurrentPos();</span>
+     if (mousePosition)
+     {
+<span class="gd">-        int pos = control-&gt;PositionFromPoint(*mousePosition);</span>
+<span class="gd">-        int start = control-&gt;WordStartPosition(pos, true);</span>
+<span class="gd">-        int end = control-&gt;WordEndPosition(pos, true);</span>
+<span class="gd">-        selected_text = control-&gt;GetTextRange(start, end);</span>
+<span class="gi">+        pos = control-&gt;PositionFromPoint(*mousePosition);</span>
+     }
+<span class="gd">-    else</span>
+<span class="gi">+    </span>
+<span class="gi">+    //if you want to disable evaluation of whole expression under cursor</span>
+<span class="gi">+    //simply set callChain and/or evaluateCall to false.</span>
+<span class="gi">+    const wxString&amp; whitespace = control-&gt;GetWhitespaceChars();</span>
+<span class="gi">+    int start = control-&gt;WordStartPosition(pos, true);</span>
+<span class="gi">+    int end = control-&gt;WordEndPosition(pos, true);</span>
+<span class="gi">+    bool callChain = true;</span>
+<span class="gi">+    bool isChained = false;</span>
+<span class="gi">+    while( callChain )</span>
+     {
+<span class="gd">-        int start = control-&gt;WordStartPosition(control-&gt;GetCurrentPos(), true);</span>
+<span class="gd">-        int end = control-&gt;WordEndPosition(control-&gt;GetCurrentPos(), true);</span>
+<span class="gd">-        selected_text = control-&gt;GetTextRange(start, end);</span>
+<span class="gi">+        int prevPos = start-1;</span>
+<span class="gi">+        char prevChar = control-&gt;GetCharAt(prevPos);</span>
+<span class="gi">+</span>
+<span class="gi">+        if ( whitespace.find_first_of(prevChar) != wxString::npos )</span>
+<span class="gi">+        {//whitespace found</span>
+<span class="gi">+            start -= 1;</span>
+<span class="gi">+        }</span>
+<span class="gi">+        else if( prevChar == &#39;.&#39; )</span>
+<span class="gi">+        {</span>
+<span class="gi">+            isChained = true;</span>
+<span class="gi">+            start -= 1;</span>
+<span class="gi">+        }</span>
+<span class="gi">+        else if( (prevChar == &#39;&gt;&#39; &amp;&amp; control-&gt;GetCharAt(start-2) == &#39;-&#39;)</span>
+<span class="gi">+                   || (prevChar == &#39;:&#39; &amp;&amp; control-&gt;GetCharAt(start-2) == &#39;:&#39;) )</span>
+<span class="gi">+        {// :: or -&gt;</span>
+<span class="gi">+            isChained = true;</span>
+<span class="gi">+            start -= 2;</span>
+<span class="gi">+            //start = control-&gt;WordStartPosition(start-2,true);</span>
+<span class="gi">+        }</span>
+<span class="gi">+        else if( prevChar == &#39;)&#39; || prevChar == &#39;]&#39; || prevChar == &#39;&gt;&#39; )</span>
+<span class="gi">+        {</span>
+<span class="gi">+            int bracePos = control-&gt;BraceMatch(prevPos);</span>
+<span class="gi">+            if( bracePos != -1 ){</span>
+<span class="gi">+                start = bracePos;</span>
+<span class="gi">+            }</span>
+<span class="gi">+            else{</span>
+<span class="gi">+                callChain = false;    //probably syntax error</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+<span class="gi">+        else if ( isChained )</span>
+<span class="gi">+        {    </span>
+<span class="gi">+            isChained = false;</span>
+<span class="gi">+            start = control-&gt;WordStartPosition(prevPos,true);;</span>
+<span class="gi">+        }</span>
+<span class="gi">+        else</span>
+<span class="gi">+            callChain = false;</span>
+     }
+<span class="gi">+</span>
+<span class="gi">+    //append right side of pointed expression</span>
+<span class="gi">+    bool evaluateCall = true;</span>
+<span class="gi">+    while( evaluateCall )</span>
+<span class="gi">+    {</span>
+<span class="gi">+        char nextChar = control-&gt;GetCharAt(end);</span>
+<span class="gi">+        if( whitespace.find_first_of(nextChar) != wxString::npos )</span>
+<span class="gi">+        {//whitespace at end</span>
+<span class="gi">+            end = control-&gt;WordEndPosition(end+1,true); //skip it</span>
+<span class="gi">+        }</span>
+<span class="gi">+        else if ( nextChar == &#39;[&#39; || nextChar == &#39;(&#39; || nextChar == &#39;&lt;&#39; )</span>
+<span class="gi">+        {</span>
+<span class="gi">+            int bracePos = control-&gt;BraceMatch(end);</span>
+<span class="gi">+            if( bracePos != -1 ){</span>
+<span class="gi">+                end = bracePos+1;</span>
+<span class="gi">+            }</span>
+<span class="gi">+            else{</span>
+<span class="gi">+                evaluateCall = false;</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+<span class="gi">+        else{</span>
+<span class="gi">+            evaluateCall = false;</span>
+<span class="gi">+        }</span>
+<span class="gi">+        </span>
+<span class="gi">+    }</span>
+<span class="gi">+    </span>
+<span class="gi">+    selected_text = control-&gt;GetTextRange(start, end);</span>
+<span class="gi">+    selected_text.Trim(true);</span>
+<span class="gi">+    selected_text.Trim(false);</span>
+<span class="gi">+</span>
+     return selected_text;
+ }
+ 
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">p2rkw 2012-09-06 13:36:31</div>

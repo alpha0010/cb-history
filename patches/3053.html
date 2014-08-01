@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,135 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable">/*
+ * This file is part of the Code::Blocks IDE and licensed under the GNU General Public License, version 3
+ * http://www.gnu.org/licenses/gpl-3.0.html
+ */
+
+#include &lt;sdk.h&gt;
+#include &lt;prep.h&gt;
+#include &quot;compilerLDC.h&quot;
+#include &lt;wx/intl.h&gt;
+#include &lt;wx/regex.h&gt;
+#include &lt;wx/config.h&gt;
+#include &lt;wx/fileconf.h&gt;
+#include &lt;wx/msgdlg.h&gt;
+#include &quot;manager.h&quot;
+#include &quot;logmanager.h&quot;
+
+#include &lt;configmanager.h&gt;
+
+#ifdef __WXMSW__
+    #include &lt;wx/msw/registry.h&gt;
+#endif
+
+CompilerLDC::CompilerLDC()
+    : Compiler(_(&quot;LDC D Compiler&quot;), _T(&quot;ldc&quot;))
+{
+    Reset();
+}
+
+CompilerLDC::~CompilerLDC()
+{
+    //dtor
+}
+
+Compiler * CompilerLDC::CreateCopy()
+{
+    Compiler* c = new CompilerLDC(*this);
+    c-&gt;SetExtraPaths(m_ExtraPaths); // wxArrayString doesn&#39;t seem to be copied with the default copy ctor...
+    return c;
+}
+
+void CompilerLDC::Reset()
+{
+    if (platform::windows)
+    {
+        m_Programs.C = _T(&quot;mingw32-ldc.exe&quot;);
+        m_Programs.CPP = _T(&quot;mingw32-ldc.exe&quot;);
+        m_Programs.LD = _T(&quot;mingw32-ldc.exe&quot;);
+        m_Programs.DBG = _T(&quot;gdb.exe&quot;);
+        m_Programs.LIB = _T(&quot;ar.exe&quot;);
+        m_Programs.WINDRES = _T(&quot;windres.exe&quot;);
+        m_Programs.MAKE = _T(&quot;mingw32-make.exe&quot;);
+    }
+    else
+    {
+        m_Programs.C = _T(&quot;ldc&quot;);
+        m_Programs.CPP = _T(&quot;ldc&quot;);
+        m_Programs.LD = _T(&quot;ldc&quot;);
+        m_Programs.DBG = _T(&quot;gdb&quot;);
+        m_Programs.LIB = _T(&quot;ar&quot;);
+        m_Programs.WINDRES = _T(&quot;&quot;);
+        m_Programs.MAKE = _T(&quot;make&quot;);
+    }
+    m_Switches.includeDirs = _T(&quot;-I&quot;);
+    m_Switches.libDirs = _T(&quot;-L&quot;);
+    m_Switches.linkLibs = _T(&quot;-l&quot;);
+    m_Switches.defines = _T(&quot;-d-version=&quot;);
+    m_Switches.genericSwitch = _T(&quot;-&quot;);
+    m_Switches.objectExtension = _T(&quot;o&quot;);
+    m_Switches.needDependencies = true;
+    m_Switches.forceCompilerUseQuotes = false;
+    m_Switches.forceLinkerUseQuotes = false;
+    m_Switches.logging = clogSimple;
+    m_Switches.libPrefix = _T(&quot;lib&quot;);
+    m_Switches.libExtension = _T(&quot;a&quot;);
+    m_Switches.linkerNeedsLibPrefix = false;
+    m_Switches.linkerNeedsLibExtension = false;
+
+    m_Options.ClearOptions();
+    m_Options.AddOption(_(&quot;Produce debugging symbols&quot;),
+                _T(&quot;-g&quot;),
+                _(&quot;Debugging&quot;),
+                _T(&quot;&quot;),
+                true,
+                _T(&quot;-O -O0 -O1 -O2 -O3 -O4 -O5&quot;),
+                _(&quot;You have optimizations enabled. This is Not A Good Thing(tm) when producing debugging symbols...&quot;));
+
+    wxString category = _(&quot;Warnings&quot;);
+
+    // warnings
+    m_Options.AddOption(_(&quot;Enable all compiler warnings (overrides every other setting)&quot;), _T(&quot;-w&quot;), category);
+    // D features
+    category = _(&quot;D&quot;);
+    m_Options.AddOption(_(&quot;generate documentation&quot;), _T(&quot;-D&quot;), category);
+    m_Options.AddOption(_(&quot;allow deprecated features&quot;), _T(&quot;-d&quot;), category);
+    m_Options.AddOption(_(&quot;compile in debug code&quot;), _T(&quot;-d-debug&quot;), category);
+    m_Options.AddOption(_(&quot;Enable function inlining in -O&lt;N&gt;&quot;), _T(&quot;-enable-inlining&quot;), category);
+    m_Options.AddOption(_(&quot;suppress generation of object file&quot;), _T(&quot;-o-&quot;), category);
+    m_Options.AddOption(_(&quot;compile release version, which means not generating code for contracts and asserts&quot;), _T(&quot;-release&quot;), category);
+    m_Options.AddOption(_(&quot;compile in unittest code, also turns on asserts&quot;), _T(&quot;-unittest&quot;), category);
+    
+    // other
+    category = _(&quot;Others&quot;);
+    m_Options.AddOption(_(&quot;generate D interface file&quot;), _T(&quot;-H&quot;), category);
+    m_Options.AddOption(_(&quot;verbose&quot;), _T(&quot;-v&quot;), category);
+
+    // optimization
+    category = _(&quot;Optimization&quot;);
+    m_Options.AddOption(_(&quot;Strip all symbols from binary (minimizes size)&quot;), _T(&quot;&quot;), category, _T(&quot;-s&quot;), true, _T(&quot;-g -ggdb&quot;), _(&quot;Stripping the binary will strip debugging symbols as well!&quot;));
+    m_Options.AddOption(_(&quot;Equivalent to -O2&quot;), _T(&quot;-O&quot;), category);
+    m_Options.AddOption(_(&quot;No optimizations (default)&quot;), _T(&quot;-O0&quot;), category);
+    m_Options.AddOption(_(&quot;Simple optimizations&quot;), _T(&quot;-O1&quot;), category);
+    m_Options.AddOption(_(&quot;Good optimizations&quot;), _T(&quot;-O2&quot;), category);
+    m_Options.AddOption(_(&quot;Aggressive optimizations&quot;), _T(&quot;-O3&quot;), category);
+    m_Options.AddOption(_(&quot;Link-time optimization&quot;), _T(&quot;-O4&quot;), category);
+    m_Options.AddOption(_(&quot;Link-time optimization&quot;), _T(&quot;-O5&quot;), category);
+    // machine dependent options - cpu arch
+    category = _(&quot;CPU architecture tuning (choose none, or only one of these)&quot;);
+    m_Options.AddOption(_(&quot;i386&quot;), _T(&quot;-march=i386&quot;), category);
+    m_Options.AddOption(_(&quot;i486&quot;), _T(&quot;-march=i486&quot;), category);
+    m_Options.AddOption(_(&quot;Intel Pentium&quot;), _T(&quot;-march=i586&quot;), category);
+    m_Options.AddOption(_(&quot;Intel Pentium (MMX)&quot;), _T(&quot;-march=pentium-mmx&quot;), category);
+    m_Options.AddOption(_(&quot;Intel Pentium PRO&quot;), _T(&quot;-march=i686&quot;), category);
+    m_Options.AddOption(_(&quot;Intel Pentium 2 (MMX)&quot;), _T(&quot;-march=pentium2&quot;), category);
+    m_Options.AddOption(_(&quot;Intel Pentium 3 (MMX, SSE)&quot;), _T(&quot;-march=pentium3&quot;), category);
+    m_Options.AddOption(_(&quot;Intel Pentium 4 (MMX, SSE, SSE2)&quot;), _T(&quot;-march=pentium4&quot;), category);
+    m_Optio
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">afb 2010-08-28 21:42:58</div>

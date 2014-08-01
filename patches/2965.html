@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,178 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/include/cbstyledtextctrl.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/cbstyledtextctrl.h    (revision 6196)</span>
+<span class="gi">+++ src/include/cbstyledtextctrl.h    (working copy)</span>
+<span class="gu">@@ -19,14 +19,20 @@</span>
+         cbStyledTextCtrl(wxWindow* pParent, int id, const wxPoint&amp; pos = wxDefaultPosition, const wxSize&amp; size = wxDefaultSize, long style = 0);
+         virtual ~cbStyledTextCtrl();
+         wxDateTime GetLastFocusTime() const {return m_lastFocusTime;}
+<span class="gi">+        void SetTabSmartJump(bool enable = true) { m_tabSmartJump = enable; }</span>
+<span class="gi">+</span>
+     private:
+         void OnContextMenu(wxContextMenuEvent&amp; event);
+         void OnKillFocus(wxFocusEvent&amp; event);
+         void OnGetFocus(wxFocusEvent&amp; event);
+         void OnGPM(wxMouseEvent&amp; event);
+<span class="gi">+        void OnKeyDown(wxKeyEvent&amp; event);</span>
+<span class="gi">+        void OnKeyUp(wxKeyEvent&amp; event);</span>
+<span class="gi">+        bool AllowTabSmartJump();</span>
+ 
+         wxWindow* m_pParent;
+         wxLongLong m_lastFocusTime;
+<span class="gi">+        bool m_tabSmartJump;</span>
+ 
+         DECLARE_EVENT_TABLE()
+ };
+<span class="gh">Index: src/sdk/cbstyledtextctrl.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbstyledtextctrl.cpp    (revision 6196)</span>
+<span class="gi">+++ src/sdk/cbstyledtextctrl.cpp    (working copy)</span>
+<span class="gu">@@ -18,17 +18,23 @@</span>
+ #include &quot;editorbase.h&quot; // DisplayContextMenu
+ #include &quot;prep.h&quot; // platform::gtk
+ 
+<span class="gi">+static const wxString s_leftBrace(_T(&quot;([{&#39;\&quot;&quot;));</span>
+<span class="gi">+static const wxString s_rightBrace(_T(&quot;)]}&#39;\&quot;&quot;));</span>
+<span class="gi">+</span>
+ BEGIN_EVENT_TABLE(cbStyledTextCtrl, wxScintilla)
+     EVT_CONTEXT_MENU(cbStyledTextCtrl::OnContextMenu)
+     EVT_KILL_FOCUS(cbStyledTextCtrl::OnKillFocus)
+     EVT_MIDDLE_DOWN(cbStyledTextCtrl::OnGPM)
+     EVT_SET_FOCUS(cbStyledTextCtrl::OnGetFocus)
+<span class="gi">+    EVT_KEY_DOWN(cbStyledTextCtrl::OnKeyDown)</span>
+<span class="gi">+    EVT_KEY_UP(cbStyledTextCtrl::OnKeyUp)</span>
+ END_EVENT_TABLE()
+ 
+ cbStyledTextCtrl::cbStyledTextCtrl(wxWindow* pParent, int id, const wxPoint&amp; pos, const wxSize&amp; size, long style)
+     : wxScintilla(pParent, id, pos, size, style),
+     m_pParent(pParent),
+<span class="gd">-    m_lastFocusTime(0L)</span>
+<span class="gi">+    m_lastFocusTime(0L),</span>
+<span class="gi">+    m_tabSmartJump(false)</span>
+ {
+     //ctor
+ }
+<span class="gu">@@ -103,3 +109,115 @@</span>
+         SetSelectionVoid(start, end);
+     }
+ } // end of OnGPM
+<span class="gi">+</span>
+<span class="gi">+void cbStyledTextCtrl::OnKeyDown(wxKeyEvent&amp; event)</span>
+<span class="gi">+{</span>
+<span class="gi">+    int keyCode = event.GetKeyCode();</span>
+<span class="gi">+    switch (keyCode)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        case WXK_TAB:</span>
+<span class="gi">+        {</span>
+<span class="gi">+            if (m_tabSmartJump)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                if (s_rightBrace.Find(GetCharAt(GetCurrentPos())) == wxNOT_FOUND)</span>
+<span class="gi">+                {</span>
+<span class="gi">+                    m_tabSmartJump = false;</span>
+<span class="gi">+                }</span>
+<span class="gi">+                else</span>
+<span class="gi">+                {</span>
+<span class="gi">+                    CharRight();</span>
+<span class="gi">+                    return;</span>
+<span class="gi">+                }</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+<span class="gi">+        break;</span>
+<span class="gi">+</span>
+<span class="gi">+        case WXK_BACK:</span>
+<span class="gi">+        {</span>
+<span class="gi">+            if (m_tabSmartJump)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                const int pos = GetCurrentPos();</span>
+<span class="gi">+                const int index = s_leftBrace.Find(GetCharAt(pos - 1));</span>
+<span class="gi">+                if (index != wxNOT_FOUND &amp;&amp; GetCharAt(pos) == s_rightBrace.GetChar(index))</span>
+<span class="gi">+                {</span>
+<span class="gi">+                    CharRight();</span>
+<span class="gi">+                    DeleteBack();</span>
+<span class="gi">+                }</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+<span class="gi">+        break;</span>
+<span class="gi">+</span>
+<span class="gi">+        case WXK_ESCAPE:</span>
+<span class="gi">+        {</span>
+<span class="gi">+            if (m_tabSmartJump)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                m_tabSmartJump = false;</span>
+<span class="gi">+                CharLeft();</span>
+<span class="gi">+                Tab();</span>
+<span class="gi">+                return;</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+<span class="gi">+        break;</span>
+<span class="gi">+</span>
+<span class="gi">+        case WXK_RETURN:</span>
+<span class="gi">+        {</span>
+<span class="gi">+            m_tabSmartJump = false;</span>
+<span class="gi">+        }</span>
+<span class="gi">+        break;</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+<span class="gi">+    event.Skip();</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+void cbStyledTextCtrl::OnKeyUp(wxKeyEvent&amp; event)</span>
+<span class="gi">+{</span>
+<span class="gi">+    const int keyCode = event.GetKeyCode();</span>
+<span class="gi">+    switch (keyCode)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        case _T(&#39;[&#39;):   // [ {</span>
+<span class="gi">+        case _T(&#39;\&#39;&#39;):  // &#39; &quot;</span>
+<span class="gi">+        case _T(&#39;9&#39;):   // (</span>
+<span class="gi">+        {</span>
+<span class="gi">+            if (!AllowTabSmartJump()) break;</span>
+<span class="gi">+</span>
+<span class="gi">+            wxChar ch = keyCode;</span>
+<span class="gi">+            if (event.ShiftDown())</span>
+<span class="gi">+            {</span>
+<span class="gi">+                if (keyCode == _T(&#39;\&#39;&#39;)) ch = _T(&#39;&quot;&#39;);</span>
+<span class="gi">+                else if (keyCode == _T(&#39;9&#39;)) ch = _T(&#39;(&#39;);</span>
+<span class="gi">+                else if (keyCode == _T(&#39;[&#39;)) ch = _T(&#39;{&#39;);</span>
+<span class="gi">+            }</span>
+<span class="gi">+</span>
+<span class="gi">+            int index = s_leftBrace.Find(ch);</span>
+<span class="gi">+            if (index != wxNOT_FOUND &amp;&amp; GetCharAt(GetCurrentPos()) == s_rightBrace.GetChar(index))</span>
+<span class="gi">+                m_tabSmartJump = true;</span>
+<span class="gi">+            else if (keyCode == _T(&#39;\&#39;&#39;)) // &#39; &quot;</span>
+<span class="gi">+                m_tabSmartJump = false;</span>
+<span class="gi">+        }</span>
+<span class="gi">+        break;</span>
+<span class="gi">+</span>
+<span class="gi">+        case _T(&#39;]&#39;):   // ] }</span>
+<span class="gi">+        case _T(&#39;0&#39;):   // )</span>
+<span class="gi">+        {</span>
+<span class="gi">+            if (!AllowTabSmartJump()) break;</span>
+<span class="gi">+            if (keyCode == _T(&#39;0&#39;) &amp;&amp; !event.ShiftDown()) break;</span>
+<span class="gi">+            m_tabSmartJump = false;</span>
+<span class="gi">+        }</span>
+<span class="gi">+        break;</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+<span class="gi">+    event.Skip();</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+bool cbStyledTextCtrl::AllowTabSmartJump()</span>
+<span class="gi">+{</span>
+<span class="gi">+    int style = GetStyleAt(GetCurrentPos() - 2);</span>
+<span class="gi">+    switch (GetLexer())</span>
+<span class="gi">+    {</span>
+<span class="gi">+        case wxSCI_LEX_CPP:</span>
+<span class="gi">+            return !(style == wxSCI_C_STRING || style == wxSCI_C_CHARACTER);</span>
+<span class="gi">+        case wxSCI_LEX_D:</span>
+<span class="gi">+            return !(style == wxSCI_D_STRING || style == wxSCI_D_CHARACTER);</span>
+<span class="gi">+    }</span>
+<span class="gi">+    return false;</span>
+<span class="gi">+}</span>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">loaden 2010-03-29 01:16:11</div>

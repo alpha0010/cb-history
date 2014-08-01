@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,114 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/DoxyBlocks/ChangeLog.txt</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/DoxyBlocks/ChangeLog.txt    (revision 7025)</span>
+<span class="gi">+++ src/plugins/contrib/DoxyBlocks/ChangeLog.txt    (working copy)</span>
+<span class="gu">@@ -1,3 +1,10 @@</span>
+<span class="gi">+06 February 2011</span>
+<span class="gi">+   released version 1.7.655 of DoxyBlocks</span>
+<span class="gi">+</span>
+<span class="gi">+     Change log:</span>
+<span class="gi">+        -Fixed: Hard coded doxygen directory name.</span>
+<span class="gi">+        -Updated: Directory creation code.</span>
+<span class="gi">+</span>
+ 02 February 2011
+    released version 1.6.613 of DoxyBlocks
+ 
+<span class="gh">Index: src/plugins/contrib/DoxyBlocks/ConfigPanel.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/DoxyBlocks/ConfigPanel.cpp    (revision 7025)</span>
+<span class="gi">+++ src/plugins/contrib/DoxyBlocks/ConfigPanel.cpp    (working copy)</span>
+<span class="gu">@@ -1,987 +1,987 @@</span>
+<span class="gd">-/**************************************************************************//**</span>
+<span class="gd">- * \file        ConfigPanel.cpp</span>
+<span class="gd">- * \author    Gary Harris</span>
+<span class="gd">- * \date        01-02-2010</span>
+<span class="gd">- *</span>
+<span class="gd">- * DoxyBlocks - doxygen integration for Code::Blocks.                    \n</span>
+<span class="gd">- * Copyright (C) 2010 Gary Harris.</span>
+<span class="gd">- *</span>
+<span class="gd">- * This program is free software: you can redistribute it and/or modify</span>
+<span class="gd">- * it under the terms of the GNU General Public License as published by</span>
+<span class="gd">- * the Free Software Foundation, either version 3 of the License, or</span>
+<span class="gd">- * (at your option) any later version.</span>
+<span class="gd">- *</span>
+<span class="gd">- * This program is distributed in the hope that it will be useful,</span>
+<span class="gd">- * but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="gd">- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="gd">- * GNU General Public License for more details.</span>
+<span class="gd">- *</span>
+<span class="gd">- * You should have received a copy of the GNU General Public License</span>
+<span class="gd">- * along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</span>
+<span class="gd">- *</span>
+<span class="gd">- *****************************************************************************/</span>
+<span class="gd">-#include &quot;ConfigPanel.h&quot;</span>
+<span class="gd">-#include &lt;sdk.h&gt; // Code::Blocks SDK</span>
+<span class="gd">-</span>
+<span class="gd">-//(*InternalHeaders(ConfigPanel)</span>
+<span class="gd">-#include &lt;wx/intl.h&gt;</span>
+<span class="gd">-#include &lt;wx/string.h&gt;</span>
+<span class="gd">-//*)</span>
+<span class="gd">-#include &lt;wx/filedlg.h&gt;</span>
+<span class="gd">-#include &lt;editorcolourset.h&gt;</span>
+<span class="gd">-#include &lt;editormanager.h&gt;</span>
+<span class="gd">-#include &quot;configmanager.h&quot;</span>
+<span class="gd">-#include &lt;wx/fontutil.h&gt;</span>
+<span class="gd">-#include &quot;tinyxml/tinyxml.h&quot;</span>
+<span class="gd">-#include &quot;version.h&quot;</span>
+<span class="gd">-</span>
+<span class="gd">-</span>
+<span class="gd">-//(*IdInit(ConfigPanel)</span>
+<span class="gd">-const long ConfigPanel::ID_RADIOBOX_BLOCKCOMMENTS = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_TEXTCTRL_BLOCKCOMMENT = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_RADIOBOX_LINECOMMENTS = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_TEXTCTRL_LINECOMMENT = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_PANEL2 = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_STATICTEXT1 = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_TEXTCTRL_PROJECTNUMBER = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_USEAUTOVERSION = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_STATICTEXT8 = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_TEXTCTRLOUTPUT_DIRECTORY = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_STATICTEXT5 = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHOICE_OUTPUT_LANGUAGE = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_EXTRACT_ALL = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_EXTRACTPRIVATE = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_EXTRACTSTATIC = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_WARNINGS = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_WARN_IF_DOC_ERROR = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_WARN_IF_UNDOCUMENTED = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_WARN_NO_PARAMDOC = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_ALPHABETICAL_INDEX = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_PANEL3 = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_GENERATE_HTML = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_GENERATE_HTMLHELP = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_GENERATE_CHI = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_BINARY_TOC = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_GENERATE_LATEX = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_GENERATE_RTF = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_GENERATE_MAN = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_GENERATE_XML = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_GENERATE_AUTOGEN_DEF = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_GENERATE_PERLMOD = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_ENABLE_PREPROCESSING = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_CLASS_DIAGRAMS = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_CHECKBOX_HAVE_DOT = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_PANEL4 = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_STATICTEXT2 = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_TEXTCTRL_PATHDOXYGEN = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_BUTTON_BROWSEDOXYGEN = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_STATICTEXT4 = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_TEXTCTRL_PATHDOXYWIZARD = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_BUTTON_BROWSEDOXYWIZARD = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_STATICTEXT3 = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_TEXTCTRL_PATHHHC = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_BUTTON_BROWSEHHC = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_STATICTEXT6 = wxNewId();</span>
+<span class="gd">-const long ConfigPanel::ID_TEXTCTRL_P</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">cryogen 2011-02-06 22:32:07</div>

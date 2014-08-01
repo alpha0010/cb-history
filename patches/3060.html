@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,81 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsfindreplacedialog.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsfindreplacedialog.h    (revision 6575)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsfindreplacedialog.h    (working copy)</span>
+<span class="gu">@@ -23,7 +23,9 @@</span>
+ 
+ #include &quot;../wxstool.h&quot;
+ 
+<span class="gd">-/** \brief Class for wxFindReplaceDialog dialogue. */</span>
+<span class="gi">+/** \brief Class for wxFindReplaceDialog dialogue.</span>
+<span class="gi">+    \note In order for events to connect properly you must set the ID of your wxFindReplaceDialog to -1 in wxSmith.</span>
+<span class="gi">+*/</span>
+ class wxsFindReplaceDialog: public wxsTool
+ {
+     public:
+<span class="gh">Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsrichtextformattingdialog.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsrichtextformattingdialog.cpp    (revision 6575)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsrichtextformattingdialog.cpp    (working copy)</span>
+<span class="gu">@@ -96,9 +96,9 @@</span>
+             }
+ 
+             #if wxCHECK_VERSION(2, 9, 0)
+<span class="gd">-            Codef(_T(&quot;%C(%s, %W, %t, %I, %P, %S, %T);\n&quot;), sFlags.wx_str(), m_sTitle.wx_str());</span>
+<span class="gi">+            Codef(_T(&quot;%C(%s, %W, %t, %I, %P, %S);\n&quot;), sFlags.wx_str(), m_sTitle.wx_str());</span>
+             #else
+<span class="gd">-            Codef(_T(&quot;%C(%s, %W, %t, %I, %P, %S, %T);\n&quot;), sFlags.c_str(), m_sTitle.c_str());</span>
+<span class="gi">+            Codef(_T(&quot;%C(%s, %W, %t, %I, %P, %S);\n&quot;), sFlags.c_str(), m_sTitle.c_str());</span>
+             #endif
+ 
+             BuildSetupWindowCode();
+<span class="gh">Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsrichtextstyleorganiserdialog.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsrichtextstyleorganiserdialog.cpp    (revision 6575)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsrichtextstyleorganiserdialog.cpp    (working copy)</span>
+<span class="gu">@@ -87,6 +87,7 @@</span>
+ void wxsRichTextStyleOrganiserDialog::OnBuildCreatingCode()
+ {
+     wxString sFlags;
+<span class="gi">+    wxString sStyleSheetName = GetCoderContext()-&gt;GetUniqueName(_T(&quot;richTextStyleSheet&quot;));</span>
+     switch(GetLanguage())
+     {
+         case wxsCPP:
+<span class="gu">@@ -105,17 +106,25 @@</span>
+             }
+ 
+             #if wxCHECK_VERSION(2, 9, 0)
+<span class="gd">-            Codef(_T(&quot;%C(%s, NULL, NULL, %W, %I, %t, &quot;)</span>
+<span class="gi">+            AddDeclaration(wxString::Format(wxT(&quot;wxRichTextStyleSheet  *%s;&quot;), sStyleSheetName.wx_str()));</span>
+<span class="gi">+            Codef(_T(&quot;\t%s = new wxRichTextStyleSheet;\n&quot;), sStyleSheetName.wx_str());</span>
+<span class="gi">+            #else</span>
+<span class="gi">+            AddDeclaration(wxString::Format(wxT(&quot;wxRichTextStyleSheet  *%s;&quot;), sStyleSheetName.c_str()));</span>
+<span class="gi">+            Codef(_T(&quot;\t%s = new wxRichTextStyleSheet;\n&quot;), sStyleSheetName.c_str());</span>
+<span class="gi">+            #endif</span>
+<span class="gi">+</span>
+<span class="gi">+            #if wxCHECK_VERSION(2, 9, 0)</span>
+<span class="gi">+            Codef(_T(&quot;%C(%s, %s, NULL, %W, %I, %t, &quot;)</span>
+                             wxT(&quot;SYMBOL_WXRICHTEXTSTYLEORGANISERDIALOG_POSITION, &quot;)
+                             wxT(&quot;SYMBOL_WXRICHTEXTSTYLEORGANISERDIALOG_SIZE, &quot;)
+                             wxT(&quot;SYMBOL_WXRICHTEXTSTYLEORGANISERDIALOG_STYLE);\n&quot;),
+<span class="gd">-                            sFlags.wx_str(), m_sCaption.wx_str());</span>
+<span class="gi">+                            sFlags.wx_str(), sStyleSheetName.wx_str(), m_sCaption.wx_str());</span>
+             #else
+<span class="gd">-            Codef(_T(&quot;%C(%s, NULL, NULL, %W, %I, %t, &quot;)</span>
+<span class="gi">+            Codef(_T(&quot;%C(%s, %s, NULL, %W, %I, %t, &quot;)</span>
+                             wxT(&quot;SYMBOL_WXRICHTEXTSTYLEORGANISERDIALOG_POSITION, &quot;)
+                             wxT(&quot;SYMBOL_WXRICHTEXTSTYLEORGANISERDIALOG_SIZE, &quot;)
+                             wxT(&quot;SYMBOL_WXRICHTEXTSTYLEORGANISERDIALOG_STYLE);\n&quot;),
+<span class="gd">-                            sFlags.c_str(), m_sCaption.c_str());</span>
+<span class="gi">+                            sFlags.c_str(), sStyleSheetName.c_str(), m_sCaption.c_str());</span>
+             #endif
+ 
+             BuildSetupWindowCode();
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">cryogen 2010-09-12 04:25:39</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,120 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/scripting/bindings/scriptbindings.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/scripting/bindings/scriptbindings.cpp    (revision 3557)</span>
+<span class="gi">+++ src/sdk/scripting/bindings/scriptbindings.cpp    (arbetskopia)</span>
+<span class="gu">@@ -557,6 +557,56 @@</span>
+                 func(&amp;cbEditor::AutoComplete, &quot;AutoComplete&quot;).
+                 func(&amp;cbEditor::AddBreakpoint, &quot;AddBreakpoint&quot;).
+                 func(&amp;cbEditor::RemoveBreakpoint, &quot;RemoveBreakpoint&quot;).
+<span class="gi">+</span>
+<span class="gi">+                // Exposing the wxScintilla API below</span>
+<span class="gi">+                func(&amp;cbEditor::BeginUndoAct, &quot;BeginUndoAct&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::EndUndoAct, &quot;EndUndoAct&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::Insert, &quot;Insert&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::GetSelText, &quot;GetSelText&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::GetLineText, &quot;GetLineText&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::GetChar, &quot;GetChar&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::GetCharRel, &quot;GetCharRel&quot;).</span>
+<span class="gi">+                </span>
+<span class="gi">+                func(&amp;cbEditor::MatchBrace, &quot;MatchBrace&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::GotoMatchBrace, &quot;GotoMatchBrace&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::GetStyle, &quot;GetStyle&quot;).</span>
+<span class="gi">+</span>
+<span class="gi">+                func(&amp;cbEditor::GetCurLine, &quot;GetCurLine&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::GetCurCol, &quot;GetCurCol&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::GetCurPos, &quot;GetCurPos&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::SetCurLine, &quot;SetCurLine&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::SetCurCol, &quot;SetCurCol&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::SetCurPos, &quot;SetCurPos&quot;).</span>
+<span class="gi">+</span>
+<span class="gi">+                func(&amp;cbEditor::SetSearchFlags, &quot;SetSearchFlags&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::GetSearchFlags, &quot;GetSearchFlags&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::SetTargetStart, &quot;SetTargetStart&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::GetTargetStart, &quot;GetTargetStart&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::SetTargetEnd, &quot;SetTargetEnd&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::GetTargetEnd, &quot;GetTargetEnd&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::ReplaceTarget, &quot;ReplaceTarget&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::ReplaceTargetRE, &quot;ReplaceTargetRE&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::SearchInTarget, &quot;SearchInTarget&quot;).</span>
+<span class="gi">+</span>
+<span class="gi">+                func(&amp;cbEditor::Find, &quot;Find&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::GetLastFindLen, &quot;GetLastFindLen&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::SearchAnchor, &quot;SearchAnchor&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::SearchNext, &quot;SearchNext&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::SearchPrev, &quot;SearchPrev&quot;).</span>
+<span class="gi">+</span>
+<span class="gi">+                func(&amp;cbEditor::GetLine, &quot;GetLine&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::InsertText, &quot;InsertText&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::GetCharAtPos, &quot;GetCharAtPos&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::GotoPos, &quot;GotoPos&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::SetAnchor, &quot;SetAnchor&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::GetAnchor, &quot;GetAnchor&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::GetStyleAt, &quot;GetStyleAt&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::GetLength, &quot;GetLength&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::PosFromLine, &quot;PosFromLine&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::LineFromPos, &quot;LineFromPos&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::ScrollToLine, &quot;ScrollToLine&quot;).</span>
+<span class="gi">+                func(&amp;cbEditor::SendMsg, &quot;SendMsg&quot;).</span>
+<span class="gi">+</span>
+                 // these are not present in cbEditor; included to help scripts edit text
+                 staticFuncVarArgs(&amp;cbEditor_SetText, &quot;SetText&quot;, &quot;*&quot;).
+                 staticFuncVarArgs(&amp;cbEditor_GetText, &quot;GetText&quot;, &quot;*&quot;);
+<span class="gh">Index: src/sdk/cbeditor.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.h    (revision 3557)</span>
+<span class="gi">+++ src/sdk/cbeditor.h    (arbetskopia)</span>
+<span class="gu">@@ -296,6 +296,69 @@</span>
+ 
+         /// Apply the editor defaults to any (possibly foreign) cbStyledTextCtrl.
+         static void ApplyStyles(cbStyledTextCtrl* control);
+<span class="gi">+</span>
+<span class="gi">+</span>
+<span class="gi">+        // Additional wxScintilla API, expose to Squirrel, Arne Steinarson, 2007-01-15</span>
+<span class="gi">+        </span>
+<span class="gi">+        // This collection of functions are &#39;relative&#39;, they don&#39;t take position arguments</span>
+<span class="gi">+        // but work mostly like the keyboard.</span>
+<span class="gi">+        void BeginUndoAct();</span>
+<span class="gi">+        void EndUndoAct();</span>
+<span class="gi">+</span>
+<span class="gi">+        void Insert(const wxString&amp; text);</span>
+<span class="gi">+</span>
+<span class="gi">+        wxString GetSelText();</span>
+<span class="gi">+        wxString GetLineText();</span>
+<span class="gi">+</span>
+<span class="gi">+        int GetChar();</span>
+<span class="gi">+        int GetCharRel( int dcol );    // dcol is offset from current column</span>
+<span class="gi">+        </span>
+<span class="gi">+        int MatchBrace();</span>
+<span class="gi">+        int GotoMatchBrace();</span>
+<span class="gi">+        </span>
+<span class="gi">+        int GetStyle();</span>
+<span class="gi">+        </span>
+<span class="gi">+        // Functions that are not relative</span>
+<span class="gi">+        int GetCurLine();</span>
+<span class="gi">+        int GetCurCol();</span>
+<span class="gi">+        int GetCurPos();</span>
+<span class="gi">+        void SetCurLine( int line );</span>
+<span class="gi">+        void SetCurCol( int col );</span>
+<span class="gi">+        void SetCurPos( int pos );</span>
+<span class="gi">+</span>
+<span class="gi">+        // Functions for search/replace</span>
+<span class="gi">+        void SetSearchFlags(int flags);</span>
+<span class="gi">+        int GetSearchFlags();</span>
+<span class="gi">+        void SetTargetStart(int pos);</span>
+<span class="gi">+        int GetTargetStart();</span>
+<span class="gi">+        void SetTargetEnd(int pos);</span>
+<span class="gi">+        int GetTargetEnd();</span>
+<span class="gi">+        int ReplaceTarget(const wxString &amp;text);</span>
+<span class="gi">+        int ReplaceTargetRE(const wxString &amp;text);</span>
+<span class="gi">+        int SearchInTarget(const wxString &amp;text);</span>
+<span class="gi">+        </span>
+<span class="gi">+        // Returns only</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

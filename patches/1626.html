@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,88 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gd">--- src/plugins/contrib/source_exporter//wxPdfDocument/src/pdfimage.cpp.orig    2006-11-05 23:17:39.000000000 +0100</span>
+<span class="gi">+++ src/plugins/contrib/source_exporter//wxPdfDocument/src/pdfimage.cpp    2006-11-06 01:13:16.000000000 +0100</span>
+<span class="gu">@@ -572,30 +572,53 @@</span>
+   m_dataSize = 0;
+   m_data     = NULL;
+ 
+<span class="gi">+#if wxCHECK_VERSION(2, 7, 0)</span>
+<span class="gi">+  wxGIFDecoder gif;</span>
+<span class="gi">+  if (!gif.CanRead(*imageStream))</span>
+<span class="gi">+#else</span>
+   wxGIFDecoder gif(imageStream);
+   if (!gif.CanRead())
+<span class="gi">+#endif</span>
+   {
+     wxLogDebug(_T(&quot;wxPdfImage::ParseGIF: &#39;%s&#39; not a GIF file.&quot;), m_name.c_str());
+     return false;
+   }
+ 
+<span class="gi">+#if wxCHECK_VERSION(2, 7, 0)</span>
+<span class="gi">+  if (gif.LoadGIF(*imageStream) != wxGIF_OK)</span>
+<span class="gi">+#else</span>
+   if (gif.ReadGIF() != wxGIF_OK)
+<span class="gi">+#endif</span>
+   {
+     wxLogDebug(_T(&quot;wxPdfImage::ParseGIF: Invalid GIF file &#39;%s&#39;.&quot;), m_name.c_str());
+     return false;
+   }
+ 
+   isValid = true;
+<span class="gi">+#if wxCHECK_VERSION(2, 7, 0)</span>
+<span class="gi">+  wxSize size = gif.GetFrameSize(0);</span>
+<span class="gi">+  m_width = size.GetWidth();</span>
+<span class="gi">+  m_height = size.GetHeight();</span>
+<span class="gi">+#else</span>
+   m_width = gif.GetWidth();
+   m_height = gif.GetHeight();
+<span class="gi">+#endif</span>
+   m_cs = _T(&quot;Indexed&quot;);
+   m_bpc    = 8;
+ 
+   m_palSize  = 768;
+   m_pal = new char[m_palSize];
+<span class="gi">+#if wxCHECK_VERSION(2, 7, 0)</span>
+<span class="gi">+  memcpy(m_pal,gif.GetPalette(0),m_palSize);</span>
+<span class="gi">+#else</span>
+   memcpy(m_pal,gif.GetPalette(),m_palSize);
+<span class="gi">+#endif</span>
+ 
+<span class="gi">+#if wxCHECK_VERSION(2, 7, 0)</span>
+<span class="gi">+  int trns = gif.GetTransparentColourIndex(0);</span>
+<span class="gi">+#else</span>
+   int trns = gif.GetTransparentColour();
+<span class="gi">+#endif</span>
+   if (trns != -1)
+   {
+     m_trnsSize = 3;
+<span class="gu">@@ -611,7 +634,11 @@</span>
+     m_f = _T(&quot;FlateDecode&quot;);
+     wxMemoryOutputStream* p = new wxMemoryOutputStream();
+     wxZlibOutputStream q(*p);
+<span class="gi">+#if wxCHECK_VERSION(2, 7, 0)</span>
+<span class="gi">+    q.Write(gif.GetData(0),m_dataSize);</span>
+<span class="gi">+#else</span>
+     q.Write(gif.GetData(),m_dataSize);
+<span class="gi">+#endif</span>
+     q.Close();
+     m_dataSize = p-&gt;TellO();
+     m_data = new char[m_dataSize];
+<span class="gu">@@ -622,7 +649,11 @@</span>
+   {
+     m_f = _T(&quot;&quot;);
+     m_data = new char[m_dataSize];
+<span class="gi">+#if wxCHECK_VERSION(2, 7, 0)</span>
+<span class="gi">+    memcpy(m_data,gif.GetData(0),m_dataSize);</span>
+<span class="gi">+#else</span>
+     memcpy(m_data,gif.GetData(),m_dataSize);
+<span class="gi">+#endif</span>
+   }
+ 
+   return isValid;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">ceniza 2006-11-08 21:50:35</div>

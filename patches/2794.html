@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,118 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/wxSmithContribItems/wxchart/wxschart.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmithContribItems/wxchart/wxschart.cpp    (revision 5693)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmithContribItems/wxchart/wxschart.cpp    (working copy)</span>
+<span class="gu">@@ -195,9 +211,18 @@</span>
+ 
+ void wxsChart::OnAddExtraProperties(wxsPropertyGridManager* Grid)
+ {
+<span class="gi">+    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)</span>
+<span class="gi">+    Grid-&gt;SelectPage(0);</span>
+<span class="gi">+    #else</span>
+     Grid-&gt;SetTargetPage(0);
+<span class="gi">+    #endif</span>
+ 
+<span class="gi">+</span>
+<span class="gi">+    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)</span>
+<span class="gi">+    m_ChartPointsCountId = Grid-&gt;Append(new wxIntProperty(_(&quot;Number of data sets&quot;),wxPG_LABEL,</span>
+<span class="gi">+    #else</span>
+     m_ChartPointsCountId = Grid-&gt;Append(wxIntProperty(_(&quot;Number of data sets&quot;),wxPG_LABEL,
+<span class="gi">+    #endif</span>
+                                                       (int)m_ChartPointsDesc.Count()));
+ 
+     for ( int i=0; i&lt;(int)m_ChartPointsDesc.Count(); i++ )
+<span class="gu">@@ -210,7 +235,11 @@</span>
+ 
+ void wxsChart::OnExtraPropertyChanged(wxsPropertyGridManager* Grid,wxPGId Id)
+ {
+<span class="gi">+    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)</span>
+<span class="gi">+    Grid-&gt;SelectPage(0);</span>
+<span class="gi">+    #else</span>
+     Grid-&gt;SetTargetPage(0);
+<span class="gi">+    #endif</span>
+ 
+     if ( Id == m_ChartPointsCountId )
+     {
+<span class="gu">@@ -237,7 +266,11 @@</span>
+             // We have to remove some entries
+             for ( int i=NewValue; i&lt;OldValue; i++ )
+             {
+<span class="gi">+                #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)</span>
+<span class="gi">+                Grid-&gt;DeleteProperty(m_ChartPointsDesc[i]-&gt;Id);</span>
+<span class="gi">+                #else</span>
+                 Grid-&gt;Delete(m_ChartPointsDesc[i]-&gt;Id);
+<span class="gi">+                #endif</span>
+                 delete m_ChartPointsDesc[i];
+             }
+ 
+<span class="gu">@@ -344,7 +348,11 @@</span>
+     ChartPointsDesc* Desc = m_ChartPointsDesc[Position];
+     wxString SetName = wxString::Format(_(&quot;Set %d&quot;),Position+1);
+ 
+<span class="gi">+    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)</span>
+<span class="gi">+    Desc-&gt;Id = Grid-&gt;Append(new wxParentProperty(SetName,wxPG_LABEL));</span>
+<span class="gi">+    #else</span>
+     Desc-&gt;Id = Grid-&gt;Append(wxParentProperty(SetName,wxPG_LABEL));
+<span class="gi">+    #endif</span>
+ 
+     static const wxChar* Types[] =
+     {
+<span class="gu">@@ -359,9 +367,15 @@</span>
+         Bar, Bar3D, Pie, Pie3D, Points, Points3D, Line, Line3D, Area, Area3D
+     };
+ 
+<span class="gi">+    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)</span>
+<span class="gi">+    Desc-&gt;TypeId = Grid-&gt;AppendIn(Desc-&gt;Id,new wxEnumProperty(_(&quot;Type&quot;),wxPG_LABEL,Types,Values,Desc-&gt;Type));</span>
+<span class="gi">+    Desc-&gt;NameId = Grid-&gt;AppendIn(Desc-&gt;Id,new wxStringProperty(_(&quot;Name&quot;),wxPG_LABEL,Desc-&gt;Name));</span>
+<span class="gi">+    Desc-&gt;PointsCountId = Grid-&gt;AppendIn(Desc-&gt;Id,new wxIntProperty(_(&quot;Number of points&quot;),wxPG_LABEL,(int)Desc-&gt;Points.Count()));</span>
+<span class="gi">+    #else</span>
+     Desc-&gt;TypeId = Grid-&gt;AppendIn(Desc-&gt;Id,wxEnumProperty(_(&quot;Type&quot;),wxPG_LABEL,Types,Values,Desc-&gt;Type));
+     Desc-&gt;NameId = Grid-&gt;AppendIn(Desc-&gt;Id,wxStringProperty(_(&quot;Name&quot;),wxPG_LABEL,Desc-&gt;Name));
+     Desc-&gt;PointsCountId = Grid-&gt;AppendIn(Desc-&gt;Id,wxIntProperty(_(&quot;Number of points&quot;),wxPG_LABEL,(int)Desc-&gt;Points.Count()));
+<span class="gi">+    #endif</span>
+ 
+     for ( int i=0; i&lt;(int)Desc-&gt;Points.Count(); i++ )
+     {
+<span class="gu">@@ -415,7 +458,11 @@</span>
+         {
+             for ( int i=NewValue; i&lt;OldValue; i++ )
+             {
+<span class="gi">+                #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)</span>
+<span class="gi">+                Grid-&gt;DeleteProperty((Desc-&gt;Points[i])-&gt;Id);</span>
+<span class="gi">+                #else</span>
+                 Grid-&gt;Delete((Desc-&gt;Points[i])-&gt;Id);
+<span class="gi">+                #endif</span>
+                 delete Desc-&gt;Points[i];
+             }
+ 
+<span class="gu">@@ -451,10 +465,17 @@</span>
+     PointDesc* Desc = SetDesc-&gt;Points[Position];
+     wxString Name = wxString::Format(_(&quot;Point %d&quot;),Position+1);
+ 
+<span class="gi">+    #if wxCHECK_VERSION(2, 9, 0) || wxCHECK_PROPGRID_VERSION(1, 4, 0)</span>
+<span class="gi">+    Desc-&gt;Id = Grid-&gt;AppendIn(SetDesc-&gt;Id,new wxParentProperty(Name,wxPG_LABEL));</span>
+<span class="gi">+    Desc-&gt;NameId = Grid-&gt;AppendIn(Desc-&gt;Id,new wxStringProperty(_(&quot;Name&quot;),wxPG_LABEL,Desc-&gt;Name));</span>
+<span class="gi">+    Desc-&gt;XId = Grid-&gt;AppendIn(Desc-&gt;Id,new wxStringProperty(_(&quot;X&quot;),wxPG_LABEL,wxString::Format(_T(&quot;%lf&quot;),Desc-&gt;X)));</span>
+<span class="gi">+    Desc-&gt;YId = Grid-&gt;AppendIn(Desc-&gt;Id,new wxStringProperty(_(&quot;Y&quot;),wxPG_LABEL,wxString::Format(_T(&quot;%lf&quot;),Desc-&gt;Y)));</span>
+<span class="gi">+    #else</span>
+     Desc-&gt;Id = Grid-&gt;AppendIn(SetDesc-&gt;Id,wxParentProperty(Name,wxPG_LABEL));
+     Desc-&gt;NameId = Grid-&gt;AppendIn(Desc-&gt;Id,wxStringProperty(_(&quot;Name&quot;),wxPG_LABEL,Desc-&gt;Name));
+     Desc-&gt;XId = Grid-&gt;AppendIn(Desc-&gt;Id,wxStringProperty(_(&quot;X&quot;),wxPG_LABEL,wxString::Format(_T(&quot;%lf&quot;),Desc-&gt;X)));
+     Desc-&gt;YId = Grid-&gt;AppendIn(Desc-&gt;Id,wxStringProperty(_(&quot;Y&quot;),wxPG_LABEL,wxString::Format(_T(&quot;%lf&quot;),Desc-&gt;Y)));
+<span class="gi">+    #endif</span>
+ }
+ 
+ bool wxsChart::HandleChangeInPoint(wxsPropertyGridManager* Grid,wxPGId Id,ChartPointsDesc* SetDesc,int Position,bool Global)
+<span class="gh">Index: src/plugins/contrib/wxSmithAui/wxAuiManager/wxsAuiPaneInfoProperty.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmithAui/wxAuiManager/wxsAuiPaneInfoProperty.cpp    (revision 5693)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmithAui/wxAuiManager/wxsAuiPaneInfoProp</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">stahta01 2009-07-23 05:46:44</div>

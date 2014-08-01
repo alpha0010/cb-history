@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,59 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 3851)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -1960,7 +1960,7 @@</span>
+ 
+         menu-&gt;Enable(idUndo, control-&gt;CanUndo());
+         menu-&gt;Enable(idRedo, control-&gt;CanRedo());
+<span class="gd">-        menu-&gt;Enable(idCut, !control-&gt;GetReadOnly());</span>
+<span class="gi">+        menu-&gt;Enable(idCut, !control-&gt;GetReadOnly() &amp;&amp; hasSel);</span>
+         menu-&gt;Enable(idCopy, hasSel);
+ 
+         if(platform::gtk) // a wxGTK bug causes the triggering of unexpected events
+<span class="gh">Index: src/src/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/main.cpp    (revision 3851)</span>
+<span class="gi">+++ src/src/main.cpp    (working copy)</span>
+<span class="gu">@@ -3306,11 +3306,11 @@</span>
+         canCut = !eb-&gt;IsReadOnly();
+     }
+ 
+<span class="gd">-    mbar-&gt;Enable(idEditUndo, eb &amp;&amp; canUndo);</span>
+<span class="gd">-    mbar-&gt;Enable(idEditRedo, eb &amp;&amp; canRedo);</span>
+<span class="gd">-    mbar-&gt;Enable(idEditCut, eb &amp;&amp; canCut);</span>
+<span class="gd">-    mbar-&gt;Enable(idEditCopy, eb &amp;&amp; hasSel);</span>
+<span class="gd">-    mbar-&gt;Enable(idEditPaste, eb &amp;&amp; canPaste);</span>
+<span class="gi">+    mbar-&gt;Enable(idEditUndo, canUndo);</span>
+<span class="gi">+    mbar-&gt;Enable(idEditRedo, canRedo);</span>
+<span class="gi">+    mbar-&gt;Enable(idEditCut, canCut &amp;&amp; hasSel);</span>
+<span class="gi">+    mbar-&gt;Enable(idEditCopy, hasSel);</span>
+<span class="gi">+    mbar-&gt;Enable(idEditPaste, canPaste);</span>
+     mbar-&gt;Enable(idEditSwapHeaderSource, ed);
+     mbar-&gt;Enable(idEditGotoMatchingBrace, ed);
+     mbar-&gt;Enable(idEditHighlightMode, ed);
+<span class="gu">@@ -3355,11 +3355,11 @@</span>
+ 
+     if (m_pToolbar)
+     {
+<span class="gd">-        m_pToolbar-&gt;EnableTool(idEditUndo, eb &amp;&amp; canUndo);</span>
+<span class="gd">-        m_pToolbar-&gt;EnableTool(idEditRedo, eb &amp;&amp; canRedo);</span>
+<span class="gd">-        m_pToolbar-&gt;EnableTool(idEditCut, eb &amp;&amp; canCut);</span>
+<span class="gd">-        m_pToolbar-&gt;EnableTool(idEditCopy, eb &amp;&amp; hasSel);</span>
+<span class="gd">-        m_pToolbar-&gt;EnableTool(idEditPaste, eb &amp;&amp; canPaste);</span>
+<span class="gi">+        m_pToolbar-&gt;EnableTool(idEditUndo, canUndo);</span>
+<span class="gi">+        m_pToolbar-&gt;EnableTool(idEditRedo, canRedo);</span>
+<span class="gi">+        m_pToolbar-&gt;EnableTool(idEditCut, canCut &amp;&amp; hasSel);</span>
+<span class="gi">+        m_pToolbar-&gt;EnableTool(idEditCopy, hasSel);</span>
+<span class="gi">+        m_pToolbar-&gt;EnableTool(idEditPaste, canPaste);</span>
+     }
+ 
+     event.Skip();
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">pauliusz 2007-04-13 07:49:13</div>

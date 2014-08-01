@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,124 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/wxSmith/wxwidgets/wxwidgetsguiconfigpanel.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/wxwidgets/wxwidgetsguiconfigpanel.cpp    (revision 3669)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/wxwidgets/wxwidgetsguiconfigpanel.cpp    (working copy)</span>
+<span class="gu">@@ -144,7 +144,11 @@</span>
+         _(&quot;XRC files (*.xrc)|*.xrc|&quot;
+           &quot;Zipped files (*.zip)|*.zip|&quot;
+           &quot;All files (*)|*&quot;),
+<span class="gd">-        wxOPEN|wxFILE_MUST_EXIST|wxHIDE_READONLY);</span>
+<span class="gi">+        wxOPEN | wxFILE_MUST_EXIST</span>
+<span class="gi">+#if WXWIN_COMPATIBILITY_2_4</span>
+<span class="gi">+        | wxHIDE_READONLY</span>
+<span class="gi">+#endif</span>
+<span class="gi">+    );</span>
+
+     if ( !FileName.empty() )
+     {
+<span class="gh">Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxssplitterwindow.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxssplitterwindow.cpp    (revision 3669)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxssplitterwindow.cpp    (working copy)</span>
+<span class="gu">@@ -58,7 +58,9 @@</span>
+         WXS_ST(wxSP_3D)
+         WXS_ST(wxSP_3DSASH)
+         WXS_ST(wxSP_3DBORDER)
+<span class="gi">+#if WXWIN_COMPATIBILITY_2_6</span>
+         WXS_ST(wxSP_FULLSASH)
+<span class="gi">+#endif</span>
+         WXS_ST(wxSP_BORDER)
+         WXS_ST(wxSP_NOBORDER)
+         WXS_ST(wxSP_PERMIT_UNSPLIT)
+<span class="gh">Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstextctrl.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstextctrl.cpp    (revision 3669)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxstextctrl.cpp    (working copy)</span>
+<span class="gu">@@ -56,7 +56,12 @@</span>
+     //    WXS_ST(wxTE_DONTWRAP)
+
+     // Not in Help file but in XRC file, assume applying to all platform
+<span class="gi">+</span>
+<span class="gi">+#if WXWIN_COMPATIBILITY_2_6</span>
+         WXS_ST(wxTE_LINEWRAP)
+<span class="gi">+#else</span>
+<span class="gi">+        WXS_ST(wxTE_CHARWRAP)</span>
+<span class="gi">+#endif // WXWIN_COMPATIBILITY_2_6</span>
+     WXS_ST_END()
+
+
+<span class="gh">Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsdialog.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsdialog.cpp    (revision 3669)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsdialog.cpp    (working copy)</span>
+<span class="gu">@@ -32,13 +32,13 @@</span>
+         WXS_ST(wxSTAY_ON_TOP)
+         WXS_ST(wxCAPTION)
+         WXS_ST(wxDEFAULT_DIALOG_STYLE)
+<span class="gd">-        WXS_ST(wxTHICK_FRAME)</span>
+<span class="gi">+     //   WXS_ST(wxTHICK_FRAME)// replaced by wxRESIZE_BORDER in 2.6</span>
+         WXS_ST(wxSYSTEM_MENU)
+         WXS_ST(wxRESIZE_BORDER)
+<span class="gd">-        WXS_ST(wxRESIZE_BOX)</span>
+<span class="gi">+     //   WXS_ST(wxRESIZE_BOX) // replaced by wxMAXIMIZE_BOX in 2.6</span>
+         WXS_ST(wxCLOSE_BOX)
+<span class="gd">-        WXS_ST(wxDIALOG_MODAL)</span>
+<span class="gd">-        WXS_ST(wxDIALOG_MODELESS)</span>
+<span class="gi">+     //   WXS_ST(wxDIALOG_MODAL)    // removed in 2.6</span>
+<span class="gi">+     //   WXS_ST(wxDIALOG_MODELESS) // removed in 2.6</span>
+         WXS_ST(wxDIALOG_NO_PARENT)
+         WXS_ST(wxTAB_TRAVERSAL)
+         WXS_ST(wxWS_EX_VALIDATE_RECURSIVELY)
+<span class="gu">@@ -50,7 +50,7 @@</span>
+     // on WXMSW wxDIALOG_EX_METAL only for WXMAC
+     // NOTE (cyberkoa#1#):  wxDIALOG_EX_CONTEXTHELP &amp; wxDIALOG_EX_METAL are
+     // extended style which need 2 steps construction
+<span class="gd">-        WXS_ST_MASK(wxNO_3D,wxsSFWin,0,true)</span>
+<span class="gi">+     //   WXS_ST_MASK(wxNO_3D,wxsSFWin,0,true) // removed in 2.6</span>
+         WXS_EXST_MASK(wxDIALOG_EX_CONTEXTHELP,wxsSFWin,0,true)
+         WXS_EXST_MASK(wxDIALOG_EX_METAL,wxsSFOSX,0,true)
+     WXS_ST_END()
+<span class="gh">Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsscrolledwindow.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsscrolledwindow.cpp    (revision 3669)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsscrolledwindow.cpp    (working copy)</span>
+<span class="gu">@@ -31,7 +31,7 @@</span>
+         WXS_ST_CATEGORY(&quot;wxScrolledWindow&quot;)
+         WXS_ST(wxHSCROLL)
+         WXS_ST(wxVSCROLL)
+<span class="gd">-        WXS_ST(wxNO_3D)</span>
+<span class="gi">+     //   WXS_ST(wxNO_3D)      // removed in 2.6</span>
+         WXS_ST(wxTAB_TRAVERSAL)
+         WXS_EXST(wxWS_EX_VALIDATE_RECURSIVELY)
+     WXS_ST_END()
+<span class="gh">Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxspanel.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxspanel.cpp    (revision 3669)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxspanel.cpp    (working copy)</span>
+<span class="gu">@@ -29,7 +29,7 @@</span>
+
+     WXS_ST_BEGIN(wxsPanelStyles,_T(&quot;wxTAB_TRAVERSAL&quot;))
+         WXS_ST_CATEGORY(&quot;wxPanel&quot;)
+<span class="gd">-        WXS_ST(wxNO_3D)</span>
+<span class="gi">+     //   WXS_ST(wxNO_3D)      // removed in 2.6</span>
+         WXS_ST(wxTAB_TRAVERSAL)
+         WXS_ST(wxWANTS_CHARS)
+         WXS_EXST(wxWS_EX_VALIDATE_RECURSIVELY)
+<span class="gh">Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsframe.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsframe.cpp    (revision 3669)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsframe.cpp    (working copy)</span>
+<span class="gu">@@ -33,10 +33,10 @@</span>
+         WXS_ST(wxCAPTION)
+         WXS_ST(wxDEFAULT_DIALOG_STYLE)
+         WXS_ST(wxDEFAULT_FRAME_STYLE)
+<span class="gd">-        WXS_ST(wxTHICK_FRAME)</span>
+<span class="gi">+     //   WXS_ST(wxTHICK_FRAME)// r</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">stahta01 2007-02-25 20:47:28</div>

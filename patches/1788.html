@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,143 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/editarraystringdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editarraystringdlg.cpp    (revision 3832)</span>
+<span class="gi">+++ src/sdk/editarraystringdlg.cpp    (working copy)</span>
+<span class="gu">@@ -57,7 +57,7 @@</span>
+     {
+         wxListBox* list = XRCCTRL(*this, &quot;lstItems&quot;, wxListBox);
+         m_Array.Clear();
+<span class="gd">-        for (int i = 0; i &lt; list-&gt;GetCount(); ++i)</span>
+<span class="gi">+        for (cbItemCount i = 0; i &lt; list-&gt;GetCount(); ++i)</span>
+         {
+             m_Array.Add(list-&gt;GetString(i));
+         }
+<span class="gh">Index: src/sdk/editarrayorderdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editarrayorderdlg.cpp    (revision 3832)</span>
+<span class="gi">+++ src/sdk/editarrayorderdlg.cpp    (working copy)</span>
+<span class="gu">@@ -67,7 +67,7 @@</span>
+     wxListBox* list = XRCCTRL(*this, &quot;lstItems&quot;, wxListBox);
+ 
+     XRCCTRL(*this, &quot;btnMoveUp&quot;, wxButton)-&gt;Enable(list-&gt;GetSelection() &gt; 0);
+<span class="gd">-    XRCCTRL(*this, &quot;btnMoveDown&quot;, wxButton)-&gt;Enable(list-&gt;GetSelection() &gt;= 0 &amp;&amp; list-&gt;GetSelection() &lt; list-&gt;GetCount() - 1);</span>
+<span class="gi">+    XRCCTRL(*this, &quot;btnMoveDown&quot;, wxButton)-&gt;Enable(list-&gt;GetSelection() &gt;= 0 &amp;&amp; list-&gt;GetSelection() &lt; (int)(list-&gt;GetCount()) - 1);</span>
+ }
+ 
+ void EditArrayOrderDlg::OnMoveUp(wxCommandEvent&amp; event)
+<span class="gu">@@ -89,7 +89,7 @@</span>
+     wxListBox* list = XRCCTRL(*this, &quot;lstItems&quot;, wxListBox);
+     int sel = list-&gt;GetSelection();
+ 
+<span class="gd">-    if (sel &lt; list-&gt;GetCount() - 1)</span>
+<span class="gi">+    if (sel &lt; (int)(list-&gt;GetCount()) - 1)</span>
+     {
+         wxString tmp = list-&gt;GetString(sel);
+         list-&gt;Delete(sel);
+<span class="gu">@@ -105,7 +105,7 @@</span>
+         wxListBox* list = XRCCTRL(*this, &quot;lstItems&quot;, wxListBox);
+ 
+         m_Array.Clear();
+<span class="gd">-        for (int i = 0; i &lt; list-&gt;GetCount(); ++i)</span>
+<span class="gi">+        for (cbItemCount i = 0; i &lt; list-&gt;GetCount(); ++i)</span>
+             m_Array.Add(list-&gt;GetString(i));
+     }
+ 
+<span class="gh">Index: src/sdk/editarrayfiledlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editarrayfiledlg.cpp    (revision 3832)</span>
+<span class="gi">+++ src/sdk/editarrayfiledlg.cpp    (working copy)</span>
+<span class="gu">@@ -67,7 +67,7 @@</span>
+     {
+         wxListBox* list = XRCCTRL(*this, &quot;lstItems&quot;, wxListBox);
+         m_Array.Clear();
+<span class="gd">-        for (int i = 0; i &lt; list-&gt;GetCount(); ++i)</span>
+<span class="gi">+        for (cbItemCount i = 0; i &lt; list-&gt;GetCount(); ++i)</span>
+         {
+             m_Array.Add(list-&gt;GetString(i));
+         }
+<span class="gh">Index: src/sdk/multiselectdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/multiselectdlg.cpp    (revision 3832)</span>
+<span class="gi">+++ src/sdk/multiselectdlg.cpp    (working copy)</span>
+<span class="gu">@@ -79,7 +79,7 @@</span>
+ {
+     int count = 0;
+     wxCheckListBox* lst = XRCCTRL(*this, &quot;lstItems&quot;, wxCheckListBox);
+<span class="gd">-    for (int i = 0; i &lt; lst-&gt;GetCount(); ++i)</span>
+<span class="gi">+    for (cbItemCount i = 0; i &lt; lst-&gt;GetCount(); ++i)</span>
+     {
+         if (lst-&gt;IsChecked(i))
+             ++count;
+<span class="gu">@@ -93,7 +93,7 @@</span>
+ {
+     wxArrayString ret;
+     wxCheckListBox* lst = XRCCTRL(*this, &quot;lstItems&quot;, wxCheckListBox);
+<span class="gd">-    for (int i = 0; i &lt; lst-&gt;GetCount(); ++i)</span>
+<span class="gi">+    for (cbItemCount i = 0; i &lt; lst-&gt;GetCount(); ++i)</span>
+     {
+         if (lst-&gt;IsChecked(i))
+             ret.Add(lst-&gt;GetString(i));
+<span class="gu">@@ -105,7 +105,7 @@</span>
+ {
+     wxArrayInt ret;
+     wxCheckListBox* lst = XRCCTRL(*this, &quot;lstItems&quot;, wxCheckListBox);
+<span class="gd">-    for (int i = 0; i &lt; lst-&gt;GetCount(); ++i)</span>
+<span class="gi">+    for (cbItemCount i = 0; i &lt; lst-&gt;GetCount(); ++i)</span>
+     {
+         if (lst-&gt;IsChecked(i))
+             ret.Add(i);
+<span class="gu">@@ -119,7 +119,7 @@</span>
+         return;
+     wxArrayString wilds = GetArrayFromString(wild, _T(&quot;;&quot;));
+     wxCheckListBox* lst = XRCCTRL(*this, &quot;lstItems&quot;, wxCheckListBox);
+<span class="gd">-    for (int i = 0; i &lt; lst-&gt;GetCount(); ++i)</span>
+<span class="gi">+    for (cbItemCount i = 0; i &lt; lst-&gt;GetCount(); ++i)</span>
+     {
+         if (clearOld || !lst-&gt;IsChecked(i))
+         {
+<span class="gu">@@ -167,7 +167,7 @@</span>
+ void MultiSelectDlg::OnToggle(wxCommandEvent&amp; /*event*/)
+ {
+     wxCheckListBox* lst = XRCCTRL(*this, &quot;lstItems&quot;, wxCheckListBox);
+<span class="gd">-    for (int i = 0; i &lt; lst-&gt;GetCount(); ++i)</span>
+<span class="gi">+    for (cbItemCount i = 0; i &lt; lst-&gt;GetCount(); ++i)</span>
+     {
+         lst-&gt;Check(i, !lst-&gt;IsChecked(i));
+     }
+<span class="gu">@@ -177,7 +177,7 @@</span>
+ void MultiSelectDlg::OnSelectAll(wxCommandEvent&amp; /*event*/)
+ {
+     wxCheckListBox* lst = XRCCTRL(*this, &quot;lstItems&quot;, wxCheckListBox);
+<span class="gd">-    for (int i = 0; i &lt; lst-&gt;GetCount(); ++i)</span>
+<span class="gi">+    for (cbItemCount i = 0; i &lt; lst-&gt;GetCount(); ++i)</span>
+     {
+         lst-&gt;Check(i, true);
+     }
+<span class="gu">@@ -187,7 +187,7 @@</span>
+ void MultiSelectDlg::OnDeselectAll(wxCommandEvent&amp; /*event*/)
+ {
+     wxCheckListBox* lst = XRCCTRL(*this, &quot;lstItems&quot;, wxCheckListBox);
+<span class="gd">-    for (int i = 0; i &lt; lst-&gt;GetCount(); ++i)</span>
+<span class="gi">+    for (cbItemCount i = 0; i &lt; lst-&gt;GetCount(); ++i)</span>
+     {
+         lst-&gt;Check(i, false);
+     }
+<span class="gh">Index: src/sdk/editorconfigurationdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorconfigurationdlg.cpp    (revision 3832)</span>
+<span class="gi">+++ src/sdk/editorconfigurationdlg.cpp    (working copy)</span>
+<span class="gu">@@ -781,7 +781,7 @@</span>
+     {
+         m_AutoCompMap.erase(it);
+         lstKeyword-&gt;Delete(sel);
+<span class="gd">-        if (sel &gt;= lstKeyword-&gt;GetCount())</span>
+<span class="gi">+        if (sel &gt;= ((int)lstKeyword-&gt;GetCount()))</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">stahta01 2007-01-01 16:40:55</div>

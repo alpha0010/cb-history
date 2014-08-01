@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,176 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: D:/codeblocks/src/sdk/as/source/as_arrayobject.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- D:/codeblocks/src/sdk/as/source/as_arrayobject.cpp    (revision 2051)</span>
+<span class="gi">+++ D:/codeblocks/src/sdk/as/source/as_arrayobject.cpp    (working copy)</span>
+<span class="gu">@@ -33,8 +33,14 @@</span>
+ #endif
+ #include &lt;assert.h&gt;
+ #include &lt;new&gt;
+<span class="gd">-#include &lt;malloc.h&gt;</span>
+ 
+<span class="gi">+#ifdef __FreeBSD__</span>
+<span class="gi">+    #include &lt;stdlib.h&gt;</span>
+<span class="gi">+#else</span>
+<span class="gi">+    #include &lt;malloc.h&gt;</span>
+<span class="gi">+#endif</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+ #include &quot;as_config.h&quot;
+ #include &quot;as_arrayobject.h&quot;
+ #include &quot;as_scriptengine.h&quot;
+<span class="gh">Index: D:/codeblocks/src/sdk/as/source/as_gcobject.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- D:/codeblocks/src/sdk/as/source/as_gcobject.cpp    (revision 2051)</span>
+<span class="gi">+++ D:/codeblocks/src/sdk/as/source/as_gcobject.cpp    (working copy)</span>
+<span class="gu">@@ -34,8 +34,11 @@</span>
+ #endif
+ #include &lt;assert.h&gt;
+ #include &lt;new&gt;
+<span class="gd">-#if defined(WIN32) || defined(HAVE_MALLOC_H)</span>
+<span class="gd">-#include &lt;malloc.h&gt;</span>
+<span class="gi">+</span>
+<span class="gi">+#ifdef __FreeBSD__</span>
+<span class="gi">+    #include &lt;stdlib.h&gt;</span>
+<span class="gi">+#else</span>
+<span class="gi">+    #include &lt;malloc.h&gt;</span>
+ #endif
+ 
+ #include &quot;as_config.h&quot;
+<span class="gh">Index: D:/codeblocks/src/sdk/as/source/as_scriptengine.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- D:/codeblocks/src/sdk/as/source/as_scriptengine.cpp    (revision 2051)</span>
+<span class="gi">+++ D:/codeblocks/src/sdk/as/source/as_scriptengine.cpp    (working copy)</span>
+<span class="gu">@@ -39,8 +39,13 @@</span>
+ #ifdef HAVE_CONFIG_H
+ #include &quot;config.h&quot;
+ #endif
+<span class="gd">-#include &lt;malloc.h&gt;</span>
+ 
+<span class="gi">+#ifdef __FreeBSD__</span>
+<span class="gi">+    #include &lt;stdlib.h&gt;</span>
+<span class="gi">+#else</span>
+<span class="gi">+    #include &lt;malloc.h&gt;</span>
+<span class="gi">+#endif</span>
+<span class="gi">+</span>
+ #include &quot;as_config.h&quot;
+ #include &quot;as_scriptengine.h&quot;
+ #include &quot;as_builder.h&quot;
+<span class="gh">Index: D:/codeblocks/src/sdk/configmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- D:/codeblocks/src/sdk/configmanager.cpp    (revision 2051)</span>
+<span class="gi">+++ D:/codeblocks/src/sdk/configmanager.cpp    (working copy)</span>
+<span class="gu">@@ -1230,8 +1230,7 @@</span>
+     if(mNode)
+     {
+         while((curr = mNode-&gt;IterateChildren(curr)-&gt;ToElement()))
+<span class="gd">-            set-&gt;insert(_U(curr-&gt;FirstChild()-&gt;ToText()-&gt;Value()))</span>
+<span class="gd">-            ;</span>
+<span class="gi">+            set-&gt;insert(_U(curr-&gt;FirstChild()-&gt;ToText()-&gt;Value()));</span>
+     }
+ }
+ 
+<span class="gh">Index: D:/codeblocks/src/sdk/editorbase.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- D:/codeblocks/src/sdk/editorbase.cpp    (revision 2051)</span>
+<span class="gi">+++ D:/codeblocks/src/sdk/editorbase.cpp    (working copy)</span>
+<span class="gu">@@ -317,6 +317,7 @@</span>
+         }
+         m_SwitchTo.clear();
+     }
+<span class="gi">+#if wxABI_VERSION &gt;= 20601</span>
+     else if (id == idGoogle)/////////////////// TODO: UrlEncode
+     {
+         wxLaunchDefaultBrowser(wxString(_T(&quot;http://www.google.com/search?q=&quot;)) &lt;&lt; URLEncode(lastWord));
+<span class="gu">@@ -325,6 +326,7 @@</span>
+     {
+         wxLaunchDefaultBrowser(wxString(_T(&quot;http://search.microsoft.com/search/results.aspx?qu=&quot;)) &lt;&lt; URLEncode(lastWord) &lt;&lt; _T(&quot;&amp;View=msdn&quot;));
+     }
+<span class="gi">+#endif</span>
+     else
+     {
+         event.Skip();
+<span class="gh">Index: D:/codeblocks/src/src/appglobals.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- D:/codeblocks/src/src/appglobals.cpp    (revision 2051)</span>
+<span class="gi">+++ D:/codeblocks/src/src/appglobals.cpp    (working copy)</span>
+<span class="gu">@@ -28,6 +28,8 @@</span>
+   const wxString g_AppPlatform = _T(&quot;OS/2&quot;);
+ #elif defined(__WXMAC__)
+   const wxString g_AppPlatform = _T(&quot;Mac OS X&quot;);
+<span class="gi">+#elif defined(__FreeBSD__)</span>
+<span class="gi">+  const wxString g_AppPlatform = _T(&quot;FreeBSD&quot;);</span>
+ #elif defined(__UNIX__)
+   const wxString g_AppPlatform = _T(&quot;Linux&quot;);
+ #else
+<span class="gu">@@ -46,7 +48,9 @@</span>
+ 
+ operating_system_t __cb_get_os()
+ {
+<span class="gd">-#if   defined(__UNIX__)</span>
+<span class="gi">+#if defined(__FreeBSD__)</span>
+<span class="gi">+    return oxFreeBSD;</span>
+<span class="gi">+#elif defined(__UNIX__)</span>
+     return osLinux;
+ #elif defined(__WXMAC__)
+     return osOSX;
+<span class="gu">@@ -78,7 +82,7 @@</span>
+ }
+ 
+ 
+<span class="gd">-const wxString langs[] =</span>
+<span class="gi">+const wxString langs[LANGUAGES_SIZE] =</span>
+ {
+     _(&quot;(System default)&quot;)
+ //        ,_T(&quot;English (U.S.)&quot;)
+<span class="gu">@@ -89,7 +93,7 @@</span>
+ };
+ 
+ // Must have the same order than the above
+<span class="gd">-const int locales[] =</span>
+<span class="gi">+const int locales[LANGUAGES_SIZE] =</span>
+ {
+     wxLANGUAGE_DEFAULT
+ //        ,wxLANGUAGE_ENGLISH_US
+<span class="gh">Index: D:/codeblocks/src/src/appglobals.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- D:/codeblocks/src/src/appglobals.h    (revision 2051)</span>
+<span class="gi">+++ D:/codeblocks/src/src/appglobals.h    (working copy)</span>
+<span class="gu">@@ -17,17 +17,18 @@</span>
+ extern const wxString g_DefaultBatchBuildArgs;
+ 
+ #define LOCALIZE   true
+<span class="gd">-#define LANGUAGES  2</span>
+<span class="gd">-//Please fix this. I have no Idea that the WXSIZEOF couldn&#39;t work whithout defining LANGUAGES</span>
+<span class="gd">-extern const wxString langs[LANGUAGES];</span>
+<span class="gd">-extern const int locales[LANGUAGES];</span>
+<span class="gi">+#define LANGUAGES_SIZE  2</span>
+ 
+<span class="gi">+extern const wxString langs[LANGUAGES_SIZE];</span>
+<span class="gi">+extern const int locales[LANGUAGES_SIZE];</span>
+<span class="gi">+</span>
+ typedef enum
+ {
+ osUnknownWindows,
+ osWindows9598ME,
+ osWindowsNT2000,
+ osWindowsXP,
+<span class="gi">+oxFreeBSD,</span>
+ osLinux,
+ osOS2,
+ osOSX
+<span class="gh">Index: D:/codeblocks/src/src/environmentsettingsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- D:/codeblocks/src/src/environmentsettingsdlg.cpp    (revision 2051)</span>
+<span class="gi">+++ D:/codeblocks/src/src/environmentsettingsdlg.cpp    (working copy)</span>
+<span class="gu">@@ -117,7 +117,7 @@</span>
+ 
+     bool i18n=cfg-&gt;ReadBool(_T(&quot;/enviro
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">thomasdenk 2006-02-19 10:52:19</div>

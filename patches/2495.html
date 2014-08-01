@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,139 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: configure.in</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- configure.in    (revision 5189)</span>
+<span class="gi">+++ configure.in    (working copy)</span>
+<span class="gu">@@ -221,7 +221,6 @@</span>
+     src/include/scripting/sqstdlib/Makefile
+     src/include/scripting/squirrel/Makefile
+     src/include/tinyxml/Makefile
+<span class="gd">-    src/include/wxFlatNotebook/Makefile</span>
+     src/include/wxscintilla/Makefile
+     src/sdk/Makefile
+     src/sdk/scripting/Makefile
+<span class="gu">@@ -230,7 +229,6 @@</span>
+     src/sdk/scripting/sqstdlib/Makefile
+     src/sdk/scripting/sqplus/Makefile
+     src/sdk/wxscintilla/Makefile
+<span class="gd">-    src/sdk/wxFlatNotebook/Makefile</span>
+     src/sdk/resources/Makefile
+     src/sdk/resources/lexers/Makefile
+     src/src/wxAUI/Makefile
+<span class="gh">Index: src/sdk/projectmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/projectmanager.cpp    (revision 5189)</span>
+<span class="gi">+++ src/sdk/projectmanager.cpp    (working copy)</span>
+<span class="gu">@@ -38,7 +38,9 @@</span>
+ #include &lt;wx/utils.h&gt;
+ #include &lt;wx/textdlg.h&gt;
+ #include &lt;wx/progdlg.h&gt;
+<span class="gd">-#include &quot;wx/wxFlatNotebook/wxFlatNotebook.h&quot;</span>
+<span class="gi">+#include &lt;wx/filedlg.h&gt;</span>
+<span class="gi">+#include &lt;wx/choicdlg.h&gt;</span>
+<span class="gi">+#include &lt;wx/aui/auibook.h&gt;</span>
+ 
+ #include &quot;incrementalselectlistdlg.h&quot;
+ #include &quot;filegroupsandmasks.h&quot;
+<span class="gu">@@ -157,6 +159,8 @@</span>
+     EVT_TREE_ITEM_RIGHT_CLICK(ID_ProjectManager, ProjectManager::OnTreeItemRightClick)
+     EVT_COMMAND_RIGHT_CLICK(ID_ProjectManager, ProjectManager::OnRightClick)
+ 
+<span class="gi">+    EVT_AUINOTEBOOK_TAB_RIGHT_UP(idNB, ProjectManager::OnTabContextMenu)</span>
+<span class="gi">+</span>
+     EVT_MENU_RANGE(idOpenWith[0], idOpenWith[MAX_OPEN_WITH_ITEMS - 1], ProjectManager::OnOpenWith)
+     EVT_MENU(idOpenWithInternal, ProjectManager::OnOpenWith)
+     EVT_MENU(idNB_TabTop, ProjectManager::OnTabPosition)
+<span class="gu">@@ -216,20 +220,14 @@</span>
+     m_isCheckingForExternallyModifiedProjects(false),
+     m_CanSendWorkspaceChanged(false)
+ {
+<span class="gd">-    m_pNotebook = new wxFlatNotebook(Manager::Get()-&gt;GetAppWindow(), idNB);</span>
+<span class="gd">-    m_pNotebook-&gt;SetWindowStyleFlag(Manager::Get()-&gt;GetConfigManager(_T(&quot;app&quot;))-&gt;ReadInt(_T(&quot;/environment/project_tabs_style&quot;), wxFNB_NO_X_BUTTON));</span>
+<span class="gd">-    m_pNotebook-&gt;SetImageList(new wxFlatNotebookImageList);</span>
+<span class="gi">+    m_pNotebook = new wxAuiNotebook(Manager::Get()-&gt;GetAppWindow(), idNB, wxDefaultPosition, wxDefaultSize, wxAUI_NB_WINDOWLIST_BUTTON);</span>
+<span class="gi">+    if (Manager::Get()-&gt;GetConfigManager(_T(&quot;app&quot;))-&gt;ReadBool(_T(&quot;/environment/project_tabs_bottom&quot;), false))</span>
+<span class="gi">+        m_pNotebook-&gt;SetWindowStyleFlag(m_pNotebook-&gt;GetWindowStyleFlag() | wxAUI_NB_BOTTOM);</span>
+ 
+<span class="gd">-    wxMenu* NBmenu = new wxMenu(); // deleted automatically by wxFlatNotebook</span>
+<span class="gd">-    NBmenu-&gt;Append(idNB_TabTop, _(&quot;Tabs at top&quot;));</span>
+<span class="gd">-    NBmenu-&gt;Append(idNB_TabBottom, _(&quot;Tabs at bottom&quot;));</span>
+<span class="gd">-    m_pNotebook-&gt;SetRightClickMenu(NBmenu);</span>
+<span class="gd">-</span>
+     m_InitialDir=wxFileName::GetCwd();
+     m_pActiveProject = 0L;
+     m_pProjects = new ProjectsArray;
+     m_pProjects-&gt;Clear();
+<span class="gd">-    // m_pPanel = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL | wxCLIP_CHILDREN);</span>
+     InitPane();
+ 
+     m_pFileGroups = new FilesGroupsAndMasks;
+<span class="gu">@@ -272,7 +270,6 @@</span>
+     delete m_pImages;m_pImages = 0;
+     delete m_pFileGroups;m_pFileGroups = 0;
+ 
+<span class="gd">-    delete m_pNotebook-&gt;GetImageList();</span>
+     m_pNotebook-&gt;Destroy();
+ }
+ 
+<span class="gu">@@ -1646,16 +1643,25 @@</span>
+ 
+ // events
+ 
+<span class="gi">+void ProjectManager::OnTabContextMenu(wxAuiNotebookEvent&amp; event)</span>
+<span class="gi">+{</span>
+<span class="gi">+    wxMenu* NBmenu = new wxMenu();</span>
+<span class="gi">+    NBmenu-&gt;Append(idNB_TabTop, _(&quot;Tabs at top&quot;));</span>
+<span class="gi">+    NBmenu-&gt;Append(idNB_TabBottom, _(&quot;Tabs at bottom&quot;));</span>
+<span class="gi">+    m_pNotebook-&gt;PopupMenu(NBmenu);</span>
+<span class="gi">+    delete NBmenu;</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ void ProjectManager::OnTabPosition(wxCommandEvent&amp; event)
+ {
+     long style = m_pNotebook-&gt;GetWindowStyleFlag();
+<span class="gd">-    style &amp;= ~wxFNB_BOTTOM;</span>
+<span class="gi">+    style &amp;= ~wxAUI_NB_BOTTOM;</span>
+ 
+     if (event.GetId() == idNB_TabBottom)
+<span class="gd">-        style |= wxFNB_BOTTOM;</span>
+<span class="gi">+        style |= wxAUI_NB_BOTTOM;</span>
+     m_pNotebook-&gt;SetWindowStyleFlag(style);
+<span class="gd">-    // (style &amp; wxFNB_BOTTOM) saves info only about the the tabs position</span>
+<span class="gd">-    Manager::Get()-&gt;GetConfigManager(_T(&quot;app&quot;))-&gt;Write(_T(&quot;/environment/project_tabs_bottom&quot;), (bool)(style &amp; wxFNB_BOTTOM));</span>
+<span class="gi">+    // (style &amp; wxAUI_NB_BOTTOM) saves info only about the the tabs position</span>
+<span class="gi">+    Manager::Get()-&gt;GetConfigManager(_T(&quot;app&quot;))-&gt;Write(_T(&quot;/environment/project_tabs_bottom&quot;), (bool)(style &amp; wxAUI_NB_BOTTOM));</span>
+ }
+ 
+ void ProjectManager::OnTreeBeginDrag(wxTreeEvent&amp; event)
+<span class="gh">Index: src/sdk/editorbase.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorbase.cpp    (revision 5189)</span>
+<span class="gi">+++ src/sdk/editorbase.cpp    (working copy)</span>
+<span class="gu">@@ -21,10 +21,11 @@</span>
+     #include &quot;cbproject.h&quot; // FileTreeData
+     #include &lt;wx/wfstream.h&gt;
+ #endif
+<span class="gi">+</span>
+<span class="gi">+#include &lt;wx/aui/auibook.h&gt;</span>
+<span class="gi">+</span>
+ #include &quot;cbstyledtextctrl.h&quot;
+ 
+<span class="gd">-#include &quot;wx/wxFlatNotebook/wxFlatNotebook.h&quot;</span>
+<span class="gd">-</span>
+ // needed for initialization of variables
+ int editorbase_RegisterId(int id)
+ {
+<span class="gh">Index: src/sdk/editormanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editormanager.cpp    (revision 5189)</span>
+<span class="gi">+++ src/sdk/editormanager.cpp    (working copy)</span>
+<span class="gu">@@ -42,6 +42,7 @@</span>
+ #include
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">dermeister 2008-06-15 13:10:31</div>

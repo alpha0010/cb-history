@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,85 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">diff --git a/src/include/compiler.h b/src/include/compiler.h</span>
+<span class="gh">index cea2eb4..eba07f2 100644</span>
+<span class="gd">--- a/src/include/compiler.h</span>
+<span class="gi">+++ b/src/include/compiler.h</span>
+<span class="gu">@@ -177,6 +177,7 @@ struct CompilerSwitches</span>
+     wxString libExtension;        // a
+     bool linkerNeedsLibPrefix;    // when adding a link library, linker needs prefix?
+     bool linkerNeedsLibExtension; // when adding a link library, linker needs extension?
+<span class="gi">+    bool linkerNeedsPathresolution; // linker does not support libDirs; C::B must resolve file paths</span>
+     bool supportsPCH;             // supports pre-compiled headers?
+     wxString PCHExtension;        // pre-compiled headers extension
+     bool UseFlatObjects;          // Use Flat object file names (no extra subdirs)?
+<span class="gu">@@ -184,12 +185,20 @@ struct CompilerSwitches</span>
+                                   // well with relative paths, therefore for GCC it is better to specify the source
+                                   // full to the compiler in a full path notation, for all other compilers it is
+                                   // suggested to keep this switch at false
+<span class="gi">+    wxChar includeDirSeparator;   // space</span>
+<span class="gi">+    wxChar libDirSeparator;       // space</span>
+<span class="gi">+    wxChar objectSeparator;       // space</span>
+<span class="gi">+    int statusSuccess;            // 0</span>
+     bool Use83Paths;              // This is mainly a workaround for the resource compiler under Windows, apparently
+                                   // it doesn&#39;t deal well with spaces in the (include) path even if the path is quoted,
+                                   // therefore use 8.3 notation without spaces on Windows.
+                                   // However, this will apply to all include path&#39;s as other tools might have the
+                                   // same issue and it won&#39;t hurt to apply it to all include directories, if enabled.
+ 
+<span class="gi">+                                  // therefore use 8.3 notation without spaces on Windows.</span>
+<span class="gi">+                                  // However, this will apply to all include path&#39;s as other tools might have the</span>
+<span class="gi">+                                  // same issue and it won&#39;t hurt to apply it to all include directories, if enabled.</span>
+<span class="gi">+</span>
+     CompilerSwitches(); // constructor initializing the members, specific compilers should overrule if needed
+ };
+ 
+<span class="gh">diff --git a/src/include/compilercommandgenerator.h b/src/include/compilercommandgenerator.h</span>
+<span class="gh">index 9657662..3a8d2d7 100644</span>
+<span class="gd">--- a/src/include/compilercommandgenerator.h</span>
+<span class="gi">+++ b/src/include/compilercommandgenerator.h</span>
+<span class="gu">@@ -68,6 +68,11 @@ class DLLIMPORT CompilerCommandGenerator</span>
+         virtual void DoBuildScripts(cbProject* project, CompileTargetBase* target, const wxString&amp; funcName);
+         virtual wxString GetOrderedOptions(const ProjectBuildTarget* target, OptionsRelationType rel, const wxString&amp; project_options, const wxString&amp; target_options);
+         virtual wxArrayString GetOrderedOptions(const ProjectBuildTarget* target, OptionsRelationType rel, const wxArrayString&amp; project_options, const wxArrayString&amp; target_options);
+<span class="gi">+        virtual wxArrayString GetOrderedIncludeDirs(Compiler* compiler, ProjectBuildTarget* target);</span>
+<span class="gi">+        virtual wxArrayString GetOrderedLibrariesDirs(Compiler* compiler, ProjectBuildTarget* target);</span>
+<span class="gi">+        virtual wxArrayString GetOrderedResourceIncludeDirs(Compiler* compiler, ProjectBuildTarget* target);</span>
+<span class="gi">+        static wxString MakeOptString(const wxArrayString&amp; arr, const wxString&amp; opt, wxChar separator = _T(&#39; &#39;));</span>
+<span class="gi">+        static wxString PathSearch(const wxArrayString&amp; arr, const wxString&amp; filename);</span>
+         virtual wxString SetupOutputFilenames(Compiler* compiler, ProjectBuildTarget* target);
+         virtual wxString SetupIncludeDirs(Compiler* compiler, ProjectBuildTarget* target);
+         virtual wxString SetupLibrariesDirs(Compiler* compiler, ProjectBuildTarget* target);
+<span class="gh">diff --git a/src/plugins/compilergcc/Makefile.am b/src/plugins/compilergcc/Makefile.am</span>
+<span class="gh">index 2e07e90..7879221 100644</span>
+<span class="gd">--- a/src/plugins/compilergcc/Makefile.am</span>
+<span class="gi">+++ b/src/plugins/compilergcc/Makefile.am</span>
+<span class="gu">@@ -26,6 +26,8 @@ libcompiler_la_SOURCES = advancedcompileroptionsdlg.cpp \</span>
+             compilergcc.cpp \
+             compilerGDC.cpp \
+             compilerICC.cpp \
+<span class="gi">+            compilerIAR.cpp \</span>
+<span class="gi">+            compilerKeilC51.cpp \</span>
+             compilerLCC.cpp \
+             compilermessages.cpp \
+             compilerMINGW.cpp \
+<span class="gu">@@ -51,6 +53,8 @@ noinst_HEADERS = advancedcompileroptionsdlg.h \</span>
+             compilerG95.h \
+             compilerGDC.h \
+             compilerICC.h \
+<span class="gi">+            compilerIAR.h \</span>
+<span class="gi">+            compilerKeilC51.h \</span>
+             compilerLCC.h \
+             compilermessages.h \
+             compilerMINGW.h \
+<span class="gh">diff --git a/src/plugins/compilergcc/advancedcompileroptionsdlg.cpp b/src/plugins/compilergcc/advancedcompileroptionsdlg.cpp</span>
+<span class="gh">index dac7186..dd6501c 100644</span>
+<span class="gd">--- a/src/plugins/compilergcc/advancedcompileroptionsdlg.cpp</span>
+<span class="gi">+++ b/src/plugins/compilergcc/advancedcompileroptionsdlg.cpp</span>
+<span class="gu">@@ -114,6 +114,7 @@ void AdvancedCompilerOptionsDlg::ReadCompilerO</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">alpha0010 2012-12-25 14:33:49</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,159 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/scripting/sqsession/sqext.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/scripting/sqsession/sqext.cpp    (revision 0)</span>
+<span class="gi">+++ src/sdk/scripting/sqsession/sqext.cpp    (revision 0)</span>
+<span class="gu">@@ -0,0 +1,294 @@</span>
+<span class="gi">+/* see copyright notice in squirrel.h */</span>
+<span class="gi">+#include &lt;squirrel.h&gt;</span>
+<span class="gi">+#include &lt;string.h&gt;</span>
+<span class="gi">+#include &lt;stdlib.h&gt;</span>
+<span class="gi">+#include &lt;stdio.h&gt;</span>
+<span class="gi">+#include &lt;ctype.h&gt;</span>
+<span class="gi">+#include &lt;assert.h&gt;</span>
+<span class="gi">+</span>
+<span class="gi">+#include &quot;../squirrel/sqpcheader.h&quot;</span>
+<span class="gi">+#include &quot;../squirrel/sqvm.h&quot;</span>
+<span class="gi">+#include &quot;../squirrel/sqclosure.h&quot;</span>
+<span class="gi">+#include &quot;../squirrel/sqfuncproto.h&quot;</span>
+<span class="gi">+</span>
+<span class="gi">+#include &quot;sqext.h&quot;</span>
+<span class="gi">+</span>
+<span class="gi">+#ifdef SQUNICODE</span>
+<span class="gi">+#define scfprintf fwprintf</span>
+<span class="gi">+#define scfopen    _wfopen</span>
+<span class="gi">+#define scvprintf vwprintf</span>
+<span class="gi">+#else</span>
+<span class="gi">+#define scfprintf fprintf</span>
+<span class="gi">+#define scfopen    fopen</span>
+<span class="gi">+#define scvprintf vprintf</span>
+<span class="gi">+#endif</span>
+<span class="gi">+</span>
+<span class="gi">+#ifdef ATS</span>
+<span class="gi">+extern int g_sq_malloc_n;</span>
+<span class="gi">+extern int g_sq_malloc_tot;</span>
+<span class="gi">+extern int g_sq_malloc_oper_sum;</span>
+<span class="gi">+</span>
+<span class="gi">+SQInteger _ext_getmemusage(HSQUIRRELVM v){</span>
+<span class="gi">+    sq_newtable(v);</span>
+<span class="gi">+    sq_pushstring(v,_SC(&quot;nr_blocks&quot;),-1);</span>
+<span class="gi">+    sq_pushinteger(v,g_sq_malloc_n);</span>
+<span class="gi">+    sq_rawset(v,-3);</span>
+<span class="gi">+    sq_pushstring(v,_SC(&quot;total_size&quot;),-1);</span>
+<span class="gi">+    sq_pushinteger(v,g_sq_malloc_tot);</span>
+<span class="gi">+    sq_rawset(v,-3);</span>
+<span class="gi">+    sq_pushstring(v,_SC(&quot;total_nr_ops&quot;),-1);</span>
+<span class="gi">+    sq_pushinteger(v,g_sq_malloc_oper_sum);</span>
+<span class="gi">+    sq_rawset(v,-3);</span>
+<span class="gi">+    return 1;</span>
+<span class="gi">+}</span>
+<span class="gi">+#endif // ifdef ATS</span>
+<span class="gi">+/*</span>
+<span class="gi">+void ext_scstrcat( SQChar *dst, const SQChar *src, int *pp ){</span>
+<span class="gi">+    if( !src ) return;</span>
+<span class="gi">+    int i, p = *pp;</span>
+<span class="gi">+    for( i=0; src[i]; i++ )</span>
+<span class="gi">+        dst[p+i] = src[i];</span>
+<span class="gi">+    dst[p+i] = 0;</span>
+<span class="gi">+    *pp = p+i;</span>
+<span class="gi">+}</span>
+<span class="gi">+*/</span>
+<span class="gi">+</span>
+<span class="gi">+SQInteger _ext_getfuncinfo(HSQUIRRELVM v){</span>
+<span class="gi">+    SQObjectPtr &amp;o = stack_get(v,2);</span>
+<span class="gi">+    SQChar *stype, *stemp = sq_getscratchpad(v,200);</span>
+<span class="gi">+    SQChar buf[16];</span>
+<span class="gi">+    *stemp = 0;</span>
+<span class="gi">+    //printf( &quot;type: %08X\n&quot;, type(o) );</span>
+<span class="gi">+</span>
+<span class="gi">+    if( type(o)!=OT_NATIVECLOSURE &amp;&amp; type(o)!=OT_CLOSURE &amp;&amp; type(o)!=OT_FUNCPROTO )</span>
+<span class="gi">+        return 0;</span>
+<span class="gi">+</span>
+<span class="gi">+    sq_newtable(v);</span>
+<span class="gi">+</span>
+<span class="gi">+    switch( type(o) ){</span>
+<span class="gi">+        case OT_NATIVECLOSURE:{</span>
+<span class="gi">+            SQNativeClosure *pnc = o._unVal.pNativeClosure;</span>
+<span class="gi">+            bool var_arg = pnc-&gt;_nparamscheck&lt;0 ? true : false;</span>
+<span class="gi">+</span>
+<span class="gi">+            sq_pushstring(v,_SC(&quot;type&quot;),-1);</span>
+<span class="gi">+            sq_pushstring(v,_SC(&quot;native&quot;),-1);</span>
+<span class="gi">+            sq_rawset(v,-3);</span>
+<span class="gi">+</span>
+<span class="gi">+            sq_pushstring(v,_SC(&quot;args&quot;),-1);</span>
+<span class="gi">+            sq_newarray(v,0);</span>
+<span class="gi">+</span>
+<span class="gi">+            // If we don&#39;t have a typemask, use number of paramaters</span>
+<span class="gi">+            if( !pnc-&gt;_typecheck.size() ){</span>
+<span class="gi">+                if( pnc-&gt;_nparamscheck ){</span>
+<span class="gi">+                    for( int i=(var_arg?-1:1)*pnc-&gt;_nparamscheck; i&gt;0; i-- ){</span>
+<span class="gi">+                        sq_pushstring(v,_SC(&quot;unspec&quot;),-1);</span>
+<span class="gi">+                        sq_arrayappend(v,-2);</span>
+<span class="gi">+                    }</span>
+<span class="gi">+                    if( var_arg ){</span>
+<span class="gi">+                        sq_pushstring(v,_SC(&quot;...&quot;),-1);</span>
+<span class="gi">+                        sq_arrayappend(v,-2);</span>
+<span class="gi">+                    }</span>
+<span class="gi">+                }</span>
+<span class="gi">+                else{</span>
+<span class="gi">+                    sq_pushstring(v,_SC(&quot;???&quot;),-1);</span>
+<span class="gi">+                    sq_arrayappend(v,-2);</span>
+<span class="gi">+                }</span>
+<span class="gi">+            }</span>
+<span class="gi">+            else{</span>
+<span class="gi">+                // Write type of each argument</span>
+<span class="gi">+                SQObjectType type_val;</span>
+<span class="gi">+                unsigned int i;</span>
+<span class="gi">+                for( i=0; i&lt;pnc-&gt;_typecheck.size(); i++ ){</span>
+<span class="gi">+                    type_val = SQObjectType(pnc-&gt;_typecheck._vals[i]);</span>
+<span class="gi">+                    if( type_val==-1 ) stype = _SC(&quot;any&quot;);</span>
+<span class="gi">+                    else{</span>
+<span class="gi">+                        stype = (SQChar*)IdType2Name( type_val );</span>
+<span class="gi">+                        if( !stype ){</span>
+<span class="gi">+                            if( (type_val&amp;(_RT_FLOAT|_RT_INTEGER))==(_RT_FLOAT|_RT_INTEGER) )</span>
+<span class="gi">+                                stype = _SC(&quot;number&quot;);</span>
+<span class="gi">+                            else{</span>
+<span class="gi">+                                scsprintf( buf, _SC(&quot;unknown&lt;%X&gt;&quot;), type_val );</span>
+<span class="gi">+                                stype = buf; // (SQChar*)(!i ? _SC(&quot;env&quot;) : _SC(&quot;unknown&quot;));</span>
+<span class="gi">+                            }</span>
+<span class="gi">+                        }</span>
+<span class="gi">+                    }</span>
+<span class="gi">+                    sq_pushstring(v,stype,-1);</span>
+<span class="gi">+                    sq_arrayappend(v,-2);</span>
+<span class="gi">+                }</span>
+<span class="gi">+                </span>
+<span class="gi">+                // If typemask is too short, correct for that</span>
+<span class="gi">+                for( unsigned int imax = (var_arg?-1:1)*pnc-&gt;_nparamscheck; i&lt;imax; i++ ){</span>
+<span class="gi">+                    sq_pushstring(v,_SC(&quot;unsp&quot;),-1);</span>
+<span class="gi">+                    sq_arrayappend(v,-2);</span>
+<span class="gi">+                }</span>
+<span class="gi">+                </span>
+<span class="gi">+                if( var_arg ){</span>
+<span class="gi">+                    sq_pushstring(v,_SC(&quot;...&quot;),-1);</span>
+<span class="gi">+                    sq_arrayappend(v,-2);</span>
+<span class="gi">+                }</span>
+<span class="gi">+            }</span>
+<span class="gi">+            sq_rawset(v,-3);    // Slot the array into the table</span>
+<span class="gi">+            break;</span>
+<span class="gi">+        }</span>
+<span class="gi">+</span>
+<span class="gi">+        case OT_CLOSURE:</span>
+<span class="gi">+        case OT_FUNCPROTO:{</span>
+<span class="gi">+            SQFunctionProto *pfp;</span>
+<span class="gi">+            if( type(o)==OT_CLOSURE ) pfp = _funcproto(o._unVal.pClosure-&gt;_function);</span>
+<span class="gi">+            else pfp = o._unVal.pFunctionProto;</span>
+<span class="gi">+</span>
+<span class="gi">+            sq_pushstring(v,_SC(&quot;type&quot;),-1);</span>
+<span class="gi">+            sq_pushstring(v,_SC(type(o)==OT_CLOSURE?&quot;closure&quot;:&quot;proto&quot;),-1);</span>
+<span class="gi">+            sq_rawset(v,-3);</span>
+<span class="gi">+</span>
+<span class="gi">+            sq_pushstring(v,_SC(&quot;args&quot;),-1);</span>
+<span class="gi">+            sq_newarra</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

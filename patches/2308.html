@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,124 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/keybinder/menuutils.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/keybinder/menuutils.cpp    (revision 4801)</span>
+<span class="gi">+++ src/plugins/contrib/keybinder/menuutils.cpp    (working copy)</span>
+<span class="gu">@@ -199,8 +199,8 @@</span>
+     wxArrayString levels;
+ 
+     // break the full menu path string into levels
+<span class="gd">-    for ( int i=0; i &lt; levelCount; ++i )</span>
+<span class="gd">-    {</span>
+<span class="gi">+    for ( int i=0; i &lt; levelCount; ++i )</span>
+<span class="gi">+    {</span>
+         levels.Add( fullMenuPath.BeforeFirst(wxT(&#39;\\&#39;)) );
+         fullMenuPath.Remove(0, levels[i].Length()+1 );
+         levels[i].Trim();
+<span class="gu">@@ -257,10 +257,10 @@</span>
+ // ----------------------------------------------------------------------------
+ // wxMenuCmd
+ // ----------------------------------------------------------------------------
+<span class="gd">-</span>
+<span class="gd">-#if defined( __WXGTK__) || defined(__WXMAC__)</span>
+<span class="gi">+#if not wxCHECK_VERSION(2, 8, 7)</span>
+<span class="gi">+#if defined (__WXGTK__) || defined(__WXMAC__)</span>
+ // ----------------------------------------------------------------------------
+<span class="gd">-void wxMenuCmd::Update(wxMenuItem* pSpecificMenuItem) //for __WXGTK__</span>
+<span class="gi">+void wxMenuCmd::Update(wxMenuItem* pSpecificMenuItem) //for __WXMAC__</span>
+ // ----------------------------------------------------------------------------
+ {
+ //    //+v0.4.11
+<span class="gu">@@ -332,10 +332,10 @@</span>
+ 
+ #endif
+ }
+<span class="gd">-#endif //update for __WXGTK__</span>
+<span class="gi">+#endif //update for __WXGTK__ || __WXMAC__</span>
+<span class="gi">+#endif // wxCHECK_VERSION(2, 8, 7)</span>
+ // ----------------------------------------------------------------------------
+<span class="gd">-</span>
+<span class="gd">-#if defined( __WXMSW__ )</span>
+<span class="gi">+#if defined( __WXMSW__ ) || wxCHECK_VERSION(2, 8, 7)</span>
+ // ----------------------------------------------------------------------------
+ void wxMenuCmd::Update(wxMenuItem* pSpecificMenuItem) // for __WXMSW__
+ // ----------------------------------------------------------------------------
+<span class="gu">@@ -357,8 +357,11 @@</span>
+     // leave numeric menu items alone. They get replaced by CodeBlocks
+     if (IsNumericMenuItem(pLclMnuItem))
+       return;
+<span class="gd">-</span>
+<span class="gi">+    #if wxCHECK_VERSION(2, 8, 7)</span>
+<span class="gi">+    wxString strText = pLclMnuItem-&gt;GetItemLabel();</span>
+<span class="gi">+    #else</span>
+     wxString strText = pLclMnuItem-&gt;GetText();
+<span class="gi">+    #endif</span>
+     //use full text to get label in order to preserve mnemonics/accelerators
+     wxString strLabel = strText.BeforeFirst(_T(&#39;\t&#39;));
+     wxString newtext = strLabel; //no accel, contains mnemonic
+<span class="gu">@@ -371,10 +374,16 @@</span>
+          LOGIT(wxT(&quot;wxMenuCmd::Update - Removing shortcuts [%d][%s] for [%d][%s]&quot;),pLclMnuItem-&gt;GetId(), strText.c_str(), m_nId, newtext.c_str());
+         #endif
+         // set &quot;non bitmapped&quot; text to preserve menu width
+<span class="gi">+        #if wxCHECK_VERSION(2, 8, 7)</span>
+<span class="gi">+        pLclMnuItem-&gt;SetItemLabel(newtext);</span>
+<span class="gi">+        #else</span>
+         pLclMnuItem-&gt;SetText(newtext);
+<span class="gi">+        #endif</span>
+<span class="gi">+        #if defined( __WXMSW__ )</span>
+          //now rebuild the menuitem if bitmapped
+          if (pLclMnuItem-&gt;GetBitmap().GetWidth())
+              pLclMnuItem = RebuildMenuitem(pLclMnuItem); //+v0.4.6
+<span class="gi">+        #endif //#if defined( __WXMSW__ )</span>
+         return;
+     }
+ 
+<span class="gu">@@ -395,12 +404,20 @@</span>
+     #if LOGGING
+      LOGIT(wxT(&quot;wxMenuCmd::Update - Setting shortcuts for [%d][%s]&quot;), pLclMnuItem-&gt;GetId(), newtext.c_str());
+     #endif
+<span class="gd">-    pLclMnuItem-&gt;SetText(newtext);</span>
+<span class="gi">+    #if wxCHECK_VERSION(2, 8, 7)</span>
+<span class="gi">+    pLclMnuItem-&gt;SetItemLabel(newtext);</span>
+<span class="gi">+    #else</span>
+<span class="gi">+    pLclMnuItem-&gt;SetText(newtext);</span>
+<span class="gi">+    #endif</span>
+<span class="gi">+    #if defined( __WXMSW__ )</span>
+     //now rebuild the menuitem if bitmapped
+     if (pLclMnuItem-&gt;GetBitmap().GetWidth())
+         pLclMnuItem = RebuildMenuitem(pLclMnuItem); //+v0.4.6
+<span class="gi">+    #endif //#if defined( __WXMSW__ )</span>
+ 
+ }//Update
+<span class="gi">+#endif //if defined( __WXMSW__ ) || wxCHECK_VERSION(2, 8, 7)</span>
+<span class="gi">+#if defined( __WXMSW__ )</span>
+ //// ----------------------------------------------------------------------------
+ //// RebuildMenuitem
+ //// ----------------------------------------------------------------------------
+<span class="gu">@@ -869,3 +886,4 @@</span>
+ }
+ // ----------------------------------------------------------------------------
+ 
+<span class="gi">+</span>
+<span class="gh">Index: src/src/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/main.cpp    (revision 4801)</span>
+<span class="gi">+++ src/src/main.cpp    (working copy)</span>
+<span class="gu">@@ -1293,7 +1293,11 @@</span>
+         {
+             if (!items[i]-&gt;IsCheckable())
+                 continue;
+<span class="gi">+            #if wxCHECK_VERSION(2, 8, 7)</span>
+<span class="gi">+            items[i]-&gt;Check(items[i]-&gt;GetItemLabelText().IsSameAs(name));</span>
+<span class="gi">+            #else</span>
+             items[i]-&gt;Check(items[i]-&gt;GetText().IsSameAs(name));
+<span class="gi">+            #endif</span>
+         }
+         Manager::Get()-&gt;GetConfigManager(_T(&quot;app&quot;))-&gt;Write(_T(&quot;/main_frame/layout/default&quot;), name);
+     }
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">jenslody 2008-01-01 20:16:19</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,78 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/src/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/main.cpp    (Revision 6943)</span>
+<span class="gi">+++ src/src/main.cpp    (Arbeitskopie)</span>
+<span class="gu">@@ -1715,11 +1715,12 @@</span>
+ 
+     width[num++] = -1; // main field
+ //    width[num++] = 128; // progress bar
+<span class="gi">+    dc.GetTextExtent(_(&quot; Windows (CR &amp; LF) &quot;),      &amp;width[num++], &amp;h);</span>
+     dc.GetTextExtent(_(&quot; WINDOWS-1252 &quot;),           &amp;width[num++], &amp;h);
+     dc.GetTextExtent(_(&quot; Line 12345, Column 123 &quot;), &amp;width[num++], &amp;h);
+     dc.GetTextExtent(_(&quot; Overwrite &quot;),              &amp;width[num++], &amp;h);
+     dc.GetTextExtent(_(&quot; Modified &quot;),               &amp;width[num++], &amp;h);
+<span class="gd">-    dc.GetTextExtent(_(&quot; Read/Write.....&quot;),         &amp;width[num++], &amp;h);</span>
+<span class="gi">+    dc.GetTextExtent(_(&quot; Read/Write &quot;),             &amp;width[num++], &amp;h);</span>
+     dc.GetTextExtent(_(&quot; name_of_profile &quot;),        &amp;width[num++], &amp;h);
+ 
+     CreateStatusBar(num);
+<span class="gu">@@ -1742,9 +1743,17 @@</span>
+         int panel = 0;
+         int pos = ed-&gt;GetControl()-&gt;GetCurrentPos();
+         wxString msg;
+<span class="gd">-        msg.Printf(_(&quot;Line %d, Column %d&quot;), ed-&gt;GetControl()-&gt;GetCurrentLine() + 1, ed-&gt;GetControl()-&gt;GetColumn(pos) + 1);</span>
+         SetStatusText(ed-&gt;GetFilename(), panel++);
+<span class="gi">+        switch (ed-&gt;GetControl()-&gt;GetEOLMode())</span>
+<span class="gi">+        {</span>
+<span class="gi">+            case wxSCI_EOL_CRLF: msg = _T(&quot;Windows (CR &amp; LF)&quot;); break;</span>
+<span class="gi">+            case wxSCI_EOL_CR: msg = _T(&quot;Unix (CR)&quot;); break;</span>
+<span class="gi">+            case wxSCI_EOL_LF: msg = _T(&quot;Mac (LF)&quot;); break;</span>
+<span class="gi">+            default: break;</span>
+<span class="gi">+        }</span>
+<span class="gi">+        SetStatusText(msg, panel++);</span>
+         SetStatusText(ed-&gt;GetEncodingName(), panel++);
+<span class="gi">+        msg.Printf(_(&quot;Line %d, Column %d&quot;), ed-&gt;GetControl()-&gt;GetCurrentLine() + 1, ed-&gt;GetControl()-&gt;GetColumn(pos) + 1);</span>
+         SetStatusText(msg, panel++);
+         SetStatusText(ed-&gt;GetControl()-&gt;GetOvertype() ? _(&quot;Overwrite&quot;) : _(&quot;Insert&quot;), panel++);
+         #if wxCHECK_VERSION(2, 9, 0)
+<span class="gu">@@ -1768,6 +1777,7 @@</span>
+         SetStatusText(wxEmptyString, panel++);
+         SetStatusText(wxEmptyString, panel++);
+         SetStatusText(wxEmptyString, panel++);
+<span class="gi">+        SetStatusText(wxEmptyString, panel++);</span>
+         SetStatusText(personality, panel++);
+     }
+ #endif // wxUSE_STATUSBAR
+<span class="gh">Index: src/src/resources/main_menu.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/resources/main_menu.xrc    (Revision 6943)</span>
+<span class="gi">+++ src/src/resources/main_menu.xrc    (Arbeitskopie)</span>
+<span class="gu">@@ -257,17 +257,17 @@</span>
+       &lt;object class=&quot;wxMenu&quot; name=&quot;idEditEOLMode&quot;&gt;
+         &lt;label&gt;&amp;amp;End-of-line mode&lt;/label&gt;
+         &lt;object class=&quot;wxMenuItem&quot; name=&quot;idEditEOLCRLF&quot;&gt;
+<span class="gd">-          &lt;label&gt;CR &amp;amp;&amp;amp; LF&lt;/label&gt;</span>
+<span class="gi">+          &lt;label&gt;Windows (CR &amp;amp;&amp;amp; LF)&lt;/label&gt;</span>
+           &lt;help&gt;End-of-line mode uses carriage return and line feed&lt;/help&gt;
+           &lt;radio&gt;1&lt;/radio&gt;
+         &lt;/object&gt;
+         &lt;object class=&quot;wxMenuItem&quot; name=&quot;idEditEOLCR&quot;&gt;
+<span class="gd">-          &lt;label&gt;CR&lt;/label&gt;</span>
+<span class="gi">+          &lt;label&gt;Unix (CR)&lt;/label&gt;</span>
+           &lt;help&gt;End-of-line mode uses carriage return only&lt;/help&gt;
+           &lt;radio&gt;1&lt;/radio&gt;
+         &lt;/object&gt;
+         &lt;object class=&quot;wxMenuItem&quot; name=&quot;idEditEOLLF&quot;&gt;
+<span class="gd">-          &lt;label&gt;LF&lt;/label&gt;</span>
+<span class="gi">+          &lt;label&gt;Mac (LF)&lt;/label&gt;</span>
+           &lt;help&gt;End-of-line mode uses line feed only&lt;/help&gt;
+           &lt;radio&gt;1&lt;/radio&gt;
+         &lt;/object&gt;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">olipfei 2011-02-01 22:38:37</div>

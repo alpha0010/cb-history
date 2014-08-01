@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,33 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/src/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/main.cpp    (revision 2264)</span>
+<span class="gi">+++ src/src/main.cpp    (working copy)</span>
+<span class="gu">@@ -1194,7 +1194,19 @@</span>
+ #if wxUSE_STATUSBAR
+     const int count = 6;
+     CreateStatusBar(count);
+<span class="gd">-    int statusWidths[count] = {-1, 96, 148, 64, 64, 96};</span>
+<span class="gi">+    //int statusWidths[count] = {-1, 96, 148, 64, 64, 96};</span>
+<span class="gi">+    CreateStatusBar(count);</span>
+<span class="gi">+    // set statusbar widths to fit any dpi //pecan 2006/03/27</span>
+<span class="gi">+    wxClientDC dc(this);</span>
+<span class="gi">+    wxFont font = dc.GetFont();</span>
+<span class="gi">+    wxCoord Pos2,Pos3,Pos4,Pos5,Pos6,h;</span>
+<span class="gi">+    dc.GetTextExtent(wxT(&quot; WINDOWS-1252 &quot;), &amp;Pos2, &amp;h);</span>
+<span class="gi">+    dc.GetTextExtent(wxT(&quot; Line 1234, Column 123 &quot;), &amp;Pos3, &amp;h);</span>
+<span class="gi">+    dc.GetTextExtent(wxT(&quot; Overwrite&quot;),  &amp;Pos4, &amp;h);</span>
+<span class="gi">+    dc.GetTextExtent(wxT(&quot; Modified&quot;),   &amp;Pos5, &amp;h);</span>
+<span class="gi">+    dc.GetTextExtent(wxT(&quot; Read/Write.....&quot;), &amp;Pos6, &amp;h);</span>
+<span class="gi">+</span>
+<span class="gi">+    int statusWidths[count] = {-1, Pos2, Pos3, Pos4, Pos5, Pos6};</span>
+     SetStatusWidths(count, statusWidths);
+ #endif // wxUSE_STATUSBAR
+ }
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">pecan 2006-03-28 04:03:50</div>

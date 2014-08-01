@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,124 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">diff --git a/src/plugins/scriptedwizard/resources/Makefile.am b/src/plugins/scriptedwizard/resources/Makefile.am</span>
+<span class="gh">index b843860..f5344ed 100644</span>
+<span class="gd">--- a/src/plugins/scriptedwizard/resources/Makefile.am</span>
+<span class="gi">+++ b/src/plugins/scriptedwizard/resources/Makefile.am</span>
+<span class="gu">@@ -1,4 +1,4 @@</span>
+<span class="gd">-SUBDIRS = arm avr c_file console d directx dll empty empty_file fltk fortran glfw glut gtk h_file irrlicht lf matlab_csf ogre opengl plugins ppc qt4 sdl sfml smartwin staticlib stlport sharedlib sys tricore win32gui wxwidgets</span>
+<span class="gi">+SUBDIRS = arm avr c_file console d directx dll empty empty_file fltk fortran glfw glut gtk h_file irrlicht lf mcs51 matlab_csf ogre opengl plugins ppc qt4 sdl sfml smartwin staticlib stlport sharedlib sys tricore win32gui wxwidgets</span>
+ 
+ pkgdata_DATA = scriptedwizard.zip
+ CLEANFILES = $(pkgdata_DATA)
+<span class="gh">diff --git a/src/plugins/scriptedwizard/resources/common_functions.script b/src/plugins/scriptedwizard/resources/common_functions.script</span>
+<span class="gh">index 2bdb8e9..bed3dd0 100644</span>
+<span class="gd">--- a/src/plugins/scriptedwizard/resources/common_functions.script</span>
+<span class="gi">+++ b/src/plugins/scriptedwizard/resources/common_functions.script</span>
+<span class="gu">@@ -59,6 +59,14 @@ function WarningsOn(base, compilerID)</span>
+         // with SDCC all warnings are enabled by default. You can only ask for less by using --less-pedantic or --disable-warning.
+         // the (pseudo) compiler &quot;No Compiler&quot; takes no options
+     }
+<span class="gi">+    else if (   GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;keil*&quot;)))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        base.AddCompilerOption(_T(&quot;WARNINGLEVEL(2)&quot;));</span>
+<span class="gi">+    }</span>
+<span class="gi">+    else if (   GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;iar*&quot;)))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        base.AddCompilerOption(_T(&quot;--remarks&quot;));</span>
+<span class="gi">+    }</span>
+     else
+     {
+         ShowWarning(_T(&quot;This wizard doesn&#39;t know how to setup warning flags for this compiler.\n&quot;));
+<span class="gu">@@ -113,7 +121,13 @@ function DebugSymbolsOn(base, compilerID)</span>
+     {
+         base.AddCompilerOption(_T(&quot;-d2&quot;)); // full symbolic debugging information
+     }
+<span class="gd">-    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;sdcc&quot;)))</span>
+<span class="gi">+    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;keil*&quot;)))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        base.AddCompilerOption(_T(&quot;DEBUG&quot;));</span>
+<span class="gi">+        base.AddCompilerOption(_T(&quot;OBJECTEXTEND&quot;));</span>
+<span class="gi">+    }</span>
+<span class="gi">+    else if (   GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;sdcc&quot;))</span>
+<span class="gi">+             || GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;iar*&quot;)))</span>
+     {
+         base.AddCompilerOption(_T(&quot;--debug&quot;));
+     }
+<span class="gu">@@ -188,6 +202,19 @@ function OptimizationsOn(base, compilerID)</span>
+         base.AddCompilerOption(_T(&quot;-ot&quot;)); // optimize for time
+         base.AddCompilerOption(_T(&quot;-ox&quot;)); // Maximum optimization
+     }
+<span class="gi">+    else if (   GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;keilc51&quot;)))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        base.AddCompilerOption(_T(&quot;OPTIMIZE(11,SIZE)&quot;));</span>
+<span class="gi">+    }</span>
+<span class="gi">+    else if (   GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;keilcx51&quot;)))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        base.AddCompilerOption(_T(&quot;OPTIMIZE(11,SIZE)&quot;));</span>
+<span class="gi">+        base.AddCompilerOption(_T(&quot;OBJECTADVANCED&quot;));</span>
+<span class="gi">+    }</span>
+<span class="gi">+    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;iar*&quot;)))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        base.AddCompilerOption(_T(&quot;-Oh&quot;));</span>
+<span class="gi">+    }</span>
+     else if (   GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;sdcc&quot;)) )
+     {
+         base.AddCompilerOption(_T(&quot;--opt-code-size&quot;));
+<span class="gh">diff --git a/src/plugins/scriptedwizard/resources/mcs51/Makefile.am b/src/plugins/scriptedwizard/resources/mcs51/Makefile.am</span>
+new file mode 100644
+<span class="gh">index 0000000..cb32de3</span>
+<span class="gd">--- /dev/null</span>
+<span class="gi">+++ b/src/plugins/scriptedwizard/resources/mcs51/Makefile.am</span>
+<span class="gu">@@ -0,0 +1,10 @@</span>
+<span class="gi">+pkgdatadir = $(datadir)/@PACKAGE@/templates/wizard/mcs51</span>
+<span class="gi">+</span>
+<span class="gi">+dist_pkgdata_DATA = logo.png \</span>
+<span class="gi">+                    wizard.png \</span>
+<span class="gi">+                    wizard.script \</span>
+<span class="gi">+                    wizard.xrc</span>
+<span class="gi">+</span>
+<span class="gi">+filesdir    = $(pkgdatadir)/files</span>
+<span class="gi">+</span>
+<span class="gi">+dist_files_DATA    = files/main.c</span>
+<span class="gh">diff --git a/src/plugins/scriptedwizard/resources/mcs51/files/main.c b/src/plugins/scriptedwizard/resources/mcs51/files/main.c</span>
+<span class="gh">index e59c525..ece853c 100644</span>
+<span class="gd">--- a/src/plugins/scriptedwizard/resources/mcs51/files/main.c</span>
+<span class="gi">+++ b/src/plugins/scriptedwizard/resources/mcs51/files/main.c</span>
+<span class="gu">@@ -1,7 +1,13 @@</span>
+ /*
+  */
+ 
+<span class="gi">+#if defined SDCC</span>
+ #include &lt;mcs51/8051.h&gt;
+<span class="gi">+#elif defined __CX51__ || defined __C51__</span>
+<span class="gi">+#include &lt;reg51.h&gt;</span>
+<span class="gi">+#elif defined __ICC8051__</span>
+<span class="gi">+#include &lt;io80C52.h&gt;</span>
+<span class="gi">+#endif</span>
+ 
+ void main(void)
+ {
+<span class="gh">diff --git a/src/plugins/scriptedwizard/resources/mcs51/wizard.script b/src/plugins/scriptedwizard/resources/mcs51/wizard.script</span>
+<span class="gh">index 013d6e9..4acad9c 100644</span>
+<span class="gd">--- a/src/plugins/scriptedwizard/resources/mcs51/wizard.script</span>
+<span class="gi">+++ b/src/plugins/scriptedwizard/resources/mcs51/wizard.script</span>
+<span class="gu">@@ -4,12 +4,17 @@</span>
+ //
+ // Project: MCS51 project
+ // Author:  H. Metin OZER
+<span class="gi">+// Keil/IAR: Thomas Sailer</span>
+ //
+ ////////////////////////////////////////////////////////////////////////////////
+ 
+ // Global Vars
+ MemoryModel &lt;- _T(&quot;&quot;);     // The chosen memory model
+<span class="gd">-IntelHex &lt;- true;         // produce Intel Hex file?</span>
+<span class="gi">+MemoryModelIndex &lt;- 0;     // The memory model as integer</span>
+<span class="gi">+Inte</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">alpha0010 2013-01-09 02:54:47</div>

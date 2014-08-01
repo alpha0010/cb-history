@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,114 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">diff -urN src/plugins/debuggergdb/gdb_commands.h src/plugins/debuggergdb/gdb_commands.h</span>
+<span class="gd">--- src/plugins/debuggergdb/gdb_commands.h    2007-02-02 16:40:17.000000000 +0100</span>
+<span class="gi">+++ src/plugins/debuggergdb/gdb_commands.h    2007-02-02 16:40:05.000000000 +0100</span>
+<span class="gu">@@ -130,8 +130,8 @@</span>
+ //  ebx at 0x22ff6c, ebp at 0x22ff78, esi at 0x22ff70, edi at 0x22ff74, eip at 0x22ff7c
+ static wxRegEx reDisassemblyInit(_T(&quot;^Stack level [0-9]+, frame at (0x[A-Fa-f0-9]+):&quot;));
+ static wxRegEx reDisassemblyInitFunc(_T(&quot;eip = (0x[A-Fa-f0-9]+) in ([^;]*)&quot;));
+<span class="gd">-// or32 variant</span>
+<span class="gd">-#ifdef __WXMSW__</span>
+<span class="gi">+// or32/ba variant</span>
+<span class="gi">+#if (defined(__WXMSW__) || defined(__LINUX__))</span>
+ static wxRegEx reDisassemblyInitFuncOR32(_T(&quot;PC = (0x[A-Fa-f0-9]+) in ([^;]*)&quot;));
+ #endif
+ //    Using the running image of child Thread 46912568064384 (LWP 7051).
+<span class="gu">@@ -932,8 +932,9 @@</span>
+ 
+     public:
+         /** @param dlg The disassembly dialog. */
+<span class="gd">-#ifdef __WXMSW__</span>
+<span class="gi">+#if (defined(__WXMSW__) || defined(__LINUX__))</span>
+         // only tested on mingw/pc/win env
+<span class="gi">+        // tested allso on gcc/pc/linux env</span>
+         GdbCmd_InfoRegisters(DebuggerDriver* driver, CPURegistersDlg* dlg, wxString disassemblyFlavor)
+ #else
+         GdbCmd_InfoRegisters(DebuggerDriver* driver, CPURegistersDlg* dlg)
+<span class="gu">@@ -942,7 +943,7 @@</span>
+             m_pDlg(dlg)
+         {
+             m_Cmd &lt;&lt; _T(&quot;info registers&quot;);
+<span class="gd">-#ifdef __WXMSW__</span>
+<span class="gi">+#if (defined(__WXMSW__) || defined(__LINUX__))</span>
+             m_disassemblyFlavor = disassemblyFlavor;
+ #endif
+         }
+<span class="gu">@@ -969,8 +970,9 @@</span>
+ 
+             if (!m_pDlg)
+                 return;
+<span class="gd">-            // or32 register string parser</span>
+<span class="gd">-            if(m_disassemblyFlavor == _T(&quot;set disassembly-flavor or32&quot;))</span>
+<span class="gi">+            // or32/ba register string parser</span>
+<span class="gi">+            if((m_disassemblyFlavor == _T(&quot;set disassembly-flavor or32&quot;)) ||</span>
+<span class="gi">+              (m_disassemblyFlavor == _T(&quot;set disassembly-flavor ba&quot;)))</span>
+             {
+                 ParseOutputFromOR32gdbPort(output);
+             }
+<span class="gu">@@ -1106,14 +1108,15 @@</span>
+ class GdbCmd_DisassemblyInit : public DebuggerCmd
+ {
+         DisassemblyDlg* m_pDlg;
+<span class="gd">-#ifdef __WXMSW__</span>
+<span class="gi">+#if (defined(__WXMSW__) || defined(__LINUX__))</span>
+         wxString m_disassemblyFlavor;
+ #endif
+     public:
+         static wxString LastAddr;
+         /** @param dlg The disassembly dialog. */
+<span class="gd">-#ifdef __WXMSW__</span>
+<span class="gi">+#if (defined(__WXMSW__) || defined(__LINUX__))</span>
+         // only tested on mingw/pc/win env
+<span class="gi">+        // also tested on gcc/pc/linux env</span>
+         GdbCmd_DisassemblyInit(DebuggerDriver* driver, DisassemblyDlg* dlg, wxString disassemblyFlavor)
+ #else
+         GdbCmd_DisassemblyInit(DebuggerDriver* driver, DisassemblyDlg* dlg)
+<span class="gu">@@ -1122,7 +1125,7 @@</span>
+             m_pDlg(dlg)
+         {
+             m_Cmd &lt;&lt; _T(&quot;info frame&quot;);
+<span class="gd">-#ifdef __WXMSW__</span>
+<span class="gi">+#if (defined(__WXMSW__) || defined(__LINUX__))</span>
+             m_disassemblyFlavor = disassemblyFlavor;
+ #endif
+         }
+<span class="gu">@@ -1145,8 +1148,9 @@</span>
+                     sf.function = reDisassemblyInitFunc.GetMatch(output, 2);
+                     long int active;
+ 
+<span class="gd">-#ifdef __WXMSW__</span>
+<span class="gd">-                    if(m_disassemblyFlavor == _T(&quot;set disassembly-flavor or32&quot;))</span>
+<span class="gi">+#if (defined(__WXMSW__) || defined(__LINUX__))</span>
+<span class="gi">+                    if((m_disassemblyFlavor == _T(&quot;set disassembly-flavor or32&quot;)) ||</span>
+<span class="gi">+                       (m_disassemblyFlavor == _T(&quot;set disassembly-flavor ba&quot;)))</span>
+                     {
+                         reDisassemblyInitFuncOR32.GetMatch(output, 1).ToLong(&amp;active, 16);
+                     }
+<span class="gh">diff -urN src/plugins/debuggergdb/gdb_driver.cpp src/plugins/debuggergdb/gdb_driver.cpp</span>
+<span class="gd">--- src/plugins/debuggergdb/gdb_driver.cpp    2007-02-02 16:40:17.000000000 +0100</span>
+<span class="gi">+++ src/plugins/debuggergdb/gdb_driver.cpp    2007-02-02 16:39:45.000000000 +0100</span>
+<span class="gu">@@ -440,7 +440,7 @@</span>
+ {
+     if (!m_pDisassembly)
+         return;
+<span class="gd">-#ifdef __WXMSW__</span>
+<span class="gi">+#if (defined(__WXMSW__) || defined(__LINUX__))</span>
+     QueueCommand(new GdbCmd_DisassemblyInit(this, m_pDisassembly, flavour));
+ #else
+     QueueCommand(new GdbCmd_DisassemblyInit(this, m_pDisassembly));
+<span class="gu">@@ -451,7 +451,7 @@</span>
+ {
+     if (!m_pCPURegisters)
+         return;
+<span class="gd">-#ifdef __WXMSW__</span>
+<span class="gi">+#if (defined(__WXMSW__) || defined(__LINUX__))</span>
+     QueueCommand(new GdbCmd_InfoRegisters(this, m_pCPURegisters, flavour));
+ #else
+     QueueCommand(new GdbCmd_InfoRegisters(this, m_pCPURegisters));
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mandrav 2007-04-12 13:18:03</div>

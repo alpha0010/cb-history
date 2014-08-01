@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,44 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: scintilla/src/Editor.cxx</span>
+<span class="gh">===================================================================</span>
+RCS file: /cvsroot/scintilla/scintilla/src/Editor.cxx,v
+retrieving revision 1.501
+<span class="gh">diff -u -r1.501 Editor.cxx</span>
+<span class="gd">--- scintilla/src/Editor.cxx    21 Jan 2010 12:57:34 -0000    1.501</span>
+<span class="gi">+++ scintilla/src/Editor.cxx    26 Jan 2010 21:04:13 -0000</span>
+<span class="gu">@@ -2909,7 +2909,9 @@</span>
+         if (subLine == (ll-&gt;lines - 1)) {
+             virtualSpaces = sel.VirtualSpaceFor(pdoc-&gt;LineEnd(line));
+         }
+<span class="gd">-        SelectionSegment virtualSpaceRange(SelectionPosition(posLineStart), SelectionPosition(posLineStart + lineEnd, virtualSpaces));</span>
+<span class="gi">+        SelectionPosition posStart(posLineStart);</span>
+<span class="gi">+        SelectionPosition posEnd(posLineStart + lineEnd, virtualSpaces);</span>
+<span class="gi">+        SelectionSegment virtualSpaceRange(posStart, posEnd);</span>
+         for (size_t r=0; r&lt;sel.Count(); r++) {
+             int alpha = (r == sel.Main()) ? vsDraw.selAlpha : vsDraw.selAdditionalAlpha;
+             if (alpha != SC_ALPHA_NOALPHA) {
+<span class="gh">Index: scintilla/src/PositionCache.cxx</span>
+<span class="gh">===================================================================</span>
+RCS file: /cvsroot/scintilla/scintilla/src/PositionCache.cxx,v
+retrieving revision 1.16
+<span class="gh">diff -u -r1.16 PositionCache.cxx</span>
+<span class="gd">--- scintilla/src/PositionCache.cxx    26 Aug 2009 10:48:18 -0000    1.16</span>
+<span class="gi">+++ scintilla/src/PositionCache.cxx    26 Jan 2010 21:04:14 -0000</span>
+<span class="gu">@@ -413,7 +413,9 @@</span>
+     }
+ 
+     if (breakForSelection) {
+<span class="gd">-        SelectionSegment segmentLine(SelectionPosition(posLineStart), SelectionPosition(posLineStart + lineEnd));</span>
+<span class="gi">+        SelectionPosition posStart(posLineStart);</span>
+<span class="gi">+        SelectionPosition posEnd(posLineStart + lineEnd);</span>
+<span class="gi">+        SelectionSegment segmentLine(posStart, posEnd);</span>
+         for (size_t r=0; r&lt;ll-&gt;psel-&gt;Count(); r++) {
+             SelectionSegment portion = ll-&gt;psel-&gt;Range(r).Intersect(segmentLine);
+             if (!(portion.start == portion.end)) {
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">techy 2010-01-26 23:11:18</div>

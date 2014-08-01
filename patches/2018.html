@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,133 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: plugins/compilergcc/compilermessages.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/compilergcc/compilermessages.cpp    (revision 3991)</span>
+<span class="gi">+++ plugins/compilergcc/compilermessages.cpp    (working copy)</span>
+<span class="gu">@@ -100,7 +100,11 @@</span>
+ 
+         // file:line: msg
+         text &lt;&lt; m_pList-&gt;GetItemText(i) &lt;&lt; _T(&#39;:&#39;) &lt;&lt; line &lt;&lt; _T(&quot;: &quot;);
+<span class="gd">-        text &lt;&lt; msg &lt;&lt; _T(&#39;\n&#39;);</span>
+<span class="gi">+        text &lt;&lt; msg;</span>
+<span class="gi">+#ifdef __WIN32__</span>
+<span class="gi">+        text &lt;&lt; _T(&#39;\r&#39;); // Add CR for Windows clipboard</span>
+<span class="gi">+#endif</span>
+<span class="gi">+        text &lt;&lt; _T(&#39;\n&#39;);</span>
+     }
+ 
+     if (!text.IsEmpty() &amp;&amp; wxTheClipboard-&gt;Open())
+<span class="gh">Index: plugins/compilergcc/compileroptionsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/compilergcc/compileroptionsdlg.cpp    (revision 3991)</span>
+<span class="gi">+++ plugins/compilergcc/compileroptionsdlg.cpp    (working copy)</span>
+<span class="gu">@@ -857,7 +857,7 @@</span>
+ 
+     // linker options and libs
+     wxListBox* lstLibs = XRCCTRL(*this, &quot;lstLibs&quot;, wxListBox);
+<span class="gd">-    for (int i = 0; i &lt; lstLibs-&gt;GetCount(); ++i)</span>
+<span class="gi">+    for (unsigned int i = 0; i &lt; lstLibs-&gt;GetCount(); ++i)</span>
+         m_LinkLibs.Add(lstLibs-&gt;GetString(i));
+ }
+ 
+<span class="gu">@@ -1407,7 +1407,7 @@</span>
+     if (!base)
+         return;
+     wxNotebook* nb = XRCCTRL(*this, &quot;nbDirs&quot;, wxNotebook);
+<span class="gd">-    for (int i = 0; i &lt; control-&gt;GetCount(); ++i)</span>
+<span class="gi">+    for (unsigned int i = 0; i &lt; control-&gt;GetCount(); ++i)</span>
+     {
+         switch (nb-&gt;GetSelection())
+         {
+<span class="gu">@@ -1505,7 +1505,7 @@</span>
+                         wxYES | wxNO | wxICON_QUESTION) == wxID_YES)
+     {
+         // Unset all variables of lstVars
+<span class="gd">-        for (int i=0; i&lt;lstVars-&gt;GetCount(); i++)</span>
+<span class="gi">+        for (unsigned int i=0; i&lt;lstVars-&gt;GetCount(); i++)</span>
+         {
+             wxString key = lstVars-&gt;GetString(i).BeforeFirst(_T(&#39;=&#39;)).Trim(true);
+             if (!key.IsEmpty())
+<span class="gu">@@ -1553,7 +1553,8 @@</span>
+                 break;
+         } // end switch
+     }
+<span class="gd">-    wxChoice* cmb = XRCCTRL(*this, &quot;cmbCompiler&quot;, wxChoice);</span>
+<span class="gi">+    wxChoice* cmb = 0;</span>
+<span class="gi">+    cmb = XRCCTRL(*this, &quot;cmbCompiler&quot;, wxChoice);</span>
+     wxString value = wxGetTextFromUser(_(&quot;Please enter the new compiler&#39;s name:&quot;),
+                                     _(&quot;Add new compiler&quot;),
+                                     _(&quot;Copy of &quot;) + CompilerFactory::GetCompiler(m_CurrentCompilerIdx)-&gt;GetName());
+<span class="gu">@@ -1618,7 +1619,7 @@</span>
+         int compilerIdx = m_CurrentCompilerIdx;
+         CompilerFactory::RemoveCompiler(CompilerFactory::GetCompiler(compilerIdx));
+         cmb-&gt;Delete(compilerIdx);
+<span class="gd">-        while (compilerIdx &gt;= cmb-&gt;GetCount())</span>
+<span class="gi">+        while (compilerIdx &gt;= (int)(cmb-&gt;GetCount()))</span>
+             --compilerIdx;
+         cmb-&gt;SetSelection(compilerIdx);
+         m_CurrentCompilerIdx = compilerIdx;
+<span class="gu">@@ -1747,7 +1748,7 @@</span>
+                                 : reinterpret_cast&lt;CompileOptionsBase*&gt;(m_pProject-&gt;GetBuildTarget(sel));
+     if (!base)
+         return;
+<span class="gd">-    for (int i = 0; i &lt; lstLibs-&gt;GetCount(); ++i)</span>
+<span class="gi">+    for (unsigned int i = 0; i &lt; lstLibs-&gt;GetCount(); ++i)</span>
+     {
+         base-&gt;AddLinkLib(lstLibs-&gt;GetString(i));
+     }
+<span class="gu">@@ -1854,7 +1855,7 @@</span>
+ void CompilerOptionsDlg::OnMoveLibDownClick(wxSpinEvent&amp; /*event*/)
+ {
+     wxListBox* lstLibs = XRCCTRL(*this, &quot;lstLibs&quot;, wxListBox);
+<span class="gd">-    if (lstLibs-&gt;GetSelection() == lstLibs-&gt;GetCount() - 1)</span>
+<span class="gi">+    if (lstLibs-&gt;GetSelection() == (int)(lstLibs-&gt;GetCount()) - 1)</span>
+         return;
+     int sel = lstLibs-&gt;GetSelection();
+     wxString lib = lstLibs-&gt;GetStringSelection();
+<span class="gu">@@ -1880,7 +1881,7 @@</span>
+ void CompilerOptionsDlg::OnMoveDirDownClick(wxSpinEvent&amp; /*event*/)
+ {
+     wxListBox* lst = GetDirsListBox();
+<span class="gd">-    if (!lst || lst-&gt;GetSelection() == lst-&gt;GetCount() - 1)</span>
+<span class="gi">+    if (!lst || lst-&gt;GetSelection() == (int)(lst-&gt;GetCount()) - 1)</span>
+         return;
+     int sel = lst-&gt;GetSelection();
+     wxString lib = lst-&gt;GetStringSelection();
+<span class="gh">Index: sdk/configuretoolsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- sdk/configuretoolsdlg.cpp    (revision 3991)</span>
+<span class="gi">+++ sdk/configuretoolsdlg.cpp    (working copy)</span>
+<span class="gu">@@ -93,7 +93,7 @@</span>
+     const wxListBox* list = XRCCTRL(*this, &quot;lstTools&quot;, wxListBox);
+     bool hasSel = list-&gt;GetSelection() != -1;
+     bool notFirst = list-&gt;GetSelection() &gt; 0;
+<span class="gd">-    bool notLast = (list-&gt;GetSelection() &lt; list-&gt;GetCount() -1) &amp;&amp; hasSel;</span>
+<span class="gi">+    bool notLast = (list-&gt;GetSelection() &lt; (int)(list-&gt;GetCount()) -1) &amp;&amp; hasSel;</span>
+     bool notSeparator = true;
+ 
+     if(hasSel)
+<span class="gh">Index: sdk/projectoptionsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- sdk/projectoptionsdlg.cpp    (revision 3991)</span>
+<span class="gi">+++ sdk/projectoptionsdlg.cpp    (working copy)</span>
+<span class="gu">@@ -108,7 +108,7 @@</span>
+     m_pCompiler(0L)
+ {
+     wxXmlResource::Get()-&gt;LoadDialog(this, parent, _T(&quot;dlgProjectOptions&quot;));
+<span class="gd">-    </span>
+<span class="gi">+</span>
+     wxCheckListBox* list = XRCCTRL(*this, &quot;lstFiles&quot;, wxCheckListBox);
+     int count = m_Project-&gt;GetFilesCount();
+     for (int i = 0; i &lt; count; ++i)
+<span class="gu">@@ -754,7 +754,7 @@</span>
+     ProjectBuildTarget* target = m_Project-&gt;GetBuildTarget(targetIdx);
+ 
+     wxCheckListBox* list = XRCCTRL(*this, &quot;lstFiles&quot;, wxCheckListBox);
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

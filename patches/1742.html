@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,41 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/compilercommandgenerator.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/compilercommandgenerator.cpp    (revision 3398)</span>
+<span class="gi">+++ src/sdk/compilercommandgenerator.cpp    (working copy)</span>
+<span class="gu">@@ -238,13 +238,6 @@</span>
+     FixPathSeparators(compiler, tmpObject);
+     FixPathSeparators(compiler, tmpFlatObject);
+ 
+<span class="gd">-    if (target)</span>
+<span class="gd">-    {  // this one has to come first, since wxString::Replace, otherwise $object would go first</span>
+<span class="gd">-        // leaving nothing to replace for this $objects_output_dir</span>
+<span class="gd">-        tmp = target-&gt;GetObjectOutput();</span>
+<span class="gd">-        FixPathSeparators(compiler, tmp);</span>
+<span class="gd">-        macro.Replace(_T(&quot;$objects_output_dir&quot;), tmp);</span>
+<span class="gd">-    }</span>
+     macro.Replace(_T(&quot;$compiler&quot;), compilerStr);
+     macro.Replace(_T(&quot;$linker&quot;), compiler-&gt;GetPrograms().LD);
+     macro.Replace(_T(&quot;$lib_linker&quot;), compiler-&gt;GetPrograms().LIB);
+<span class="gu">@@ -257,6 +250,14 @@</span>
+     macro.Replace(_T(&quot;$libs&quot;), m_LDAdd[target]);
+     macro.Replace(_T(&quot;$file&quot;), tmpFile);
+     macro.Replace(_T(&quot;$dep_object&quot;), tmpDeps);
+<span class="gi">+    if (target)</span>
+<span class="gi">+    {  // this one has to come before $object, otherwise $object would go first</span>
+<span class="gi">+       // leaving nothing to replace for this $objects_output_dir,</span>
+<span class="gi">+       // and after $options because $objects_output_dir may be in compiler flags ($options).</span>
+<span class="gi">+        tmp = target-&gt;GetObjectOutput();</span>
+<span class="gi">+        FixPathSeparators(compiler, tmp);</span>
+<span class="gi">+        macro.Replace(_T(&quot;$objects_output_dir&quot;), tmp);</span>
+<span class="gi">+    }</span>
+     macro.Replace(_T(&quot;$object&quot;), tmpObject);
+     macro.Replace(_T(&quot;$resource_output&quot;), tmpObject);
+     if (!target)
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">naika 2006-12-19 22:35:39</div>

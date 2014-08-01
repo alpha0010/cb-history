@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,82 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/editormanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editormanager.cpp    (revision 2321)</span>
+<span class="gi">+++ src/sdk/editormanager.cpp    (working copy)</span>
+<span class="gu">@@ -585,12 +585,12 @@</span>
+     }
+ }
+ 
+<span class="gd">-cbEditor* EditorManager::New()</span>
+<span class="gi">+cbEditor* EditorManager::New(const wxString&amp; newFileName)</span>
+ {
+     SANITY_CHECK(0L);
+ 
+     wxString old_title = Manager::Get()-&gt;GetAppWindow()-&gt;GetTitle(); // Fix for Bug #1389450
+<span class="gd">-    cbEditor* ed = new cbEditor(m_pNotebook, wxEmptyString);</span>
+<span class="gi">+    cbEditor* ed = new cbEditor(m_pNotebook, newFileName);</span>
+     if (!ed-&gt;SaveAs())
+     {
+         //DeletePage(ed-&gt;GetPageIndex());
+<span class="gu">@@ -1104,6 +1104,41 @@</span>
+         //    newEd-&gt;SetProjectFile(ed-&gt;GetProjectFile());
+         return newEd;
+     }
+<span class="gi">+</span>
+<span class="gi">+    // We couldn&#39;t find the file, maybe it does not exist. Ask the user if we</span>
+<span class="gi">+    // should create it:</span>
+<span class="gi">+    if (cbMessageBox(_(&quot;The file does not exist. Do you want to create it?&quot;),</span>
+<span class="gi">+                _(&quot;Error&quot;), wxICON_QUESTION | wxYES_NO) == wxID_YES)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        cbProject* project = Manager::Get()-&gt;GetProjectManager()-&gt;GetActiveProject();</span>
+<span class="gi">+        if (project)</span>
+<span class="gi">+            wxSetWorkingDirectory(project-&gt;GetBasePath());</span>
+<span class="gi">+</span>
+<span class="gi">+        // Create a suggestion for the new file name:</span>
+<span class="gi">+        if (ft == ftHeader)</span>
+<span class="gi">+            fn.SetExt(FileFilters::CPP_EXT);</span>
+<span class="gi">+        else if (ft == ftSource)</span>
+<span class="gi">+            fn.SetExt(FileFilters::H_EXT);</span>
+<span class="gi">+        // else? Well, if the filename is not changed we could possibly</span>
+<span class="gi">+        // overwrite an existing file with our suggestion.</span>
+<span class="gi">+</span>
+<span class="gi">+        cbEditor* newEd = New(fn.GetFullPath());</span>
+<span class="gi">+        if (cbMessageBox(_(&quot;Do you want to add this new file in the active project?&quot;),</span>
+<span class="gi">+                    _(&quot;Add file to project&quot;),</span>
+<span class="gi">+                    wxYES_NO | wxICON_QUESTION) == wxID_YES)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            wxArrayInt targets;</span>
+<span class="gi">+            if (Manager::Get()-&gt;GetProjectManager()-&gt;AddFileToProject(newEd-&gt;GetFilename(), project, targets) != 0)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                ProjectFile* pf = project-&gt;GetFileByFilename(newEd-&gt;GetFilename(), false);</span>
+<span class="gi">+                newEd-&gt;SetProjectFile(pf);</span>
+<span class="gi">+                Manager::Get()-&gt;GetProjectManager()-&gt;RebuildTree();</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+<span class="gi">+        // verify that the open files are still in sync</span>
+<span class="gi">+        // the new file might have overwritten an existing one)</span>
+<span class="gi">+        Manager::Get()-&gt;GetEditorManager()-&gt;CheckForExternallyModifiedFiles();</span>
+<span class="gi">+    }</span>
+     return 0L;
+ }
+ 
+<span class="gh">Index: src/sdk/editormanager.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editormanager.h    (revision 2321)</span>
+<span class="gi">+++ src/sdk/editormanager.h    (working copy)</span>
+<span class="gu">@@ -72,7 +72,7 @@</span>
+         void SetActiveEditor(EditorBase* ed);
+         EditorColorSet* GetColorSet(){ return (this==NULL) ? 0 : m_Theme; }
+         void SetColorSet(EditorColorSet* theme);
+<span class="gd">-        cbEditor* New();</span>
+<span class="gi">+        cbEditor* New(const wxString&amp; newFileName = wxEmptyString);</span>
+ 
+         // these are used *only* for custom editors
+         void AddCustomEditor(EditorBase* eb);
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mandrav 2006-04-10 09:27:02</div>

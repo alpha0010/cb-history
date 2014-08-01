@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,94 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/editorconfigurationdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorconfigurationdlg.cpp    (revision 3186)</span>
+<span class="gi">+++ src/sdk/editorconfigurationdlg.cpp    (working copy)</span>
+<span class="gu">@@ -122,6 +122,7 @@</span>
+        XRCCTRL(*this, &quot;chkTabIndents&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/tab_indents&quot;), true));
+        XRCCTRL(*this, &quot;chkBackspaceUnindents&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/backspace_unindents&quot;), true));
+        XRCCTRL(*this, &quot;chkWordWrap&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/word_wrap&quot;), false));
+<span class="gi">+       XRCCTRL(*this, &quot;chkPosixRegex&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/use_posix_style_regexes&quot;), false));</span>
+        XRCCTRL(*this, &quot;chkShowLineNumbers&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/show_line_numbers&quot;), true));
+        XRCCTRL(*this, &quot;chkHighlightCaretLine&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/highlight_caret_line&quot;), false));
+        XRCCTRL(*this, &quot;spnTabSize&quot;, wxSpinCtrl)-&gt;SetValue(cfg-&gt;ReadInt(_T(&quot;/tab_size&quot;), 4));
+<span class="gu">@@ -835,12 +836,16 @@</span>
+         cfg-&gt;Write(_T(&quot;/tab_indents&quot;),             XRCCTRL(*this, &quot;chkTabIndents&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/backspace_unindents&quot;),     XRCCTRL(*this, &quot;chkBackspaceUnindents&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/word_wrap&quot;),             XRCCTRL(*this, &quot;chkWordWrap&quot;, wxCheckBox)-&gt;GetValue());
+<span class="gi">+        cfg-&gt;Write(_T(&quot;/use_posix_style_regexes&quot;),XRCCTRL(*this, &quot;chkPosixRegex&quot;, wxCheckBox)-&gt;GetValue());</span>
+<span class="gi">+</span>
+         cfg-&gt;Write(_T(&quot;/show_line_numbers&quot;),     XRCCTRL(*this, &quot;chkShowLineNumbers&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/highlight_caret_line&quot;), XRCCTRL(*this, &quot;chkHighlightCaretLine&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/tab_size&quot;),             XRCCTRL(*this, &quot;spnTabSize&quot;, wxSpinCtrl)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/view_whitespace&quot;),      XRCCTRL(*this, &quot;cmbViewWS&quot;, wxComboBox)-&gt;GetSelection());
+         cfg-&gt;Write(_T(&quot;/tab_text_relative&quot;),    XRCCTRL(*this, &quot;rbTabText&quot;, wxRadioBox)-&gt;GetSelection() ? true : false);
+
+<span class="gi">+        // find &amp; replace, regex searches</span>
+<span class="gi">+</span>
+         //caret
+         cfg-&gt;Write(_T(&quot;/caret/width&quot;), XRCCTRL(*this, &quot;spnCaretWidth&quot;, wxSpinCtrl)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/caret/colour&quot;), XRCCTRL(*this, &quot;btnCaretColour&quot;, wxButton)-&gt;GetBackgroundColour());
+<span class="gh">Index: src/sdk/editormanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editormanager.cpp    (revision 3186)</span>
+<span class="gi">+++ src/sdk/editormanager.cpp    (working copy)</span>
+<span class="gu">@@ -1423,7 +1423,11 @@</span>
+     if (data-&gt;matchCase)
+         flags |= wxSCI_FIND_MATCHCASE;
+     if (data-&gt;regEx)
+<span class="gi">+    {</span>
+         flags |= wxSCI_FIND_REGEXP;
+<span class="gi">+        if (Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;))-&gt;ReadBool(_T(&quot;/use_posix_style_regexes&quot;), false))</span>
+<span class="gi">+            flags |= wxSCI_FIND_POSIX;</span>
+<span class="gi">+    }</span>
+
+     control-&gt;BeginUndoAction();
+     int pos = -1;
+<span class="gu">@@ -1658,7 +1662,11 @@</span>
+     if (data-&gt;matchCase)
+         flags |= wxSCI_FIND_MATCHCASE;
+     if (data-&gt;regEx)
+<span class="gi">+    {</span>
+         flags |= wxSCI_FIND_REGEXP;
+<span class="gi">+        if (Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;))-&gt;ReadBool(_T(&quot;/use_posix_style_regexes&quot;), false))</span>
+<span class="gi">+            flags |= wxSCI_FIND_POSIX;</span>
+<span class="gi">+    }</span>
+
+     bool replace = false;
+     bool confirm = true;
+<span class="gu">@@ -1884,7 +1892,11 @@</span>
+     if (data-&gt;matchCase)
+         flags |= wxSCI_FIND_MATCHCASE;
+     if (data-&gt;regEx)
+<span class="gi">+    {</span>
+         flags |= wxSCI_FIND_REGEXP;
+<span class="gi">+        if (Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;))-&gt;ReadBool(_T(&quot;/use_posix_style_regexes&quot;), false))</span>
+<span class="gi">+            flags |= wxSCI_FIND_POSIX;</span>
+<span class="gi">+    }</span>
+
+     int pos = -1;
+     // avoid infinite loop when wrapping search around, eventually crashing WinLogon O.O
+<span class="gh">Index: src/sdk/resources/editor_configuration.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/editor_configuration.xrc    (revision 3186)</span>
+<span class="gi">+++ src/sdk/resources/editor_configuration.xrc    (working copy)</span>
+<span class="gu">@@ -308,6 +308,12 @@</span>
+                             &lt;/object&gt;
+                             &lt;object class=&quot;sizeritem&quot;&gt;
+                               &lt;flag&gt;wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;
+<span class="gi">+                              &lt;object class=&quot;wxCheckBox&quot; name=&quot;chkPosixRegex&quot;&gt;</span>
+<span class="gi">+                                &lt;label&gt;Use POSIX style for RegEx searches&lt;/label&gt;</span>
+<span class="gi">+                              &lt;/object&gt;</span>
+<span class="gi">+                            &lt;/object&gt;</span>
+<span class="gi">+                            &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gi">+                              &lt;flag&gt;wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;</span>
+                               &lt;object class=&quot;wxCheckBox&quot; name=&quot;chkShowLineNumbers&quot;&gt;
+                                 &lt;label&gt;Show line numbers&lt;/label&gt;
+                               &lt;/object&gt;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

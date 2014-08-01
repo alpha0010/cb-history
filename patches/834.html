@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,147 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: D:/codeblocks/src/src/app.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- D:/codeblocks/src/src/app.cpp    (revision 2006)</span>
+<span class="gi">+++ D:/codeblocks/src/src/app.cpp    (working copy)</span>
+<span class="gu">@@ -276,55 +276,26 @@</span>
+ void CodeBlocksApp::InitLocale()
+ {
+     ConfigManager* cfg = Manager::Get()-&gt;GetConfigManager(_T(&quot;app&quot;));
+<span class="gd">-    const wxString langs[] =</span>
+<span class="gd">-    {</span>
+<span class="gd">-        _T(&quot;(System default)&quot;)</span>
+<span class="gd">-//        ,_T(&quot;English (U.S.)&quot;)</span>
+<span class="gd">-//        ,_T(&quot;English&quot;)</span>
+<span class="gd">-//        ,_T(&quot;Chinese (Simplified)&quot;)</span>
+<span class="gd">-//        ,_T(&quot;German&quot;)</span>
+<span class="gd">-//        ,_T(&quot;Russian&quot;)</span>
+<span class="gd">-    };</span>
+ 
+<span class="gd">-    // Must have the same order than the above</span>
+<span class="gd">-    const long int locales[] =</span>
+<span class="gd">-    {</span>
+<span class="gd">-        wxLANGUAGE_DEFAULT</span>
+<span class="gd">-//        ,wxLANGUAGE_ENGLISH_US</span>
+<span class="gd">-//        ,wxLANGUAGE_ENGLISH</span>
+<span class="gd">-//        ,wxLANGUAGE_CHINESE_SIMPLIFIED</span>
+<span class="gd">-//        ,wxLANGUAGE_GERMAN</span>
+<span class="gd">-//        ,wxLANGUAGE_RUSSIAN</span>
+<span class="gd">-    };</span>
+ 
+<span class="gd">-    long int lng = cfg-&gt;ReadInt(_T(&quot;/locale/language&quot;),(long int)-2);</span>
+<span class="gi">+    bool i18n=cfg-&gt;ReadBool(_T(&quot;/environment/I18N&quot;),LOCALIZE);</span>
+<span class="gi">+    int lng =-1;    // -1 = Don&#39;t use locale; the default is 0 = Use locale</span>
+<span class="gi">+    if(i18n)</span>
+<span class="gi">+        lng = cfg-&gt;ReadInt(_T(&quot;/locale/language&quot;),(int)0);</span>
+ 
+<span class="gd">-    if (lng &lt;= -2 &amp;&amp; WXSIZEOF(langs)&gt;=2) // ask only if undefined and there are at least 2 choices</span>
+<span class="gd">-    {</span>
+<span class="gd">-        lng = wxGetSingleChoiceIndex(_T(&quot;Please choose language:&quot;), _T(&quot;Language&quot;), WXSIZEOF(langs), langs);</span>
+<span class="gd">-        if (lng &gt;= 0 &amp;&amp; static_cast&lt;unsigned int&gt;(lng) &lt; WXSIZEOF(locales))</span>
+<span class="gd">-        {</span>
+<span class="gd">-            lng = locales[lng];</span>
+<span class="gd">-        }</span>
+<span class="gd">-    }</span>
+<span class="gd">-    else</span>
+<span class="gd">-    {</span>
+<span class="gd">-        lng = -1; // -1 = Don&#39;t use locale</span>
+<span class="gd">-    }</span>
+<span class="gi">+    int catalogNum = cfg-&gt;ReadInt(_T(&quot;/locale/catalogNum&quot;), (int)0);</span>
+<span class="gi">+    if (catalogNum == 0)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        catalogNum = 1;</span>
+<span class="gi">+        cfg-&gt;Write(_T(&quot;/locale/Domain1&quot;), &quot;codeblocks&quot;);</span>
+<span class="gi">+    }</span>
+ 
+     if (lng&gt;=0)
+     {
+<span class="gd">-        m_locale.Init(lng);</span>
+<span class="gi">+        m_locale.Init(locales[lng]);</span>
+         wxLocale::AddCatalogLookupPathPrefix(ConfigManager::GetDataFolder() + _T(&quot;/locale&quot;));
+         wxLocale::AddCatalogLookupPathPrefix(wxT(&quot;.&quot;));
+         wxLocale::AddCatalogLookupPathPrefix(wxT(&quot;..&quot;));
+<span class="gd">-        int catalogNum = cfg-&gt;ReadInt(_T(&quot;/locale/catalogNum&quot;), (int)0);</span>
+<span class="gd">-        if (catalogNum == 0)</span>
+<span class="gd">-        {</span>
+<span class="gd">-            catalogNum = 1;</span>
+<span class="gd">-            cfg-&gt;Write(_T(&quot;/locale/Domain1&quot;), &quot;codeblocks&quot;);</span>
+<span class="gd">-        }</span>
+<span class="gd">-</span>
+         for (int i = 1; i &lt;= catalogNum; ++i)
+         {
+             wxString tempStr = wxString::Format(_T(&quot;/locale/Domain%d&quot;), i);
+<span class="gu">@@ -338,9 +309,10 @@</span>
+             else if (cfg-&gt;Read(_T(&quot;/plugins/&quot;) + catalogName))
+                 m_locale.AddCatalog(catalogName);
+         }
+<span class="gd">-        cfg-&gt;Write(_T(&quot;/locale/catalogNum&quot;), (int)catalogNum);</span>
+<span class="gi">+        </span>
+     }
+<span class="gd">-</span>
+<span class="gi">+    cfg-&gt;Write(_T(&quot;/locale/catalogNum&quot;), (int)catalogNum);</span>
+<span class="gi">+    cfg-&gt;Write(_T(&quot;/environment/I18N&quot;),  (bool)i18n);</span>
+     cfg-&gt;Write(_T(&quot;/locale/language&quot;), (int)lng);
+ }
+ 
+<span class="gh">Index: D:/codeblocks/src/src/appglobals.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- D:/codeblocks/src/src/appglobals.cpp    (revision 2006)</span>
+<span class="gi">+++ D:/codeblocks/src/src/appglobals.cpp    (working copy)</span>
+<span class="gu">@@ -43,3 +43,25 @@</span>
+ const wxString g_AppBuildTimestamp = (wxString(wxT(__DATE__)) + wxT(&quot;, &quot;) + wxT(__TIME__) + wxT(&quot; - wx&quot;) + wxString(wxT(wxVERSION_NUM_DOT_STRING)) + wxT(&quot; (&quot;) + g_AppPlatform + wxT(&quot;, &quot;) + g_AppWXAnsiUnicode + wxT(&quot;)&quot;) );
+ 
+ const wxString g_DefaultBatchBuildArgs = _T(&quot;-na -nd -ns --batch-build-notify&quot;);
+<span class="gi">+</span>
+<span class="gi">+</span>
+<span class="gi">+const wxString langs[] =</span>
+<span class="gi">+{</span>
+<span class="gi">+    _(&quot;(System default)&quot;)</span>
+<span class="gi">+//        ,_T(&quot;English (U.S.)&quot;)</span>
+<span class="gi">+//        ,_T(&quot;English&quot;)</span>
+<span class="gi">+    ,_(&quot;Chinese (Simplified)&quot;)</span>
+<span class="gi">+//        ,_T(&quot;German&quot;)</span>
+<span class="gi">+//        ,_T(&quot;Russian&quot;)</span>
+<span class="gi">+};</span>
+<span class="gi">+</span>
+<span class="gi">+// Must have the same order than the above</span>
+<span class="gi">+const int locales[] =</span>
+<span class="gi">+{</span>
+<span class="gi">+    wxLANGUAGE_DEFAULT</span>
+<span class="gi">+//        ,wxLANGUAGE_ENGLISH_US</span>
+<span class="gi">+//        ,wxLANGUAGE_ENGLISH</span>
+<span class="gi">+    ,wxLANGUAGE_CHINESE_SIMPLIFIED</span>
+<span class="gi">+//        ,wxLANGUAGE_GERMAN</span>
+<span class="gi">+//        ,wxLANGUAGE_RUSSIAN</span>
+<span class="gi">+};</span>
+<span class="gh">Index: D:/codeblocks/src/src/appglobals.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- D:/codeblocks/src/src/appglobals.h    (revision 2006)</span>
+<span class="gi">+++ D:/codeblocks/src/src/appglobals.h    (working copy)</span>
+<span class="gu">@@ -16,4 +16,10 @@</span>
+ 
+ extern const wxString g_DefaultBatchBuildArgs;
+ 
+<span class="gi">+#define LOCALIZE   true</span>
+<span class="gi">+#define LANGUAGES  2</span>
+<span class="gi">+//Please fix this. I have no Idea that the WXSIZEOF couldn&#39;t work whithout defining LANGUAGES</span>
+<span class="gi">+extern const wxString langs[LANGUAGES];</span>
+<span class="gi">+extern const int locales[LANGUAGES];</span>
+<span class="gi">+</span>
+ #endif // APPGLOBALS_H
+<span class="gh">Index: D:/codeblocks/src/src/environmentsettingsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- D:/codeblocks/src/src/environmentsettingsdlg.cpp    (revision 2006)</span>
+<span class="gi">+++ D:/codeblocks/src/src/environmentsettingsdlg.cpp    (working copy)</span>
+<span class="gu">@@ -66,6 +66,7 @@</span>
+     EVT_BUTTON(XRCID(&quot;btnAuiInactiveCaptionTextColor&quot;), EnvironmentSettingsDlg::OnChooseColor)
+     EVT_CHECKBOX(XRCID(&quot;chkDoPlace&quot;), EnvironmentSettingsDlg::OnPlaceCheck)
+     EVT_CHECKBOX(XRCID(&quot;chkPlaceHead&quot;), EnvironmentSettingsDlg::OnHeadCheck)
+<span class="gi">+    EVT_CHECKBOX(XRCID(&quot;chkI18N&quot;), EnvironmentSettingsDlg::OnI18NCheck)</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

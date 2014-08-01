@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,47 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/compilergcc/directcommands.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/directcommands.cpp    (revision 4640)</span>
+<span class="gi">+++ src/plugins/compilergcc/directcommands.cpp    (working copy)</span>
+<span class="gu">@@ -194,7 +194,7 @@</span>
+         {
+             AppendArray(GetCompileFileCommand(target, pf-&gt;generatedFiles[i]), retGenerated); // recurse
+         }
+<span class="gd">-        </span>
+<span class="gi">+</span>
+         pfCustomBuild&amp; pcfb = pf-&gt;customBuild[compiler-&gt;GetID()];
+         compilerCmd = pcfb.useCustomBuildCommand
+                         ? pcfb.buildCommand
+<span class="gu">@@ -454,7 +454,11 @@</span>
+         wxArrayString tmp;
+         for (size_t i = 0; i &lt; buildcmds.GetCount(); ++i)
+         {
+<span class="gd">-            compiler-&gt;GenerateCommandLine(buildcmds[i], target, 0, wxEmptyString, wxEmptyString, wxEmptyString, wxEmptyString);</span>
+<span class="gi">+            if(target)</span>
+<span class="gi">+                compiler-&gt;GenerateCommandLine(buildcmds[i], target, 0, wxEmptyString, wxEmptyString, wxEmptyString, wxEmptyString);</span>
+<span class="gi">+            else</span>
+<span class="gi">+                compiler-&gt;GenerateCommandLine(buildcmds[i], m_pProject-&gt;GetCurrentlyCompilingTarget(), 0, wxEmptyString, wxEmptyString, wxEmptyString, wxEmptyString);</span>
+<span class="gi">+</span>
+             tmp.Add(wxString(COMPILER_WAIT)); // all commands should wait for queue to empty first
+             tmp.Add(wxString(COMPILER_SIMPLE_LOG) + buildcmds[i]);
+             tmp.Add(buildcmds[i]);
+<span class="gu">@@ -480,7 +484,11 @@</span>
+         wxArrayString tmp;
+         for (size_t i = 0; i &lt; buildcmds.GetCount(); ++i)
+         {
+<span class="gd">-            compiler-&gt;GenerateCommandLine(buildcmds[i], target, 0, wxEmptyString, wxEmptyString, wxEmptyString, wxEmptyString);</span>
+<span class="gi">+            if(target)</span>
+<span class="gi">+                compiler-&gt;GenerateCommandLine(buildcmds[i], target, 0, wxEmptyString, wxEmptyString, wxEmptyString, wxEmptyString);</span>
+<span class="gi">+            else</span>
+<span class="gi">+                compiler-&gt;GenerateCommandLine(buildcmds[i], m_pProject-&gt;GetCurrentlyCompilingTarget(), 0, wxEmptyString, wxEmptyString, wxEmptyString, wxEmptyString);</span>
+<span class="gi">+</span>
+             tmp.Add(wxString(COMPILER_WAIT)); // all commands should wait for queue to empty first
+             tmp.Add(wxString(COMPILER_SIMPLE_LOG) + buildcmds[i]);
+             tmp.Add(buildcmds[i]);
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">pauliusz 2007-11-19 23:54:08</div>

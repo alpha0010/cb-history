@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,122 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: include/cbeditor.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- include/cbeditor.h    (revision 9454)</span>
+<span class="gi">+++ include/cbeditor.h    (working copy)</span>
+<span class="gu">@@ -108,6 +108,12 @@</span>
+         /** Returns true if editor is modified, false otherwise */
+         bool GetModified() const;
+ 
+<span class="gi">+        /** Returns true if an autosaved, unaltered file is open in editor, false otherwise */</span>
+<span class="gi">+        bool GetAutoSaved() const;</span>
+<span class="gi">+</span>
+<span class="gi">+        /** Set autosaved flag externally  */</span>
+<span class="gi">+        void SetAutoSaved(bool flag);</span>
+<span class="gi">+</span>
+         /** Set the editor&#39;s modification state to \c modified. */
+         void SetModified(bool modified = true);
+ 
+<span class="gu">@@ -187,8 +193,8 @@</span>
+         /** Sets the last modification time for the file to &#39;now&#39;. Used to detect modifications outside the editor. */
+         void Touch();
+ 
+<span class="gd">-        /** Reloads the file from disk. @return True on success, False on failure. */</span>
+<span class="gd">-        bool Reload(bool detectEncoding = true);</span>
+<span class="gi">+        /** Reloads the file (or another, a save) from disk. @return True on success, False on failure. */</span>
+<span class="gi">+        bool Reload(bool detectEncoding = true,const wxString &amp;AlternateFilename = _T(&quot;&quot;));</span>
+ 
+         /** Print the file.
+           * @param selectionOnly Should the selected text be printed only?
+<span class="gu">@@ -322,7 +328,7 @@</span>
+         void SetEditorStyleAfterFileOpen();
+         static void InternalSetEditorStyleBeforeFileOpen(cbStyledTextCtrl* control);
+         static void InternalSetEditorStyleAfterFileOpen(cbStyledTextCtrl* control);
+<span class="gd">-        bool Open(bool detectEncoding = true);</span>
+<span class="gi">+        bool Open(bool detectEncoding = true,const wxString &amp;SavedFilename = _T(&quot;&quot;));</span>
+         void DoAskForCodeCompletion(); // relevant to code-completion plugins
+         static wxColour GetOptionColour(const wxString&amp; option, const wxColour _default);
+         void NotifyPlugins(wxEventType type, int intArg = 0, const wxString&amp; strArg = wxEmptyString, int xArg = 0, int yArg = 0);
+<span class="gh">Index: include/cbproject.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- include/cbproject.h    (revision 9454)</span>
+<span class="gi">+++ include/cbproject.h    (working copy)</span>
+<span class="gu">@@ -124,6 +124,16 @@</span>
+           */
+         void SetModified(bool modified = true);
+ 
+<span class="gi">+        /** Mark the project as autosaved recovery.</span>
+<span class="gi">+          * @param AutoSaved If true, the project is marked as autosaved. If false, as not-AutoSaved.</span>
+<span class="gi">+          */</span>
+<span class="gi">+        void SetAutoSaved(bool AutoSaved = true);</span>
+<span class="gi">+</span>
+<span class="gi">+        /** Get AutoSaved flag</span>
+<span class="gi">+          * @return true if open from autosaved file and not modified, false otherwise.</span>
+<span class="gi">+          */</span>
+<span class="gi">+        bool GetAutoSaved(void);</span>
+<span class="gi">+</span>
+         /** Access a file of the project.
+           * @param index The index of the file. Must be greater or equal than zero and less than GetFilesCount().
+           * @return A pointer to the file or NULL if not found.
+<span class="gu">@@ -336,6 +346,14 @@</span>
+           */
+         bool Save();
+ 
+<span class="gi">+        /** Save the project. (autosave feature)</span>
+<span class="gi">+          * @return True if successful, false otherwise.</span>
+<span class="gi">+          * @param FileName Filename to autosave project</span>
+<span class="gi">+          * @param FileNameLayout Filename to autosave layout file</span>
+<span class="gi">+          * @note No update of modified flag of project</span>
+<span class="gi">+          */</span>
+<span class="gi">+        bool SaveFullAuto(wxString &amp;FileNamePrj,wxString &amp;FileNameLayout);</span>
+<span class="gi">+</span>
+         /** Save the project under a different name.
+           * A dialog pops up for the user to choose a new filename for the project.
+           * @return True if successful, false otherwise.
+<span class="gu">@@ -355,6 +373,13 @@</span>
+           */
+         bool LoadLayout();
+ 
+<span class="gi">+        /** Load the project&#39;s layout.</span>
+<span class="gi">+          * @see SaveLayout() for info.</span>
+<span class="gi">+          * @param Filename filename for reading layout (if empty, take projet filename)</span>
+<span class="gi">+          * @return True if successful, false otherwise.</span>
+<span class="gi">+          */</span>
+<span class="gi">+        bool LoadLayoutFile(wxString Filename);</span>
+<span class="gi">+</span>
+         /** Notify that file(s) will be added shortly.
+           * This function should be called before calling AddFile().
+           * When done calling AddFile() as many times as needed, call
+<span class="gu">@@ -672,8 +697,13 @@</span>
+           */
+         virtual FilesList&amp; GetFilesList(){ return m_Files; }
+ 
+<span class="gi">+        /** Permit to force reopen of a project</span>
+<span class="gi">+          * @param Filename : optional filename for reading layout (if empty, take projet filename)</span>
+<span class="gi">+          */</span>
+<span class="gi">+        void Open(wxString Filename = _(&quot;&quot;));</span>
+<span class="gi">+</span>
+     private:
+<span class="gd">-        void Open();</span>
+<span class="gi">+</span>
+         void ExpandVirtualBuildTargetGroup(const wxString&amp; alias, wxArrayString&amp; result) const;
+         ProjectBuildTarget* AddDefaultBuildTarget();
+         int IndexOfBuildTargetName(const wxString&amp; targetName) const;
+<span class="gu">@@ -696,6 +726,7 @@</span>
+         wxArrayString     m_ExpandedNodes;
+         wxArrayString     m_SelectedNodes;
+         bool              m_Loaded;
+<span class="gi">+        bool              m_AutoSaved;</span>
+         wxTreeItemId      m_ProjectNode;
+ 
+         wxArrayString m_VirtualFolders; // not saved, just used throughout cbProject&#39;s lifetime
+<span class="gh">Index: include/cbworkspace.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">-</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">bat 2013-11-16 18:15:07</div>

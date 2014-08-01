@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,116 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 3463)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -1480,22 +1480,28 @@</span>
+ bool cbEditor::DoFoldLine(int line, int fold)
+ {
+     int level = m_pControl-&gt;GetFoldLevel(line);
+<span class="gi">+    ConfigManager* mgr = Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;));</span>
+     if ((level &amp; wxSCI_FOLDLEVELHEADERFLAG) &amp;&amp;
+             (wxSCI_FOLDLEVELBASE == (level &amp; wxSCI_FOLDLEVELNUMBERMASK))) //Check for top fold headers
+     {
+<span class="gd">-        bool expand = false;</span>
+<span class="gd">-        int maxLine = m_pControl-&gt;GetLastChild(line, -1);</span>
+<span class="gd">-        if (fold == 2) // toggle</span>
+<span class="gd">-            expand = !m_pControl-&gt;GetFoldExpanded(line);</span>
+<span class="gd">-        else</span>
+<span class="gd">-            expand = fold == 0;</span>
+<span class="gd">-        m_pControl-&gt;SetFoldExpanded(line, expand);</span>
+<span class="gd">-        if (maxLine &gt; line)</span>
+<span class="gi">+        if (mgr-&gt;ReadInt(_T(&quot;/folding/fold_all_options&quot;), 0) == 0 ||</span>
+<span class="gi">+            mgr-&gt;ReadInt(_T(&quot;/folding/fold_all_options&quot;), 0) == 2 ||</span>
+<span class="gi">+            fold != 1)</span>
+         {
+<span class="gd">-            if (expand)</span>
+<span class="gd">-                m_pControl-&gt;ShowLines(line + 1, maxLine);</span>
+<span class="gi">+            bool expand = false;</span>
+<span class="gi">+            int maxLine = m_pControl-&gt;GetLastChild(line, -1);</span>
+<span class="gi">+            if (fold == 2) // toggle</span>
+<span class="gi">+                expand = !m_pControl-&gt;GetFoldExpanded(line);</span>
+             else
+<span class="gd">-                m_pControl-&gt;HideLines(line + 1, maxLine);</span>
+<span class="gi">+                expand = fold == 0;</span>
+<span class="gi">+            m_pControl-&gt;SetFoldExpanded(line, expand);</span>
+<span class="gi">+            if (maxLine &gt; line)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                if (expand)</span>
+<span class="gi">+                    m_pControl-&gt;ShowLines(line + 1, maxLine);</span>
+<span class="gi">+                else</span>
+<span class="gi">+                    m_pControl-&gt;HideLines(line + 1, maxLine);</span>
+<span class="gi">+            }</span>
+         }
+         return true;
+     }
+<span class="gu">@@ -1505,19 +1511,28 @@</span>
+     if ((level &amp; wxSCI_FOLDLEVELHEADERFLAG) &amp;&amp;
+             (wxSCI_FOLDLEVELBASE &lt; (level &amp; wxSCI_FOLDLEVELNUMBERMASK))) //Check for sub fold headers
+     {
+<span class="gd">-        bool expand = false;</span>
+<span class="gd">-        int maxLine = m_pControl-&gt;GetLastChild(line, -1);</span>
+<span class="gd">-        if (fold == 2) // toggle</span>
+<span class="gd">-            expand = !m_pControl-&gt;GetFoldExpanded(line);</span>
+<span class="gd">-        else</span>
+<span class="gd">-            expand = fold == 0;</span>
+<span class="gd">-        m_pControl-&gt;SetFoldExpanded(line, expand);</span>
+<span class="gd">-        if (maxLine &gt; line)</span>
+<span class="gi">+        if (mgr-&gt;ReadInt(_T(&quot;/folding/fold_all_options&quot;), 0) == 1 ||</span>
+<span class="gi">+            mgr-&gt;ReadInt(_T(&quot;/folding/fold_all_options&quot;), 0) == 2 ||</span>
+<span class="gi">+            fold != 1)</span>
+         {
+<span class="gd">-            if (expand)</span>
+<span class="gd">-                m_pControl-&gt;ShowLines(line + 1, maxLine);</span>
+<span class="gd">-            else</span>
+<span class="gd">-                m_pControl-&gt;HideLines(line + 1, maxLine);</span>
+<span class="gi">+            int thisLevel = (level &amp; wxSCI_FOLDLEVELNUMBERMASK);</span>
+<span class="gi">+            if (thisLevel &lt;= (mgr-&gt;ReadInt(_T(&quot;/folding/fold_sub_depth&quot;), 0) + wxSCI_FOLDLEVELBASE) || fold != 1)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                bool expand = false;</span>
+<span class="gi">+                int maxLine = m_pControl-&gt;GetLastChild(line, -1);</span>
+<span class="gi">+                if (fold == 2) // toggle</span>
+<span class="gi">+                    expand = !m_pControl-&gt;GetFoldExpanded(line);</span>
+<span class="gi">+                else</span>
+<span class="gi">+                    expand = fold == 0;</span>
+<span class="gi">+                m_pControl-&gt;SetFoldExpanded(line, expand);</span>
+<span class="gi">+                if (maxLine &gt; line)</span>
+<span class="gi">+                {</span>
+<span class="gi">+                    if (expand)</span>
+<span class="gi">+                        m_pControl-&gt;ShowLines(line + 1, maxLine);</span>
+<span class="gi">+                    else</span>
+<span class="gi">+                        m_pControl-&gt;HideLines(line + 1, maxLine);</span>
+<span class="gi">+                }</span>
+<span class="gi">+            }</span>
+         }
+         return true;
+     }
+<span class="gh">Index: src/sdk/editorconfigurationdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorconfigurationdlg.cpp    (revision 3463)</span>
+<span class="gi">+++ src/sdk/editorconfigurationdlg.cpp    (working copy)</span>
+<span class="gu">@@ -156,6 +156,8 @@</span>
+        XRCCTRL(*this, &quot;chkFoldPreprocessor&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/folding/fold_preprocessor&quot;), false));
+        XRCCTRL(*this, &quot;chkFoldComments&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/folding/fold_comments&quot;), true));
+        XRCCTRL(*this, &quot;chkFoldXml&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/folding/fold_xml&quot;), true));
+<span class="gi">+       XRCCTRL(*this, &quot;spnSubLevelDepth&quot;, wxSpinCtrl)-&gt;SetValue(cfg-&gt;ReadInt(_T(&quot;/folding/fold_sub_depth&quot;), 1));</span>
+<span class="gi">+    XRCCTRL(*this, &quot;rbFoldAllOptions&quot;, wxRadioBox)-&gt;SetSelection(cfg-&gt;ReadInt(_T(&quot;/folding/fold_all_options&quot;), 0));</span>
+ 
+     //gutter
+     wxColour gutterColour = cfg-&gt;ReadColour(_T(&quot;/gutter/colour&quot;), *wxLIGHT_GREY);
+<span class="gu">@@ -871,6 +873,8 @@</span>
+         cfg-&gt;Write(_T(&quot;/folding/fold_preprocessor&quot;),     XRCCTRL(*this, &quot;chkFoldPreprocessor&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/folding/fold_comments&quot;),         XRCCTRL(*this, &quot;chkFoldComments&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/folding/fold_xml&quot;),             XRCCTRL(*this, &quot;chkFoldXml&quot;, wxCheckBox)-&gt;GetValue());
+<span class="gi">+        cfg-&gt;Write(_T(&quot;/folding/fold_sub_depth&quot;),         XRCCTRL(*this, &quot;spnSubLevelDepth&quot;, wxSpinCtrl)-&gt;GetValue());</span>
+<span class="gi">+        cfg-&gt;Write(_T(&quot;/folding/fold_all_options&quot;),    XRCCTRL(*this, &quot;rbFoldAllOptions&quot;, wxRadioBox)-&gt;GetSelection());</span>
+ 
+         //eol
+         cfg
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mcdave 2007-01-08 06:55:09</div>

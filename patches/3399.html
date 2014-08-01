@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,95 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">diff --git a/src/sdk/wxscintilla/src/scintilla/src/CellBuffer.cxx b/src/sdk/wxscintilla/src/scintilla/src/CellBuffer.cxx</span>
+<span class="gh">index e583fa9..83adfb4 100644</span>
+<span class="gd">--- a/src/sdk/wxscintilla/src/scintilla/src/CellBuffer.cxx</span>
+<span class="gi">+++ b/src/sdk/wxscintilla/src/scintilla/src/CellBuffer.cxx</span>
+<span class="gu">@@ -123,11 +123,15 @@ void LineVector::SetPerLine(PerLine *pl) {</span>
+ }
+ 
+ /* CHANGEBAR begin */
+<span class="gd">-void LineVector::InsertText(int line, int delta, int edition, bool undoing) {</span>
+<span class="gi">+void LineVector::InsertText(int line, int delta, int edition, bool undoing, bool lineUnchanged) {</span>
+ /* CHANGEBAR end */
+     starts.InsertText(line, delta);
+ /* CHANGEBAR begin */
+<span class="gd">-    changes.InsertText(line, edition, undoing);</span>
+<span class="gi">+    // Line stays unchanged if inserted/deleted &quot;something\n&quot; at line start</span>
+<span class="gi">+    // or &quot;\nsomething&quot; at line end</span>
+<span class="gi">+    if (!lineUnchanged) {</span>
+<span class="gi">+        changes.InsertText(line, edition, undoing);</span>
+<span class="gi">+    }</span>
+ /* CHANGEBAR end */
+ }
+ 
+<span class="gu">@@ -747,6 +751,7 @@ void CellBuffer::RemoveLine(int line, bool undoing) {</span>
+ 
+ /* CHANGEBAR begin */
+ void CellBuffer::BasicInsertString(int position, const char *s, int insertLength, bool undoing) {
+<span class="gi">+    bool atFileEnd = position == substance.Length();</span>
+ /* CHANGEBAR end */
+     if (insertLength == 0)
+         return;
+<span class="gu">@@ -759,7 +764,10 @@ void CellBuffer::BasicInsertString(int position, const char *s, int insertLength</span>
+     bool atLineStart = lv.LineStart(lineInsert-1) == position;
+     // Point all the lines after the insertion point further along in the buffer
+ /* CHANGEBAR begin */
+<span class="gd">-    lv.InsertText(lineInsert-1, insertLength, uh.Edition(), undoing);</span>
+<span class="gi">+    bool atLineEnd = (lv.LineStart(lineInsert) == position+1) || atFileEnd;</span>
+<span class="gi">+    bool lineUnchanged = (atLineStart &amp;&amp; (s[insertLength-1] == &#39;\n&#39;)) ||</span>
+<span class="gi">+        (atLineEnd &amp;&amp; (s[0] == &#39;\r&#39; || s[0] == &#39;\n&#39;));</span>
+<span class="gi">+    lv.InsertText(lineInsert-1, insertLength, uh.Edition(), undoing, lineUnchanged);</span>
+ /* CHANGEBAR end */
+     char chPrev = substance.ValueAt(position - 1);
+     char chAfter = substance.ValueAt(position + insertLength);
+<span class="gu">@@ -812,13 +820,19 @@ void CellBuffer::BasicDeleteChars(int position, int deleteLength, bool undoing)</span>
+         // If whole buffer is being deleted, faster to reinitialise lines data
+         // than to delete each line.
+         lv.Init();
+<span class="gi">+/* CHANGEBAR begin */</span>
+<span class="gi">+        lv.InsertText(0, 0, uh.Edition(), undoing, false);</span>
+<span class="gi">+/* CHANGEBAR end */</span>
+     } else {
+         // Have to fix up line positions before doing deletion as looking at text in buffer
+         // to work out which lines have been removed
+ 
+         int lineRemove = lv.LineFromPosition(position) + 1;
+ /* CHANGEBAR begin */
+<span class="gd">-        lv.InsertText(lineRemove-1, - (deleteLength), uh.Edition(), undoing);</span>
+<span class="gi">+        bool atLineEnd = (lv.LineStart(lineRemove) == position+1);</span>
+<span class="gi">+        char chAfter = substance.ValueAt(position + deleteLength);</span>
+<span class="gi">+        bool lineUnchanged = (atLineEnd &amp;&amp; (chAfter == &#39;\r&#39; || chAfter == &#39;\n&#39;));</span>
+<span class="gi">+        lv.InsertText(lineRemove-1, - (deleteLength), uh.Edition(), undoing, lineUnchanged);</span>
+ /* CHANGEBAR end */
+         char chPrev = substance.ValueAt(position - 1);
+         char chBefore = chPrev;
+<span class="gu">@@ -854,7 +868,9 @@ void CellBuffer::BasicDeleteChars(int position, int deleteLength, bool undoing)</span>
+         }
+         // May have to fix up end if last deletion causes cr to be next to lf
+         // or removes one of a crlf pair
+<span class="gd">-        char chAfter = substance.ValueAt(position + deleteLength);</span>
+<span class="gi">+/* CHANGEBAR begin */</span>
+<span class="gi">+        // char chAfter = substance.ValueAt(position + deleteLength);</span>
+<span class="gi">+/* CHANGEBAR end */</span>
+         if (chBefore == &#39;\r&#39; &amp;&amp; chAfter == &#39;\n&#39;) {
+             // Using lineRemove-1 as cr ended line before start of deletion
+ /* CHANGEBAR begin */
+<span class="gh">diff --git a/src/sdk/wxscintilla/src/scintilla/src/CellBuffer.h b/src/sdk/wxscintilla/src/scintilla/src/CellBuffer.h</span>
+<span class="gh">index 4f92127..e3b3036 100644</span>
+<span class="gd">--- a/src/sdk/wxscintilla/src/scintilla/src/CellBuffer.h</span>
+<span class="gi">+++ b/src/sdk/wxscintilla/src/scintilla/src/CellBuffer.h</span>
+<span class="gu">@@ -67,7 +67,7 @@ public:</span>
+     void SetPerLine(PerLine *pl);
+ 
+ /* CHANGEBAR begin */
+<span class="gd">-    void InsertText(int line, int delta, int edition, bool undoing);</span>
+<span class="gi">+    void InsertText(int line, int delta, int edition, bool undoing, bool lineUnchanged);</span>
+     void InsertLine(int line, int position, bool lineStart, int edition, bool undoing);
+ /* CHANGEBAR end */
+     void SetLineStart(int line, int position);
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">gentoo90 2013-01-05 10:34:49</div>

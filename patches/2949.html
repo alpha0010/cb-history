@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,99 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/src/app.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/app.cpp    (revision 6187)</span>
+<span class="gi">+++ src/src/app.cpp    (working copy)</span>
+<span class="gu">@@ -343,15 +343,15 @@</span>
+ 
+             switch(dlg.ShowModal())
+             {
+<span class="gd">-            case 0:</span>
+<span class="gi">+            case ASC_ASSOC_DLG_NO_DONT_ASK:</span>
+                 Manager::Get()-&gt;GetConfigManager(_T(&quot;app&quot;))-&gt;Write(_T(&quot;/environment/check_associations&quot;), false);
+                 break;
+<span class="gd">-            case 1:</span>
+<span class="gi">+            case ASC_ASSOC_DLG_NO_ONLY_NOW:</span>
+                 break;
+<span class="gd">-            case 2:</span>
+<span class="gi">+            case ASC_ASSOC_DLG_YES_C_FILES:</span>
+                 Associations::SetCore();
+                 break;
+<span class="gd">-            case 3:</span>
+<span class="gi">+            case ASC_ASSOC_DLG_YES_ALL_FILES:</span>
+                 Associations::SetAll();
+                 break;
+             };
+<span class="gh">Index: src/src/associations.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/associations.cpp    (revision 6187)</span>
+<span class="gi">+++ src/src/associations.cpp    (working copy)</span>
+<span class="gu">@@ -372,6 +372,8 @@</span>
+ 
+ BEGIN_EVENT_TABLE(AskAssocDialog, wxScrollingDialog)
+     EVT_BUTTON(XRCID(&quot;wxID_OK&quot;), AskAssocDialog::OnOK)
+<span class="gi">+    EVT_BUTTON(wxID_CANCEL, AskAssocDialog::OnESC)</span>
+<span class="gi">+    EVT_CHAR_HOOK(AskAssocDialog::OnCharHook)</span>
+ END_EVENT_TABLE()
+ 
+ 
+<span class="gu">@@ -379,9 +381,29 @@</span>
+ AskAssocDialog::AskAssocDialog(wxWindow* parent)
+ {
+     wxXmlResource::Get()-&gt;LoadObject(this, parent, _T(&quot;askAssoc&quot;),_T(&quot;wxScrollingDialog&quot;));
+<span class="gi">+    SetEscapeId(wxID_NONE);</span>
+ }
+ 
+ void AskAssocDialog::OnOK(wxCommandEvent&amp; event)
+ {
+     EndModal(XRCCTRL(*this, &quot;choice&quot;, wxRadioBox)-&gt;GetSelection());
+ }
+<span class="gi">+</span>
+<span class="gi">+void AskAssocDialog::OnESC(wxCommandEvent&amp; event)</span>
+<span class="gi">+{</span>
+<span class="gi">+    EndModal(ASC_ASSOC_DLG_NO_ONLY_NOW);</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+void AskAssocDialog::OnCharHook(wxKeyEvent&amp; event)</span>
+<span class="gi">+{</span>
+<span class="gi">+    if ( event.GetKeyCode() == WXK_ESCAPE )</span>
+<span class="gi">+    {</span>
+<span class="gi">+        Close(); //wxDialog::Close() send button event with id wxID_CANCEL (wxWidgets 2.8)</span>
+<span class="gi">+    }</span>
+<span class="gi">+    else if( event.GetKeyCode() == WXK_RETURN )</span>
+<span class="gi">+    {</span>
+<span class="gi">+        EndModal(XRCCTRL(*this, &quot;choice&quot;, wxRadioBox)-&gt;GetSelection());</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+<span class="gi">+    event.Skip();</span>
+<span class="gi">+}</span>
+<span class="gh">Index: src/src/associations.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/associations.h    (revision 6187)</span>
+<span class="gi">+++ src/src/associations.h    (working copy)</span>
+<span class="gu">@@ -65,12 +65,19 @@</span>
+         DECLARE_EVENT_TABLE()
+ };
+ 
+<span class="gi">+#define ASC_ASSOC_DLG_NO_DONT_ASK       0</span>
+<span class="gi">+#define ASC_ASSOC_DLG_NO_ONLY_NOW       1</span>
+<span class="gi">+#define ASC_ASSOC_DLG_YES_C_FILES       2</span>
+<span class="gi">+#define ASC_ASSOC_DLG_YES_ALL_FILES     3</span>
+<span class="gi">+</span>
+ class AskAssocDialog : public wxScrollingDialog
+ {
+     public:
+         AskAssocDialog(wxWindow* parent);
+     protected:
+         void OnOK(wxCommandEvent&amp; event);
+<span class="gi">+        void OnESC(wxCommandEvent&amp; event);</span>
+<span class="gi">+        void OnCharHook(wxKeyEvent&amp; event);</span>
+     private:
+         DECLARE_EVENT_TABLE()
+ };
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

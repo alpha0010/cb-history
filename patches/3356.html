@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,162 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/scriptedwizard/resources/dll/files/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/scriptedwizard/resources/dll/files/main.cpp    (revision 8500)</span>
+<span class="gi">+++ src/plugins/scriptedwizard/resources/dll/files/main.cpp    (working copy)</span>
+<span class="gu">@@ -6,7 +6,7 @@</span>
+     MessageBoxA(0, sometext, &quot;DLL Message&quot;, MB_OK | MB_ICONINFORMATION);
+ }
+ 
+<span class="gd">-BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)</span>
+<span class="gi">+extern &quot;C&quot; DLL_EXPORT BOOL APIENTRY DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)</span>
+ {
+     switch (fdwReason)
+     {
+<span class="gh">Index: src/plugins/scriptedwizard/resources/win32gui/files/dialog/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/scriptedwizard/resources/win32gui/files/dialog/main.cpp    (revision 8500)</span>
+<span class="gi">+++ src/plugins/scriptedwizard/resources/win32gui/files/dialog/main.cpp    (working copy)</span>
+<span class="gu">@@ -1,49 +1,40 @@</span>
+<span class="gd">-#define WIN32_LEAN_AND_MEAN</span>
+<span class="gd">-</span>
+ #include &lt;windows.h&gt;
+<span class="gd">-</span>
+<span class="gi">+#include &lt;commctrl.h&gt;</span>
+<span class="gi">+#include &lt;stdio.h&gt;</span>
+ #include &quot;resource.h&quot;
+ 
+ HINSTANCE hInst;
+ 
+<span class="gd">-BOOL CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)</span>
+<span class="gi">+BOOL CALLBACK DlgMain(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)</span>
+ {
+     switch(uMsg)
+     {
+<span class="gd">-        case WM_INITDIALOG:</span>
+<span class="gd">-            /*</span>
+<span class="gd">-             * TODO: Add code to initialize the dialog.</span>
+<span class="gd">-             */</span>
+<span class="gd">-            return TRUE;</span>
+<span class="gi">+    case WM_INITDIALOG:</span>
+<span class="gi">+    {</span>
+<span class="gi">+    }</span>
+<span class="gi">+    return TRUE;</span>
+ 
+<span class="gd">-        case WM_CLOSE:</span>
+<span class="gd">-            EndDialog(hwndDlg, 0);</span>
+<span class="gd">-            return TRUE;</span>
+<span class="gi">+    case WM_CLOSE:</span>
+<span class="gi">+    {</span>
+<span class="gi">+        EndDialog(hwndDlg, 0);</span>
+<span class="gi">+    }</span>
+<span class="gi">+    return TRUE;</span>
+ 
+<span class="gd">-        case WM_COMMAND:</span>
+<span class="gd">-            switch(LOWORD(wParam))</span>
+<span class="gd">-            {</span>
+<span class="gd">-                /*</span>
+<span class="gd">-                 * TODO: Add more control ID&#39;s, when needed.</span>
+<span class="gd">-                 */</span>
+<span class="gd">-                case IDC_BTN_QUIT:</span>
+<span class="gd">-                    EndDialog(hwndDlg, 0);</span>
+<span class="gd">-                    return TRUE;</span>
+<span class="gd">-</span>
+<span class="gd">-                case IDC_BTN_TEST:</span>
+<span class="gd">-                    MessageBox(hwndDlg, &quot;You clicked \&quot;Test\&quot; button!&quot;, &quot;Information&quot;, MB_ICONINFORMATION);</span>
+<span class="gd">-                    return TRUE;</span>
+<span class="gd">-            }</span>
+<span class="gi">+    case WM_COMMAND:</span>
+<span class="gi">+    {</span>
+<span class="gi">+        switch(LOWORD(wParam))</span>
+<span class="gi">+        {</span>
+<span class="gi">+        }</span>
+     }
+<span class="gd">-</span>
+<span class="gi">+    return TRUE;</span>
+<span class="gi">+    }</span>
+     return FALSE;
+ }
+ 
+ 
+ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
+ {
+<span class="gd">-    hInst = hInstance;</span>
+<span class="gd">-</span>
+<span class="gd">-    // The user interface is a modal dialog box</span>
+<span class="gd">-    return DialogBox(hInstance, MAKEINTRESOURCE(DLG_MAIN), NULL, (DLGPROC)DialogProc);</span>
+<span class="gd">-}</span>
+<span class="gi">+    hInst=hInstance;</span>
+<span class="gi">+    InitCommonControls();</span>
+<span class="gi">+    return DialogBox(hInst, MAKEINTRESOURCE(DLG_MAIN), NULL, (DLGPROC)DlgMain);</span>
+<span class="gi">+}</span>
+\ No newline at end of file
+<span class="gh">Index: src/plugins/scriptedwizard/resources/win32gui/files/dialog/manifest.xml</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/scriptedwizard/resources/win32gui/files/dialog/manifest.xml    (revision 0)</span>
+<span class="gi">+++ src/plugins/scriptedwizard/resources/win32gui/files/dialog/manifest.xml    (working copy)</span>
+<span class="gu">@@ -0,0 +1,17 @@</span>
+<span class="gi">+&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;yes&quot;?&gt;</span>
+<span class="gi">+&lt;assembly xmlns=&quot;urn:schemas-microsoft-com:asm.v1&quot; manifestVersion=&quot;1.0&quot;&gt;</span>
+<span class="gi">+  &lt;dependency&gt;</span>
+<span class="gi">+    &lt;dependentAssembly&gt;</span>
+<span class="gi">+      &lt;assemblyIdentity type=&quot;win32&quot; name=&quot;Microsoft.Windows.Common-Controls&quot; version=&quot;6.0.0.0&quot; processorArchitecture=&quot;*&quot; publicKeyToken=&quot;6595b64144ccf1df&quot; language=&quot;*&quot;/&gt;</span>
+<span class="gi">+    &lt;/dependentAssembly&gt;</span>
+<span class="gi">+  &lt;/dependency&gt;</span>
+<span class="gi">+  &lt;trustInfo xmlns=&quot;urn:schemas-microsoft-com:asm.v3&quot;&gt;</span>
+<span class="gi">+    &lt;security&gt;</span>
+<span class="gi">+      &lt;requestedPrivileges&gt;</span>
+<span class="gi">+        &lt;requestedExecutionLevel</span>
+<span class="gi">+          level=&quot;asInvoker&quot;</span>
+<span class="gi">+          uiAccess=&quot;false&quot;/&gt;</span>
+<span class="gi">+      &lt;/requestedPrivileges&gt;</span>
+<span class="gi">+    &lt;/security&gt;</span>
+<span class="gi">+  &lt;/trustInfo&gt;</span>
+<span class="gi">+&lt;/assembly&gt;</span>
+\ No newline at end of file
+<span class="gh">Index: src/plugins/scriptedwizard/resources/win32gui/files/dialog/resource.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/scriptedwizard/resources/win32gui/files/dialog/resource.h    (revision 8500)</span>
+<span class="gi">+++ src/plugins/scriptedwizard/resources/win32gui/files/dialog/resource.h    (working copy)</span>
+<span class="gu">@@ -1,8 +1,5 @@</span>
+<span class="gd">-#include &lt;windows.h&gt;</span>
+<span class="gi">+#ifndef IDC_STATIC</span>
+<span class="gi">+#define IDC_STATIC (-1)</span>
+<span class="gi">+#endif</span>
+ 
+<span class="gd">-// ID of Main Dialog</span>
+<span class="gd">-#define DLG_MAIN 101</span>
+<span class="gd">-</span>
+<span class="gd">-// ID of Button Controls</span>
+<span class="gd">-#define IDC_BTN_TEST 1001</span>
+<span class="gd">-#define IDC_BTN_QUIT 1002</span>
+<span class="gi">+#define DLG_MAIN                                100</span>
+<span class="gh">Index: src/plugins/scriptedwizard/resources/win32gui/files/dialog/resource.rc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/scriptedwizard/resources/win32gui/files/dialog/resource.rc    (revision 8500)</span>
+<span class="gi">+++ src/plugins/scriptedwizard/resources/win32gui/files/dialog/resource.rc    (working copy)</span>
+<span class="gu">@@ -1,14 +1,30 @@</span>
+<span class="gi">+// Generated by ResEdit 1.5.10</span>
+<span class="gi">+// Copyright (C) 2006-2012</span>
+<span class="gi">+// http://www.resedit.net</span>
+<span class="gi">+</span>
+<span class="gi">+#include &lt;windows.h&gt;</span>
+<span class="gi">+#include &lt;commctrl.h&gt;</span>
+<span class="gi">+#include &lt;richedit.h&gt;</span>
+ #include &quot;resource.h&quot;
+ 
+<span class="gd">-DLG_MAIN DIALOGEX 6, 5, 194, 106</span>
+ 
+<span class="gd">-CAPTION &quot;Code::Blocks Template Dialog App&quot;</span>
+ 
+<span class="gd">-FONT 8, &quot;Tahoma&quot;</span>
+ 
+<span class="gd">-STYLE 0x10CE0804</span>
+<span class="gi">+/</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mrexodia 2012-11-03 11:09:00</div>

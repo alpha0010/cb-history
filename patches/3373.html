@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,86 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: debian/changelog</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- debian/changelog    (revision 8587)</span>
+<span class="gi">+++ debian/changelog    (working copy)</span>
+<span class="gu">@@ -1,4 +1,4 @@</span>
+<span class="gd">-codeblocks (10.05svn8324) unstable; urgency=low</span>
+<span class="gi">+codeblocks (10.05svn8587) unstable; urgency=low</span>
+ 
+   * Linux build-fixes; moved wxSmithKWIC into wxContribItems and
+     splitted it into the items lib and the wxSmith part
+<span class="gh">Index: src/plugins/debuggergdb/gdb_driver.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/debuggergdb/gdb_driver.cpp    (revision 8587)</span>
+<span class="gi">+++ src/plugins/debuggergdb/gdb_driver.cpp    (working copy)</span>
+<span class="gu">@@ -39,13 +39,21 @@</span>
+ //[Switching to thread 2 (Thread 1082132832 (LWP 12298))]#0  0x00002aaaac5a2aca in pthread_cond_wait@@GLIBC_2.3.2 () from /lib/libpthread.so.0
+ static wxRegEx reThreadSwitch(_T(&quot;^\\[Switching to thread .*\\]#0[ \t]+(0x[A-Fa-f0-9]+) in (.*) from (.*)&quot;));
+ static wxRegEx reThreadSwitch2(_T(&quot;^\\[Switching to thread .*\\]#0[ \t]+(0x[A-Fa-f0-9]+) in (.*) from (.*):([0-9]+)&quot;));
+<span class="gd">-#ifdef __WXMSW__</span>
+<span class="gd">-    static wxRegEx reBreak(_T(&quot;([A-Za-z]*[:]*)([^:]+):([0-9]+):[0-9]+:[begmidl]+:(0x[0-9A-Fa-f]+)&quot;));</span>
+<span class="gd">-    static wxRegEx reBreak_or32(_T(&quot;\032\032([A-Za-z]:)([^:]+):([0-9]+):[0-9]+:[begmidl]+:(0x[0-9A-z]+)&quot;));</span>
+<span class="gd">-#else</span>
+<span class="gd">-    static wxRegEx reBreak(_T(&quot;\032\032([^:]+):([0-9]+):[0-9]+:[begmidl]+:(0x[0-9A-Fa-f]+)&quot;));</span>
+<span class="gd">-    static wxRegEx reBreak_or32(_T(&quot;&quot;)); // not used on linux, but make sure it exists otherwise compilation fails on linux (if (platform::windows) blabla)</span>
+<span class="gd">-#endif</span>
+<span class="gi">+//#ifdef __WXMSW__</span>
+<span class="gi">+//    static wxRegEx reBreak(_T(&quot;([A-Za-z]*[:]*)([^:]+):([0-9]+):[0-9]+:[begmidl]+:(0x[0-9A-Fa-f]+)&quot;));</span>
+<span class="gi">+//    static wxRegEx reBreak_or32(_T(&quot;\032\032([A-Za-z]:)([^:]+):([0-9]+):[0-9]+:[begmidl]+:(0x[0-9A-z]+)&quot;));</span>
+<span class="gi">+//#else</span>
+<span class="gi">+//    static wxRegEx reBreak(_T(&quot;\032\032([^:]+):([0-9]+):[0-9]+:[begmidl]+:(0x[0-9A-Fa-f]+)&quot;));</span>
+<span class="gi">+//    static wxRegEx reBreak_or32(_T(&quot;&quot;)); // not used on linux, but make sure it exists otherwise compilation fails on linux (if (platform::windows) blabla)</span>
+<span class="gi">+//#endif</span>
+<span class="gi">+</span>
+<span class="gi">+// Regular expresion for breakpoint. wxRegEx don&#39;t want to recognize &#39;?&#39; command so a bit more general rule is used here.</span>
+<span class="gi">+//  ([A-Za-z]*[:]*) corresponds to windows disk name. Under linux can be not empty in crosscompiling settings;</span>
+<span class="gi">+//  ([^:]+) corresponds to the path in linux or to the path within windows disk in windows to current file;</span>
+<span class="gi">+//  ([0-9]+) corresponds to line number in current file;</span>
+<span class="gi">+//  (0x[0-9A-Fa-f]+) correponds to current memory address.</span>
+<span class="gi">+static wxRegEx reBreak(_T(&quot;\032*([A-Za-z]*[:]*)([^:]+):([0-9]+):[0-9]+:[begmidl]+:(0x[0-9A-Fa-f]+)&quot;));</span>
+<span class="gi">+</span>
+ static wxRegEx reBreak2(_T(&quot;^(0x[A-Fa-f0-9]+) in (.*) from (.*)&quot;));
+ static wxRegEx reBreak3(_T(&quot;^(0x[A-Fa-f0-9]+) in (.*)&quot;));
+ // Catchpoint 1 (exception thrown), 0x00007ffff7b982b0 in __cxa_throw () from /usr/lib/gcc/x86_64-pc-linux-gnu/4.4.4/libstdc++.so.6
+<span class="gu">@@ -1024,12 +1032,8 @@</span>
+             //^Z^ZC:\dev\wxwidgets\wxWidgets-2.8.10\build\msw/../../src/common/imagall.cpp:29:961:beg:0x6f826722
+             //&gt;&gt;&gt;&gt;&gt;&gt;cb_gdb:
+ 
+<span class="gd">-            if (platform::windows &amp;&amp; flavour.IsSameAs(_T(&quot;set disassembly-flavor or32&quot;)))</span>
+<span class="gd">-                HandleMainBreakPoint(reBreak_or32, lines[i]);</span>
+<span class="gd">-            else</span>
+<span class="gd">-                HandleMainBreakPoint(reBreak, lines[i]);</span>
+<span class="gi">+            HandleMainBreakPoint(reBreak, lines[i]);</span>
+         }
+<span class="gd">-</span>
+         else
+         {
+             // other break info, e.g.
+<span class="gu">@@ -1130,15 +1134,15 @@</span>
+             if (platform::windows)
+             {
+                 m_Cursor.file = reBreak_in.GetMatch(line, 1) + reBreak_in.GetMatch(line, 2);
+<span class="gd">-                lineStr = reBreak_in.GetMatch(line, 3);</span>
+<span class="gd">-                m_Cursor.address = reBreak_in.GetMatch(line, 4);</span>
+             }
+             else
+             {
+<span class="gd">-                m_Cursor.file = reBreak_in.GetMatch( line, 1);</span>
+<span class="gd">-                lineStr = reBreak_in.GetMatch(line, 2);</span>
+<span class="gd">-                m_Cursor.address = reBreak_in.GetMatch( line, 3);</span>
+<span class="gi">+                // For debuging of usual linux application &#39;GetMatch(line, 1)&#39; is empty.</span>
+<span class="gi">+                // While for debuging of application under wine the name of the disk is useless.</span>
+<span class="gi">+                m_Cursor.file = reBreak_in.GetMatch(line, 2);</span>
+             }
+<span class="gi">+            lineStr = reBreak_in.GetMatch(line, 3);</span>
+<span class="gi">+            m_Cursor.address = reBreak_in.GetMatch(line, 4);</span>
+ 
+             lineStr.ToLong(&amp;m_Cursor.line);
+             m_Cursor.changed = true;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">tpetrov 2013-01-20 21:44:20</div>

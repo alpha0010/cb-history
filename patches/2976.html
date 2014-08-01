@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,139 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/wxSmith/wxwidgets/wxscorrector.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/wxwidgets/wxscorrector.cpp    (revision 6202)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/wxwidgets/wxscorrector.cpp    (working copy)</span>
+<span class="gu">@@ -27,6 +27,8 @@</span>
+ #include &quot;wxsitemresdata.h&quot;
+ #include &lt;logmanager.h&gt;
+ 
+<span class="gi">+static const wxString s_IdPrefix = _T(&quot;ID_&quot;);</span>
+<span class="gi">+</span>
+ wxsCorrector::wxsCorrector(wxsItemResData* Data):
+     m_Data(Data),
+     m_NeedRebuild(true)
+<span class="gu">@@ -101,7 +103,10 @@</span>
+         }
+         else
+         {
+<span class="gd">-            m_Ids.insert(IdName);</span>
+<span class="gi">+            if (!IsWxWidgetsIdPrefix(IdName))</span>
+<span class="gi">+            {</span>
+<span class="gi">+                m_Ids.insert(IdName);</span>
+<span class="gi">+            }</span>
+         }
+     }
+ 
+<span class="gu">@@ -138,7 +143,10 @@</span>
+         {
+             Ret = true;
+             SetNewIdName(Item);
+<span class="gd">-            m_Ids.insert(Item-&gt;GetIdName());</span>
+<span class="gi">+            if (!IsWxWidgetsIdPrefix(Item-&gt;GetIdName()))</span>
+<span class="gi">+            {</span>
+<span class="gi">+                m_Ids.insert(Item-&gt;GetIdName());</span>
+<span class="gi">+            }</span>
+         }
+     }
+ 
+<span class="gu">@@ -188,13 +196,32 @@</span>
+             Item-&gt;SetIdName(IdName);
+         }
+ 
+<span class="gd">-        if ( m_Ids.empty() || (m_Ids.find(IdName) != m_Ids.end()) )</span>
+<span class="gi">+        if ( m_Ids.find(IdName) != m_Ids.end() )</span>
+         {
+             SetNewIdName(Item);
+         }
+<span class="gd">-        m_Ids.insert(Item-&gt;GetIdName());</span>
+<span class="gi">+</span>
+<span class="gi">+        if (!IsWxWidgetsIdPrefix(Item-&gt;GetIdName()))</span>
+<span class="gi">+        {</span>
+<span class="gi">+            m_Ids.insert(Item-&gt;GetIdName());</span>
+<span class="gi">+        }</span>
+     }
+ 
+<span class="gi">+    if ( Item-&gt;GetPropertiesFlags() &amp; flLocal )</span>
+<span class="gi">+    {</span>
+<span class="gi">+        wxString prefix = s_IdPrefix;</span>
+<span class="gi">+        prefix &lt;&lt; Item-&gt;GetInfo().DefaultVarName.Upper();</span>
+<span class="gi">+        wxString curIdName = Item-&gt;GetIdName();</span>
+<span class="gi">+        if (curIdName.StartsWith(prefix))</span>
+<span class="gi">+        {</span>
+<span class="gi">+            Item-&gt;SetIdName(_T(&quot;wxID_ANY&quot;));</span>
+<span class="gi">+            if (m_Ids.find(curIdName) != m_Ids.end())</span>
+<span class="gi">+            {</span>
+<span class="gi">+                m_Ids.erase(curIdName);</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+     m_NeedRebuild = false;
+ }
+ 
+<span class="gu">@@ -223,8 +250,10 @@</span>
+ 
+         if ( Item-&gt;GetPropertiesFlags() &amp; flId )
+         {
+<span class="gd">-            wxString Id = Item-&gt;GetIdName();</span>
+<span class="gd">-            m_Ids.insert(Id);</span>
+<span class="gi">+            if (!IsWxWidgetsIdPrefix(Item-&gt;GetIdName()))</span>
+<span class="gi">+            {</span>
+<span class="gi">+                m_Ids.insert(Item-&gt;GetIdName());</span>
+<span class="gi">+            }</span>
+         }
+     }
+ 
+<span class="gu">@@ -252,7 +281,7 @@</span>
+ 
+ void wxsCorrector::SetNewIdName(wxsItem* Item)
+ {
+<span class="gd">-    wxString Prefix = _T(&quot;ID_&quot;);</span>
+<span class="gi">+    wxString Prefix = s_IdPrefix;</span>
+     Prefix &lt;&lt; Item-&gt;GetInfo().DefaultVarName.Upper();
+     wxString NewName;
+     for ( int i=1;; i++ )
+<span class="gu">@@ -296,7 +325,10 @@</span>
+         {
+             SetNewIdName(Item);
+         }
+<span class="gd">-        m_Ids.insert(Item-&gt;GetIdName());</span>
+<span class="gi">+        if (!IsWxWidgetsIdPrefix(Item-&gt;GetIdName()))</span>
+<span class="gi">+        {</span>
+<span class="gi">+            m_Ids.insert(Item-&gt;GetIdName());</span>
+<span class="gi">+        }</span>
+     }
+ 
+     wxsParent* Parent = Item-&gt;ConvertToParent();
+<span class="gu">@@ -384,6 +416,11 @@</span>
+     return FixVarName(Id);
+ }
+ 
+<span class="gi">+bool wxsCorrector::IsWxWidgetsIdPrefix(const wxString&amp; Id)</span>
+<span class="gi">+{</span>
+<span class="gi">+    return Id.StartsWith(_T(&quot;wxID_&quot;));</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ void wxsCorrector::ClearCache()
+ {
+     m_NeedRebuild = true;
+<span class="gh">Index: src/plugins/contrib/wxSmith/wxwidgets/wxscorrector.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/wxwidgets/wxscorrector.h    (revision 6202)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/wxwidgets/wxscorrector.h    (working copy)</span>
+<span class="gu">@@ -91,6 +91,8 @@</span>
+         /** \brief Function checking and fixing if necessary identifier */
+         bool FixIdName(wxString&amp; Id);
+ 
+<span class="gi">+        bool IsWxWidgetsIdPrefix(const wxString&amp; Id);</span>
+<span class="gi">+</span>
+         void RebuildSetsReq(wxsItem* Item,wxsItem* Exclude);
+         bool FixAfterLoadCheckNames(wxsItem* Item);
+         bool FillEmpty(wxsItem* Item);
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">loaden 2010-04-08 05:06:21</div>

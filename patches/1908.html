@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,152 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/wxFlatNotebook/src/wxFlatNotebook/wxFlatNotebook.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/wxFlatNotebook/src/wxFlatNotebook/wxFlatNotebook.cpp    (revision 4032)</span>
+<span class="gi">+++ src/sdk/wxFlatNotebook/src/wxFlatNotebook/wxFlatNotebook.cpp    (working copy)</span>
+<span class="gu">@@ -1017,7 +1017,11 @@</span>
+     }
+ 
+     rect = wxRect(btnXPos, 8, 16, 16);
+<span class="gi">+#if wxCHECK_VERSION(2, 8, 0)</span>
+<span class="gi">+    if(rect.Contains(pt))</span>
+<span class="gi">+#else</span>
+     if(rect.Inside(pt))
+<span class="gi">+#endif</span>
+     {
+         return (style &amp; wxFNB_NO_X_BUTTON) ? wxFNB_NOWHERE : wxFNB_X;
+     }
+<span class="gu">@@ -1026,18 +1030,30 @@</span>
+     if( style &amp; wxFNB_DROPDOWN_TABS_LIST )
+     {
+         rect = wxRect(render-&gt;GetDropArrowButtonPos( this ), 8, 16, 16);
+<span class="gi">+#if wxCHECK_VERSION(2, 8, 0)</span>
+<span class="gi">+        if( rect.Contains(pt) )</span>
+<span class="gi">+#else</span>
+         if( rect.Inside(pt) )
+<span class="gi">+#endif</span>
+             return wxFNB_DROP_DOWN_ARROW;
+     }
+ 
+<span class="gi">+#if wxCHECK_VERSION(2, 8, 0)</span>
+<span class="gi">+    if(rect.Contains(pt))</span>
+<span class="gi">+#else</span>
+     if(rect.Inside(pt))
+<span class="gi">+#endif</span>
+     {
+         return (style &amp; wxFNB_NO_NAV_BUTTONS) ? wxFNB_NOWHERE : wxFNB_RIGHT_ARROW;
+     }
+ 
+ 
+     rect = wxRect(btnLeftPos, 8, 16, 16);
+<span class="gi">+#if wxCHECK_VERSION(2, 8, 0)</span>
+<span class="gi">+    if(rect.Contains(pt))</span>
+<span class="gi">+#else</span>
+     if(rect.Inside(pt))
+<span class="gi">+#endif</span>
+     {
+         return (style &amp; wxFNB_NO_NAV_BUTTONS) ? wxFNB_NOWHERE : wxFNB_LEFT_ARROW;
+     }
+<span class="gu">@@ -1054,7 +1070,11 @@</span>
+         if(style &amp; wxFNB_X_ON_TAB &amp;&amp; (int)cur == GetSelection())
+         {
+             // &#39;x&#39; button exists on a tab
+<span class="gi">+#if wxCHECK_VERSION(2, 8, 0)</span>
+<span class="gi">+            if(m_pagesInfoVec[cur].GetXRect().Contains(pt))</span>
+<span class="gi">+#else</span>
+             if(m_pagesInfoVec[cur].GetXRect().Inside(pt))
+<span class="gi">+#endif</span>
+             {
+                 pageInfo = pgInfo;
+                 tabIdx = (int)cur;
+<span class="gu">@@ -1082,7 +1102,11 @@</span>
+ 
+             wxRect tabRect = wxRect(pgInfo.GetPosition().x, pgInfo.GetPosition().y, 
+                 pgInfo.GetSize().x, pgInfo.GetSize().y);
+<span class="gi">+#if wxCHECK_VERSION(2, 8, 0)</span>
+<span class="gi">+            if(tabRect.Contains(pt))</span>
+<span class="gi">+#else</span>
+             if(tabRect.Inside(pt))
+<span class="gi">+#endif</span>
+             {
+                 // We have a match
+                 pageInfo = pgInfo;
+<span class="gh">Index: src/sdk/wxscintilla/src/PlatWX.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/wxscintilla/src/PlatWX.cpp    (revision 4032)</span>
+<span class="gi">+++ src/sdk/wxscintilla/src/PlatWX.cpp    (working copy)</span>
+<span class="gu">@@ -1382,11 +1382,28 @@</span>
+ //----------------------------------------------------------------------
+ 
+ ElapsedTime::ElapsedTime() {
+<span class="gi">+#if !wxCHECK_VERSION(2, 6, 2)</span>
+     wxStartTimer();
+<span class="gi">+#else</span>
+<span class="gi">+    wxLongLong localTime = wxGetLocalTimeMillis();</span>
+<span class="gi">+    littleBit = localTime.GetLo();</span>
+<span class="gi">+    bigBit = localTime.GetHi();</span>
+<span class="gi">+#endif</span>
+ }
+ 
+ double ElapsedTime::Duration(bool reset) {
+<span class="gi">+#if !wxCHECK_VERSION(2, 6, 2)</span>
+     double result = wxGetElapsedTime(reset);
+<span class="gi">+#else</span>
+<span class="gi">+    wxLongLong prevTime(bigBit, littleBit);</span>
+<span class="gi">+    wxLongLong localTime = wxGetLocalTimeMillis();</span>
+<span class="gi">+    if(reset) {</span>
+<span class="gi">+        littleBit = localTime.GetLo();</span>
+<span class="gi">+        bigBit = localTime.GetHi();</span>
+<span class="gi">+    }</span>
+<span class="gi">+    wxLongLong duration = localTime - prevTime;</span>
+<span class="gi">+    double result = duration.ToDouble();</span>
+<span class="gi">+#endif</span>
+     result /= 1000.0;
+     return result;
+ }
+<span class="gh">Index: src/sdk/wxscintilla/src/ScintillaWX.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/wxscintilla/src/ScintillaWX.cpp    (revision 4032)</span>
+<span class="gi">+++ src/sdk/wxscintilla/src/ScintillaWX.cpp    (working copy)</span>
+<span class="gu">@@ -684,7 +684,6 @@</span>
+     PRectangle rcClient = GetClientRectangle();
+     paintingAllText = rcPaint.Contains(rcClient);
+ 
+<span class="gd">-    dc-&gt;BeginDrawing();</span>
+     ClipChildren(*dc, rcPaint);
+     Paint(surfaceWindow, rcPaint);
+ 
+<span class="gu">@@ -695,7 +694,6 @@</span>
+         FullPaint();
+     }
+     paintState = notPainting;
+<span class="gd">-    dc-&gt;EndDrawing();</span>
+ }
+ 
+ 
+<span class="gh">Index: src/include/globals.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/globals.h    (revision 4032)</span>
+<span class="gi">+++ src/include/globals.h    (working copy)</span>
+<span class="gu">@@ -309,4 +309,15 @@</span>
+     extern DLLIMPORT windows_version_t WindowsVersion();
+ };
+ 
+<span class="gi">+#if wxCHECK_VERSION(2, 8, 0) &amp;&amp; !(WXWIN_COMPATIBILITY_2_6)</span>
+<span class="gi">+    // Note the following defines need removed</span>
+<span class="gi">+    // when CodeBlocks support for wxWidgets 2.6 is dropped</span>
+<span class="gi">+    #define wxOPEN wxFD_OPEN</span>
+<span class="gi">+    #define wxFILE_MUST_EXIST wxFD_FILE_MUST_EXIST</span>
+<span class="gi">+    #define wxMULTIPLE wxFD_MULTIPLE</span>
+<span class="gi">+    #define wxSAVE wxFD_SAVE</span>
+<span class="gi">+    #define wxOVERWRITE_PROMPT wxFD_OVERWRITE_PROMPT</span>
+<span class="gi">+    #define wxCHANGE_DIR wxFD_CHANGE_DIR</span>
+<span class="gi">+#endif</span>
+<span class="gi">+</span>
+ #endif // SDK_GLOBALS_H
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">stahta01 2007-03-01 00:37:27</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,92 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable">Hi, C::B devs:
+
+Here is a modified function to retrieve all GCC default compiler directories
+
+wxArrayString NativeParser::GetGCCCompilerDirs(const wxString &amp;cpp_compiler, const wxString &amp;base)
+{
+    wxArrayString gcc_compiler_dirs;
+
+    // for starters , only do this for gnu compiler
+    //Manager::Get()-&gt;GetLogManager()-&gt;DebugLog(_T(&quot;CompilerID &quot;) + CompilerID);
+    //
+    //   windows: mingw32-g++ -v -E -x c++ nul
+    //   linux  : g++ -v -E -x c++ /dev/null
+    // do the trick only for c++, not needed then for C (since this is a subset of C++)
+
+
+    // let&#39;s construct the command
+    // use a null file handler
+    // both works fine in Windows and linux
+
+#ifdef __WXMSW__
+    wxString Command = cpp_compiler + _T(&quot; -v -E -x c++ nul&quot;);
+#else
+    wxString Command = cpp_compiler + _T(&quot; -v -E -x c++ /dev/null&quot;);
+#endif
+
+    // action time  (everything shows up on the error stream
+    wxArrayString Output, Errors;
+    wxExecute(Command, Output, Errors, wxEXEC_NODISABLE);
+    int nCount = Errors.GetCount();
+    // the include dir (1 per line) show up between the lines
+    // #include &lt;...&gt; search starts here:
+    // End of search list
+    //   let&#39;s hope this does not change too quickly, otherwise we need
+    // to adjust our search code (for several versions ...)
+    bool bStart = false;
+    for(int idxCount = 0; idxCount &lt; nCount; ++idxCount)
+    {
+        if (!bStart &amp;&amp; Errors[idxCount] == _(&quot;#include &lt;...&gt; search starts here:&quot;))
+        {
+            bStart = true;
+        }
+        else if (bStart &amp;&amp; Errors[idxCount] == _(&quot;End of search list.&quot;))
+        {
+            bStart = false; // could jump out of for loop if we want
+        }
+        else if (bStart)
+        {
+//                Manager::Get()-&gt;GetLogManager()-&gt;DebugLog(&quot;include dir &quot; + Errors[idxCount]);
+            // get rid of the leading space (more general : any whitespace)in front
+            wxRegEx reg(_T(&quot;^[ \t]*(.*)&quot;));
+            if(reg.Matches(Errors[idxCount]))
+            {
+                wxString out = reg.GetMatch(Errors[idxCount], 1);
+                if(!out.IsEmpty())
+                {
+                    wxFileName dir(out);
+                    if (NormalizePath(dir,base))
+                    {
+                        Manager::Get()-&gt;GetLogManager()-&gt;DebugLog(_T(&quot;Caching GCC dir: &quot;) + dir.GetFullPath());
+                        gcc_compiler_dirs.Add(dir.GetFullPath());
+                    }
+                    else
+                    #if wxCHECK_VERSION(2, 9, 0)
+                        Manager::Get()-&gt;GetLogManager()-&gt;DebugLog(F(_T(&quot;Error normalizing path: &#39;%s&#39; from &#39;%s&#39;&quot;),out.wx_str(),base.wx_str()));
+                    #else
+                        Manager::Get()-&gt;GetLogManager()-&gt;DebugLog(F(_T(&quot;Error normalizing path: &#39;%s&#39; from &#39;%s&#39;&quot;),out.c_str(),base.c_str()));
+                    #endif
+                }
+            }
+        }
+    } // end for : idx : idxCount
+
+
+
+    return gcc_compiler_dirs;
+}
+
+
+I have tested them at least works fine under Windows MinGW.
+
+see the discussing in 
+
+http://forums.codeblocks.org/index.php/topic,10598.0.html
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">ollydbg 2009-07-06 11:33:58</div>

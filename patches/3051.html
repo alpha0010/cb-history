@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,120 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/regex_testbed/regexdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/regex_testbed/regexdlg.cpp    (revision 6539)</span>
+<span class="gi">+++ src/plugins/contrib/regex_testbed/regexdlg.cpp    (working copy)</span>
+<span class="gu">@@ -109,32 +109,32 @@</span>
+ {
+     static wxString regex;
+     static wxString text;
+<span class="gd">-    static bool nocase;</span>
+<span class="gd">-    static bool newlines;</span>
+<span class="gd">-    static int library;</span>
+<span class="gi">+    static bool nocase;</span>
+<span class="gi">+    static bool newlines;</span>
+<span class="gi">+    static int library;</span>
+ 
+ //    if(event.GetId() == XRCID(&quot;ID_NOCASE&quot;) || event.GetId() == XRCID(&quot;ID_NEWLINES&quot;))
+<span class="gd">-//        regex = _T(&quot;$^&quot;); // bullshit</span>
+<span class="gd">-//    all UI elements send events quite often (on linux on every mouse mouve, if the parent window</span>
+<span class="gd">-//    has the focus, on windows even without any user action). So we can not use the event Id to force a new</span>
+<span class="gd">-//    run of GetBuiltinMatches(), because every time the value of m_quoted and m_output gets upadeted a selection of text in m_quoted</span>
+<span class="gd">-//    will be reset and therefore the user can not copy it&#39;s content (linux) and m_output jumps to the top, so that the user</span>
+<span class="gd">-//    cannot scroll the text (windows and linux).</span>
+<span class="gi">+//        regex = _T(&quot;$^&quot;); // bullshit</span>
+<span class="gi">+//    all UI elements send events quite often (on linux on every mouse move, if the parent window</span>
+<span class="gi">+//    has the focus, on windows even without any user action). So we can not use the event Id to force a new</span>
+<span class="gi">+//    run of GetBuiltinMatches(), because every time the value of m_quoted and m_output gets upadeted a selection of text in m_quoted</span>
+<span class="gi">+//    will be reset and therefore the user can not copy it&#39;s content (linux) and m_output jumps to the top, so that the user</span>
+<span class="gi">+//    cannot scroll the text (windows and linux).</span>
+ //
+ 
+<span class="gd">-    if( regex == m_regex-&gt;GetValue() &amp;&amp;</span>
+<span class="gd">-        text == m_text-&gt;GetValue() &amp;&amp;</span>
+<span class="gd">-        nocase == m_nocase-&gt;GetValue() &amp;&amp;</span>
+<span class="gd">-        newlines == m_newlines-&gt;GetValue() &amp;&amp;</span>
+<span class="gd">-        library == m_library-&gt;GetSelection())</span>
+<span class="gd">-        {</span>
+<span class="gd">-            return;</span>
+<span class="gi">+    if( regex == m_regex-&gt;GetValue() &amp;&amp;</span>
+<span class="gi">+        text == m_text-&gt;GetValue() &amp;&amp;</span>
+<span class="gi">+        nocase == m_nocase-&gt;GetValue() &amp;&amp;</span>
+<span class="gi">+        newlines == m_newlines-&gt;GetValue() &amp;&amp;</span>
+<span class="gi">+        library == m_library-&gt;GetSelection())</span>
+<span class="gi">+        {</span>
+<span class="gi">+            return;</span>
+         }
+ 
+     regex = m_regex-&gt;GetValue();
+     text = m_text-&gt;GetValue();
+     nocase = m_nocase-&gt;GetValue();
+<span class="gd">-    newlines = m_newlines-&gt;GetValue();</span>
+<span class="gi">+    newlines = m_newlines-&gt;GetValue();</span>
+     library = m_library-&gt;GetSelection();
+ 
+     wxString tmp(regex);
+<span class="gu">@@ -201,7 +201,7 @@</span>
+         return ret;
+ 
+     for(size_t i = 0; i &lt; m_wxre.GetMatchCount(); ++i)
+<span class="gd">-        if(!!m_wxre.GetMatch(text, i))</span>
+<span class="gi">+        if(m_wxre.GetMatch(text, i))</span>
+             ret.Add(m_wxre.GetMatch(text, i));
+ 
+     return ret;
+<span class="gh">Index: src/plugins/contrib/regex_testbed/regexdlg.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/regex_testbed/regexdlg.xrc    (revision 6539)</span>
+<span class="gi">+++ src/plugins/contrib/regex_testbed/regexdlg.xrc    (working copy)</span>
+<span class="gu">@@ -1,93 +1,104 @@</span>
+ &lt;resource&gt;
+<span class="gd">-    &lt;object class=&quot;wxScrollingDialog&quot; name=&quot;regex_dialog&quot;&gt;</span>
+<span class="gd">-        &lt;title&gt;Regular expression utility&lt;/title&gt;</span>
+<span class="gd">-        &lt;centered&gt;1&lt;/centered&gt;</span>
+<span class="gd">-        &lt;style&gt;wxSTAY_ON_TOP|wxDEFAULT_DIALOG_STYLE&lt;/style&gt;</span>
+<span class="gd">-        &lt;object class=&quot;wxFlexGridSizer&quot;&gt;</span>
+<span class="gd">-            &lt;cols&gt;1&lt;/cols&gt;</span>
+<span class="gd">-            &lt;growablecols&gt;0&lt;/growablecols&gt;</span>
+<span class="gd">-            &lt;growablerows&gt;4&lt;/growablerows&gt;</span>
+<span class="gd">-            &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxStaticText&quot; name=&quot;ID_3&quot;&gt;</span>
+<span class="gd">-                    &lt;label&gt;Regular expression:&lt;/label&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+<span class="gd">-                &lt;flag&gt;wxALL|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL&lt;/flag&gt;</span>
+<span class="gd">-                &lt;border&gt;10&lt;/border&gt;</span>
+<span class="gd">-            &lt;/object&gt;</span>
+<span class="gd">-            &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxTextCtrl&quot; name=&quot;ID_REGEX&quot;&gt;</span>
+<span class="gd">-                    &lt;size&gt;80,-1&lt;/size&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+<span class="gd">-                &lt;flag&gt;wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL&lt;/flag&gt;</span>
+<span class="gd">-                &lt;border&gt;10&lt;/border&gt;</span>
+<span class="gd">-            &lt;/object&gt;</span>
+<span class="gd">-            &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxTextCtrl&quot; name=&quot;ID_QUOTED&quot;&gt;</span>
+<span class="gd">-                    &lt;size&gt;80,-1&lt;/size&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+<span class="gd">-                &lt;flag&gt;wxTOP|wxLEFT|wxRIGHT|wxEXPAND|wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL&lt;/flag&gt;</span>
+<span class="gd">-                &lt;border&gt;10&lt;/border&gt;</span>
+<span class="gd">-            &lt;/object&gt;</span>
+<span class="gd">-            &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxBoxSizer&quot;&gt;</span>
+<span class="gd">-                    &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                        &lt;object class=&quot;wxStaticText&quot; name=&quot;ID_1&quot;&gt;</span>
+<span class="gd">-                            &lt;label&gt;Regex library:&lt;/label&gt;</span>
+<span class="gd">-                        &lt;/object&gt;</span>
+<span class="gd">-                        &lt;flag&gt;wxBOTTOM|wxLEFT|wxRIGHT|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL&lt;/flag&gt;</span>
+<span class="gd">-                        &lt;border&gt;10&lt;/border&gt;</span>
+<span class="gd">-                    &lt;/object&gt;</span>
+<span class="gd">-                    &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                        &lt;object class=&quot;wxChoice&quot; name=&quot;ID_LIBRARY&quot;&gt;</span>
+<span class="gd">-                            &lt;content&gt;</span>
+<span class="gd">-</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">cryogen 2010-08-26 14:51:04</div>

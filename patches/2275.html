@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,46 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/src/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/main.cpp    (revision 4717)</span>
+<span class="gi">+++ src/src/main.cpp    (working copy)</span>
+<span class="gu">@@ -606,7 +606,7 @@</span>
+ 
+     pm-&gt;RegisterEventSink(cbEVT_QUERY_VIEW_LAYOUT, new cbEventFunctor&lt;MainFrame, CodeBlocksLayoutEvent&gt;(this, &amp;MainFrame::OnLayoutQuery));
+     pm-&gt;RegisterEventSink(cbEVT_SWITCH_VIEW_LAYOUT, new cbEventFunctor&lt;MainFrame, CodeBlocksLayoutEvent&gt;(this, &amp;MainFrame::OnLayoutSwitch));
+<span class="gd">-    </span>
+<span class="gi">+</span>
+     pm-&gt;RegisterEventSink(cbEVT_ADD_LOG_WINDOW, new cbEventFunctor&lt;MainFrame, CodeBlocksLogEvent&gt;(this, &amp;MainFrame::OnAddLogWindow));
+     pm-&gt;RegisterEventSink(cbEVT_REMOVE_LOG_WINDOW, new cbEventFunctor&lt;MainFrame, CodeBlocksLogEvent&gt;(this, &amp;MainFrame::OnRemoveLogWindow));
+     pm-&gt;RegisterEventSink(cbEVT_SWITCH_TO_LOG_WINDOW, new cbEventFunctor&lt;MainFrame, CodeBlocksLogEvent&gt;(this, &amp;MainFrame::OnSwitchToLogWindow));
+<span class="gu">@@ -1045,13 +1045,19 @@</span>
+     }
+ 
+     int id = wxNewId();
+<span class="gi">+    wxString title = info-&gt;title + (menu == m_HelpPluginsMenu ? _T(&quot;...&quot;) : wxEmptyString);</span>
+     m_PluginIDsMap[id] = info-&gt;name;
+     if (pos == -1)
+<span class="gd">-        item = menu-&gt;Append(id, info-&gt;title + (menu == m_HelpPluginsMenu ? _T(&quot;...&quot;) :</span>
+<span class="gd">-            wxEmptyString), wxEmptyString, checkable ? wxITEM_CHECK : wxITEM_NORMAL);</span>
+<span class="gd">-    else</span>
+<span class="gd">-        item = menu-&gt;Insert(pos, id, info-&gt;title + (menu == m_HelpPluginsMenu ? _T(&quot;...&quot;) :</span>
+<span class="gd">-            wxEmptyString), wxEmptyString, checkable ? wxITEM_CHECK : wxITEM_NORMAL);</span>
+<span class="gi">+        pos = menu-&gt;GetMenuItemCount();</span>
+<span class="gi">+</span>
+<span class="gi">+    while(!item)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        if(!pos || title.CmpNoCase(menu-&gt;FindItemByPosition(pos - 1)-&gt;GetLabel()) &gt; 0)</span>
+<span class="gi">+            item = menu-&gt;Insert(pos, id, title, wxEmptyString, checkable ? wxITEM_CHECK : wxITEM_NORMAL);</span>
+<span class="gi">+</span>
+<span class="gi">+        pos--;</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+     Connect( id,  wxEVT_COMMAND_MENU_SELECTED, callback );
+     return item;
+ }
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mandrav 2007-12-12 14:22:49</div>

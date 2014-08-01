@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,99 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/include/projectbuildtarget.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/projectbuildtarget.h    (revision 4095)</span>
+<span class="gi">+++ src/include/projectbuildtarget.h    (working copy)</span>
+<span class="gu">@@ -88,7 +88,7 @@</span>
+           * ConsoleRunner is an external utility program that waits for a keypress
+           * after the target is executed.
+           * @return True if ConsoleRunner should be used, false if not. */
+<span class="gd">-        virtual bool GetUseConsoleRunner() const;</span>
+<span class="gi">+        virtual bool GetUseConsoleRunner(bool force = false) const;</span>
+ 
+         /** Set if ConsoleRunner should be used.
+           * Valid only for targets generating a console executable.
+<span class="gh">Index: src/sdk/projectbuildtarget.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/projectbuildtarget.cpp    (revision 4095)</span>
+<span class="gi">+++ src/sdk/projectbuildtarget.cpp    (working copy)</span>
+<span class="gu">@@ -131,9 +131,9 @@</span>
+     }
+ }
+ 
+<span class="gd">-bool ProjectBuildTarget::GetUseConsoleRunner() const</span>
+<span class="gi">+bool ProjectBuildTarget::GetUseConsoleRunner(bool force) const</span>
+ {
+<span class="gd">-    return GetTargetType() == ttConsoleOnly ? m_UseConsoleRunner : false;</span>
+<span class="gi">+    return (GetTargetType() == ttConsoleOnly || force) ? m_UseConsoleRunner : false;</span>
+ }
+ 
+ void ProjectBuildTarget::SetUseConsoleRunner(bool useIt)
+<span class="gu">@@ -147,10 +147,7 @@</span>
+ 
+ void ProjectBuildTarget::SetTargetType(const TargetType&amp; pt)
+ {
+<span class="gd">-    TargetType ttold = GetTargetType();</span>
+     CompileTargetBase::SetTargetType(pt);
+<span class="gd">-    if (ttold != GetTargetType() &amp;&amp; GetTargetType() == ttConsoleOnly)</span>
+<span class="gd">-        SetUseConsoleRunner(true); // by default, use console runner</span>
+ }
+ 
+ // target dependencies: targets to be compiled (if necessary) before this one
+<span class="gh">Index: src/sdk/projectoptionsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/projectoptionsdlg.cpp    (revision 4095)</span>
+<span class="gi">+++ src/sdk/projectoptionsdlg.cpp    (working copy)</span>
+<span class="gu">@@ -337,10 +337,6 @@</span>
+         int p = GetPlatformsFromString(platforms);
+         target-&gt;SetPlatforms(p);
+ 
+<span class="gd">-        target-&gt;SetUseConsoleRunner(XRCCTRL(*this, &quot;chkUseConsoleRunner&quot;, wxCheckBox)-&gt;GetValue());</span>
+<span class="gd">-        target-&gt;SetCreateDefFile(XRCCTRL(*this, &quot;chkCreateDefFile&quot;, wxCheckBox)-&gt;GetValue());</span>
+<span class="gd">-        target-&gt;SetCreateStaticLib(XRCCTRL(*this, &quot;chkCreateStaticLib&quot;, wxCheckBox)-&gt;GetValue());</span>
+<span class="gd">-</span>
+         target-&gt;SetTargetFilenameGenerationPolicy(
+             XRCCTRL(*this, &quot;chkAutoGenPrefix&quot;, wxCheckBox)-&gt;GetValue() ? tgfpPlatformDefault : tgfpNone,
+             XRCCTRL(*this, &quot;chkAutoGenExt&quot;, wxCheckBox)-&gt;GetValue() ? tgfpPlatformDefault : tgfpNone);
+<span class="gu">@@ -362,6 +358,10 @@</span>
+ //        fname.MakeRelativeTo(m_Project-&gt;GetBasePath());
+         target-&gt;SetObjectOutput(fname.GetFullPath());
+ 
+<span class="gi">+        target-&gt;SetUseConsoleRunner(XRCCTRL(*this, &quot;chkUseConsoleRunner&quot;, wxCheckBox)-&gt;GetValue());</span>
+<span class="gi">+        target-&gt;SetCreateDefFile(XRCCTRL(*this, &quot;chkCreateDefFile&quot;, wxCheckBox)-&gt;GetValue());</span>
+<span class="gi">+        target-&gt;SetCreateStaticLib(XRCCTRL(*this, &quot;chkCreateStaticLib&quot;, wxCheckBox)-&gt;GetValue());</span>
+<span class="gi">+</span>
+         // files options
+         wxCheckListBox* list = XRCCTRL(*this, &quot;lstFiles&quot;, wxCheckListBox);
+         int count = list-&gt;GetCount();
+<span class="gu">@@ -387,6 +387,7 @@</span>
+     if (!target)
+         return;
+     wxComboBox* cmb = XRCCTRL(*this, &quot;cmbProjectType&quot;, wxComboBox);
+<span class="gi">+    wxCheckBox* chkCR = XRCCTRL(*this, &quot;chkUseConsoleRunner&quot;, wxCheckBox);</span>
+     wxTextCtrl* txt = XRCCTRL(*this, &quot;txtOutputFilename&quot;, wxTextCtrl);
+     wxTextCtrl* txtW = XRCCTRL(*this, &quot;txtWorkingDir&quot;, wxTextCtrl);
+     wxTextCtrl* txtO = XRCCTRL(*this, &quot;txtObjectDir&quot;, wxTextCtrl);
+<span class="gu">@@ -396,7 +397,7 @@</span>
+     if (!cmb || !txt || !browse)
+         return;
+ 
+<span class="gd">-    XRCCTRL(*this, &quot;chkUseConsoleRunner&quot;, wxCheckBox)-&gt;Enable(cmb-&gt;GetSelection() == ttConsoleOnly);</span>
+<span class="gi">+    chkCR-&gt;Enable(cmb-&gt;GetSelection() == ttConsoleOnly);</span>
+     XRCCTRL(*this, &quot;chkCreateDefFile&quot;, wxCheckBox)-&gt;Enable(cmb-&gt;GetSelection() == ttDynamicLib);
+     XRCCTRL(*this, &quot;chkCreateStaticLib&quot;, wxCheckBox)-&gt;Enable(cmb-&gt;GetSelection() == ttDynamicLib);
+ 
+<span class="gu">@@ -424,6 +425,7 @@</span>
+     switch ((TargetType)cmb-&gt;GetSelection())
+     {
+         case ttConsoleOnly:
+<span class="gi">+            chkCR-&gt;SetValue(target-&gt;GetUseConsoleRunner(true));</span>
+         case ttExecutable:
+             if (ext != FileFilters::EXECUTABLE_EXT)
+                 fname.SetExt(FileFilters::EXECUTABLE_EXT);
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mandrav 2007-07-03 09:43:28</div>

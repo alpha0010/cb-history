@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,105 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/HexEditor/HexEditPanel.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/HexEditor/HexEditPanel.cpp    (revision 7060)</span>
+<span class="gi">+++ src/plugins/contrib/HexEditor/HexEditPanel.cpp    (working copy)</span>
+<span class="gu">@@ -1029,7 +1029,11 @@</span>
+ 
+         default:
+         {
+<span class="gi">+#if wxUSE_UNICODE</span>
+             m_ActiveView-&gt;PutChar( event.GetUnicodeKey() );
+<span class="gi">+#else</span>
+<span class="gi">+            m_ActiveView-&gt;PutChar( event.GetKeyCode() );</span>
+<span class="gi">+#endif</span>
+             break;
+         }
+     }
+<span class="gh">Index: src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsimagelist.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsimagelist.cpp    (revision 7060)</span>
+<span class="gi">+++ src/plugins/contrib/wxSmith/wxwidgets/defitems/wxsimagelist.cpp    (working copy)</span>
+<span class="gu">@@ -159,10 +159,10 @@</span>
+         m_Count = 0;
+ 
+         m_ImageData.Clear();
+<span class="gd">-        ss.Printf(_T(&quot;%d&quot;), m_Width);</span>
+<span class="gi">+        ss.Printf(_T(&quot;%ld&quot;), m_Width);</span>
+         m_ImageData.Add(ss);
+ 
+<span class="gd">-        ss.Printf(_T(&quot;%d&quot;), m_Height);</span>
+<span class="gi">+        ss.Printf(_T(&quot;%ld&quot;), m_Height);</span>
+         m_ImageData.Add(ss);
+     }
+     // else reset the displayed size
+<span class="gh">Index: src/plugins/contrib/NassiShneiderman/CParser.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/NassiShneiderman/CParser.cpp    (revision 7060)</span>
+<span class="gi">+++ src/plugins/contrib/NassiShneiderman/CParser.cpp    (working copy)</span>
+<span class="gu">@@ -23,7 +23,11 @@</span>
+ 
+     typedef rule&lt;scanner&lt;wxChar const *&gt; &gt; rule_t;
+ 
+<span class="gi">+#if wxUSE_UNICODE</span>
+     const wxChar *buf = str.wc_str();
+<span class="gi">+#else</span>
+<span class="gi">+    const wxChar *buf = str.c_str();</span>
+<span class="gi">+#endif</span>
+ 
+     //wxMessageBox(str, _T(&quot;parsing:&quot;));
+     rule_t preprocessor   = comment_p( _T(&quot;#&quot;) );
+<span class="gh">Index: src/plugins/contrib/ToolsPlus/PipedProcessCtrl.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/ToolsPlus/PipedProcessCtrl.cpp    (revision 7060)</span>
+<span class="gi">+++ src/plugins/contrib/ToolsPlus/PipedProcessCtrl.cpp    (working copy)</span>
+<span class="gu">@@ -259,7 +259,11 @@</span>
+         kc1[0]=&#39;\n&#39;;
+     }
+ //    cbMessageBox(_T(&quot;key press: &quot;)+wxString::FromAscii(kc1)+wxString::Format(_T(&quot; keycode: %i&quot;),ke.GetKeyCode()));
+<span class="gi">+#if wxUSE_UNICODE</span>
+     wxChar kc2=ke.GetUnicodeKey();
+<span class="gi">+#else</span>
+<span class="gi">+    wxChar kc2=ke.GetKeyCode();</span>
+<span class="gi">+#endif</span>
+     wxString buf(kc2);
+     //kc1[0]=buf[0];
+     m_ostream-&gt;Write(kc1,1);
+<span class="gh">Index: src/plugins/contrib/AutoVersioning/AutoVersioning.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/AutoVersioning/AutoVersioning.cpp    (revision 7060)</span>
+<span class="gi">+++ src/plugins/contrib/AutoVersioning/AutoVersioning.cpp    (working copy)</span>
+<span class="gu">@@ -727,7 +727,7 @@</span>
+                     iLast = sLine.Find(&#39;&quot;&#39;, true);
+                     // Create a new version string...
+                     wxString sVersion = sLine.SubString(iFirst, iLast);
+<span class="gd">-                    wxString sNewVersion = wxString::Format(wxT(&quot;\&quot;%d.%d.%d\&quot;&quot;), GetVersionState().Values.Major, GetVersionState().Values.Minor, GetVersionState().Values.Build);</span>
+<span class="gi">+                    wxString sNewVersion = wxString::Format(wxT(&quot;\&quot;%ld.%ld.%ld\&quot;&quot;), GetVersionState().Values.Major, GetVersionState().Values.Minor, GetVersionState().Values.Build);</span>
+                     // ...and insert it into the XML.
+                     sLine.Replace(sVersion, sNewVersion);
+                     // Remove the existing line and replace it with the new one.
+<span class="gh">Index: src/plugins/codecompletion/parser/token.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/parser/token.h    (revision 7060)</span>
+<span class="gi">+++ src/plugins/codecompletion/parser/token.h    (working copy)</span>
+<span class="gu">@@ -88,12 +88,12 @@</span>
+         {
+             const long totalTime = it-&gt;first-&gt;m_StopWatch.Time();
+             wxString log;
+<span class="gd">-            log.Printf(_T(&quot;\&quot;%s\&quot; used time is %d minute(s), %ld.%03ld seconds; call times is %d.&quot;),</span>
+<span class="gi">+            log.Printf(_T(&quot;\&quot;%s\&quot; used time is %ld minute(s), %ld.%03ld seconds; call times is %ld.&quot;),</span>
+                        it-&gt;second.wx_str(),
+                        (totalTime / 60000),
+                        (totalTime / 1000) % 60,
+                        (totalTime % 1000),
+<span class="gd">-                       it-&gt;first-&gt;m_CallTimes);</span>
+<span class="gi">+                       (long)it-&gt;first-&gt;m_CallTimes);</span>
+ #ifndef CC_PARSER_TEST
+             Manager::Get()-&gt;GetLogManager()-&gt;DebugLog(log);
+ #endif
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">olipfei 2011-03-21 15:08:14</div>

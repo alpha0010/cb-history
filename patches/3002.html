@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,83 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gd">--- src/sdk/cbeditor.cpp (revision 6297)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp (working copy)</span>
+<span class="gu">@@ -1288,20 +1288,6 @@</span>
+     control-&gt;SetCaretLineVisible(mgr-&gt;ReadBool(_T(&quot;/highlight_caret_line&quot;), false));
+     control-&gt;SetCaretLineBackground(GetOptionColour(_T(&quot;/highlight_caret_line_colour&quot;), wxColour(0xFF, 0xFF, 0x00)));
+ 
+<span class="gd">-    // if user wants &quot;Home&quot; key to set cursor to the very beginning of line</span>
+<span class="gd">-    if (mgr-&gt;ReadBool(_T(&quot;/simplified_home&quot;), false))</span>
+<span class="gd">-    {</span>
+<span class="gd">-        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME, wxSCI_SCMOD_NORM, wxSCI_CMD_HOME);</span>
+<span class="gd">-        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME, wxSCI_SCMOD_SHIFT, wxSCI_CMD_HOMEEXTEND);</span>
+<span class="gd">-        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME, wxSCI_SCMOD_ALT | wxSCI_SCMOD_SHIFT, wxSCI_CMD_HOMERECTEXTEND);</span>
+<span class="gd">-    }</span>
+<span class="gd">-    else // else set default &quot;Home&quot; key behavior</span>
+<span class="gd">-    {</span>
+<span class="gd">-        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME, wxSCI_SCMOD_NORM, wxSCI_CMD_VCHOME);</span>
+<span class="gd">-        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME, wxSCI_SCMOD_SHIFT, wxSCI_CMD_VCHOMEEXTEND);</span>
+<span class="gd">-        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME, wxSCI_SCMOD_ALT | wxSCI_SCMOD_SHIFT, wxSCI_CMD_VCHOMERECTEXTEND);</span>
+<span class="gd">-    }</span>
+<span class="gd">-</span>
+     control-&gt;SetUseTabs(mgr-&gt;ReadBool(_T(&quot;/use_tab&quot;), false));
+     control-&gt;SetIndentationGuides(mgr-&gt;ReadBool(_T(&quot;/show_indent_guides&quot;), false)?wxSCI_IV_LOOKBOTH:wxSCI_IV_NONE);
+     control-&gt;SetTabIndents(mgr-&gt;ReadBool(_T(&quot;/tab_indents&quot;), true));
+<span class="gu">@@ -1313,21 +1299,44 @@</span>
+         //otherwise to the start/end of the entire line.
+         //alt+home/end go to start/end of the entire line.
+         //in unwrapped mode, there is no difference between home/end and alt+home/end
+<span class="gd">-        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_NORM,wxSCI_CMD_VCHOMEWRAP);</span>
+         control-&gt;CmdKeyAssign(wxSCI_KEY_END,wxSCI_SCMOD_NORM,wxSCI_CMD_LINEENDWRAP);
+<span class="gd">-        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_ALT,wxSCI_CMD_VCHOME);</span>
+         control-&gt;CmdKeyAssign(wxSCI_KEY_END,wxSCI_SCMOD_ALT,wxSCI_CMD_LINEEND);
+<span class="gd">-        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_SHIFT,wxSCI_CMD_VCHOMEWRAPEXTEND);</span>
+         control-&gt;CmdKeyAssign(wxSCI_KEY_END,wxSCI_SCMOD_SHIFT,wxSCI_CMD_LINEENDWRAPEXTEND);
+<span class="gd">-        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_SHIFT|wxSCI_SCMOD_ALT,wxSCI_CMD_VCHOMEEXTEND);</span>
+         control-&gt;CmdKeyAssign(wxSCI_KEY_END,wxSCI_SCMOD_SHIFT|wxSCI_SCMOD_ALT,wxSCI_CMD_LINEENDEXTEND);
+<span class="gi">+</span>
+<span class="gi">+        // if user wants &quot;Home&quot; key to set cursor to the very beginning of line</span>
+<span class="gi">+        if (mgr-&gt;ReadBool(_T(&quot;/simplified_home&quot;), false))</span>
+<span class="gi">+        {</span>
+<span class="gi">+            control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_NORM,wxSCI_CMD_HOMEWRAP);</span>
+<span class="gi">+            control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_ALT,wxSCI_CMD_HOME);</span>
+<span class="gi">+            control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_SHIFT,wxSCI_CMD_HOMEWRAPEXTEND);</span>
+<span class="gi">+            control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_SHIFT|wxSCI_SCMOD_ALT,wxSCI_CMD_HOMEEXTEND);</span>
+<span class="gi">+        }</span>
+<span class="gi">+        else // else set default &quot;Home&quot; key behavior</span>
+<span class="gi">+        {</span>
+<span class="gi">+            control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_NORM,wxSCI_CMD_VCHOMEWRAP);</span>
+<span class="gi">+            control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_ALT,wxSCI_CMD_VCHOME);</span>
+<span class="gi">+            control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_SHIFT,wxSCI_CMD_VCHOMEWRAPEXTEND);</span>
+<span class="gi">+            control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_SHIFT|wxSCI_SCMOD_ALT,wxSCI_CMD_VCHOMEEXTEND);</span>
+<span class="gi">+        }</span>
+     }
+     else
+<span class="gd">-    { //in word wrap mode, home/end keys goto start/end of the entire line. alt+home/end goes to wrap points</span>
+<span class="gd">-        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_ALT,wxSCI_CMD_VCHOMEWRAP);</span>
+<span class="gi">+    {</span>
+<span class="gi">+        //in word wrap mode, home/end keys goto start/end of the entire line. alt+home/end goes to wrap points</span>
+         control-&gt;CmdKeyAssign(wxSCI_KEY_END,wxSCI_SCMOD_ALT,wxSCI_CMD_LINEENDWRAP);
+<span class="gd">-        control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_SHIFT|wxSCI_SCMOD_ALT,wxSCI_CMD_VCHOMEWRAPEXTEND);</span>
+         control-&gt;CmdKeyAssign(wxSCI_KEY_END,wxSCI_SCMOD_SHIFT|wxSCI_SCMOD_ALT,wxSCI_CMD_LINEENDWRAPEXTEND);
+<span class="gi">+</span>
+<span class="gi">+        // if user wants &quot;Home&quot; key to set cursor to the very beginning of line</span>
+<span class="gi">+        if (mgr-&gt;ReadBool(_T(&quot;/simplified_home&quot;), false))</span>
+<span class="gi">+        {</span>
+<span class="gi">+            control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_ALT,wxSCI_CMD_HOMEWRAP);</span>
+<span class="gi">+            control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_SHIFT|wxSCI_SCMOD_ALT,wxSCI_CMD_HOMEWRAPEXTEND);</span>
+<span class="gi">+        }</span>
+<span class="gi">+        else // else set default &quot;Home&quot; key behavior</span>
+<span class="gi">+        {</span>
+<span class="gi">+            control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_ALT,wxSCI_CMD_VCHOMEWRAP);</span>
+<span class="gi">+            control-&gt;CmdKeyAssign(wxSCI_KEY_HOME,wxSCI_SCMOD_SHIFT|wxSCI_SCMOD_ALT,wxSCI_CMD_VCHOMEWRAPEXTEND);</span>
+<span class="gi">+        }</span>
+     }
+     control-&gt;SetViewEOL(mgr-&gt;ReadBool(_T(&quot;/show_eol&quot;), false));
+     control-&gt;SetViewWhiteSpace(mgr-&gt;ReadInt(_T(&quot;/view_whitespace&quot;), 0));
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">csun 2010-05-31 10:58:35</div>

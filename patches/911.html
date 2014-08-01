@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,103 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/resources/lexers/lexer_nsis.sample</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/lexers/lexer_nsis.sample    (revision 2164)</span>
+<span class="gi">+++ src/sdk/resources/lexers/lexer_nsis.sample    (working copy)</span>
+<span class="gu">@@ -19,7 +19,13 @@</span>
+     Name &quot;Example&quot;
+     OutFile &quot;setup.exe&quot;
+     InstallDir $PROGRAMFILES\Example
+<span class="gi">+    InstallDirRegKey HKLM &quot;Software\Example&quot; &quot;&quot;</span>
+ 
+<span class="gi">+;----------------------------------------</span>
+<span class="gi">+;Variables</span>
+<span class="gi">+</span>
+<span class="gi">+  Var STARTMENU_FOLDER</span>
+<span class="gi">+</span>
+ ;-----------------------------------------
+ ;Interface Settings
+ 
+<span class="gu">@@ -31,6 +37,10 @@</span>
+ 
+     !insertmacro MUI_PAGE_WELCOME
+     !insertmacro MUI_PAGE_DIRECTORY
+<span class="gi">+    !define MUI_STARTMENUPAGE_REGISTRY_ROOT &quot;HKLM&quot;</span>
+<span class="gi">+    !define MUI_STARTMENUPAGE_REGISTRY_KEY &quot;Software\Example&quot;</span>
+<span class="gi">+    !define MUI_STARTMENUPAGE_REGISTRY_VALUENAME &quot;Example&quot;</span>
+<span class="gi">+    !insertmacro MUI_PAGE_STARTMENU Application $STARTMENU_FOLDER</span>
+     !insertmacro MUI_PAGE_INSTFILES
+     !define MUI_FINISHPAGE_NOREBOOTSUPPORT
+     !insertmacro MUI_PAGE_FINISH
+<span class="gu">@@ -49,23 +59,43 @@</span>
+ ;-----------------------------------------
+ ;Installer Section
+ 
+<span class="gd">-    Section &quot;Install&quot;</span>
+<span class="gi">+Section &quot;Install&quot;</span>
+<span class="gi">+</span>
+<span class="gi">+    WriteRegStr HKLM &quot;Software\Example&quot; &quot;Install_Dir&quot; $INSTDIR</span>
+<span class="gi">+    WriteRegStr HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\Example&quot; &quot;DisplayIcon&quot; $INSTDIR\uninstall.exe,0</span>
+<span class="gi">+    WriteRegStr HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\Example&quot; &quot;DisplayName&quot; &quot;Example&quot;</span>
+<span class="gi">+    WriteRegStr HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\Example&quot; &quot;InstallLocation&quot; $INSTDIR</span>
+<span class="gi">+    WriteRegDWORD HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\Example&quot; &quot;NoModify&quot; 1</span>
+<span class="gi">+    WriteRegDWORD HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\Example&quot; &quot;NoRepair&quot; 1</span>
+<span class="gi">+    WriteRegStr HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\Example&quot; &quot;UninstallString&quot; $INSTDIR\uninstall.exe</span>
+ 
+<span class="gd">-        !insertmacro MUI_STARTMENU_WRITE_END</span>
+<span class="gi">+    !insertmacro MUI_STARTMENU_WRITE_BEGIN &quot;Application&quot;</span>
+ 
+<span class="gd">-        SetOutPath &quot;$INSTDIR&quot;</span>
+<span class="gi">+    CreateDirectory $SMPROGRAMS\$STARTMENU_FOLDER</span>
+<span class="gi">+    CreateShortCut $SMPROGRAMS\$STARTMENU_FOLDER\Uninstall Example.lnk $INSTDIR\uninstall.exe</span>
+ 
+<span class="gd">-        WriteUninstaller &quot;uninstall.exe&quot;</span>
+<span class="gi">+    !insertmacro MUI_STARTMENU_WRITE_END</span>
+ 
+<span class="gd">-    SectionEnd</span>
+<span class="gi">+    SetOutPath $INSTDIR</span>
+ 
+<span class="gi">+    WriteUninstaller &quot;uninstall.exe&quot;</span>
+<span class="gi">+</span>
+<span class="gi">+SectionEnd</span>
+<span class="gi">+</span>
+ ;-----------------------------------------
+ ;Uninstaller Section
+<span class="gi">+</span>
+<span class="gi">+Section &quot;Uninstall&quot;</span>
+<span class="gi">+</span>
+<span class="gi">+    DeleteRegKey HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\Example&quot;</span>
+<span class="gi">+    DeleteRegKey HKLM &quot;Software\Example&quot;</span>
+ 
+<span class="gd">-    Section &quot;Uninstall&quot;</span>
+<span class="gi">+    !insertmacro MUI_STARTMENU_GETFOLDER &quot;Application&quot; $STARTMENU_FOLDER</span>
+ 
+<span class="gd">-        Delete &quot;$INSTDIR\uninstall.exe&quot;</span>
+<span class="gi">+    RMDir /r $SMPROGRAMS\$STARTMENU_FOLDER</span>
+ 
+<span class="gd">-        RMDir &quot;$INSTDIR&quot;</span>
+<span class="gi">+    Delete $INSTDIR\uninstall.exe</span>
+ 
+<span class="gd">-    SectionEnd</span>
+<span class="gi">+    RMDir $INSTDIR</span>
+<span class="gi">+</span>
+<span class="gi">+SectionEnd</span>
+<span class="gh">Index: src/sdk/resources/lexers/lexer_nsis.xml</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/lexers/lexer_nsis.xml    (revision 2164)</span>
+<span class="gi">+++ src/sdk/resources/lexers/lexer_nsis.xml    (working copy)</span>
+<span class="gu">@@ -29,7 +29,7 @@</span>
+                         bold=&quot;1&quot;/&gt;
+                 &lt;Style name=&quot;Variable&quot;
+                         index=&quot;6&quot;
+<span class="gd">-                        fg=&quot;158,0,0&quot;/&gt;</span>
+<span class="gi">+                        fg=&quot;160,0,0&quot;/&gt;</span>
+                 &lt;Style name=&quot;Label&quot;
+                         index=&quot;7&quot;
+                         fg=&quot;224,160,0&quot;/&gt;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

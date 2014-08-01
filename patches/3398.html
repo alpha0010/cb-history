@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,117 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/codecompletion/cctreectrl.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/cctreectrl.cpp    (wersja 8739)</span>
+<span class="gi">+++ src/plugins/codecompletion/cctreectrl.cpp    (kopia robocza)</span>
+<span class="gu">@@ -70,6 +70,9 @@</span>
+         case bstScope:
+             Compare = &amp;CBScopeCompare;
+             break;
+<span class="gi">+        case bstLine:</span>
+<span class="gi">+            Compare = &amp;CBLineCompare;</span>
+<span class="gi">+            break;</span>
+         case bstNone:
+         default:
+             Compare = &amp;CBNoCompare;
+<span class="gu">@@ -119,6 +122,25 @@</span>
+     return rhs-&gt;m_Token-&gt;m_Scope - lhs-&gt;m_Token-&gt;m_Scope;
+ }
+ 
+<span class="gi">+int CCTreeCtrl::CBLineCompare (CCTreeCtrlData* lhs, CCTreeCtrlData* rhs)</span>
+<span class="gi">+{</span>
+<span class="gi">+    if (!lhs || !rhs)</span>
+<span class="gi">+        return 1;</span>
+<span class="gi">+    if (lhs-&gt;m_SpecialFolder != sfToken || rhs-&gt;m_SpecialFolder != sfToken)</span>
+<span class="gi">+        return -1;</span>
+<span class="gi">+    if (!lhs-&gt;m_Token || !rhs-&gt;m_Token)</span>
+<span class="gi">+        return 1;</span>
+<span class="gi">+    if (lhs-&gt;m_Token-&gt;m_FileIdx == rhs-&gt;m_Token-&gt;m_FileIdx)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        return (lhs-&gt;m_Token-&gt;m_Line &gt; rhs-&gt;m_Token-&gt;m_Line) * 2 - 1; // from 0,1 to -1,1</span>
+<span class="gi">+    }</span>
+<span class="gi">+    else</span>
+<span class="gi">+    {</span>
+<span class="gi">+        return (lhs-&gt;m_Token-&gt;m_FileIdx &gt; rhs-&gt;m_Token-&gt;m_FileIdx) * 2 - 1;</span>
+<span class="gi">+    }</span>
+<span class="gi">+        </span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ int CCTreeCtrl::CBNoCompare(cb_unused CCTreeCtrlData* lhs, cb_unused CCTreeCtrlData* rhs)
+ {
+     return 0;
+<span class="gh">Index: src/plugins/codecompletion/cctreectrl.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/cctreectrl.h    (wersja 8739)</span>
+<span class="gi">+++ src/plugins/codecompletion/cctreectrl.h    (kopia robocza)</span>
+<span class="gu">@@ -77,6 +77,7 @@</span>
+     static int CBAlphabetCompare(CCTreeCtrlData* lhs, CCTreeCtrlData* rhs);
+     static int CBKindCompare    (CCTreeCtrlData* lhs, CCTreeCtrlData* rhs);
+     static int CBScopeCompare   (CCTreeCtrlData* lhs, CCTreeCtrlData* rhs);
+<span class="gi">+    static int CBLineCompare    (CCTreeCtrlData* lhs, CCTreeCtrlData* rhs);</span>
+     static int CBNoCompare      (CCTreeCtrlData* lhs, CCTreeCtrlData* rhs);
+ 
+     int OnCompareItems(const wxTreeItemId&amp; item1, const wxTreeItemId&amp; item2);
+<span class="gh">Index: src/plugins/codecompletion/classbrowser.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/classbrowser.cpp    (wersja 8739)</span>
+<span class="gi">+++ src/plugins/codecompletion/classbrowser.cpp    (kopia robocza)</span>
+<span class="gu">@@ -89,6 +89,7 @@</span>
+ int idCBSortByAlpabet          = wxNewId();
+ int idCBSortByKind             = wxNewId();
+ int idCBSortByScope            = wxNewId();
+<span class="gi">+int idCBSortByLine             = wxNewId();</span>
+ int idCBBottomTree             = wxNewId();
+ int idThreadEvent              = wxNewId();
+ 
+<span class="gu">@@ -122,6 +123,7 @@</span>
+     EVT_MENU(idCBSortByAlpabet,                          ClassBrowser::OnSetSortType)
+     EVT_MENU(idCBSortByKind,                             ClassBrowser::OnSetSortType)
+     EVT_MENU(idCBSortByScope,                            ClassBrowser::OnSetSortType)
+<span class="gi">+    EVT_MENU(idCBSortByLine,                             ClassBrowser::OnSetSortType)</span>
+     EVT_MENU(idCBBottomTree,                             ClassBrowser::OnCBViewMode)
+ 
+     EVT_COMMAND(idThreadEvent, wxEVT_COMMAND_ENTER,      ClassBrowser::OnThreadEvent)
+<span class="gu">@@ -341,6 +343,7 @@</span>
+     menu-&gt;AppendCheckItem(idCBSortByAlpabet, _(&quot;Sort alphabetically&quot;));
+     menu-&gt;AppendCheckItem(idCBSortByKind,    _(&quot;Sort by kind&quot;));
+     menu-&gt;AppendCheckItem(idCBSortByScope,   _(&quot;Sort by access&quot;));
+<span class="gi">+    menu-&gt;AppendCheckItem(idCBSortByLine,    _(&quot;Sort by line&quot;));</span>
+ 
+     const BrowserSortType&amp; bst = options.sortType;
+     switch (bst)
+<span class="gu">@@ -354,6 +357,9 @@</span>
+         case bstScope:
+             menu-&gt;Check(idCBSortByScope,   true);
+             break;
+<span class="gi">+        case bstLine:</span>
+<span class="gi">+            menu-&gt;Check(idCBSortByLine,    true);</span>
+<span class="gi">+            break;</span>
+         case bstNone:
+         default:
+             menu-&gt;Check(idCBNoSort,        true);
+<span class="gu">@@ -697,6 +703,7 @@</span>
+     if      (event.GetId() == idCBSortByAlpabet) bst = bstAlphabet;
+     else if (event.GetId() == idCBSortByKind)    bst = bstKind;
+     else if (event.GetId() == idCBSortByScope)   bst = bstScope;
+<span class="gi">+    else if (event.GetId() == idCBSortByLine)    bst = bstLine;</span>
+     else                                         bst = bstNone;
+ 
+     if (m_Parser)
+<span class="gh">Index: src/plugins/codecompletion/parser/parser.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/parser/parser.h    (wersja 8739)</span>
+<span class="gi">+++ src/plugins/codecompletion/parser/parser.h    (kopia robocza)</span>
+<span class="gu">@@ -107,6 +107,7 @@</span>
+     bstAlphabet = 0, /// alphabetical
+     bstKind,         /// class, function, macros
+     bstScope,        /// public, protected, private
+<span class="gi">+    bstLine,         /// code like order </span>
+     bstNone
+ };
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">p2rkw 2013-01-01 23:46:38</div>

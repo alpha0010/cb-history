@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,114 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbproject.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbproject.cpp    (revision 5201)</span>
+<span class="gi">+++ src/sdk/cbproject.cpp    (working copy)</span>
+<span class="gu">@@ -1550,6 +1550,25 @@</span>
+     return m_Makefile;
+ }
+ 
+<span class="gi">+void cbProject::SetMakefileExecutionDir(const wxString&amp; dir)</span>
+<span class="gi">+{</span>
+<span class="gi">+    if (m_MakefileExecutionDir != dir)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        m_MakefileExecutionDir = dir;</span>
+<span class="gi">+        SetModified(true);</span>
+<span class="gi">+    }</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+const wxString&amp; cbProject::GetMakefileExecutionDir() const</span>
+<span class="gi">+{</span>
+<span class="gi">+    if (!m_MakefileExecutionDir.IsEmpty())</span>
+<span class="gi">+        return m_MakefileExecutionDir;</span>
+<span class="gi">+</span>
+<span class="gi">+    wxFileName makefile_execution_dir(GetBasePath());</span>
+<span class="gi">+    m_MakefileExecutionDir = makefile_execution_dir.GetFullPath();</span>
+<span class="gi">+    return m_MakefileExecutionDir;</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ ProjectFile* cbProject::GetFile(int index)
+ {
+     FilesList::Node* node = m_Files.Item(index);
+<span class="gh">Index: src/sdk/projectoptionsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/projectoptionsdlg.cpp    (revision 5201)</span>
+<span class="gi">+++ src/sdk/projectoptionsdlg.cpp    (working copy)</span>
+<span class="gu">@@ -68,6 +68,7 @@</span>
+     EVT_BUTTON(    XRCID(&quot;btnBrowseOutputFilename&quot;),   ProjectOptionsDlg::OnBrowseOutputFilenameClick)
+     EVT_BUTTON(    XRCID(&quot;btnBrowseWorkingDir&quot;),       ProjectOptionsDlg::OnBrowseDirClick)
+     EVT_BUTTON(    XRCID(&quot;btnBrowseObjectDir&quot;),        ProjectOptionsDlg::OnBrowseDirClick)
+<span class="gi">+    EVT_BUTTON(    XRCID(&quot;btnMakefileExecutionDir&quot;),   ProjectOptionsDlg::OnBrowseDirClick)</span>
+     EVT_BUTTON(    XRCID(&quot;btnVirtualBuildTargets&quot;),    ProjectOptionsDlg::OnVirtualTargets)
+     EVT_BUTTON(    XRCID(&quot;btnExternalDeps&quot;),           ProjectOptionsDlg::OnEditDepsClick)
+     EVT_BUTTON(    XRCID(&quot;btnExportTarget&quot;),           ProjectOptionsDlg::OnExportTargetClick)
+<span class="gu">@@ -110,6 +111,7 @@</span>
+     XRCCTRL(*this, &quot;txtPlatformProj&quot;, wxTextCtrl)-&gt;SetValue(GetStringFromPlatforms(m_Project-&gt;GetPlatforms()));
+     XRCCTRL(*this, &quot;txtProjectMakefile&quot;, wxTextCtrl)-&gt;SetValue(m_Project-&gt;GetMakefile());
+     XRCCTRL(*this, &quot;chkCustomMakefile&quot;, wxCheckBox)-&gt;SetValue(m_Project-&gt;IsMakefileCustom());
+<span class="gi">+    XRCCTRL(*this, &quot;txtMakefileExecutionDir&quot;, wxTextCtrl)-&gt;SetValue(m_Project-&gt;GetMakefileExecutionDir());</span>
+     XRCCTRL(*this, &quot;rbPCHStrategy&quot;, wxRadioBox)-&gt;SetSelection((int)m_Project-&gt;GetModeForPCH());
+ 
+     Compiler* compiler = CompilerFactory::GetCompiler(project-&gt;GetCompilerID());
+<span class="gu">@@ -687,6 +689,8 @@</span>
+         targettext = XRCCTRL(*this, &quot;txtWorkingDir&quot;, wxTextCtrl);
+     else if (event.GetId() == XRCID(&quot;btnBrowseObjectDir&quot;))
+         targettext = XRCCTRL(*this, &quot;txtObjectDir&quot;, wxTextCtrl);
+<span class="gi">+    else if (event.GetId() == XRCID(&quot;btnMakefileExecutionDir&quot;))</span>
+<span class="gi">+        targettext = XRCCTRL(*this, &quot;txtMakefileExecutionDir&quot;, wxTextCtrl);</span>
+     else
+         return;
+ 
+<span class="gu">@@ -1021,6 +1025,10 @@</span>
+     XRCCTRL(*this, &quot;btnToggleCheckmarks&quot;, wxButton)-&gt;Enable(!customMake &amp;&amp; en);
+     list-&gt;Enable(!customMake);
+ 
+<span class="gi">+    // enable some stuff if using a custom makefile</span>
+<span class="gi">+    XRCCTRL(*this, &quot;txtMakefileExecutionDir&quot;, wxTextCtrl)-&gt;Enable(customMake);</span>
+<span class="gi">+    XRCCTRL(*this, &quot;btnMakefileExecutionDir&quot;, wxTextCtrl)-&gt;Enable(customMake);</span>
+<span class="gi">+</span>
+     // scripts page
+     wxTreeCtrl* tc = XRCCTRL(*this, &quot;tcOverview&quot;, wxTreeCtrl);
+     tc-&gt;Enable(!customMake);
+<span class="gu">@@ -1055,6 +1063,7 @@</span>
+         m_Project-&gt;RenameInTree(m_Project-&gt;GetTitle());
+         m_Project-&gt;SetMakefile(XRCCTRL(*this, &quot;txtProjectMakefile&quot;, wxTextCtrl)-&gt;GetValue());
+         m_Project-&gt;SetMakefileCustom(XRCCTRL(*this, &quot;chkCustomMakefile&quot;, wxCheckBox)-&gt;GetValue());
+<span class="gi">+        m_Project-&gt;SetMakefileExecutionDir(XRCCTRL(*this, &quot;txtMakefileExecutionDir&quot;, wxTextCtrl)-&gt;GetValue());</span>
+         m_Project-&gt;SetTargetType(TargetType(XRCCTRL(*this, &quot;cmbProjectType&quot;, wxComboBox)-&gt;GetSelection()));
+         m_Project-&gt;SetModeForPCH((PCHMode)XRCCTRL(*this, &quot;rbPCHStrategy&quot;, wxRadioBox)-&gt;GetSelection());
+         m_Project-&gt;SetExtendedObjectNamesGeneration(XRCCTRL(*this, &quot;chkExtendedObjNames&quot;, wxCheckBox)-&gt;GetValue());
+<span class="gh">Index: src/sdk/projectloader.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/projectloader.cpp    (revision 5201)</span>
+<span class="gi">+++ src/sdk/projectloader.cpp    (working copy)</span>
+<span class="gu">@@ -377,6 +377,7 @@</span>
+     wxString title;
+     wxString makefile;
+     bool makefile_custom = false;
+<span class="gi">+    wxString makefile_execution_dir;</span>
+     wxString defaultTarget;
+     wxString compilerId = _T(&quot;gcc&quot;);
+     bool extendedObjectNames = false;
+<span class="gu">@@ -405,6 +406,9 @@</span>
+         else if (node-&gt;Attribute(&quot;makefile_is_custom&quot;))
+             makefile_custom = strncmp(node-&gt;Attribute(&quot;makefile_is_custom&quot;), &quot;1&quot;, 1) == 0;
+ 
+<span class="gi">+        else if (node-&gt;Attribute(&quot;makefile_execution_dir&quot;))</span>
+<span class="gi">+            makefile_execution_dir = cbC2U(node-&gt;Attribute(&quot;makefile_execution_dir&quot;));</span>
+<span class="gi">+</span>
+         // old default_target (int) node
+         else if (node-&gt;QueryIntAttribute(&quot;default_target&quot;, &amp;m_1_4_to_1_5_deftarget) == TIXML_SUCCESS)
+         {
+<span class="gu">@@ -442,6 +446,7 @@</span>
+     m_pProject-&gt;SetPlatforms(platformsFinal);
+     m_pProject-&gt;SetMakefile(makefile);
+     m_pProject-&gt;SetMakefileCustom(makefile_custom);
+<span class="gi">+    m_pProj</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">gryphon 2008-09-06 23:46:20</div>

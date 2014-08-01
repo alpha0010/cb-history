@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,103 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/astyle/astyleconfigdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/astyle/astyleconfigdlg.cpp    (revision 9225)</span>
+<span class="gi">+++ src/plugins/astyle/astyleconfigdlg.cpp    (working copy)</span>
+<span class="gu">@@ -41,6 +41,7 @@</span>
+   EVT_RADIOBUTTON(XRCID(&quot;rbLisp&quot;),       AstyleConfigDlg::OnStyleChange)
+   EVT_RADIOBUTTON(XRCID(&quot;rbCustom&quot;),     AstyleConfigDlg::OnStyleChange)
+   EVT_BUTTON(XRCID(&quot;Preview&quot;),           AstyleConfigDlg::OnPreview    )
+<span class="gi">+  EVT_CHECKBOX(XRCID(&quot;chkBreakeLines&quot;),  AstyleConfigDlg::OnBreakLineChange)</span>
+ END_EVENT_TABLE()
+ 
+ AstyleConfigDlg::AstyleConfigDlg(wxWindow* parent)
+<span class="gu">@@ -274,6 +275,14 @@</span>
+     SetStyle(aspsCustom);
+ }
+ 
+<span class="gi">+void AstyleConfigDlg::OnBreakLineChange(wxCommandEvent&amp; event)</span>
+<span class="gi">+{</span>
+<span class="gi">+    if(event.IsChecked())</span>
+<span class="gi">+        XRCCTRL(*this, &quot;txtMaxLineLegth&quot;, wxTextCtrl)-&gt;Enable();</span>
+<span class="gi">+    else</span>
+<span class="gi">+        XRCCTRL(*this, &quot;txtMaxLineLegth&quot;, wxTextCtrl)-&gt;Disable();</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ void AstyleConfigDlg::OnPreview(wxCommandEvent&amp; WXUNUSED(event))
+ {
+   wxString text(XRCCTRL(*this, &quot;txtSample&quot;, wxTextCtrl)-&gt;GetValue());
+<span class="gu">@@ -333,7 +342,14 @@</span>
+   XRCCTRL(*this, &quot;chkConvertTabs&quot;,        wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/convert_tabs&quot;),         false));
+   XRCCTRL(*this, &quot;chkFillEmptyLines&quot;,     wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/fill_empty_lines&quot;),     false));
+   XRCCTRL(*this, &quot;chkAddBrackets&quot;,        wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/add_brackets&quot;),         false));
+<span class="gi">+  XRCCTRL(*this, &quot;chkBreakeLines&quot;,        wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/break_lines&quot;),          false));</span>
+<span class="gi">+  XRCCTRL(*this, &quot;txtMaxLineLegth&quot;,       wxTextCtrl)-&gt;SetValue(cfg-&gt;Read(_T(&quot;/max_line_length&quot;), _T(&quot;200&quot;)));</span>
+ 
+<span class="gi">+  if(XRCCTRL(*this, &quot;chkBreakeLines&quot;,wxCheckBox)-&gt;GetValue())</span>
+<span class="gi">+    XRCCTRL(*this, &quot;txtMaxLineLegth&quot;, wxTextCtrl)-&gt;Enable();</span>
+<span class="gi">+  else</span>
+<span class="gi">+    XRCCTRL(*this, &quot;txtMaxLineLegth&quot;, wxTextCtrl)-&gt;Disable();</span>
+<span class="gi">+</span>
+   SetStyle((AStylePredefinedStyle)style);
+ }
+ 
+<span class="gu">@@ -397,4 +413,6 @@</span>
+   cfg-&gt;Write(_T(&quot;/convert_tabs&quot;),         XRCCTRL(*this, &quot;chkConvertTabs&quot;,        wxCheckBox)-&gt;GetValue());
+   cfg-&gt;Write(_T(&quot;/fill_empty_lines&quot;),     XRCCTRL(*this, &quot;chkFillEmptyLines&quot;,     wxCheckBox)-&gt;GetValue());
+   cfg-&gt;Write(_T(&quot;/add_brackets&quot;),         XRCCTRL(*this, &quot;chkAddBrackets&quot;,        wxCheckBox)-&gt;GetValue());
+<span class="gi">+  cfg-&gt;Write(_T(&quot;/break_lines&quot;),          XRCCTRL(*this, &quot;chkBreakeLines&quot;,        wxCheckBox)-&gt;GetValue());</span>
+<span class="gi">+  cfg-&gt;Write(_T(&quot;/max_line_length&quot;),      XRCCTRL(*this, &quot;txtMaxLineLegth&quot;,       wxTextCtrl)-&gt;GetValue());</span>
+ }
+<span class="gh">Index: src/plugins/astyle/astyleconfigdlg.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/astyle/astyleconfigdlg.h    (revision 9225)</span>
+<span class="gi">+++ src/plugins/astyle/astyleconfigdlg.h    (working copy)</span>
+<span class="gu">@@ -19,6 +19,7 @@</span>
+     protected:
+         void OnStyleChange(wxCommandEvent&amp; event);
+         void OnPreview(wxCommandEvent&amp; event);
+<span class="gi">+        void OnBreakLineChange(wxCommandEvent&amp; event);</span>
+ 
+         virtual wxString GetTitle() const { return _(&quot;Source formatter&quot;); }
+         virtual wxString GetBitmapBaseName() const { return _T(&quot;astyle-plugin&quot;); }
+<span class="gh">Index: src/plugins/astyle/formattersettings.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/astyle/formattersettings.cpp    (revision 9225)</span>
+<span class="gi">+++ src/plugins/astyle/formattersettings.cpp    (working copy)</span>
+<span class="gu">@@ -126,4 +126,9 @@</span>
+   formatter.setTabSpaceConversionMode(cfg-&gt;ReadBool(_T(&quot;/convert_tabs&quot;)));
+   formatter.setEmptyLineFill(cfg-&gt;ReadBool(_T(&quot;/fill_empty_lines&quot;)));
+   formatter.setAddBracketsMode(cfg-&gt;ReadBool(_T(&quot;/add_brackets&quot;)));
+<span class="gi">+</span>
+<span class="gi">+  if(cfg-&gt;ReadBool(_T(&quot;/break_lines&quot;)))</span>
+<span class="gi">+    formatter.setMaxCodeLength( wxAtoi(cfg-&gt;Read(_T(&quot;/max_line_length&quot;))));</span>
+<span class="gi">+  else</span>
+<span class="gi">+    formatter.setMaxCodeLength(string::npos);</span>
+ }
+<span class="gh">Index: src/plugins/astyle/resources/configuration.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/astyle/resources/configuration.xrc    (revision 9225)</span>
+<span class="gi">+++ src/plugins/astyle/resources/configuration.xrc    (working copy)</span>
+<span class="gu">@@ -381,6 +381,35 @@</span>
+                                             &lt;flag&gt;wxTOP|wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;
+                                             &lt;border&gt;8&lt;/border&gt;
+                                         &lt;/object&gt;
+<span class="gi">+                                        &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gi">+                                            &lt;object class=&quot;wxCheckBox&quot; name=&quot;chkBreakeLines&quot;&gt;</span>
+<span class="gi">+                                                &lt;label&gt;Enable Line breaking&lt;/label&gt;</span>
+<span class="gi">+                                            &lt;/object&gt;</span>
+<span class="gi">+                                            &lt;flag&gt;wxTOP|wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;</span>
+<span class="gi">+                                            &lt;border&gt;8&lt;/border&gt;</span>
+<span class="gi">+                                        &lt;/object&gt;</span>
+<span class="gi">+                                        &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gi">+                                            &lt;object class=&quot;wxBoxSizer&quot;&gt;</span>
+<span class="gi">+                                                &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gi">+                                                    &lt;object class=&quot;w</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">bluehazzard 2013-07-23 15:03:44</div>

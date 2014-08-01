@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,128 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/codecompletion/codecompletion.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/codecompletion.cpp    (revision 4149)</span>
+<span class="gi">+++ src/plugins/codecompletion/codecompletion.cpp    (working copy)</span>
+<span class="gu">@@ -109,6 +109,9 @@</span>
+ int idGotoDeclaration = wxNewId();
+ int idGotoImplementation = wxNewId();
+ int idOpenIncludeFile = wxNewId();
+<span class="gi">+int idGotoDeclarationMenu = wxNewId();</span>
+<span class="gi">+int idGotoImplementationMenu = wxNewId();</span>
+<span class="gi">+int idOpenIncludeFileMenu = wxNewId();</span>
+ int idStartParsingProjects = wxNewId();
+ int idCodeCompleteTimer = wxNewId();
+ int idFunctionsParsingTimer = wxNewId();
+<span class="gu">@@ -128,7 +131,10 @@</span>
+     EVT_MENU(idUnimplementedClassMethods, CodeCompletion::OnUnimplementedClassMethods)
+     EVT_MENU(idGotoDeclaration, CodeCompletion::OnGotoDeclaration)
+     EVT_MENU(idGotoImplementation, CodeCompletion::OnGotoDeclaration)
+<span class="gi">+    EVT_MENU(idGotoDeclarationMenu, CodeCompletion::OnGotoDeclarationMenu)</span>
+<span class="gi">+    EVT_MENU(idGotoImplementationMenu, CodeCompletion::OnGotoDeclarationMenu)</span>
+     EVT_MENU(idOpenIncludeFile, CodeCompletion::OnOpenIncludeFile)
+<span class="gi">+    EVT_MENU(idOpenIncludeFileMenu, CodeCompletion::OnOpenIncludeFileMenu)</span>
+
+     EVT_MENU(idViewClassBrowser, CodeCompletion::OnViewClassBrowser)
+
+<span class="gu">@@ -237,6 +243,8 @@</span>
+         m_EditMenu-&gt;AppendSeparator();
+         m_EditMenu-&gt;Append(idMenuCodeComplete, _(&quot;Complete code\tCtrl-Space&quot;));
+         m_EditMenu-&gt;Append(idMenuShowCallTip, _(&quot;Show call tip\tCtrl-Shift-Space&quot;));
+<span class="gi">+        m_EditMenu-&gt;Append(idClassMethod, _(&quot;Insert class method declaration/implementation&quot;));</span>
+<span class="gi">+        m_EditMenu-&gt;Append(idUnimplementedClassMethods, _(&quot;Insert unimplemented class methods&quot;));</span>
+     }
+     else
+         Manager::Get()-&gt;GetMessageManager()-&gt;DebugLog(_T(&quot;Could not find Edit menu!&quot;));
+<span class="gu">@@ -247,6 +255,9 @@</span>
+         m_SearchMenu-&gt;Append(idMenuGotoFunction, _(&quot;Goto function...\tCtrl-Alt-G&quot;));
+         m_SearchMenu-&gt;Append(idMenuGotoPrevFunction, _(&quot;Goto previous function\tCtrl-PgUp&quot;));
+         m_SearchMenu-&gt;Append(idMenuGotoNextFunction, _(&quot;Goto next function\tCtrl-PgDn&quot;));
+<span class="gi">+        m_SearchMenu-&gt;Append(idGotoDeclarationMenu, _(&quot;Goto declaration&quot;));</span>
+<span class="gi">+        m_SearchMenu-&gt;Append(idGotoImplementationMenu, _(&quot;Goto implementation&quot;));</span>
+<span class="gi">+        m_SearchMenu-&gt;Append(idOpenIncludeFileMenu, _(&quot;Open include file&quot;));</span>
+     }
+     else
+         Manager::Get()-&gt;GetMessageManager()-&gt;DebugLog(_T(&quot;Could not find Search menu!&quot;));
+<span class="gu">@@ -402,12 +415,17 @@</span>
+     {
+         m_EditMenu-&gt;Delete(idMenuCodeComplete);
+         m_EditMenu-&gt;Delete(idMenuShowCallTip);
+<span class="gi">+        m_EditMenu-&gt;Delete(idClassMethod);</span>
+<span class="gi">+        m_EditMenu-&gt;Delete(idUnimplementedClassMethods);</span>
+     }
+     if (m_SearchMenu)
+     {
+         m_SearchMenu-&gt;Delete(idMenuGotoFunction);
+         m_SearchMenu-&gt;Delete(idMenuGotoPrevFunction);
+         m_SearchMenu-&gt;Delete(idMenuGotoNextFunction);
+<span class="gi">+        m_SearchMenu-&gt;Delete(idGotoDeclarationMenu);</span>
+<span class="gi">+        m_SearchMenu-&gt;Delete(idGotoImplementationMenu);</span>
+<span class="gi">+        m_SearchMenu-&gt;Delete(idOpenIncludeFileMenu);</span>
+     }
+ }
+
+<span class="gu">@@ -1364,6 +1382,8 @@</span>
+     {
+         m_EditMenu-&gt;Enable(idMenuCodeComplete, hasEd);
+         m_EditMenu-&gt;Enable(idMenuShowCallTip, hasEd);
+<span class="gi">+        m_EditMenu-&gt;Enable(idClassMethod, hasEd);</span>
+<span class="gi">+        m_EditMenu-&gt;Enable(idUnimplementedClassMethods, hasEd);</span>
+     }
+
+     if (m_SearchMenu)
+<span class="gu">@@ -1371,6 +1391,9 @@</span>
+         m_SearchMenu-&gt;Enable(idMenuGotoFunction,     hasEd);
+         m_SearchMenu-&gt;Enable(idMenuGotoPrevFunction, hasEd);
+         m_SearchMenu-&gt;Enable(idMenuGotoNextFunction, hasEd);
+<span class="gi">+        m_SearchMenu-&gt;Enable(idGotoDeclarationMenu, hasEd);</span>
+<span class="gi">+        m_SearchMenu-&gt;Enable(idGotoImplementationMenu, hasEd);</span>
+<span class="gi">+        m_SearchMenu-&gt;Enable(idOpenIncludeFileMenu, hasEd);</span>
+     }
+
+     if (m_ViewMenu)
+<span class="gu">@@ -1463,11 +1486,57 @@</span>
+     DoAllMethodsImpl();
+ }
+
+<span class="gi">+void CodeCompletion::OnOpenIncludeFileMenu(wxCommandEvent&amp; event)</span>
+<span class="gi">+{</span>
+<span class="gi">+    cbEditor* ed = Manager::Get()-&gt;GetEditorManager()-&gt;GetBuiltinActiveEditor();</span>
+<span class="gi">+    if (ed)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        m_LastIncludeFileFrom = ed-&gt;GetFilename();</span>
+<span class="gi">+        cbStyledTextCtrl* control = ed-&gt;GetControl();</span>
+<span class="gi">+        int pos = control-&gt;GetCurrentPos();</span>
+<span class="gi">+        wxString line = control-&gt;GetLine(control-&gt;LineFromPosition(pos));</span>
+<span class="gi">+</span>
+<span class="gi">+        wxRegEx reg(_T(&quot;^[ \t]*#[ \t]*include[ \t]+[\&quot;&lt;]([^\&quot;&gt;]+)[\&quot;&gt;]&quot;));</span>
+<span class="gi">+        wxString inc;</span>
+<span class="gi">+        if (reg.Matches(line))</span>
+<span class="gi">+            inc = reg.GetMatch(line, 1);</span>
+<span class="gi">+        m_LastIncludeFile.Clear();</span>
+<span class="gi">+        if (!inc.IsEmpty())</span>
+<span class="gi">+        {</span>
+<span class="gi">+            m_LastIncludeFile = inc;</span>
+<span class="gi">+            OnOpenIncludeFile(event);</span>
+<span class="gi">+        }</span>
+<span class="gi">+    }</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+void CodeCompletion::OnGotoDeclarationMenu(wxCommandEvent&amp; event)</span>
+<span class="gi">+{</span>
+<span class="gi">+    cbEditor* ed = Manager::Get()-&gt;GetEditorManager()-&gt;GetBuiltinActiveEditor();</span>
+<span class="gi">+    if (ed)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        cbStyledTextCtrl* control = ed-&gt;GetControl();</span>
+<span class="gi">+        int pos = control-&gt;GetCurrentPos();</span>
+<span class="gi">+        int ws = control-&gt;WordStartPosition(pos, true);</span>
+<span class="gi">+        int we = control-&gt;WordEndPosition(pos, true);</span>
+<span class="gi">+        wxString txt = control-&gt;GetTextRange(ws, we);</span>
+<span class="gi">+        m_LastKeyword.Clea</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">dmoore 2007-06-22 15:23:57</div>

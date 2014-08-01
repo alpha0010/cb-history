@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,92 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbproject.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbproject.cpp    (revision 2661)</span>
+<span class="gi">+++ src/sdk/cbproject.cpp    (working copy)</span>
+<span class="gu">@@ -533,7 +533,7 @@</span>
+                     EditorBase* eb = Manager::Get()-&gt;GetEditorManager()-&gt;Open(f-&gt;file.GetFullPath());
+                     if(eb)
+                     {
+<span class="gd">-                        Manager::Get()-&gt;GetProjectManager()-&gt;SetTopEditor(eb);</span>
+<span class="gi">+//!                        Manager::Get()-&gt;GetProjectManager()-&gt;SetTopEditor(eb);</span>
+                         eb-&gt;Activate();
+                     }
+                 }
+<span class="gh">Index: src/sdk/projectmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/projectmanager.cpp    (revision 2661)</span>
+<span class="gi">+++ src/sdk/projectmanager.cpp    (working copy)</span>
+<span class="gu">@@ -195,7 +195,7 @@</span>
+ ProjectManager::ProjectManager()
+     : m_pTree(0),
+     m_pWorkspace(0),
+<span class="gd">-    m_pTopEditor(0),</span>
+<span class="gi">+//!    m_pTopEditor(0),</span>
+     m_TreeCategorize(false),
+     m_TreeUseFolders(true),
+     m_TreeFreezeCounter(0),
+<span class="gu">@@ -960,7 +960,7 @@</span>
+     }
+     return m_pWorkspace;
+ }
+<span class="gd">-</span>
+<span class="gi">+/*!</span>
+ void ProjectManager::SetTopEditor(EditorBase* ed)
+ {
+     m_pTopEditor = ed;
+<span class="gu">@@ -970,10 +970,10 @@</span>
+ {
+     return m_pTopEditor;
+ }
+<span class="gd">-</span>
+<span class="gi">+*/</span>
+ bool ProjectManager::LoadWorkspace(const wxString&amp; filename)
+ {
+<span class="gd">-    m_pTopEditor = 0;</span>
+<span class="gi">+    //! m_pTopEditor = 0;</span>
+     if (!CloseWorkspace())
+         return false; // didn&#39;t close
+     m_IsLoadingWorkspace=true;
+<span class="gu">@@ -992,8 +992,8 @@</span>
+         m_IsLoadingWorkspace=false;
+         Manager::Get()-&gt;GetEditorManager()-&gt;RebuildOpenedFilesTree();
+         m_pTree-&gt;SetItemText(m_TreeRoot, m_pWorkspace-&gt;GetTitle());
+<span class="gd">-        if(m_pTopEditor)</span>
+<span class="gd">-            m_pTopEditor-&gt;Activate();</span>
+<span class="gi">+        // if(m_pTopEditor)</span>
+<span class="gi">+        //    m_pTopEditor-&gt;Activate();</span>
+         Manager::Get()-&gt;GetEditorManager()-&gt;RefreshOpenedFilesTree(true);
+         UnfreezeTree(true);
+     }
+<span class="gh">Index: src/sdk/projectmanager.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/projectmanager.h    (revision 2661)</span>
+<span class="gi">+++ src/sdk/projectmanager.h    (working copy)</span>
+<span class="gu">@@ -346,9 +346,9 @@</span>
+           */
+         wxMenu* GetProjectMenu();
+         /** Sets the Top Editor (the active editor from the last session) */
+<span class="gd">-        void SetTopEditor(EditorBase* ed);</span>
+<span class="gi">+//!        void SetTopEditor(EditorBase* ed);</span>
+         /** @return The Top Editor */
+<span class="gd">-        EditorBase* GetTopEditor() const;</span>
+<span class="gi">+//!        EditorBase* GetTopEditor() const;</span>
+ 
+         /** @return The workspace icon index in the image list. */
+         int WorkspaceIconIndex();
+<span class="gu">@@ -399,7 +399,7 @@</span>
+         ProjectsArray* m_pProjects;
+         DepsMap m_ProjectDeps;
+         cbWorkspace* m_pWorkspace;
+<span class="gd">-        EditorBase* m_pTopEditor;</span>
+<span class="gi">+//!        EditorBase* m_pTopEditor;</span>
+         bool m_TreeCategorize;
+         bool m_TreeUseFolders;
+         FilesGroupsAndMasks* m_pFileGroups;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">bjoernp 2006-07-04 03:35:12</div>

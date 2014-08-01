@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,32 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/projectmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/projectmanager.cpp    (revision 4237)</span>
+<span class="gi">+++ src/sdk/projectmanager.cpp    (working copy)</span>
+<span class="gu">@@ -2590,9 +2590,17 @@</span>
+         if(name != new_name)
+         {
+             #if wxCHECK_VERSION(2, 8, 0)
+<span class="gd">-            if (!wxRenameFile(path + name, path + new_name, false))</span>
+<span class="gi">+            // workaround: on windows we allow overwriting if the user wants to change the case of the filename</span>
+<span class="gi">+            bool overwrite = false;</span>
+<span class="gi">+            if (platform::windows &amp;&amp; name.IsSameAs(new_name, false))</span>
+<span class="gi">+                overwrite = true;</span>
+<span class="gi">+            if (!wxRenameFile(path + name, path + new_name, overwrite))</span>
+             #else // wx-2.6 doesn&#39;t check whether it&#39;s overwriting an existing file
+<span class="gd">-            if(wxFileExists(path + new_name))</span>
+<span class="gi">+            // workaround: on windows we skip wxFileExists if the user wants to change the case of the filename</span>
+<span class="gi">+            bool skip = false;</span>
+<span class="gi">+            if (platform::windows &amp;&amp; name.IsSameAs(new_name, false))</span>
+<span class="gi">+                skip = true;</span>
+<span class="gi">+            if(!skip &amp;&amp; wxFileExists(path + new_name))</span>
+             {
+                 cbMessageBox(_(&quot;Can&#39;t rename file &quot;) + path + new_name +
+                              _(&quot;\nA file with specified filename already exists!&quot;) +
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mortenmacfly 2007-07-09 08:30:28</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,141 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/editorconfigurationdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorconfigurationdlg.cpp    (revision 8133)</span>
+<span class="gi">+++ src/sdk/editorconfigurationdlg.cpp    (working copy)</span>
+<span class="gu">@@ -543,6 +543,7 @@</span>
+     if (cookie == wxNOT_FOUND)
+         cookie = 0;
+     cmbThemes-&gt;SetSelection(cookie);
+<span class="gi">+    XRCCTRL(*this, &quot;chkColoursWxSmith&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/colour_sets/highlight_wxsmith&quot;), true));</span>
+     ChangeTheme();
+ }
+ 
+<span class="gu">@@ -612,6 +613,7 @@</span>
+     {
+         wxString sel = cmbLangs-&gt;GetStringSelection();
+         m_Lang = m_Theme-&gt;GetHighlightLanguage(sel);
+<span class="gi">+        XRCCTRL(*this, &quot;chkColoursWxSmith&quot;, wxCheckBox)-&gt;Show(sel == wxT(&quot;C/C++&quot;));</span>
+     }
+ 
+     CreateColoursSample();
+<span class="gu">@@ -727,6 +729,7 @@</span>
+     {
+         wxString sel = XRCCTRL(*this, &quot;cmbLangs&quot;, wxComboBox)-&gt;GetStringSelection();
+         m_Lang = m_Theme-&gt;GetHighlightLanguage(sel);
+<span class="gi">+        XRCCTRL(*this, &quot;chkColoursWxSmith&quot;, wxCheckBox)-&gt;Show(sel == wxT(&quot;C/C++&quot;));</span>
+     }
+     FillColourComponents();
+     CreateColoursSample();
+<span class="gu">@@ -930,6 +933,7 @@</span>
+             cfg-&gt;Write(_T(&quot;/colour_sets/active_colour_set&quot;), m_Theme-&gt;GetName());
+         }
+         cfg-&gt;Write(_T(&quot;/colour_sets/active_lang&quot;), XRCCTRL(*this, &quot;cmbLangs&quot;, wxComboBox)-&gt;GetStringSelection());
+<span class="gi">+        cfg-&gt;Write(_T(&quot;/colour_sets/highlight_wxsmith&quot;), XRCCTRL(*this, &quot;chkColoursWxSmith&quot;, wxCheckBox)-&gt;GetValue());</span>
+ 
+         // encoding
+         wxComboBox* cmbEnc = XRCCTRL(*this, &quot;cmbEncoding&quot;, wxComboBox);
+<span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 8133)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -1604,6 +1604,7 @@</span>
+         control-&gt;SetProperty(_T(&quot;fold&quot;), _T(&quot;0&quot;));
+         control-&gt;SetMarginWidth(C_FOLDING_MARGIN, 0);
+     }
+<span class="gi">+    control-&gt;SetProperty(_T(&quot;highlight.wxsmith&quot;), mgr-&gt;ReadBool(_T(&quot;/colour_sets/highlight_wxsmith&quot;), true) ? _T(&quot;1&quot;) : _T(&quot;0&quot;));</span>
+ 
+     // line numbering
+     control-&gt;SetMarginType(C_LINE_MARGIN, wxSCI_MARGIN_NUMBER);
+<span class="gh">Index: src/sdk/wxscintilla/include/wx/wxscintilla.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/wxscintilla/include/wx/wxscintilla.h    (revision 8133)</span>
+<span class="gi">+++ src/sdk/wxscintilla/include/wx/wxscintilla.h    (working copy)</span>
+<span class="gu">@@ -577,7 +577,7 @@</span>
+ /* C::B begin */
+ // Keep in sync with SciLexer.h      -&gt; SCE_C_WXSMITH
+ // Keep in sync with Scintilla.iface -&gt; SCE_C_WXSMITH
+<span class="gd">-#define wxSCI_C_WXSMITH 99</span>
+<span class="gi">+#define wxSCI_C_WXSMITH 50</span>
+ /* C::B end */
+ 
+ // Lexical states for SCLEX_D
+<span class="gh">Index: src/sdk/wxscintilla/src/scintilla/include/Scintilla.iface</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/wxscintilla/src/scintilla/include/Scintilla.iface    (revision 8133)</span>
+<span class="gi">+++ src/sdk/wxscintilla/src/scintilla/include/Scintilla.iface    (working copy)</span>
+<span class="gu">@@ -273,9 +273,9 @@</span>
+ 
+ enu MarkerOutline=SC_MARKNUM_
+ # CHANGEBAR begin #
+<span class="gd">-# Markers used for outlining and changed column. </span>
+<span class="gd">-val SC_MARKNUM_CHANGEUNSAVED=23 </span>
+<span class="gd">-val SC_MARKNUM_CHANGESAVED=24 </span>
+<span class="gi">+# Markers used for outlining and changed column.</span>
+<span class="gi">+val SC_MARKNUM_CHANGEUNSAVED=23</span>
+<span class="gi">+val SC_MARKNUM_CHANGESAVED=24</span>
+ # CHANGEBAR end #
+ val SC_MARKNUM_FOLDEREND=25
+ val SC_MARKNUM_FOLDEROPENMID=26
+<span class="gu">@@ -2565,7 +2565,7 @@</span>
+ # WXSMITH begin #
+ # Keep in sync with wxscinilla.h -&gt; wxSCI_C_WXSMITH
+ # Keep in sync with SciLexer.h   -&gt; SCE_C_WXSMITH
+<span class="gd">-val SCE_C_WXSMITH=99</span>
+<span class="gi">+val SCE_C_WXSMITH=50</span>
+ # WXSMITH end #
+ # Lexical states for SCLEX_D
+ lex D=SCLEX_D SCE_D_
+<span class="gh">Index: src/sdk/wxscintilla/src/scintilla/include/SciLexer.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/wxscintilla/src/scintilla/include/SciLexer.h    (revision 8133)</span>
+<span class="gi">+++ src/sdk/wxscintilla/src/scintilla/include/SciLexer.h    (working copy)</span>
+<span class="gu">@@ -164,7 +164,7 @@</span>
+ /* C::B begin */
+ // Keep in sync with wxscinilla.h    -&gt; wxSCI_C_WXSMITH
+ // Keep in sync with Scintilla.iface -&gt; SCE_C_WXSMITH
+<span class="gd">-#define SCE_C_WXSMITH 99</span>
+<span class="gi">+#define SCE_C_WXSMITH 50</span>
+ /* C::B end */
+ #define SCE_D_DEFAULT 0
+ #define SCE_D_COMMENT 1
+<span class="gh">Index: src/sdk/wxscintilla/src/scintilla/lexers/LexCPP.cxx</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/wxscintilla/src/scintilla/lexers/LexCPP.cxx    (revision 8133)</span>
+<span class="gi">+++ src/sdk/wxscintilla/src/scintilla/lexers/LexCPP.cxx    (working copy)</span>
+<span class="gu">@@ -218,7 +218,7 @@</span>
+     bool foldCompact;
+     bool foldAtElse;
+ /* C::B begin */
+<span class="gd">-    bool foldWxSmith;</span>
+<span class="gi">+    bool highlightWxSmith;</span>
+ /* C::B end */
+     OptionsCPP() {
+         stylingWithinPreprocessor = false;
+<span class="gu">@@ -239,7 +239,7 @@</span>
+         foldCompact = false;
+         foldAtElse = false;
+ /* C::B begin */
+<span class="gd">-        foldWxSmith = false;</span>
+<span class="gi">+        highlightWxSmith = true;</span>
+ /* C::B end */
+     }
+ };
+<span class="gu">@@ -306,6 +306,10 @@</span>
+ 
+         DefineProperty(&quot;fold.compact&quot;, &amp;OptionsCPP::foldCompact);
+ 
+<span class="gi">+/* C::B begin */</span>
+<span class="gi">+        DefineProperty(&quot;highlight.wxsmith&quot;, &amp;OptionsCPP::highlightWxSmith);</span>
+<span class="gi">+/* C::B end */</span>
+<span class="gi">+</span>
+         DefineProperty(&quot;fold.at.else&quot;, &amp;OptionsCPP::foldAtElse,
+             &quot;T
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">alpha0010 2012-07-15 05:05:01</div>

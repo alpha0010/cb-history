@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,84 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/compilergcc/compilergcc.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilergcc.h    (revision 3652)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilergcc.h    (working copy)</span>
+<span class="gu">@@ -256,6 +256,7 @@</span>
+         CompilerErrors m_Errors;
+         wxString m_LastTargetName;
+         bool m_NotifiedMaxErrors;
+<span class="gi">+        wxLongLong m_StartTimer;</span>
+ 
+         // build state management
+         cbProject* m_pBuildingProject; // +
+<span class="gh">Index: src/plugins/compilergcc/compileroptionsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compileroptionsdlg.cpp    (revision 3652)</span>
+<span class="gi">+++ src/plugins/compilergcc/compileroptionsdlg.cpp    (working copy)</span>
+<span class="gu">@@ -246,7 +246,7 @@</span>
+         // global settings
+         SetLabel(_(&quot;Compiler Settings&quot;));
+         sizer-&gt;Show(tree,false);
+<span class="gd">-        sizer-&gt;Remove(tree);</span>
+<span class="gi">+        sizer-&gt;Detach(tree);</span>
+         nb-&gt;DeletePage(6); // remove &quot;Make&quot; page
+         nb-&gt;DeletePage(3); // remove &quot;Commands&quot; page
+     }
+<span class="gh">Index: src/plugins/compilergcc/compilergcc.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilergcc.cpp    (revision 3652)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilergcc.cpp    (working copy)</span>
+<span class="gu">@@ -728,7 +728,11 @@</span>
+     wxString binPath = pathList.FindAbsoluteValidPath(gcc);
+     // it seems, under Win32, the above command doesn&#39;t search in paths with spaces...
+     // look directly for the file in question in masterPath
+<span class="gi">+#if wxCHECK_VERSION(2, 8, 0)</span>
+<span class="gi">+    if (binPath.IsEmpty() || !(pathList.Index(wxPathOnly(binPath)) != wxNOT_FOUND))</span>
+<span class="gi">+#else</span>
+     if (binPath.IsEmpty() || !pathList.Member(wxPathOnly(binPath)))
+<span class="gi">+#endif</span>
+     {
+         if (wxFileExists(masterPath + sep + _T(&quot;bin&quot;) + sep + gcc))
+             binPath = masterPath + sep + _T(&quot;bin&quot;);
+<span class="gu">@@ -750,7 +754,11 @@</span>
+         }
+     }
+ 
+<span class="gi">+#if wxCHECK_VERSION(2, 8, 0)</span>
+<span class="gi">+    if (binPath.IsEmpty() || !(pathList.Index(wxPathOnly(binPath)) != wxNOT_FOUND))</span>
+<span class="gi">+#else</span>
+     if (binPath.IsEmpty() || !pathList.Member(wxPathOnly(binPath)))
+<span class="gi">+#endif</span>
+     {
+         m_EnvironmentMsg &lt;&lt; _(&quot;Can&#39;t find compiler executable in your search path for &quot;) &lt;&lt; compiler-&gt;GetName() &lt;&lt; _T(&#39;\n&#39;);
+         Manager::Get()-&gt;GetMessageManager()-&gt;DebugLog(_T(&quot;Can&#39;t find compiler executable in your search path (%s)...&quot;), compiler-&gt;GetName().c_str());
+<span class="gu">@@ -1357,7 +1365,8 @@</span>
+     {
+         ClearLog();
+         DoClearErrors();
+<span class="gd">-        wxStartTimer();</span>
+<span class="gi">+        // wxStartTimer();</span>
+<span class="gi">+        m_StartTimer = wxGetLocalTimeMillis();</span>
+     }
+     Manager::Yield();
+ }
+<span class="gu">@@ -3386,7 +3395,11 @@</span>
+             m_BuildJobTargetsList.pop();
+ 
+ 
+<span class="gd">-        long int elapsed = wxGetElapsedTime() / 1000;</span>
+<span class="gi">+        // long int elapsed = wxGetElapsedTime() / 1000;</span>
+<span class="gi">+        wxLongLong localTime = wxGetLocalTimeMillis();</span>
+<span class="gi">+        wxLongLong duration = localTime - m_StartTimer;</span>
+<span class="gi">+        long int elapsed = duration.ToLong();</span>
+<span class="gi">+        elapsed /= 1000;</span>
+         int mins = elapsed / 60;
+         int secs = (elapsed % 60);
+         wxString msg = wxString::Format(_(&quot;Process terminated with status %d (%d minutes, %d seconds)&quot;), exitCode, mins, secs);
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">stahta01 2007-03-01 18:01:41</div>

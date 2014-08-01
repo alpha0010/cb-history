@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,118 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 4827)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -296,6 +296,9 @@</span>
+     int m_LastMarginMenuLine;
+     int m_LastDebugLine;
+ 
+<span class="gi">+    bool mFoldingLimit;</span>
+<span class="gi">+    int mFoldingLimitLevel;</span>
+<span class="gi">+</span>
+     wxFontEncoding m_encoding;
+     bool m_useByteOrderMark;
+     int m_byteOrderMarkLength;
+<span class="gu">@@ -854,6 +857,10 @@</span>
+         SetEditorTitle(m_Shortname);
+     }
+ 
+<span class="gi">+    // Folding properties.</span>
+<span class="gi">+    m_pData-&gt;mFoldingLimit = mgr-&gt;ReadBool(_T(&quot;/folding/limit&quot;), false);</span>
+<span class="gi">+    m_pData-&gt;mFoldingLimitLevel = mgr-&gt;ReadInt(_T(&quot;/folding/limit_level&quot;), 1);</span>
+<span class="gi">+</span>
+     // EOL properties
+     m_pData-&gt;m_strip_trailing_spaces = mgr-&gt;ReadBool(_T(&quot;/eol/strip_trailing_spaces&quot;), true);
+     m_pData-&gt;m_ensure_final_line_end = mgr-&gt;ReadBool(_T(&quot;/eol/ensure_final_line_end&quot;), true);
+<span class="gu">@@ -1549,27 +1556,31 @@</span>
+         cbAssert(m_pControl2);
+     cbStyledTextCtrl* ctrl = GetControl();
+     int level = ctrl-&gt;GetFoldLevel(line);
+<span class="gi">+</span>
+<span class="gi">+    // The fold parameter is the type of folding action requested</span>
+<span class="gi">+    // 0 = Unfold; 1 = Fold; 2 = Toggle folding.</span>
+<span class="gi">+</span>
+<span class="gi">+    // Check if the line is a header (fold point).</span>
+     if (level &amp; wxSCI_FOLDLEVELHEADERFLAG)
+     {
+<span class="gd">-        bool expand = false;</span>
+<span class="gd">-        if (fold == 2) // toggle</span>
+<span class="gd">-        {</span>
+<span class="gd">-            ctrl-&gt;ToggleFold(line);</span>
+<span class="gd">-            return true;</span>
+<span class="gd">-        }</span>
+<span class="gd">-        else</span>
+<span class="gd">-            expand = fold == 0;</span>
+<span class="gd">-        bool IsCurLineFolded = ctrl-&gt;GetFoldExpanded(line);</span>
+<span class="gd">-        /* -------------------------------------------------------</span>
+<span class="gd">-        *  fold = 0 (Unfold), 1 (fold), 2 (toggle)</span>
+<span class="gd">-        *  So check if fold = 0 then GetFoldExpanded(line) = false</span>
+<span class="gd">-        *  before toggling it and vice-versa</span>
+<span class="gd">-        *  -----------------------------------------------------*/</span>
+<span class="gd">-        if ((!IsCurLineFolded &amp;&amp; expand) || (IsCurLineFolded &amp;&amp; !expand))</span>
+<span class="gd">-        {</span>
+<span class="gd">-            ctrl-&gt;ToggleFold(line);</span>
+<span class="gd">-            return true;</span>
+<span class="gd">-        }</span>
+<span class="gi">+        bool IsExpanded = ctrl-&gt;GetFoldExpanded(line);</span>
+<span class="gi">+</span>
+<span class="gi">+        // If a fold/unfold request is issued when the block is already</span>
+<span class="gi">+        // folded/unfolded, ignore the request.</span>
+<span class="gi">+        if (fold == 0 &amp;&amp; IsExpanded) return true;</span>
+<span class="gi">+        if (fold == 1 &amp;&amp; !IsExpanded) return true;</span>
+<span class="gi">+</span>
+<span class="gi">+        // Apply the folding level limit only if the current block will be</span>
+<span class="gi">+        // folded (that means it&#39;s currently expanded), folding level limiter</span>
+<span class="gi">+        // must be enabled of course. Unfolding will not be affected.</span>
+<span class="gi">+        if (m_pData-&gt;mFoldingLimit &amp;&amp; IsExpanded)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            if ((level &amp; wxSCI_FOLDLEVELNUMBERMASK) &gt; (wxSCI_FOLDLEVELBASE + m_pData-&gt;mFoldingLimitLevel-1))</span>
+<span class="gi">+                return false;</span>
+<span class="gi">+        }</span>
+<span class="gi">+</span>
+<span class="gi">+        ctrl-&gt;ToggleFold(line);</span>
+<span class="gi">+        return true;</span>
+     }
+     return false;
+ }
+<span class="gh">Index: src/sdk/editorconfigurationdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorconfigurationdlg.cpp    (revision 4827)</span>
+<span class="gi">+++ src/sdk/editorconfigurationdlg.cpp    (working copy)</span>
+<span class="gu">@@ -162,7 +162,9 @@</span>
+        XRCCTRL(*this, &quot;chkFoldXml&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/folding/fold_xml&quot;), true));
+        XRCCTRL(*this, &quot;chkUnderlineFoldedLine&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/folding/underline_folded_line&quot;), true));
+     XRCCTRL(*this, &quot;lstIndicators&quot;, wxChoice)-&gt;SetSelection(cfg-&gt;ReadInt(_T(&quot;/folding/indicator&quot;), 2));
+<span class="gd">-</span>
+<span class="gi">+    XRCCTRL(*this, &quot;chkFoldLimit&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/folding/limit&quot;), false));</span>
+<span class="gi">+    XRCCTRL(*this, &quot;spnFoldLimitLevel&quot;, wxSpinCtrl)-&gt;SetValue(cfg-&gt;ReadInt(_T(&quot;/folding/limit_level&quot;), 1));</span>
+<span class="gi">+    </span>
+     //gutter
+     wxColour gutterColour = cfg-&gt;ReadColour(_T(&quot;/gutter/colour&quot;), *wxLIGHT_GREY);
+     XRCCTRL(*this, &quot;lstGutterMode&quot;, wxChoice)-&gt;SetSelection(cfg-&gt;ReadInt(_T(&quot;/gutter/mode&quot;), 0));
+<span class="gu">@@ -902,6 +904,8 @@</span>
+         cfg-&gt;Write(_T(&quot;/folding/fold_xml&quot;),             XRCCTRL(*this, &quot;chkFoldXml&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/folding/underline_folded_line&quot;), XRCCTRL(*this, &quot;chkUnderlineFoldedLine&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/folding/indicator&quot;),             XRCCTRL(*this, &quot;lstIndicators&quot;, wxChoice)-&gt;GetSelection());
+<span class="gi">+        cfg-&gt;Write(_T(&quot;/folding/limit&quot;),                 XRCCTRL(*this, &quot;chkFoldLimit&quot;, wxCheckBox)-&gt;GetValue());</span>
+<span class="gi">+        cfg-&gt;Write(_T(&quot;/folding/limit_level&quot;),             XRCCTRL(*this, &quot;spnFoldLimitLevel&quot;, wxSpinCtrl)-&gt;GetValue());</span>
+ 
+         //eol
+         cfg-&gt;Write(_T(&quot;/show_eol&quot;),                     XRCCTRL(*this, &quot;chkShowEOL&quot;, wxCheckBox)-&gt;GetValue());
+<span class="gh">Index: src/sdk/resources/editor_configuration.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/editor_configuration.xrc    (revision 4827)</span>
+<span class="gi">+++ src/sdk/resources/editor_configuration.xrc    (working copy)</span>
+<span class="gu">@@ -445,6 +445,28 @@</span>
+                                     &lt;flag&gt;wxALL|wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;
+                                     &lt;border&gt;5&lt;/border&gt;
+                                 &lt;/object&gt;
+<span class="gi">+</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">kkez 2008-01-16 10:46:39</div>

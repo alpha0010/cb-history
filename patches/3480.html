@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,111 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/include/menuitemsmanager.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/menuitemsmanager.h    (revision 9158)</span>
+<span class="gi">+++ src/include/menuitemsmanager.h    (working copy)</span>
+<span class="gu">@@ -31,7 +31,8 @@</span>
+         MenuItemsManager(bool autoClearOnDestroy = true);
+         virtual ~MenuItemsManager();
+ 
+<span class="gd">-        virtual wxMenuItem* CreateFromString(const wxString&amp; menuPath, int id);</span>
+<span class="gi">+        //virtual wxMenuItem* CreateFromString(const wxString&amp; menuPath, int id);</span>
+<span class="gi">+        virtual int CreateFromString(const wxString&amp; menuPath, int id);</span>
+ 
+         virtual wxMenuItem* Add(wxMenu* parent, int id, const wxString&amp; caption, const wxString&amp; helptext);
+         virtual wxMenuItem* Insert(wxMenu* parent, int index, int id, const wxString&amp; caption, const wxString&amp; helptext);
+<span class="gh">Index: src/sdk/menuitemsmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/menuitemsmanager.cpp    (revision 9158)</span>
+<span class="gi">+++ src/sdk/menuitemsmanager.cpp    (working copy)</span>
+<span class="gu">@@ -100,9 +100,9 @@</span>
+   *                 starts with a dash (-) (e.g. &quot;-MyItem&quot;) then a menu
+   *                 separator is prepended before the actual menu item.
+   * @param id The menu item ID (use wxID_SEPARATOR for adding a separator)
+<span class="gd">-  * @return The newly created menu item or NULL for failure.</span>
+<span class="gi">+  * @return The id of the newly created menu or the id of the old, same menu entry or NULL for failure.</span>
+   */
+<span class="gd">-wxMenuItem* MenuItemsManager::CreateFromString(const wxString&amp; menuPath, int id)</span>
+<span class="gi">+int MenuItemsManager::CreateFromString(const wxString&amp; menuPath, int id)</span>
+ {
+     wxMenuBar* mbar = Manager::Get()-&gt;GetAppFrame()-&gt;GetMenuBar();
+     wxMenu* menu = 0;
+<span class="gu">@@ -165,9 +165,11 @@</span>
+             {
+                 // existing menu
+                 // if it is the final item we want to create, display error and stop
+<span class="gi">+</span>
+                 if (isLast || existing &gt;= (int)menu-&gt;GetMenuItemCount())
+<span class="gd">-                    return 0;</span>
+<span class="gi">+                    return existing;</span>
+ 
+<span class="gi">+</span>
+                 // else just keep the menu pointer updated
+                 existingMenu = menu-&gt;GetMenuItems()[existing]-&gt;GetSubMenu();
+                 if (!existingMenu)
+<span class="gu">@@ -187,7 +189,10 @@</span>
+                     break;
+ 
+                 if (isLast)
+<span class="gd">-                    return Insert(menu, insert ? insertIndex : menu-&gt;GetMenuItemCount(), id, current, wxEmptyString);</span>
+<span class="gi">+                {</span>
+<span class="gi">+                    Insert(menu, insert ? insertIndex : menu-&gt;GetMenuItemCount(), id, current, wxEmptyString);</span>
+<span class="gi">+                    return id;</span>
+<span class="gi">+                }</span>
+                 else
+                 {
+                     wxMenu* sub = new wxMenu;
+<span class="gu">@@ -202,3 +207,4 @@</span>
+     }
+     return 0;
+ } // end of CreateFromString
+<span class="gi">+</span>
+<span class="gh">Index: src/sdk/scripting/bindings/sc_plugin.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/scripting/bindings/sc_plugin.cpp    (revision 9158)</span>
+<span class="gi">+++ src/sdk/scripting/bindings/sc_plugin.cpp    (working copy)</span>
+<span class="gu">@@ -75,14 +75,22 @@</span>
+         for (size_t i = 0; i &lt; arr.GetCount(); ++i)
+         {
+             int id = wxNewId();
+<span class="gd">-            mi.CreateFromString(arr[i], id);</span>
+<span class="gi">+            id = mi.CreateFromString(arr[i], id);</span>
+ 
+             ret.Add(id);
+ 
+             MenuCallback callback;
+             callback.object = it-&gt;second;
+             callback.menuIndex = i;
+<span class="gd">-            s_MenuCallbacks.insert(s_MenuCallbacks.end(), std::make_pair(id, callback));</span>
+<span class="gi">+</span>
+<span class="gi">+            ModuleMenuCallbacks::iterator it =  s_MenuCallbacks.find(id);</span>
+<span class="gi">+            if(it == s_MenuCallbacks.end())</span>
+<span class="gi">+                s_MenuCallbacks.insert(s_MenuCallbacks.end(), std::make_pair(id, callback));</span>
+<span class="gi">+            else</span>
+<span class="gi">+            {</span>
+<span class="gi">+                s_MenuCallbacks.erase(it);</span>
+<span class="gi">+                s_MenuCallbacks.insert(s_MenuCallbacks.end(), std::make_pair(id, callback));</span>
+<span class="gi">+            }</span>
+         }
+     }
+ 
+<span class="gh">Index: src/sdk/scriptingmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/scriptingmanager.cpp    (revision 9158)</span>
+<span class="gi">+++ src/sdk/scriptingmanager.cpp    (working copy)</span>
+<span class="gu">@@ -280,7 +299,8 @@</span>
+     }
+ 
+     int id = wxNewId();
+<span class="gd">-    wxMenuItem* item = m_MenuItemsManager.CreateFromString(menuPath, id);</span>
+<span class="gi">+    id = m_MenuItemsManager.CreateFromString(menuPath, id);</span>
+<span class="gi">+    wxMenuItem* item = Manager::Get()-&gt;GetAppFrame()-&gt;GetMenuBar()-&gt;FindItem(id);</span>
+     if (item)
+     {
+         if (!isFunction)
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">bluehazzard 2013-06-17 07:36:18</div>

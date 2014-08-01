@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,33 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 7010)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -490,16 +490,18 @@</span>
+         wxString selectedText(m_pOwner-&gt;GetControl()-&gt;GetTextRange(a, b));
+ 
+         int eof = m_pOwner-&gt;m_pControl-&gt;GetLength();
+<span class="gd">-        ConfigManager* cfg = Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;));</span>
+ 
+         // Set Styling:
+         // clear all style indications set in a previous run (is also done once after text gets unselected)
+         m_pOwner-&gt;GetControl()-&gt;IndicatorClearRange(0, eof);
+ 
+<span class="gi">+        if (a == b)</span>
+<span class="gi">+            return;</span>
+<span class="gi">+</span>
+<span class="gi">+        ConfigManager* cfg = Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;));</span>
+         // check that feature is enabled,
+         // selected text has a minimal length of 3 and contains no spaces
+         if( cfg-&gt;ReadBool(_T(&quot;/highlight_occurrence/enabled&quot;), true)
+<span class="gd">-                &amp;&amp; selectedText.Len() &gt; 2        // if there is no text selected (a == b), it stops here and does not hog the cpu further</span>
+                 &amp;&amp; selectedText.Find(_T(&#39; &#39;)) == wxNOT_FOUND
+                 &amp;&amp; selectedText.Find(_T(&#39;\t&#39;)) == wxNOT_FOUND
+                 &amp;&amp; selectedText.Find(_T(&#39;\n&#39;)) == wxNOT_FOUND )
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">frosty 2011-02-14 05:59:41</div>

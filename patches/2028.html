@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,60 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/editormanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editormanager.cpp    (revision 4013)</span>
+<span class="gi">+++ src/sdk/editormanager.cpp    (working copy)</span>
+<span class="gu">@@ -2144,6 +2144,9 @@</span>
+ 
+ int EditorManager::FindInFiles(cbFindReplaceData* data)
+ {
+<span class="gi">+    if (!data || data-&gt;findText.IsEmpty())</span>
+<span class="gi">+        return 0;</span>
+<span class="gi">+</span>
+     // clear old search results
+     if ( data-&gt;delOldSearches )
+     {
+<span class="gu">@@ -2151,9 +2154,6 @@</span>
+     }
+     int oldcount = m_pSearchLog-&gt;GetListControl()-&gt;GetItemCount();
+ 
+<span class="gd">-    if (!data || data-&gt;findText.IsEmpty())</span>
+<span class="gd">-        return 0;</span>
+<span class="gd">-</span>
+     // let&#39;s make a list of all the files to search in
+     wxArrayString filesList;
+ 
+<span class="gu">@@ -2251,8 +2251,8 @@</span>
+         return 0;
+     }
+ 
+<span class="gd">-    // now that are list is filled, we &#39;ll search</span>
+<span class="gd">-    // but first we &#39;ll create a hidden cbStyledTextCtrl to do the search for us ;)</span>
+<span class="gi">+    // now that list is filled, we&#39;ll search</span>
+<span class="gi">+    // but first we&#39;ll create a hidden cbStyledTextCtrl to do the search for us ;)</span>
+     cbStyledTextCtrl* control = new cbStyledTextCtrl(m_pNotebook, -1, wxDefaultPosition, wxSize(0, 0));
+     control-&gt;Show(false); //hidden
+ 
+<span class="gu">@@ -2285,9 +2285,14 @@</span>
+         // re-initialize the find struct for every file searched
+         *data = localData;
+ 
+<span class="gd">-        // first load the file in the control</span>
+<span class="gd">-        if (!control-&gt;LoadFile(filesList[i]))</span>
+<span class="gi">+        // check if the file is already opened in built-in editor and do search in it</span>
+<span class="gi">+        cbEditor* ed = IsBuiltinOpen(filesList[i]);</span>
+<span class="gi">+        if (ed)</span>
+         {
+<span class="gi">+            control-&gt;SetText(ed-&gt;GetControl()-&gt;GetText());</span>
+<span class="gi">+        }</span>
+<span class="gi">+        else if (!control-&gt;LoadFile(filesList[i])) // else load the file in the control</span>
+<span class="gi">+        {</span>
+             //            LOGSTREAM &lt;&lt; _(&quot;Failed opening &quot;) &lt;&lt; filesList[i] &lt;&lt; wxT(&#39;\n&#39;);
+             continue; // failed
+         }
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">biplab 2007-06-01 15:51:25</div>

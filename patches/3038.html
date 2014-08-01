@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,141 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/include/editormanager.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/editormanager.h    (revision 6416)</span>
+<span class="gi">+++ src/include/editormanager.h    (working copy)</span>
+<span class="gu">@@ -115,6 +115,7 @@</span>
+ 
+         bool UpdateProjectFiles(cbProject* project);
+         bool SwapActiveHeaderSource();
+<span class="gi">+        bool OpenContainingFolder();</span>
+         bool CloseActive(bool dontsave = false);
+         bool Close(const wxString&amp; filename, bool dontsave = false);
+         bool Close(EditorBase* editor, bool dontsave = false);
+<span class="gu">@@ -155,6 +156,7 @@</span>
+         void OnSave(wxCommandEvent&amp; event);
+         void OnSaveAll(wxCommandEvent&amp; event);
+         void OnSwapHeaderSource(wxCommandEvent&amp; event);
+<span class="gi">+        void OnOpenContainingFolder(wxCommandEvent&amp; event);</span>
+         void OnTabPosition(wxCommandEvent&amp; event);
+         void OnProperties(wxCommandEvent&amp; event);
+         void OnAddFileToProject(wxCommandEvent&amp; event);
+<span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 6416)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -633,6 +633,7 @@</span>
+ const int idLowerCase = wxNewId();
+ const int idSelectAll = wxNewId();
+ const int idSwapHeaderSource = wxNewId();
+<span class="gi">+const int idOpenContainingFolder = wxNewId();</span>
+ const int idBookmarks = wxNewId();
+ const int idBookmarksToggle = wxNewId();
+ const int idBookmarksPrevious = wxNewId();
+<span class="gu">@@ -676,6 +677,7 @@</span>
+     EVT_MENU(idLowerCase, cbEditor::OnContextMenuEntry)
+     EVT_MENU(idSelectAll, cbEditor::OnContextMenuEntry)
+     EVT_MENU(idSwapHeaderSource, cbEditor::OnContextMenuEntry)
+<span class="gi">+    EVT_MENU(idOpenContainingFolder, cbEditor::OnContextMenuEntry)</span>
+     EVT_MENU(idBookmarksToggle, cbEditor::OnContextMenuEntry)
+     EVT_MENU(idBookmarksPrevious, cbEditor::OnContextMenuEntry)
+     EVT_MENU(idBookmarksNext, cbEditor::OnContextMenuEntry)
+<span class="gu">@@ -2650,6 +2652,7 @@</span>
+             popup-&gt;AppendSeparator();
+         }
+         popup-&gt;Append(idSwapHeaderSource, _(&quot;Swap header/source&quot;));
+<span class="gi">+        popup-&gt;Append(idOpenContainingFolder, _(&quot;Open containing folder&quot;));</span>
+         if(!noeditor)
+             popup-&gt;AppendSeparator();
+ 
+<span class="gu">@@ -2885,6 +2888,8 @@</span>
+         control-&gt;SelectAll();
+     else if (id == idSwapHeaderSource)
+         Manager::Get()-&gt;GetEditorManager()-&gt;SwapActiveHeaderSource();
+<span class="gi">+    else if (id == idOpenContainingFolder)</span>
+<span class="gi">+        Manager::Get()-&gt;GetEditorManager()-&gt;OpenContainingFolder();</span>
+     else if (id == idBookmarkAdd)
+         control-&gt;MarkerAdd(m_pData-&gt;m_LastMarginMenuLine, BOOKMARK_MARKER);
+     else if (id == idBookmarkRemove)
+<span class="gh">Index: src/sdk/editormanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editormanager.cpp    (revision 6416)</span>
+<span class="gi">+++ src/sdk/editormanager.cpp    (working copy)</span>
+<span class="gu">@@ -146,6 +146,7 @@</span>
+ static const int idNBTabSave = wxNewId();
+ static const int idNBTabSaveAll = wxNewId();
+ static const int idNBSwapHeaderSource = wxNewId();
+<span class="gi">+static const int idNBTabOpenContainingFolder = wxNewId();</span>
+ static const int idNBTabTop = wxNewId();
+ static const int idNBTabBottom = wxNewId();
+ static const int idNBProperties = wxNewId();
+<span class="gu">@@ -190,6 +191,7 @@</span>
+     EVT_MENU(idNBTabClose, EditorManager::OnClose)
+     EVT_MENU(idNBTabCloseAll, EditorManager::OnCloseAll)
+     EVT_MENU(idNBTabCloseAllOthers, EditorManager::OnCloseAllOthers)
+<span class="gi">+    EVT_MENU(idNBTabOpenContainingFolder, EditorManager::OnOpenContainingFolder)</span>
+     EVT_MENU(idNBTabSave, EditorManager::OnSave)
+     EVT_MENU(idNBTabSaveAll, EditorManager::OnSaveAll)
+     EVT_MENU(idNBSwapHeaderSource, EditorManager::OnSwapHeaderSource)
+<span class="gu">@@ -1119,6 +1121,35 @@</span>
+     return candidateFile;
+ }
+ 
+<span class="gi">+bool EditorManager::OpenContainingFolder()</span>
+<span class="gi">+{</span>
+<span class="gi">+    cbEditor* ed = GetBuiltinEditor(GetActiveEditor());</span>
+<span class="gi">+    if (!ed)</span>
+<span class="gi">+        return false;</span>
+<span class="gi">+</span>
+<span class="gi">+    const wxString&amp; fullpath = ed-&gt;GetFilename();</span>
+<span class="gi">+</span>
+<span class="gi">+    wxString cmd;</span>
+<span class="gi">+</span>
+<span class="gi">+#ifdef __WXMSW__</span>
+<span class="gi">+    cmd = _(&quot;explorer /select,&quot;) + fullpath;    //Open folder with the file selected</span>
+<span class="gi">+#else</span>
+<span class="gi">+#ifdef __WXMAC__</span>
+<span class="gi">+    cmd = _(&quot;open -R &quot;) + fullpath;                //Open folder with the file selected</span>
+<span class="gi">+#else</span>
+<span class="gi">+    //Cant select the file on Linux, so just extract the folder name</span>
+<span class="gi">+    wxFileName::SplitPath(fullpath, &amp;cmd, NULL, NULL);</span>
+<span class="gi">+</span>
+<span class="gi">+    //Use the xdg-open command</span>
+<span class="gi">+    cmd = _(&quot;xdg-open &quot;) + cmd;</span>
+<span class="gi">+#endif</span>
+<span class="gi">+#endif</span>
+<span class="gi">+</span>
+<span class="gi">+    wxExecute(cmd);</span>
+<span class="gi">+</span>
+<span class="gi">+    return true;</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ bool EditorManager::SwapActiveHeaderSource()
+ {
+     cbEditor* ed = GetBuiltinEditor(GetActiveEditor());
+<span class="gu">@@ -2777,6 +2808,7 @@</span>
+     pop-&gt;Append(idNBTabSaveAll, _(&quot;Save all&quot;));
+     pop-&gt;AppendSeparator();
+     pop-&gt;Append(idNBSwapHeaderSource, _(&quot;Swap header/source&quot;));
+<span class="gi">+    pop-&gt;Append(idNBTabOpenContainingFolder, _(&quot;Open containing folder&quot;));</span>
+     pop-&gt;AppendSeparator();
+     pop-&gt;Append(idNBTabTop, _(&quot;Tabs at top&quot;));
+     pop-&gt;Append(idNBTabBottom, _(&quot;Tabs at bottom&quot;));
+<span class="gu">@@ -2859,6 +2891,11 @@</span>
+     Manager::Get()-&gt;GetEditorManager()-&gt;SwapActiveHeaderSource();
+ }
+ 
+<span class="gi">+void EditorManager::OnOpenContainingFolder(wxCommandEvent&amp; event)</span>
+<span class="gi">+{</span>
+<span class="gi">+    Manager::Get()-&gt;GetEditorManager()-&gt;OpenContainingFolder();</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ void EditorManager::OnTabPosition(wxCommandEvent&amp; event)
+ {
+     long style = m_pNotebook-&gt;GetWindowStyleFlag();
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">codeman 2010-07-24 20:34:26</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,142 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">diff -r 6fcf35fb5ad7 src/include/cbeditor.h</span>
+<span class="gd">--- a/src/include/cbeditor.h    Wed Apr 29 11:33:50 2009 -0400</span>
+<span class="gi">+++ b/src/include/cbeditor.h    Thu Apr 30 13:35:54 2009 -0400</span>
+<span class="gu">@@ -248,6 +248,12 @@</span>
+         /** Go to previous bookmark. */
+         void GotoPreviousBookmark();
+ 
+<span class="gi">+        /** Set a bookmark at the specified line. */</span>
+<span class="gi">+        void SetBookmark(int line = -1);</span>
+<span class="gi">+</span>
+<span class="gi">+        /** Get a list of all bookmarks */</span>
+<span class="gi">+        void GetAllBookmarks(BookmarkList &amp;marks);</span>
+<span class="gi">+</span>
+         /** Highlight the line the debugger will execute next. */
+         void SetDebugLine(int line);
+ 
+<span class="gh">diff -r 6fcf35fb5ad7 src/include/editorbase.h</span>
+<span class="gd">--- a/src/include/editorbase.h    Wed Apr 29 11:33:50 2009 -0400</span>
+<span class="gi">+++ b/src/include/editorbase.h    Thu Apr 30 13:35:54 2009 -0400</span>
+<span class="gu">@@ -13,9 +13,12 @@</span>
+ #include &quot;settings.h&quot;
+ #include &quot;cbexception.h&quot;
+ 
+<span class="gi">+#include &lt;set&gt;</span>
+<span class="gi">+</span>
+ class wxMenu;
+ class EditorBase;
+ struct EditorBaseInternalData;
+<span class="gi">+typedef std::set&lt;int&gt; BookmarkList;</span>
+ 
+ WX_DECLARE_HASH_MAP(int, EditorBase*, wxIntegerHash, wxIntegerEqual, SwitchToMap);
+ 
+<span class="gu">@@ -196,6 +199,15 @@</span>
+         /** Go to previous bookmark. */
+         virtual void GotoPreviousBookmark(){}
+ 
+<span class="gi">+        /** Set a bookmark at specified line.</span>
+<span class="gi">+          * @param line The line to set the bookmark on. If @c line is -1,</span>
+<span class="gi">+          *             use current line.</span>
+<span class="gi">+          */</span>
+<span class="gi">+        virtual void SetBookmark(int line = -1);</span>
+<span class="gi">+</span>
+<span class="gi">+        /** Get a list of all bookmarks by line number. */</span>
+<span class="gi">+        virtual void GetAllBookmarks(BookmarkList &amp;marks) {}</span>
+<span class="gi">+</span>
+         /** @brief Mark the debugger&#39;s active line.
+           *
+           * Highlight the line the debugger will execute next.
+<span class="gh">diff -r 6fcf35fb5ad7 src/include/projectfile.h</span>
+<span class="gd">--- a/src/include/projectfile.h    Wed Apr 29 11:33:50 2009 -0400</span>
+<span class="gi">+++ b/src/include/projectfile.h    Thu Apr 30 13:35:54 2009 -0400</span>
+<span class="gu">@@ -7,6 +7,7 @@</span>
+ #define PROJECTFILE_H
+ 
+ #include &lt;vector&gt;
+<span class="gi">+#include &lt;set&gt;</span>
+ 
+ #include &quot;settings.h&quot;
+ #include &quot;globals.h&quot;
+<span class="gu">@@ -33,6 +34,7 @@</span>
+ 
+ class ProjectFile;
+ typedef std::vector&lt;ProjectFile*&gt; ProjectFilesVector;
+<span class="gi">+typedef std::set&lt;int&gt; BookmarkList;</span>
+ 
+ /** Represents a file in a Code::Blocks project. */
+ class ProjectFile  : public BlockAllocated&lt;ProjectFile, 1000&gt;
+<span class="gu">@@ -139,7 +141,7 @@</span>
+         unsigned short int weight;
+ 
+         /** If true, the file is open inside an editor. */
+<span class="gd">-        bool editorOpen; // layout info</span>
+<span class="gi">+        enum { eUnattached, eOpenOnLoad, eAttached } editorOpen; // layout info</span>
+ 
+         /** The last known caret position in an editor for this file. */
+         int editorPos; // layout info
+<span class="gu">@@ -175,6 +177,11 @@</span>
+ 
+         /** Auto-generated files when compiling this file */
+         ProjectFilesVector generatedFiles;
+<span class="gi">+</span>
+<span class="gi">+        void ResetBookmarks()       { m_bookmarks.clear(); }</span>
+<span class="gi">+        void AddBookmark(int line)  { m_bookmarks.insert(line); }</span>
+<span class="gi">+        const BookmarkList &amp; GetBookmarks() const;</span>
+<span class="gi">+</span>
+     protected:
+         friend class cbProject;
+ 
+<span class="gu">@@ -184,6 +191,7 @@</span>
+         wxTreeItemId m_TreeItemId; // set by the project when building the tree
+         wxString m_ObjName;
+         PFDMap m_PFDMap;
+<span class="gi">+        mutable BookmarkList m_bookmarks;</span>
+ };
+ WX_DECLARE_LIST(ProjectFile, FilesList);
+ 
+<span class="gh">diff -r 6fcf35fb5ad7 src/plugins/contrib/BrowseTracker/BrowseTrackerLayout.cpp</span>
+<span class="gd">--- a/src/plugins/contrib/BrowseTracker/BrowseTrackerLayout.cpp    Wed Apr 29 11:33:50 2009 -0400</span>
+<span class="gi">+++ b/src/plugins/contrib/BrowseTracker/BrowseTrackerLayout.cpp    Thu Apr 30 13:35:54 2009 -0400</span>
+<span class="gu">@@ -239,11 +239,11 @@</span>
+     {
+         ProjectFile* f = m_pProject-&gt;GetFile(i);
+ 
+<span class="gd">-        if (f-&gt;editorOpen || f-&gt;editorPos || f-&gt;editorTopLine || f-&gt;editorTabPos)</span>
+<span class="gi">+        if (f-&gt;editorOpen == ProjectFile::eAttached || f-&gt;editorPos || f-&gt;editorTopLine || f-&gt;editorTabPos)</span>
+         {
+             TiXmlElement* node = static_cast&lt;TiXmlElement*&gt;(rootnode-&gt;InsertEndChild(TiXmlElement(&quot;File&quot;)));
+             node-&gt;SetAttribute(&quot;name&quot;, cbU2C(f-&gt;relativeFilename));
+<span class="gd">-            node-&gt;SetAttribute(&quot;open&quot;, f-&gt;editorOpen);</span>
+<span class="gi">+            node-&gt;SetAttribute(&quot;open&quot;, f-&gt;editorOpen == ProjectFile::eAttached);</span>
+             node-&gt;SetAttribute(&quot;top&quot;, (f == active));
+             node-&gt;SetAttribute(&quot;tabpos&quot;, f-&gt;editorTabPos);
+ 
+<span class="gh">diff -r 6fcf35fb5ad7 src/plugins/contrib/codesnippets/editor/scbeditor.cpp</span>
+<span class="gd">--- a/src/plugins/contrib/codesnippets/editor/scbeditor.cpp    Wed Apr 29 11:33:50 2009 -0400</span>
+<span class="gi">+++ b/src/plugins/contrib/codesnippets/editor/scbeditor.cpp    Thu Apr 30 13:35:54 2009 -0400</span>
+<span class="gu">@@ -434,7 +434,7 @@</span>
+     if (m_pControl)
+     {
+         if (m_pProjectFile)
+<span class="gd">-            m_pProjectFile-&gt;editorOpen = false;</span>
+<span class="gi">+            m_pProjectFile-&gt;editorOpen = ProjectFile::eAttached;</span>
+         m_pControl-&gt;Destroy();
+         m_pControl = 0;
+     }
+<span class="gu">@@ -606,7 +606,7 @@</span>
+         m_pControl-&gt;ScrollToLine(m_pProjectFile-&gt;editorTopLine);
+         m_pControl-&gt;ScrollToColumn(0);
+ 
+<span class="gd">-        m_pProjectFile-&gt;editorOpen = true;</span>
+<span class="gi">+        m_pProjectFile-&gt;editorOpen = ProjectFile::eAttached;</span>
+ 
+         if (Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;))-&gt;ReadBool(_T(&quot;/tab_text_relative&quot;), true))
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">raybert 2009-04-30 17:47:36</div>

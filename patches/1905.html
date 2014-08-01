@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,139 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/CodeBlocks.cbp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/CodeBlocks.cbp    (revision 3645)</span>
+<span class="gi">+++ src/CodeBlocks.cbp    (working copy)</span>
+<span class="gu">@@ -1246,6 +1246,12 @@</span>
+         &lt;Unit filename=&quot;plugins\compilergcc\compilerOW.h&quot;&gt;
+             &lt;Option target=&quot;Compiler&quot; /&gt;
+         &lt;/Unit&gt;
+<span class="gi">+        &lt;Unit filename=&quot;plugins\compilergcc\compilerOWgenerator.cpp&quot;&gt;</span>
+<span class="gi">+            &lt;Option target=&quot;Compiler&quot; /&gt;</span>
+<span class="gi">+        &lt;/Unit&gt;</span>
+<span class="gi">+        &lt;Unit filename=&quot;plugins\compilergcc\compilerOWgenerator.h&quot;&gt;</span>
+<span class="gi">+            &lt;Option target=&quot;Compiler&quot; /&gt;</span>
+<span class="gi">+        &lt;/Unit&gt;</span>
+         &lt;Unit filename=&quot;plugins\compilergcc\compilerSDCC.cpp&quot;&gt;
+             &lt;Option target=&quot;Compiler&quot; /&gt;
+         &lt;/Unit&gt;
+<span class="gh">Index: src/plugins/compilergcc/compilerOW.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilerOW.cpp    (revision 3645)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilerOW.cpp    (working copy)</span>
+<span class="gu">@@ -15,6 +15,7 @@</span>
+ 
+ #include &lt;messagemanager.h&gt;
+ #include &lt;manager.h&gt;
+<span class="gi">+#include &quot;compilerOWgenerator.h&quot;</span>
+ 
+ #include &lt;wx/utils.h&gt;
+ #include &lt;wx/filefn.h&gt;
+<span class="gu">@@ -37,6 +38,11 @@</span>
+     return c;
+ }
+ 
+<span class="gi">+CompilerCommandGenerator* CompilerOW::GetCommandGenerator()</span>
+<span class="gi">+{</span>
+<span class="gi">+    return new CompilerOWGenerator;</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ void CompilerOW::Reset()
+ {
+     /*
+<span class="gu">@@ -49,10 +55,10 @@</span>
+     m_Programs.LD               = wxT(&quot;wcl386.exe&quot;);
+     m_Programs.LIB              = wxT(&quot;wlib.exe&quot;);
+     m_Programs.WINDRES          = wxT(&quot;wrc.exe&quot;);
+<span class="gd">-    m_Programs.MAKE             = wxT(&quot;mingw32-make.exe&quot;);</span>
+<span class="gi">+    m_Programs.MAKE             = wxT(&quot;wmake.exe&quot;);</span>
+ 
+     m_Switches.includeDirs      = wxT(&quot;-i&quot;);
+<span class="gd">-    m_Switches.libDirs          = wxT(&quot;-L&quot;);</span>
+<span class="gi">+    m_Switches.libDirs          = wxT(&quot;/\&quot;LIBP &quot;);</span>
+     m_Switches.linkLibs         = wxT(&quot;&quot;);
+     m_Switches.libPrefix        = wxT(&quot;&quot;);
+     m_Switches.libExtension     = wxT(&quot;lib&quot;);
+<span class="gu">@@ -338,7 +344,7 @@</span>
+ void CompilerOW::LoadDefaultRegExArray()
+ {
+     m_RegExes.Clear();
+<span class="gd">-    m_RegExes.Add(RegExStruct(_(&quot;Note&quot;), cltError, wxT(&quot;(&quot;) + FilePathWithSpaces + _T(&quot;)\\(([0-9]+)\\): Note! (.+)&quot;), 3, 1, 2));</span>
+<span class="gi">+    m_RegExes.Add(RegExStruct(_(&quot;Note&quot;), cltWarning, wxT(&quot;(&quot;) + FilePathWithSpaces + _T(&quot;)\\(([0-9]+)\\): Note! (.+)&quot;), 3, 1, 2));</span>
+     m_RegExes.Add(RegExStruct(_(&quot;Compiler error&quot;), cltError, wxT(&quot;(&quot;) + FilePathWithSpaces + _T(&quot;)\\(([0-9]+)\\): Error! (.+)&quot;), 3, 1, 2));
+     m_RegExes.Add(RegExStruct(_(&quot;Compiler warning&quot;), cltWarning, wxT(&quot;(&quot;) + FilePathWithSpaces + _T(&quot;)\\(([0-9]+)\\): Warning! (.+)&quot;), 3, 1, 2));
+ }
+<span class="gu">@@ -347,11 +353,13 @@</span>
+ {
+ #ifdef __WXMSW__
+     wxLogNull ln;
+<span class="gd">-    wxRegKey key; // defaults to HKCR</span>
+<span class="gi">+    /* Following code is Not necessary as OpenWatcom does not write to</span>
+<span class="gi">+       Registry anymore */</span>
+<span class="gi">+    /*wxRegKey key; // defaults to HKCR</span>
+     key.SetName(wxT(&quot;HKEY_LOCAL_MACHINE\\Software\\Open Watcom\\c_1.0&quot;));
+     if (key.Open())
+         // found; read it
+<span class="gd">-        key.QueryValue(wxT(&quot;Install Location&quot;), m_MasterPath);</span>
+<span class="gi">+        key.QueryValue(wxT(&quot;Install Location&quot;), m_MasterPath);*/</span>
+ 
+     if (m_MasterPath.IsEmpty())
+         // just a guess; the default installation dir
+<span class="gu">@@ -361,6 +369,10 @@</span>
+     {
+         AddIncludeDir(m_MasterPath + wxFILE_SEP_PATH + wxT(&quot;h&quot;));
+         AddIncludeDir(m_MasterPath + wxFILE_SEP_PATH + wxT(&quot;h&quot;) + wxFILE_SEP_PATH + wxT(&quot;nt&quot;));
+<span class="gi">+        AddLibDir(m_MasterPath + wxFILE_SEP_PATH + wxT(&quot;lib386&quot;));</span>
+<span class="gi">+        AddLibDir(m_MasterPath + wxFILE_SEP_PATH + wxT(&quot;lib386&quot;) + wxFILE_SEP_PATH + wxT(&quot;nt&quot;));</span>
+<span class="gi">+        AddResourceIncludeDir(m_MasterPath + wxFILE_SEP_PATH + wxT(&quot;h&quot;));</span>
+<span class="gi">+        AddResourceIncludeDir(m_MasterPath + wxFILE_SEP_PATH + wxT(&quot;h&quot;) + wxFILE_SEP_PATH + wxT(&quot;nt&quot;));</span>
+         m_ExtraPaths.Add(m_MasterPath + wxFILE_SEP_PATH + wxT(&quot;binnt&quot;));
+         m_ExtraPaths.Add(m_MasterPath + wxFILE_SEP_PATH + wxT(&quot;binw&quot;));
+     }
+<span class="gh">Index: src/plugins/compilergcc/compilerOW.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilerOW.h    (revision 3645)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilerOW.h    (working copy)</span>
+<span class="gu">@@ -17,6 +17,7 @@</span>
+ 
+         virtual void LoadSettings(const wxString&amp; baseKey);
+         virtual void SetMasterPath(const wxString&amp; path);
+<span class="gi">+        virtual CompilerCommandGenerator* GetCommandGenerator();</span>
+     protected:
+         Compiler * CreateCopy();
+     private:
+<span class="gh">Index: src/plugins/compilergcc/compilerOWgenerator.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilerOWgenerator.cpp    (revision 0)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilerOWgenerator.cpp    (revision 0)</span>
+<span class="gu">@@ -0,0 +1,34 @@</span>
+<span class="gi">+#ifdef __WXMSW__</span>
+<span class="gi">+</span>
+<span class="gi">+#include &lt;sdk.h&gt;</span>
+<span class="gi">+#include &quot;compilerOWgenerator.h&quot;</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+<span class="gi">+CompilerOWGenerator::CompilerOWGenerator()</span>
+<span class="gi">+{</span>
+<span class="gi">+    //ctor</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+CompilerOWGenerator::~CompilerOWGenerator()</span>
+<span class="gi">+{</span>
+<span class="gi">+    //dtor</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+wxString CompilerOWGenerator::SetupLibrariesDirs(Compiler* compiler, ProjectBuildTarget* target)</span>
+<span class="gi">+{</span>
+<span class="gi">+    wxArrayString LibDirs = compiler-&gt;GetLibDirs();</span>
+<span class="gi">+    if (LibDirs.IsEmpty())</span>
+<span class="gi">+        return wxEmptyString;</span>
+<span class="gi">+    int i, Count = LibDirs.GetCount();</span>
+<span class="gi">+</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">biplab 2007-02-27 07:39:18</div>

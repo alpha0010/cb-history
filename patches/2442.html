@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,131 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/AutoVersioning/AutoVersioning.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/AutoVersioning/AutoVersioning.cpp    (revision 5005)</span>
+<span class="gi">+++ src/plugins/contrib/AutoVersioning/AutoVersioning.cpp    (working copy)</span>
+<span class="gu">@@ -65,7 +65,6 @@</span>
+     ProjectLoaderHooks::HookFunctorBase* AutoVerHook =
+       new ProjectLoaderHooks::HookFunctor&lt;AutoVersioning&gt;(this, &amp;AutoVersioning::OnProjectLoadingHook);
+     m_AutoVerHookId = ProjectLoaderHooks::RegisterHook(AutoVerHook);
+<span class="gd">-    m_IsCurrentProjectVersioned = false;</span>
+     m_Modified = false;
+     m_Project = 0;
+ } // end of constructor
+<span class="gu">@@ -128,11 +127,11 @@</span>
+         // TODO (KILLERBOT) : should we have default values, in case something would be missing ?
+         // OPTI : we could choose not to write out default values in the xml --&gt; smaller cbp
+         avConfig Config;
+<span class="gd">-        m_IsCurrentProjectVersioned = false; // default not active unless we find xml for it</span>
+<span class="gi">+        m_IsVersioned[project] = false; // default not active unless we find xml for it</span>
+         const TiXmlElement* Node = elem-&gt;FirstChildElement(&quot;AutoVersioning&quot;);
+         if (Node)
+         {
+<span class="gd">-            m_IsCurrentProjectVersioned = true;</span>
+<span class="gi">+            m_IsVersioned[project] = true;</span>
+             TiXmlHandle Handle(const_cast&lt;TiXmlElement*&gt;(Node));
+             if(const TiXmlElement* pElem = Handle.FirstChildElement(&quot;Scheme&quot;).ToElement())
+             {
+<span class="gu">@@ -215,7 +214,6 @@</span>
+         }
+         m_ProjectMap[project] = Config;
+         m_ProjectMapVersionState[project] = VersionState;
+<span class="gd">-        m_Project = project;</span>
+     }
+     else
+     {
+<span class="gu">@@ -226,7 +224,7 @@</span>
+         // if plugins that use that element are not loaded atm).
+         // so, instead of blindly inserting the element, we must first check it&#39;s
+         // not already there (and if it is, clear its contents)
+<span class="gd">-        if(m_IsCurrentProjectVersioned)</span>
+<span class="gi">+        if(m_IsVersioned[project])</span>
+         {
+             TiXmlElement* node = elem-&gt;FirstChildElement(&quot;AutoVersioning&quot;);
+             if (!node)
+<span class="gu">@@ -281,7 +279,8 @@</span>
+     if (IsAttached())
+     {
+         m_ProjectMap.erase(event.GetProject());
+<span class="gd">-        m_ProjectMapVersionState.erase(event.GetProject());</span>
+<span class="gi">+        m_ProjectMapVersionState.erase(event.GetProject());</span>
+<span class="gi">+        m_IsVersioned.erase(event.GetProject());</span>
+         if(m_Project == event.GetProject())
+         {   // should always be the case (??? we hope ??)
+             m_Project = 0;
+<span class="gu">@@ -294,7 +293,7 @@</span>
+ // be activated and each has the compilerstarted/Finished ?????
+ void AutoVersioning::OnCompilerStarted(CodeBlocksEvent&amp; event)
+ {
+<span class="gd">-    if (m_Project &amp;&amp; IsAttached() &amp;&amp; m_IsCurrentProjectVersioned)</span>
+<span class="gi">+    if (m_Project &amp;&amp; IsAttached() &amp;&amp; m_IsVersioned[event.GetProject()])</span>
+     {
+         if (m_Modified)
+         {
+<span class="gu">@@ -317,7 +316,7 @@</span>
+ 
+ void AutoVersioning::OnCompilerFinished(CodeBlocksEvent&amp; event)
+ {
+<span class="gd">-    if (m_Project &amp;&amp; IsAttached() &amp;&amp; m_IsCurrentProjectVersioned)</span>
+<span class="gi">+    if (m_Project &amp;&amp; IsAttached() &amp;&amp; m_IsVersioned[event.GetProject()])</span>
+     {
+         ++(GetVersionState().Values.BuildCount);
+     }
+<span class="gu">@@ -325,7 +324,7 @@</span>
+ 
+ void AutoVersioning::OnTimerVerify(wxTimerEvent&amp; event)
+ {
+<span class="gd">-    if (m_Project &amp;&amp; IsAttached() &amp;&amp; m_IsCurrentProjectVersioned)</span>
+<span class="gi">+    if (m_Project &amp;&amp; IsAttached() &amp;&amp; m_IsVersioned[m_Project])</span>
+     {
+         if (!m_Modified)
+         {
+<span class="gu">@@ -348,7 +347,7 @@</span>
+     {
+         if (m_Project)
+         {
+<span class="gd">-            if (m_IsCurrentProjectVersioned)</span>
+<span class="gi">+            if (m_IsVersioned[m_Project])</span>
+             {
+                 SetVersionAndSettings(*m_Project, true);
+                 UpdateVersionHeader();
+<span class="gu">@@ -357,8 +356,20 @@</span>
+             {
+                 if (wxMessageBox(_(&quot;Configure the project \&quot;&quot;) + m_Project-&gt;GetTitle() + _(&quot;\&quot; for Autoversioning?&quot;),_(&quot;Autoversioning&quot;),wxYES_NO) == wxYES)
+                 {
+<span class="gi">+                    if(wxFileExists(m_Project-&gt;GetBasePath() + _T(&quot;version.h&quot;)))</span>
+<span class="gi">+                    {</span>
+<span class="gi">+                        wxMessageBox(</span>
+<span class="gi">+                         _T(&quot;The header version.h already exist on your projects path. &quot;</span>
+<span class="gi">+                            &quot;The content will be overwritten by the the version info generated code.&quot;</span>
+<span class="gi">+                            &quot;\n\nYou can change the default version.h file on the \&quot;Settings\&quot; Tab.&quot;</span>
+<span class="gi">+                           ),</span>
+<span class="gi">+                         _T(&quot;Warning&quot;),</span>
+<span class="gi">+                         wxICON_EXCLAMATION  | wxOK</span>
+<span class="gi">+                        );</span>
+<span class="gi">+                    }</span>
+<span class="gi">+</span>
+                     // we activated
+<span class="gd">-                    m_IsCurrentProjectVersioned = true;</span>
+<span class="gi">+                    m_IsVersioned[m_Project] = true;</span>
+                     // just becasue we activated the project becomes modified
+                     m_Project-&gt;SetModified();
+ 
+<span class="gu">@@ -382,7 +393,7 @@</span>
+ 
+ void AutoVersioning::OnMenuCommitChanges(wxCommandEvent&amp;)
+ {
+<span class="gd">-    if (m_Project &amp;&amp; IsAttached() &amp;&amp; m_IsCurrentProjectVersioned)</span>
+<span class="gi">+    if (m_Project &amp;&amp; IsAttached() &amp;&amp; m_IsVersioned[m_Project])</span>
+     {
+         if(m_Modified)
+         {
+<span class="gu">@@ -406,7 +417,7 @@</span>
+             {
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">jgm 2008-04-18 22:40:51</div>

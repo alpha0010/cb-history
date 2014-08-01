@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,36 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/debuggergdb/gdb_driver.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/debuggergdb/gdb_driver.cpp    (revision 2539)</span>
+<span class="gi">+++ src/plugins/debuggergdb/gdb_driver.cpp    (working copy)</span>
+<span class="gu">@@ -28,6 +28,7 @@</span>
+     static wxRegEx reBreak(_T(&quot;\032\032([^:]+):([0-9]+):[0-9]+:[begmidl]+:(0x[0-9A-z]+)&quot;));
+ #endif
+ static wxRegEx reBreak2(_T(&quot;^(0x[A-z0-9]+) in (.*) from (.*)&quot;));
+<span class="gi">+static wxRegEx reBreak3(_T(&quot;^(0x[A-z0-9]+) in (.*)&quot;));</span>
+ 
+ GDB_driver::GDB_driver(DebuggerGDB* plugin)
+     : DebuggerDriver(plugin),
+<span class="gu">@@ -572,6 +574,15 @@</span>
+                 m_Cursor.changed = true;
+                 needsUpdate = true;
+             }
+<span class="gi">+            else if (reBreak3.Matches(lines[i]) )</span>
+<span class="gi">+            {</span>
+<span class="gi">+                m_Cursor.file=_T(&quot;&quot;);</span>
+<span class="gi">+                m_Cursor.function= reBreak3.GetMatch(lines[i], 2);</span>
+<span class="gi">+                           m_Cursor.address = reBreak3.GetMatch(lines[i], 1);</span>
+<span class="gi">+                           m_Cursor.line = -1;</span>
+<span class="gi">+                           m_Cursor.changed = true;</span>
+<span class="gi">+                           needsUpdate = true;</span>
+<span class="gi">+            }</span>
+         }
+     }
+     buffer.Clear();
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

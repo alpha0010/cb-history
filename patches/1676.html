@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,190 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/build_tools/autorevision/autorevision.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/build_tools/autorevision/autorevision.cpp    (revision 3316)</span>
+<span class="gi">+++ src/build_tools/autorevision/autorevision.cpp    (working copy)</span>
+<span class="gu">@@ -26,8 +26,8 @@</span>
+     inline void set_env(const char* k, const char* v) { setenv(k, v, 1); };
+ #endif
+ 
+<span class="gd">-bool QuerySvn(const string&amp; workingDir, string&amp; revision, string &amp;date);</span>
+<span class="gd">-bool ParseFile(const string&amp; docFile, string&amp; revision, string &amp;date);</span>
+<span class="gi">+bool QuerySvn(const string&amp; workingDir, string&amp; revision, string&amp; date);</span>
+<span class="gi">+bool ParseFile(const string&amp; docFile, string&amp; revision, string&amp; date);</span>
+ bool WriteOutput(const string&amp; outputFile, string&amp; revision, string&amp; date);
+ int main(int argc, char** argv);
+ 
+<span class="gu">@@ -43,7 +43,6 @@</span>
+     string outputFile;
+     string workingDir;
+ 
+<span class="gd">-</span>
+     for(int i = 1; i &lt; argc; ++i)
+     {
+         if(strcmp(&quot;+int&quot;, argv[i]) == 0)
+<span class="gu">@@ -99,43 +98,47 @@</span>
+     return 0;
+ }
+ 
+<span class="gd">-</span>
+<span class="gd">-</span>
+<span class="gd">-bool QuerySvn(const string&amp; workingDir, string&amp; revision, string &amp;date)</span>
+<span class="gi">+bool QuerySvn(const string&amp; workingDir, string&amp; revision, string&amp; date)</span>
+ {
+     string svncmd(&quot;svn info &quot;);
+     svncmd.append(workingDir);
+     set_env(&quot;LANG&quot;, &quot;en_US&quot;);
+<span class="gd">-    FILE *svn = popen(svncmd.c_str(), &quot;r&quot;);</span>
+ 
+<span class="gd">-    if(svn)</span>
+<span class="gi">+    ifstream svn(svncmd.c_str());</span>
+<span class="gi">+</span>
+<span class="gi">+    if (svn)</span>
+     {
+         char buf[1024];
+<span class="gi">+</span>
+         string line;
+<span class="gd">-        while(fgets(buf, 4095, svn))</span>
+<span class="gi">+</span>
+<span class="gi">+        while (svn.get(buf, 1024))</span>
+         {
+             line.assign(buf);
+<span class="gd">-            if(line.find(&quot;Revision:&quot;) != string::npos)</span>
+<span class="gi">+</span>
+<span class="gi">+            if (line.find(&quot;Revision:&quot;) != string::npos)</span>
+             {
+                 revision = line.substr(strlen(&quot;Revision: &quot;));
+ 
+<span class="gd">-                    string lbreak(&quot;\r\n&quot;);</span>
+<span class="gd">-                    size_t i;</span>
+<span class="gd">-                    while((i = revision.find_first_of(lbreak)) != string::npos)</span>
+<span class="gd">-                        revision.erase(revision.length()-1);</span>
+<span class="gi">+                string lbreak(&quot;\r\n&quot;);</span>
+<span class="gi">+</span>
+<span class="gi">+                size_t i;</span>
+<span class="gi">+</span>
+<span class="gi">+                while ((i = revision.find_first_of(lbreak)) != string::npos)</span>
+<span class="gi">+                    revision.erase(revision.length() - 1);</span>
+             }
+<span class="gd">-            if(line.find(&quot;Last Changed Date: &quot;) != string::npos)</span>
+<span class="gd">-            {</span>
+<span class="gd">-                    date = line.substr(strlen(&quot;Last Changed Date: &quot;), strlen(&quot;2006-01-01 12:34:56&quot;));</span>
+<span class="gd">-            }</span>
+<span class="gi">+</span>
+<span class="gi">+            if (line.find(&quot;Last Changed Date: &quot;) != string::npos)</span>
+<span class="gi">+                date = line.substr(strlen(&quot;Last Changed Date: &quot;), strlen(&quot;2006-01-01 12:34:56&quot;));</span>
+         }
+     }
+<span class="gd">-    pclose(svn);</span>
+<span class="gi">+</span>
+<span class="gi">+    svn.close();</span>
+<span class="gi">+</span>
+     return !revision.empty();
+ }
+ 
+<span class="gd">-</span>
+<span class="gd">-bool ParseFile(const string&amp; docFile, string&amp; revision, string &amp;date)</span>
+<span class="gi">+bool ParseFile(const string&amp; docFile, string&amp; revision, string&amp; date)</span>
+ {
+     string token[6];
+     date.clear();
+<span class="gu">@@ -143,13 +146,13 @@</span>
+     int c = 0;
+ 
+     ifstream inFile(docFile.c_str());
+<span class="gi">+</span>
+     if (!inFile)
+<span class="gd">-    {</span>
+         return false;
+<span class="gd">-    }</span>
+<span class="gi">+</span>
+     else
+     {
+<span class="gd">-        while(!inFile.eof() &amp;&amp; c &lt; 6)</span>
+<span class="gi">+        while (!inFile.eof() &amp;&amp; c &lt; 6)</span>
+             inFile &gt;&gt; token[c++];
+ 
+         revision = token[2];
+<span class="gu">@@ -160,7 +163,6 @@</span>
+     }
+ }
+ 
+<span class="gd">-</span>
+ bool WriteOutput(const string&amp; outputFile, string&amp; revision, string&amp; date)
+ {
+     string old;
+<span class="gu">@@ -168,70 +170,80 @@</span>
+     comment.append(revision);
+     comment.append(&quot;*/&quot;);
+ 
+<span class="gi">+    ifstream in(outputFile.c_str());</span>
+<span class="gi">+</span>
+<span class="gi">+    if (!in.bad() &amp;&amp; !in.eof())</span>
+     {
+<span class="gd">-        ifstream in(outputFile.c_str());</span>
+<span class="gd">-        if (!in.bad() &amp;&amp; !in.eof())</span>
+<span class="gi">+        in &gt;&gt; old;</span>
+<span class="gi">+</span>
+<span class="gi">+        if (old == comment)</span>
+         {
+<span class="gd">-            in &gt;&gt; old;</span>
+<span class="gd">-            if(old == comment)</span>
+<span class="gd">-            {</span>
+<span class="gd">-                if(be_verbose)</span>
+<span class="gd">-                    printf(&quot;Revision unchanged (%s). Skipping.&quot;, revision.c_str());</span>
+<span class="gd">-                in.close();</span>
+<span class="gd">-                return false;</span>
+<span class="gd">-            }</span>
+<span class="gi">+            if (be_verbose)</span>
+<span class="gi">+                printf(&quot;Revision unchanged (%s). Skipping.&quot;, revision.c_str());</span>
+<span class="gi">+</span>
+<span class="gi">+            in.close();</span>
+<span class="gi">+</span>
+<span class="gi">+            return false;</span>
+         }
+<span class="gd">-        in.close();</span>
+     }
+ 
+<span class="gi">+    in.close();</span>
+ 
+<span class="gd">-    FILE *header = fopen(outputFile.c_str(), &quot;wb&quot;);</span>
+<span class="gd">-    if(!header)</span>
+<span class="gi">+    ofstream header(outputFile.c_str());</span>
+<span class="gi">+</span>
+<span class="gi">+    if (!header)</span>
+     {
+         puts(&quot;Error: Could not open output file.&quot;);
+<span class="gi">+</span>
+         return false;
+     }
+ 
+<span class="gd">-    fprintf(header, &quot;%s\n&quot;, comment.c_str());</span>
+<span class="gd">-    fprintf(header, &quot;#ifndef AUTOREVISION_H\n&quot;);</span>
+<span class="gd">-    fprintf(header, &quot;#define AUTOREVISION_H\n\n\n&quot;);</span>
+<span class="gi">+    header &lt;&lt; noskipws;</span>
+ 
+<span class="gd">-    if(do_std)</span>
+<span class="gd">-        fprintf(header, &quot;#include &lt;string&gt;\n&quot;);</span>
+<span class="gd">-    if(do_wx)</span>
+<span class="gd">-        fprintf(header, &quot;#include &lt;wx/string.h&gt;\n&quot;);</span>
+<span class="gi">+    header &lt;&lt; comment &lt;&lt; &quot;\n&quot;;</span>
+<span class="gi">+    header &lt;&lt; &quot;#ifndef AUTOREVISION_H\n&quot;;</span>
+<span class="gi">+    header &lt;&lt; &quot;#define AUTOREVISION_H\n\n&quot;;</span>
+ 
+<span class="gd">-    fprintf(header, &quot;\n#define SVN_REVISION \&quot;%s\&quot;\n&quot;, revision.c_str());</span>
+<span class="gd">-    fprintf(header, &quot;\n#define SVN_DATE     \&quot;%s\&quot;\n\n&quot;, date.c_str());</span>
+<span class="gi">+    if (do_std)</span>
+<span class="gi">+        header &lt;&lt; &quot;#include &lt;string&gt;\n&quot;;</span>
+ 
+<span class="gd">-    if(do_int || do_std || do_wx)</span>
+<span class="gd">-        fprintf(header, &quot;namespace autorevision\n{\n&quot;);</span>
+<span class="gi">+    if (do_wx)</span>
+<span class="gi">+        header &lt;&lt;</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">sethjackson 2006-11-30 21:24:00</div>

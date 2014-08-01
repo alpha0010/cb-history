@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,43 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/editorconfigurationdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorconfigurationdlg.cpp    (revision 2537)</span>
+<span class="gi">+++ src/sdk/editorconfigurationdlg.cpp    (working copy)</span>
+<span class="gu">@@ -837,7 +837,20 @@</span>
+         cfg-&gt;Write(_T(&quot;/caret/period&quot;), XRCCTRL(*this, &quot;slCaretPeriod&quot;, wxSlider)-&gt;GetValue());
+ 
+         //folding
+<span class="gd">-        cfg-&gt;Write(_T(&quot;/folding/show_folds&quot;),             XRCCTRL(*this, &quot;chkEnableFolding&quot;, wxCheckBox)-&gt;GetValue());</span>
+<span class="gi">+        bool enableFolding = XRCCTRL(*this, &quot;chkEnableFolding&quot;, wxCheckBox)-&gt;GetValue();</span>
+<span class="gi">+        if (!enableFolding)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            //if the folding has been disabled, first unfold </span>
+<span class="gi">+            //all blocks in all editors</span>
+<span class="gi">+            EditorManager *em = Manager::Get()-&gt;GetEditorManager();</span>
+<span class="gi">+            for (int idx = 0; idx&lt;em-&gt;GetEditorsCount(); ++idx)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                cbEditor *ed = em-&gt;GetBuiltinEditor(em-&gt;GetEditor(idx));</span>
+<span class="gi">+                ed-&gt;UnfoldAll();</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+<span class="gi">+</span>
+<span class="gi">+        cfg-&gt;Write(_T(&quot;/folding/show_folds&quot;),             enableFolding);</span>
+         cfg-&gt;Write(_T(&quot;/folding/fold_all_on_open&quot;),     XRCCTRL(*this, &quot;chkFoldOnOpen&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/folding/fold_preprocessor&quot;),     XRCCTRL(*this, &quot;chkFoldPreprocessor&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/folding/fold_comments&quot;),         XRCCTRL(*this, &quot;chkFoldComments&quot;, wxCheckBox)-&gt;GetValue());
+<span class="gu">@@ -857,7 +870,7 @@</span>
+ 
+         //margin
+         cfg-&gt;Write(_T(&quot;/margin/width_chars&quot;), XRCCTRL(*this, &quot;spnMarginWidth&quot;, wxSpinCtrl)-&gt;GetValue());
+<span class="gd">-        cfg-&gt;Write(_T(&quot;margin/dynamic_width&quot;), XRCCTRL(*this, &quot;chkDynamicWidth&quot;, wxCheckBox)-&gt;GetValue());</span>
+<span class="gi">+        cfg-&gt;Write(_T(&quot;/margin/dynamic_width&quot;), XRCCTRL(*this, &quot;chkDynamicWidth&quot;, wxCheckBox)-&gt;GetValue());</span>
+         cfg-&gt;Write(_T(&quot;/margin_1_sensitive&quot;), (bool)XRCCTRL(*this, &quot;chkAddBPByLeftClick&quot;, wxCheckBox)-&gt;GetValue());
+ 
+         // default code : first update what&#39;s in the current txtCtrl,
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

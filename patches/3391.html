@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,161 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/codecompletion/codecompletion.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/codecompletion.h    (revision 8646)</span>
+<span class="gi">+++ src/plugins/codecompletion/codecompletion.h    (working copy)</span>
+<span class="gu">@@ -279,6 +279,7 @@</span>
+     int                     m_ActiveCalltipsNest;
+ 
+     bool                    m_IsAutoPopup;
+<span class="gi">+    bool                    m_CompletePPOnly;</span>
+     // The variables below were related to CC&#39;s toolbar
+     /** the CC&#39;s toolbar */
+     wxToolBar*              m_ToolBar;
+<span class="gh">Index: src/plugins/codecompletion/codecompletion.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/codecompletion.cpp    (revision 8646)</span>
+<span class="gi">+++ src/plugins/codecompletion/codecompletion.cpp    (working copy)</span>
+<span class="gu">@@ -380,6 +380,36 @@</span>
+ &quot;                &quot;,
+ &quot;                &quot;};
+ 
+<span class="gi">+// bitmap for #include file listings</span>
+<span class="gi">+/* XPM */</span>
+<span class="gi">+static const char* header_file_xpm[] = {</span>
+<span class="gi">+&quot;16 16 9 1&quot;,</span>
+<span class="gi">+&quot;   c None&quot;,</span>
+<span class="gi">+&quot;+  c #D23E39&quot;,</span>
+<span class="gi">+&quot;$  c #CF0C0A&quot;,</span>
+<span class="gi">+&quot;@  c #CB524B&quot;,</span>
+<span class="gi">+&quot;&amp;  c #E2D8D8&quot;,</span>
+<span class="gi">+&quot;#  c #C7C7C4&quot;,</span>
+<span class="gi">+&quot;_  c #E4B9B5&quot;,</span>
+<span class="gi">+&quot;-  c #F7F9F7&quot;,</span>
+<span class="gi">+&quot;=  c #EBE9E7&quot;,</span>
+<span class="gi">+&quot;  #########     &quot;,</span>
+<span class="gi">+&quot;  #=-----####   &quot;,</span>
+<span class="gi">+&quot;  #--------=##  &quot;,</span>
+<span class="gi">+&quot;  #--------=-#  &quot;,</span>
+<span class="gi">+&quot;  #--=@_-----#  &quot;,</span>
+<span class="gi">+&quot;  #--=+_-----#  &quot;,</span>
+<span class="gi">+&quot;  #--=++@_---#  &quot;,</span>
+<span class="gi">+&quot;  #--&amp;$@@$=--#  &quot;,</span>
+<span class="gi">+&quot;  #--&amp;$__$&amp;=-#  &quot;,</span>
+<span class="gi">+&quot;  #--&amp;$__$&amp;=-#  &quot;,</span>
+<span class="gi">+&quot;  #--&amp;$__$&amp;=-#  &quot;,</span>
+<span class="gi">+&quot;  #-==#=&amp;#==-#  &quot;,</span>
+<span class="gi">+&quot;  #-========-#  &quot;,</span>
+<span class="gi">+&quot;  #----=====-#  &quot;,</span>
+<span class="gi">+&quot;  ############  &quot;,</span>
+<span class="gi">+&quot;                &quot;};</span>
+<span class="gi">+</span>
+ // menu IDS
+ // just because we don&#39;t know other plugins&#39; used identifiers,
+ // we use wxNewId() to generate a guaranteed unique ID ;), instead of enum
+<span class="gu">@@ -469,6 +499,7 @@</span>
+     m_LastEditor(0),
+     m_ActiveCalltipsNest(0),
+     m_IsAutoPopup(false),
+<span class="gi">+    m_CompletePPOnly(false),</span>
+     m_ToolBar(0),
+     m_Function(0),
+     m_Scope(0),
+<span class="gu">@@ -837,6 +868,9 @@</span>
+ 
+ int CodeCompletion::CodeComplete()
+ {
+<span class="gi">+    const bool preprocessorOnly = m_CompletePPOnly;</span>
+<span class="gi">+    m_CompletePPOnly = false;</span>
+<span class="gi">+</span>
+     if (!IsAttached() || !m_InitDone)
+         return -1;
+ 
+<span class="gu">@@ -888,6 +922,9 @@</span>
+                 if (unique_strings.find(token-&gt;m_Name) != unique_strings.end())
+                     continue;
+ 
+<span class="gi">+                if (preprocessorOnly &amp;&amp; token-&gt;m_TokenKind != tkPreprocessor)</span>
+<span class="gi">+                    continue;</span>
+<span class="gi">+</span>
+                 unique_strings.insert(token-&gt;m_Name);
+                 int iidx = m_NativeParser.GetTokenKindImage(token);
+                 if (already_registered.Index(iidx) == wxNOT_FOUND)
+<span class="gu">@@ -919,7 +956,7 @@</span>
+ 
+             CC_LOCKER_TRACK_TT_MTX_UNLOCK(s_TokenTreeMutex)
+ 
+<span class="gd">-            if (m_NativeParser.LastAISearchWasGlobal())</span>
+<span class="gi">+            if (m_NativeParser.LastAISearchWasGlobal() &amp;&amp; !preprocessorOnly)</span>
+             {
+                 // empty or partial search phrase: add theme keywords in search list
+                 if (s_DebugSmartSense)
+<span class="gu">@@ -1095,9 +1132,19 @@</span>
+         return;
+ 
+     cbStyledTextCtrl* control = ed-&gt;GetControl();
+<span class="gd">-    const int curPos = control-&gt;GetCurrentPos();</span>
+<span class="gd">-    const int start = control-&gt;WordStartPosition(curPos, true);</span>
+<span class="gd">-    const int end = control-&gt;WordEndPosition(curPos, true);</span>
+<span class="gi">+    if (control-&gt;GetLexer() != wxSCI_LEX_CPP)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        const FileType fTp = FileTypeOf(ed-&gt;GetShortName());</span>
+<span class="gi">+        if (   fTp != ftSource</span>
+<span class="gi">+            &amp;&amp; fTp != ftHeader</span>
+<span class="gi">+            &amp;&amp; fTp != ftResource )</span>
+<span class="gi">+        {</span>
+<span class="gi">+            return; // not C/C++</span>
+<span class="gi">+        }</span>
+<span class="gi">+    }</span>
+<span class="gi">+    const int curPos    = control-&gt;GetCurrentPos();</span>
+<span class="gi">+    const int start     = control-&gt;WordStartPosition(curPos, true);</span>
+<span class="gi">+    const wxString text = control-&gt;GetTextRange(start, curPos);</span>
+ 
+     wxArrayString tokens;
+     tokens.Add(_T(&quot;include&quot;));
+<span class="gu">@@ -1115,9 +1162,21 @@</span>
+     tokens.Add(_T(&quot;error&quot;));
+     tokens.Add(_T(&quot;line&quot;));
+     tokens.Sort();
+<span class="gd">-    ed-&gt;GetControl()-&gt;ClearRegisteredImages();</span>
+<span class="gd">-    ed-&gt;GetControl()-&gt;AutoCompSetIgnoreCase(false);</span>
+<span class="gd">-    ed-&gt;GetControl()-&gt;AutoCompShow(end - start, GetStringFromArray(tokens, _T(&quot; &quot;)));</span>
+<span class="gi">+    control-&gt;ClearRegisteredImages();</span>
+<span class="gi">+    for (int i = 0; i &lt; (int)tokens.GetCount(); ++i)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        if (!text.IsEmpty() &amp;&amp; tokens[i][0] != text[0])</span>
+<span class="gi">+        {</span>
+<span class="gi">+            tokens.RemoveAt(i); // remove tokens that start with a different letter</span>
+<span class="gi">+            --i;</span>
+<span class="gi">+        }</span>
+<span class="gi">+        else</span>
+<span class="gi">+            tokens[i] += wxString::Format(wxT(&quot;?%d&quot;), PARSER_IMG_PREPROCESSOR);</span>
+<span class="gi">+    }</span>
+<span class="gi">+    control-&gt;RegisterImage(PARSER_IMG_PREPROCESSOR,</span>
+<span class="gi">+                           m_NativeParser.GetImageList()-&gt;GetBitmap(PARSER_IMG_PREPROCESSOR));</span>
+<span class="gi">+    control-&gt;AutoCompSetIgnoreCase(false);</span>
+<span class="gi">+    control-&gt;AutoCompShow(curPos - start, GetStringFromArray(tokens, _T(&quot; &quot;)));</span>
+ }
+ 
+ // Do the code completion when we enter:
+<span class="gu">@@ -1155,9 +1214,9 @@</span>
+         return;
+ 
+     int keyPos = line.Find(_T(&#39;&quot;&#39;));
+<span class="gd">-    if (keyPos == wxNOT_FOUND)</span>
+<span class="gi">+    if (keyPos == wxNOT_FOUND || keyPos &gt;= pos - lineStartPos)</span>
+         keyPos = line.Find(_T(&#39;&lt;&#39;));
+<span class="gd">-    if (keyPos == wxNOT_FOUND || keyPos &gt; pos - lineStartPos)</span>
+<span class="gi">+    if (keyPos == wxNOT_FOUND || keyPos &gt;= pos - lineStartPos)</span>
+         return;
+     ++keyPos;
+ 
+<span class="gu">@@ -1167,6 +1226,10 @@</span>
+     if
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">alpha0010 2012-12-06 01:28:10</div>

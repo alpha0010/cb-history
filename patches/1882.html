@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,145 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: debuggergdb.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- debuggergdb.cpp    (revision 3676)</span>
+<span class="gi">+++ debuggergdb.cpp    (working copy)</span>
+<span class="gu">@@ -233,6 +233,10 @@</span>
+     {
+         NotifyMissingFile(_T(&quot;debugger.zip&quot;));
+     }
+<span class="gi">+    // vars for Linux console //(pecan 2007/2/06)</span>
+<span class="gi">+    m_bIsConsole = false;</span>
+<span class="gi">+    m_nConsolePid = 0;</span>
+<span class="gi">+    m_ConsoleTty = wxEmptyString;</span>
+ }
+ 
+ DebuggerGDB::~DebuggerGDB()
+<span class="gu">@@ -1021,6 +1025,21 @@</span>
+     m_State.GetDriver()-&gt;Prepare(target &amp;&amp; target-&gt;GetTargetType() == ttConsoleOnly);
+     m_State.ApplyBreakpoints();
+ 
+<span class="gi">+   #ifdef __WXGTK__    //(pecan 2007/2/05)</span>
+<span class="gi">+    // create xterm and issue tty &quot;/dev/pts/#&quot; to GDB where</span>
+<span class="gi">+    // # is the tty for the newly created xterm</span>
+<span class="gi">+    m_bIsConsole = (target &amp;&amp; target-&gt;GetTargetType() == ttConsoleOnly);</span>
+<span class="gi">+    if (m_bIsConsole)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        if (RunNixConsole() &gt; 0 )</span>
+<span class="gi">+        {   wxString gdbTtyCmd;</span>
+<span class="gi">+            gdbTtyCmd &lt;&lt; wxT(&quot;tty &quot;) &lt;&lt; m_ConsoleTty;</span>
+<span class="gi">+            m_State.GetDriver()-&gt;QueueCommand(new DebuggerCmd(m_State.GetDriver(), gdbTtyCmd, true));</span>
+<span class="gi">+            DebugLog(wxString::Format( _(&quot;Queued:[%s]&quot;), gdbTtyCmd.c_str()) );</span>
+<span class="gi">+        }</span>
+<span class="gi">+    }//if</span>
+<span class="gi">+   #endif//def __WXGTK__</span>
+<span class="gi">+</span>
+     // Don&#39;t issue &#39;run&#39; if attaching to a process (Bug #1391904)
+     if (m_PidToAttach == 0)
+         m_State.GetDriver()-&gt;Start(m_BreakOnEntry);
+<span class="gu">@@ -1503,12 +1522,21 @@</span>
+ 
+ void DebuggerGDB::Stop()
+ {
+<span class="gi">+    // m_Process is PipedProcess I/O; m_Pid is debugger pid</span>
+     if (m_pProcess &amp;&amp; m_Pid)
+     {
+         if (IsStopped())
+         {
+             RunCommand(CMD_STOP);
+             m_pProcess-&gt;CloseOutput();
+<span class="gi">+           #ifdef __WXGTK__</span>
+<span class="gi">+            // kill any linux console //(pecan 2007/2/06)</span>
+<span class="gi">+            if ( m_bIsConsole &amp;&amp; (m_nConsolePid &gt; 0) )</span>
+<span class="gi">+            {</span>
+<span class="gi">+                ::wxKill(m_nConsolePid);</span>
+<span class="gi">+                m_nConsolePid = 0;</span>
+<span class="gi">+            }</span>
+<span class="gi">+           #endif</span>
+         }
+         else
+         {
+<span class="gu">@@ -2214,3 +2242,108 @@</span>
+ {
+     Configure();
+ }
+<span class="gi">+// ----------------------------------------------------------------------------</span>
+<span class="gi">+int DebuggerGDB::RunNixConsole()</span>
+<span class="gi">+// ----------------------------------------------------------------------------</span>
+<span class="gi">+{//(pecan 2007/3/09)</span>
+<span class="gi">+</span>
+<span class="gi">+    // start the xterm and put the shell to sleep with -e sleep 80000</span>
+<span class="gi">+    // fetch the xterm tty so we can issue to gdb a &quot;tty /dev/pts/#&quot;</span>
+<span class="gi">+    // redirecting program stdin/stdout/stderr to the xterm console.</span>
+<span class="gi">+</span>
+<span class="gi">+  #ifndef __WXMSW__</span>
+<span class="gi">+    wxString cmd;</span>
+<span class="gi">+    wxString title = wxT(&quot;Program Console&quot;);</span>
+<span class="gi">+    m_nConsolePid = 0;</span>
+<span class="gi">+    // for non-win platforms, use m_ConsoleTerm to run the console app</span>
+<span class="gi">+    wxString term = Manager::Get()-&gt;GetConfigManager(_T(&quot;app&quot;))-&gt;Read(_T(&quot;/console_terminal&quot;), DEFAULT_CONSOLE_TERM);</span>
+<span class="gi">+    term.Replace(_T(&quot;$TITLE&quot;), _T(&quot;&#39;&quot;) + title + _T(&quot;&#39;&quot;));</span>
+<span class="gi">+    cmd &lt;&lt; term &lt;&lt; _T(&quot; &quot;);</span>
+<span class="gi">+    cmd &lt;&lt; wxT(&quot;sleep &quot;);</span>
+<span class="gi">+    cmd &lt;&lt; wxString::Format(wxT(&quot;%d&quot;),80000 + ::wxGetProcessId());</span>
+<span class="gi">+</span>
+<span class="gi">+    Manager::Get()-&gt;GetMacrosManager()-&gt;ReplaceEnvVars(cmd);</span>
+<span class="gi">+    DebugLog(wxString::Format( _(&quot;Executing: %s&quot;), cmd.c_str()) );</span>
+<span class="gi">+    //start xterm -e sleep {some unique # of seconds}</span>
+<span class="gi">+    m_nConsolePid = wxExecute(cmd, wxEXEC_ASYNC);</span>
+<span class="gi">+    if (m_nConsolePid &lt;= 0) return -1;</span>
+<span class="gi">+</span>
+<span class="gi">+    // Issue the PS command to get the /dev/tty device name</span>
+<span class="gi">+    // First, wait for the xterm to settle down, else PS won&#39;t see the sleep task</span>
+<span class="gi">+    Manager::Yield();</span>
+<span class="gi">+    ::wxSleep(1);</span>
+<span class="gi">+    m_ConsoleTty = GetConsoleTty(m_nConsolePid);</span>
+<span class="gi">+    if (not m_ConsoleTty.IsEmpty() )</span>
+<span class="gi">+    {   // show what we found as tty</span>
+<span class="gi">+        DebugLog(wxString::Format(wxT(&quot;GetConsoleTTY[%s]ConsolePid[%d]&quot;),m_ConsoleTty.c_str(),m_nConsolePid));</span>
+<span class="gi">+        return m_nConsolePid;</span>
+<span class="gi">+    }</span>
+<span class="gi">+    // failed to find the console tty</span>
+<span class="gi">+    DebugLog( wxT(&quot;Console Execution error:failed to find console tty.&quot;));</span>
+<span class="gi">+    if (m_nConsolePid != 0)::wxKill(m_nConsolePid);</span>
+<span class="gi">+    m_nConsolePid = 0;</span>
+<span class="gi">+  #endif//ndef __WWXMSW__</span>
+<span class="gi">+    return -1;</span>
+<span class="gi">+}</span>
+<span class="gi">+// ----------------------------------------------------------------------------</span>
+<span class="gi">+wxString DebuggerGDB::GetConsoleTty(int ConsolePid)</span>
+<span class="gi">+// ----------------------------------------------------------------------------</span>
+<span class="gi">+{//(pecan 2007/3/09)</span>
+<span class="gi">+</span>
+<span class="gi">+    // execute the ps x -o command  and read PS output to get the /dev/tty field</span>
+<span class="gi">+</span>
+<span class="gi">+    unsigned long ConsPid = ConsolePid;</span>
+<span class="gi">+    wxString psCmd;</span>
+<span class="gi">+    wxArrayString psOutput;</span>
+<span class="gi">+    wxArrayString psErrors;</span>
+<span class="gi">+</span>
+<span class="gi">+    psCmd &lt;&lt; wxT(&quot;ps x -o tty,pid,command&quot;);</span>
+<span class="gi">+    DebugLog(wxString::Format( _(&quot;Executing: %s&quot;), psCmd.c_str()) );</span>
+<span class="gi">+    int result = wxExecute(psCmd, psOutput, psErrors, wxEXEC_SYNC);</span>
+<span class="gi">+    psCmd.Clear();</span>
+<span class="gi">+    if (result != 0)</span>
+<span class="gi">+    {   psCmd &lt;&lt; wxT(&quot;Result of ps x:&quot;) &lt;&lt; result;</span>
+<span class="gi">+        DebugLog(wxString::Format( _(&quot;Execution Error:&quot;), psCmd.c_str()) );</span>
+<span class="gi">+        return wxEmptyString;</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+<span class="gi">+    wxString ConsTtyStr;</span>
+<span class="gi">+    wxString ConsPidStr;</span>
+<span class="gi">+    ConsPidStr &lt;&lt; ConsPid;</span>
+<span class="gi">+    //find task with our unique sleep time</span>
+<span class="gi">+    wxString uniqueSleepTimeStr;</span>
+<span class="gi">+    uniqueSleepTimeStr &lt;&lt; wxT(&quot;sleep &quot;) &lt;&lt; wxString::Format(wxT(&quot;%d&quot;),80000 + ::wxGetProcessId());</span>
+<span class="gi">+    // search the output of &quot;ps pid&quot; command</span>
+<span class="gi">+    in</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">pecan 2007-02-11 20:22:38</div>

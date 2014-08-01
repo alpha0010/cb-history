@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,99 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 2339)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -553,6 +553,15 @@</span>
+     m_pControl-&gt;SetCaretLineVisible(mgr-&gt;ReadBool(_T(&quot;/highlight_caret_line&quot;), false));
+     m_pControl-&gt;SetCaretLineBackground(GetOptionColour(_T(&quot;/highlight_caret_line_color&quot;), wxColour(0xFF, 0xFF, 0x00)));
+ 
+<span class="gi">+    wxColour selForegroundColor = GetOptionColour(_T(&quot;/selection_foreground_color&quot;), wxNullColour);</span>
+<span class="gi">+</span>
+<span class="gi">+    if (selForegroundColor != wxNullColour)</span>
+<span class="gi">+        m_pControl-&gt;SetSelForeground(true, selForegroundColor);</span>
+<span class="gi">+    else</span>
+<span class="gi">+        m_pControl-&gt;SetSelForeground(false, wxNullColour);</span>
+<span class="gi">+</span>
+<span class="gi">+    m_pControl-&gt;SetSelBackground(true, GetOptionColour(_T(&quot;/selection_background_color&quot;), *wxLIGHT_GREY));</span>
+<span class="gi">+</span>
+     m_pControl-&gt;SetUseTabs(mgr-&gt;ReadBool(_T(&quot;/use_tab&quot;), false));
+     m_pControl-&gt;SetIndentationGuides(mgr-&gt;ReadBool(_T(&quot;/show_indent_guides&quot;), false));
+     m_pControl-&gt;SetTabIndents(mgr-&gt;ReadBool(_T(&quot;/tab_indents&quot;), true));
+<span class="gh">Index: src/sdk/editorcolorset.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorcolorset.cpp    (revision 2339)</span>
+<span class="gi">+++ src/sdk/editorcolorset.cpp    (working copy)</span>
+<span class="gu">@@ -41,7 +41,6 @@</span>
+ #include &quot;filefilters.h&quot;
+ 
+ const int cbHIGHLIGHT_LINE = -98; // highlight line under caret virtual style
+<span class="gd">-const int cbSELECTION      = -99; // selection virtual style</span>
+ 
+ EditorColorSet::EditorColorSet(const wxString&amp; setName)
+     : m_Name(setName)
+<span class="gu">@@ -134,7 +133,6 @@</span>
+             OptionColor* opt = it-&gt;second.m_Colors.Item(i);
+             // valid values are:
+             if (opt-&gt;value &lt; 0 &amp;&amp;               // styles &gt;= 0
+<span class="gd">-                opt-&gt;value != cbSELECTION &amp;&amp;    // cbSELECTION</span>
+                 opt-&gt;value != cbHIGHLIGHT_LINE) // cbHIGHLIGHT_LINE
+             {
+                 it-&gt;second.m_Colors.Remove(opt);
+<span class="gu">@@ -437,16 +435,6 @@</span>
+                 control-&gt;SetCaretLineBackground(opt-&gt;back);
+                 Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;))-&gt;Write(_T(&quot;/highlight_caret_line_color&quot;), opt-&gt;back);
+             }
+<span class="gd">-            else if (opt-&gt;value == cbSELECTION)</span>
+<span class="gd">-            {</span>
+<span class="gd">-                if (opt-&gt;back != wxNullColour)</span>
+<span class="gd">-                {</span>
+<span class="gd">-                    control-&gt;SetSelBackground(true, opt-&gt;back);</span>
+<span class="gd">-                    Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;))-&gt;Write(_T(&quot;/selection_color&quot;), opt-&gt;back);</span>
+<span class="gd">-                }</span>
+<span class="gd">-                else</span>
+<span class="gd">-                    control-&gt;SetSelBackground(false, wxColour(0xC0, 0xC0, 0xC0));</span>
+<span class="gd">-            }</span>
+ //            else
+ //            {
+ //                control-&gt;MarkerDefine(-opt-&gt;value, 1);
+<span class="gh">Index: src/sdk/editorconfigurationdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorconfigurationdlg.cpp    (revision 2339)</span>
+<span class="gi">+++ src/sdk/editorconfigurationdlg.cpp    (working copy)</span>
+<span class="gu">@@ -71,6 +71,8 @@</span>
+ const FileType IdxToFileType[] = { ftSource, ftHeader };
+ 
+ BEGIN_EVENT_TABLE(EditorConfigurationDlg, wxDialog)
+<span class="gi">+    EVT_BUTTON(XRCID(&quot;btnSelForeColor&quot;),        EditorConfigurationDlg::OnChooseColor)</span>
+<span class="gi">+    EVT_BUTTON(XRCID(&quot;btnSelBackColor&quot;),        EditorConfigurationDlg::OnChooseColor)</span>
+     EVT_BUTTON(XRCID(&quot;btnChooseEditorFont&quot;),     EditorConfigurationDlg::OnChooseFont)
+     EVT_BUTTON(XRCID(&quot;btnKeywords&quot;),             EditorConfigurationDlg::OnEditKeywords)
+     EVT_BUTTON(XRCID(&quot;btnFilemasks&quot;),             EditorConfigurationDlg::OnEditFilemasks)
+<span class="gu">@@ -112,6 +114,8 @@</span>
+ 
+     ConfigManager* cfg = Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;));
+ 
+<span class="gi">+    XRCCTRL(*this, &quot;btnSelForeColor&quot;, wxButton)-&gt;SetBackgroundColour(cfg-&gt;ReadColour(_T(&quot;selection_foreground_color&quot;), wxNullColour));</span>
+<span class="gi">+    XRCCTRL(*this, &quot;btnSelBackColor&quot;, wxButton)-&gt;SetBackgroundColour(cfg-&gt;ReadColour(_T(&quot;selection_background_color&quot;), *wxLIGHT_GREY));</span>
+        XRCCTRL(*this, &quot;chkAutoIndent&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/auto_indent&quot;), true));
+        XRCCTRL(*this, &quot;chkSmartIndent&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/smart_indent&quot;), true));
+        XRCCTRL(*this, &quot;chkUseTab&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/use_tab&quot;), false));
+<span class="gu">@@ -801,19 +805,21 @@</span>
+ 
+         cfg-&gt;Write(_T(&quot;/font&quot;), XRCCTRL(*this, &quot;lblEditorFont&quot;, wxStaticText)-&gt;GetFont().GetNativeFontInfoDesc());
+ 
+<span class="gd">-        cfg-&gt;Write(_T(&quot;/auto_indent&quot;),            XRCCTRL(*this, &quot;chkAutoIndent&quot;, wxCheckBox)-&gt;GetValue());</span>
+<span class="gd">-        cfg-&gt;Write(_T(&quot;/smart_indent&quot;),            XRCCTRL(*this, &quot;chkSmartIndent&quot;, wxCheckBox)-&gt;GetValue());</span>
+<span class="gd">-        cfg-&gt;Write(_T(&quot;/use_tab&quot;),                 XRCCTRL(*this, &quot;chkUseTab&quot;, wxCheckBox)-&gt;GetValue());</span>
+<span class="gd">-        cfg-&gt;Write(_T(&quot;/show_indent_guides&quot;),     XRCCTRL(*this, &quot;chkShowIndentGuides&quot;, wxCheckBox)-&gt;GetValue());</span>
+<span class="gd">-        cfg-&gt;Write(_T(&quot;/tab_indents&quot;),             XRCCTRL(*this, &quot;chkTabIndents&quot;, wxCheckBox)-&gt;GetValue());</span>
+<span class="gd">-        cfg-&gt;Write(_T(&quot;/backspace_unindents&quot;),     XRCCTRL(*this, &quot;chkBackspaceUnindents&quot;, wxCheckBox)-&gt;GetValue());</span>
+<span class="gd">-        cfg-&gt;Write(_T(&quot;/word_wrap&quot;),             XRCCTRL(*this, &quot;c</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">sethjackson 2006-04-12 20:01:46</div>

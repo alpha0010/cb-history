@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,88 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 2484)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -123,7 +123,8 @@</span>
+         m_ensure_consistent_line_ends(true),
+         m_LastMarginMenuLine(-1),
+         m_LastDebugLine(-1),
+<span class="gd">-        m_useByteOrderMark(false)</span>
+<span class="gi">+        m_useByteOrderMark(false),</span>
+<span class="gi">+        lineNumbersWidth(0)</span>
+     {
+         m_encoding = wxLocale::GetSystemEncoding();
+     }
+<span class="gu">@@ -248,6 +249,27 @@</span>
+         control-&gt;ConvertEOLs(control-&gt;GetEOLMode());
+     }
+ 
+<span class="gi">+    /** Set line number column width */</span>
+<span class="gi">+    void SetLineNumberColWidth()</span>
+<span class="gi">+    {</span>
+<span class="gi">+        int lineCount = 0;</span>
+<span class="gi">+        lineCount = m_pOwner-&gt;m_pControl-&gt;GetLineCount();</span>
+<span class="gi">+</span>
+<span class="gi">+        int lineNumWidth = 1;</span>
+<span class="gi">+        while (lineCount &gt;= 10)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            lineCount /= 10;</span>
+<span class="gi">+            ++lineNumWidth;</span>
+<span class="gi">+        }</span>
+<span class="gi">+</span>
+<span class="gi">+        if (lineNumWidth != lineNumbersWidth) {</span>
+<span class="gi">+            int pixels = 0;</span>
+<span class="gi">+            pixels = 5 + lineNumWidth * 8;</span>
+<span class="gi">+            m_pOwner-&gt;m_pControl-&gt;SetMarginWidth(0, pixels);</span>
+<span class="gi">+            lineNumbersWidth = lineNumWidth;</span>
+<span class="gi">+        }</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+     //vars
+     bool m_strip_trailing_spaces;
+     bool m_ensure_final_line_end;
+<span class="gu">@@ -259,6 +281,8 @@</span>
+     wxFontEncoding m_encoding;
+     bool m_useByteOrderMark;
+ 
+<span class="gi">+    int lineNumbersWidth;</span>
+<span class="gi">+</span>
+ };
+ ////////////////////////////////////////////////////////////////////////////////
+ 
+<span class="gu">@@ -350,8 +374,8 @@</span>
+ //    Manager::Get()-&gt;GetMessageManager()-&gt;DebugLog(_T(&quot;ctor: Filename=%s\nShort=%s&quot;), m_Filename.c_str(), m_Shortname.c_str());
+ 
+     CreateEditor();
+<span class="gi">+    m_IsOK = Open();</span>
+     SetEditorStyle();
+<span class="gd">-    m_IsOK = Open();</span>
+ 
+     // if !m_IsOK then it&#39;s a new file, so set the modified flag ON
+     if (!m_IsOK &amp;&amp; filename.IsEmpty())
+<span class="gu">@@ -579,7 +603,7 @@</span>
+     // line numbering
+     m_pControl-&gt;SetMarginType(0, wxSCI_MARGIN_NUMBER);
+        if (mgr-&gt;ReadBool(_T(&quot;/show_line_numbers&quot;), true))
+<span class="gd">-        m_pControl-&gt;SetMarginWidth(0, 48);</span>
+<span class="gi">+        m_pData-&gt;SetLineNumberColWidth();</span>
+     else
+         m_pControl-&gt;SetMarginWidth(0, 0);
+ 
+<span class="gu">@@ -1870,6 +1894,9 @@</span>
+ 
+             line = m_pControl-&gt;MarkerPrevious(line - 1, 1 &lt;&lt; BREAKPOINT_MARKER);
+         }
+<span class="gi">+</span>
+<span class="gi">+        // Adjust line numbers column</span>
+<span class="gi">+        m_pData-&gt;SetLineNumberColWidth();</span>
+     }
+ }
+ 
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">thomasdenk 2006-05-22 17:39:27</div>

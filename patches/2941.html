@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,163 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/todo/addtododlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/todo/addtododlg.cpp    (revision 6193)</span>
+<span class="gi">+++ src/plugins/todo/addtododlg.cpp    (working copy)</span>
+<span class="gu">@@ -210,7 +210,7 @@</span>
+ void AddTodoDlg::OnAddType(wxCommandEvent&amp;)
+ {
+     // ask for the new type to be added to the &quot;choice&quot; list
+<span class="gd">-    wxTextEntryDialog dlg(this, _T(&quot;Enter the user you wish to add&quot;), _T(&quot;Add type&quot;), _T(&quot;&quot;), wxOK|wxCANCEL);</span>
+<span class="gi">+    wxTextEntryDialog dlg(this, _T(&quot;Enter the type you wish to add&quot;), _T(&quot;Add type&quot;), _T(&quot;&quot;), wxOK|wxCANCEL);</span>
+     if(dlg.ShowModal() == wxID_OK)
+     {
+         wxString Type = dlg.GetValue();
+<span class="gh">Index: src/plugins/todo/addtododlg.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/todo/addtododlg.h    (revision 6193)</span>
+<span class="gi">+++ src/plugins/todo/addtododlg.h    (working copy)</span>
+<span class="gu">@@ -25,7 +25,9 @@</span>
+ {
+     tdctCpp = 0, // C++ style,
+     tdctC,       // C style
+<span class="gd">-    tdctDoxygen, // Doxygen style</span>
+<span class="gi">+    // GJH 3/3/10 Added doxygen comment in C-style block.</span>
+<span class="gi">+    tdctDoxygenC, // Doxygen C style</span>
+<span class="gi">+    tdctDoxygenCPP, // Doxygen CPP style</span>
+     tdctWarning, // compiler warning
+     tdctError    // compiler error
+ };
+<span class="gh">Index: src/plugins/todo/resources/add_todo.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/todo/resources/add_todo.xrc    (revision 6193)</span>
+<span class="gi">+++ src/plugins/todo/resources/add_todo.xrc    (working copy)</span>
+<span class="gu">@@ -127,7 +127,8 @@</span>
+               &lt;content&gt;
+                 &lt;item&gt;C++ style comment&lt;/item&gt;
+                 &lt;item&gt;C style comment&lt;/item&gt;
+<span class="gd">-                &lt;item&gt;Doxygen style comment&lt;/item&gt;</span>
+<span class="gi">+                &lt;item&gt;Doxygen C style comment (in block)&lt;/item&gt;</span>
+<span class="gi">+                &lt;item&gt;Doxygen C++ style comment&lt;/item&gt;</span>
+                 &lt;item&gt;Compiler warning&lt;/item&gt;
+                 &lt;item&gt;Compiler error&lt;/item&gt;
+               &lt;/content&gt;
+<span class="gh">Index: src/plugins/todo/todolist.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/todo/todolist.cpp    (revision 6193)</span>
+<span class="gi">+++ src/plugins/todo/todolist.cpp    (working copy)</span>
+<span class="gu">@@ -66,7 +66,6 @@</span>
+ 
+ ToDoList::~ToDoList()
+ {
+<span class="gd">-    //dtor</span>
+ }
+ 
+ void ToDoList::OnAttach()
+<span class="gu">@@ -77,7 +76,7 @@</span>
+     titles.Add(_(&quot;Type&quot;));
+     titles.Add(_(&quot;Text&quot;));
+     titles.Add(_(&quot;User&quot;));
+<span class="gd">-    titles.Add(_(&quot;Prio.&quot;));</span>
+<span class="gi">+    titles.Add(_(&quot;Priority&quot;));</span>
+     titles.Add(_(&quot;Line&quot;));
+     titles.Add(_(&quot;File&quot;));
+     widths.Add(64);
+<span class="gu">@@ -96,7 +95,7 @@</span>
+     {
+         LogManager* msgMan = Manager::Get()-&gt;GetLogManager();
+         m_ListPageIndex = msgMan-&gt;SetLog(m_pListLog);
+<span class="gd">-        msgMan-&gt;Slot(m_ListPageIndex).title = _(&quot;Todo&quot;);</span>
+<span class="gi">+        msgMan-&gt;Slot(m_ListPageIndex).title = _(&quot;To Do&quot;);</span>
+ 
+         CodeBlocksLogEvent evt(cbEVT_ADD_LOG_WINDOW, m_pListLog, msgMan-&gt;Slot(m_ListPageIndex).title, msgMan-&gt;Slot(m_ListPageIndex).icon);
+         Manager::Get()-&gt;ProcessEvent(evt);
+<span class="gu">@@ -242,6 +241,13 @@</span>
+         m_Types.Add(_T(&quot;@note&quot;));
+         m_Types.Add(_T(&quot;\\note&quot;));
+     }
+<span class="gi">+    m_pListLog-&gt;m_pAllowedTypesDlg-&gt;Clear();</span>
+<span class="gi">+    m_pListLog-&gt;m_pAllowedTypesDlg-&gt;AddItem(m_Types);</span>
+<span class="gi">+</span>
+<span class="gi">+    wxArrayString selectedTypes;</span>
+<span class="gi">+    Manager::Get()-&gt;GetConfigManager(_T(&quot;todo_list&quot;))-&gt;Read(_T(&quot;types_selected&quot;), &amp;selectedTypes);</span>
+<span class="gi">+</span>
+<span class="gi">+    m_pListLog-&gt;m_pAllowedTypesDlg-&gt;SetChecked(selectedTypes);</span>
+     SaveTypes();
+ }
+ 
+<span class="gu">@@ -370,7 +376,11 @@</span>
+         case tdctCpp:
+             buffer &lt;&lt; _T(&quot;// &quot;);
+             break;
+<span class="gd">-        case tdctDoxygen:</span>
+<span class="gi">+        // GJH 3/3/10 Added doxygen comment in C-style block.</span>
+<span class="gi">+        case tdctDoxygenC:</span>
+<span class="gi">+            buffer &lt;&lt; _T(&quot; * &quot;);</span>
+<span class="gi">+            break;</span>
+<span class="gi">+        case tdctDoxygenCPP:</span>
+             buffer &lt;&lt; _T(&quot;/// &quot;);
+             break;
+         case tdctWarning:
+<span class="gh">Index: src/plugins/todo/todolistview.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/todo/todolistview.cpp    (revision 6193)</span>
+<span class="gi">+++ src/plugins/todo/todolistview.cpp    (working copy)</span>
+<span class="gu">@@ -9,26 +9,26 @@</span>
+ 
+ #include &quot;sdk.h&quot;
+ #ifndef CB_PRECOMP
+<span class="gd">-  #include &lt;wx/arrstr.h&gt;</span>
+<span class="gd">-  #include &lt;wx/button.h&gt;</span>
+<span class="gd">-  #include &lt;wx/combobox.h&gt;</span>
+<span class="gd">-  #include &lt;wx/event.h&gt;</span>
+<span class="gd">-  #include &lt;wx/file.h&gt;</span>
+<span class="gd">-  #include &lt;wx/intl.h&gt;</span>
+<span class="gd">-  #include &lt;wx/listctrl.h&gt;</span>
+<span class="gd">-  #include &lt;wx/sizer.h&gt;</span>
+<span class="gd">-  #include &lt;wx/stattext.h&gt;</span>
+<span class="gd">-  #include &lt;wx/utils.h&gt;</span>
+<span class="gi">+#include &lt;wx/arrstr.h&gt;</span>
+<span class="gi">+#include &lt;wx/button.h&gt;</span>
+<span class="gi">+#include &lt;wx/combobox.h&gt;</span>
+<span class="gi">+#include &lt;wx/event.h&gt;</span>
+<span class="gi">+#include &lt;wx/file.h&gt;</span>
+<span class="gi">+#include &lt;wx/intl.h&gt;</span>
+<span class="gi">+#include &lt;wx/listctrl.h&gt;</span>
+<span class="gi">+#include &lt;wx/sizer.h&gt;</span>
+<span class="gi">+#include &lt;wx/stattext.h&gt;</span>
+<span class="gi">+#include &lt;wx/utils.h&gt;</span>
+ 
+<span class="gd">-  #include &quot;cbeditor.h&quot;</span>
+<span class="gd">-  #include &quot;cbproject.h&quot;</span>
+<span class="gd">-  #include &quot;editormanager.h&quot;</span>
+<span class="gd">-  #include &quot;filemanager.h&quot;</span>
+<span class="gd">-  #include &quot;globals.h&quot;</span>
+<span class="gd">-  #include &quot;manager.h&quot;</span>
+<span class="gd">-  #include &quot;projectfile.h&quot;</span>
+<span class="gd">-  #include &quot;projectmanager.h&quot;</span>
+<span class="gd">-  //#include &quot;logmanager.h&quot;</span>
+<span class="gi">+#include &quot;cbeditor.h&quot;</span>
+<span class="gi">+#include &quot;cbproject.h&quot;</span>
+<span class="gi">+#include &quot;editormanager.h&quot;</span>
+<span class="gi">+#include &quot;filemanager.h&quot;</span>
+<span class="gi">+#include &quot;globals.h&quot;</span>
+<span class="gi">+#include &quot;manager.h&quot;</span>
+<span class="gi">+#include &quot;projectfile.h&quot;</span>
+<span class="gi">+#include &quot;projectmanager.h&quot;</span>
+<span class="gi">+#include &quot;logmanager.h&quot;</span>
+ #endif
+ 
+ #include &lt;wx/progdlg.h&gt;
+<span class="gu">@@ -40,16 +40,18 @@</span>
+ 
+ namespace
+ {
+<span class="gd">-    int idList = wx</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">cryogen 2010-03-20 04:00:18</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,80 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: codeblocks.spec.in</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- codeblocks.spec.in    (revision 3163)</span>
+<span class="gi">+++ codeblocks.spec.in    (arbetskopia)</span>
+<span class="gu">@@ -1,6 +1,7 @@</span>
+ %define _svnrev        %(echo @VERSION@ | cut -c 8-)
+ %define req_wxgtk    2.6.0
+ %define _fedora        %(if [ -f /etc/fedora-release ]; then echo 1; else echo 0; fi)
+<span class="gi">+%define _redhat        %(if [ -f /etc/redhat-release ]; then echo 1; else echo 0; fi)</span>
+ %define _suse           %(if [ -f /etc/SuSE-release ]; then echo 1; else echo 0; fi)
+ %define _mandriva       %(if [ -f /etc/mandrake-release ]; then echo 1; else echo 0; fi)
+ %define _version        1.0_0.svn.%{_svnrev}
+<span class="gu">@@ -21,12 +22,20 @@</span>
+ %define _mandriva_vernum    %(echo &quot;%_{mandriva_version}&quot;|tr -d &#39;.&#39;)
+ %define _release            %{_rel}.mdk%{_mandriva_vernum}
+ %define _distribution       %(cat /etc/mandrake-release|cut -f1-4 -d&quot; &quot;)
+<span class="gi">+%define _redhat 0</span>
+ %endif
+ %if %_fedora
+ %define _fedora_vernum      %(cat /etc/fedora-release | cut -f4 -d&quot; &quot;)
+ %define _release            %{_rel}.fc%{_fedora_vernum}
+ %define _distribution       %(cat /etc/fedora-release|cut -f1-4 -d&quot; &quot;)
+<span class="gi">+%define _redhat 0</span>
+ %endif
+<span class="gi">+%if %_redhat</span>
+<span class="gi">+%define _redhat_prefix      %(grep -q &quot;Red Hat Linux&quot; /etc/redhat-release &amp;&amp; echo rhl || echo el)</span>
+<span class="gi">+%define _redhat_vernum      %(rpm -qf --queryformat %{VERSION} /etc/redhat-release|tr -d &#39;.&#39;)</span>
+<span class="gi">+%define _release            %{_rel}.%{_redhat_prefix}%{_redhat_vernum}</span>
+<span class="gi">+%define _distribution       %(cat /etc/redhat-release)</span>
+<span class="gi">+%endif</span>
+ 
+ %if %_suse
+ %if %suse_version &gt;= 930
+<span class="gu">@@ -38,7 +47,14 @@</span>
+ %define debugrpm            1
+ %endif
+ 
+<span class="gi">+%define automake17        0</span>
+ 
+<span class="gi">+%if %_redhat</span>
+<span class="gi">+%if %_redhat_vernum &lt; 4</span>
+<span class="gi">+%define automake17        1</span>
+<span class="gi">+%endif</span>
+<span class="gi">+%endif</span>
+<span class="gi">+</span>
+ Name:            codeblocks
+ Version:        %{_version}
+ Release:        %{_release}
+<span class="gu">@@ -59,7 +75,11 @@</span>
+ BuildRequires:          wxGTK2.6 &gt;= %{req_wxgtk}, wxgtku-devel &gt;= %{req_wxgtk}
+ %endif
+ 
+<span class="gi">+%if ! %{automake17}</span>
+ BuildRequires:          intltool, gcc-c++, make, gettext, autoconf &gt;= 2.5, automake &gt;= 1.7, libtool &gt;= 1.4, m4
+<span class="gi">+%else</span>
+<span class="gi">+BuildRequires:          intltool, gcc-c++, make, gettext, autoconf &gt;= 2.5, automake17, libtool &gt;= 1.4, m4</span>
+<span class="gi">+%endif</span>
+ BuildRequires:      libstdc++, libstdc++-devel
+ BuildRequires:      zip, subversion
+ 
+<span class="gu">@@ -101,7 +121,11 @@</span>
+ %{?suse_update_config:%{suse_update_config -f}}
+ 
+ %build
+<span class="gi">+%if ! %{automake17}</span>
+  ./bootstrap
+<span class="gi">+%else</span>
+<span class="gi">+ AUTOMAKE=automake-1.7 ACLOCAL=aclocal-1.7 ACLOCAL_FLAGS=&quot;-I %{_datadir}/aclocal&quot; ./bootstrap</span>
+<span class="gi">+%endif</span>
+   %configure \
+     --enable-contrib
+   %__make
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">afb 2006-10-31 16:19:08</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,69 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/src/app.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/app.cpp    (revision 3172)</span>
+<span class="gi">+++ src/src/app.cpp    (working copy)</span>
+<span class="gu">@@ -479,6 +479,7 @@</span>
+         Manager::SetBatchBuild(m_Batch);
+         Manager::Get()-&gt;GetScriptingManager();
+         MainFrame* frame = InitFrame();
+<span class="gi">+        m_Frame = frame;</span>
+ 
+         if (m_Batch)
+         {
+<span class="gu">@@ -874,6 +875,23 @@</span>
+     s_DelayedFilesToOpen.Clear();
+ }
+ 
+<span class="gi">+</span>
+<span class="gi">+#ifdef __WXMAC__</span>
+<span class="gi">+</span>
+<span class="gi">+void CodeBlocksApp::MacOpenFile(const wxString &amp; fileName )</span>
+<span class="gi">+{</span>
+<span class="gi">+    if (m_Frame)</span>
+<span class="gi">+        m_Frame-&gt;Open(fileName, true);</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+void CodeBlocksApp::MacPrintFile(const wxString &amp; fileName )</span>
+<span class="gi">+{</span>
+<span class="gi">+    //TODO</span>
+<span class="gi">+    wxApp::MacPrintFile(fileName);</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+#endif // __WXMAC__</span>
+<span class="gi">+</span>
+ // event handlers
+ 
+ void CodeBlocksApp::OnAppActivate(wxActivateEvent&amp; event)
+<span class="gh">Index: src/src/app.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/app.h    (revision 3172)</span>
+<span class="gi">+++ src/src/app.h    (working copy)</span>
+<span class="gu">@@ -46,6 +46,12 @@</span>
+         void OnAppActivate(wxActivateEvent&amp; event);
+         bool OnCmdLineParsed(wxCmdLineParser&amp; parser);
+         void OnFatalException();
+<span class="gi">+#ifdef __WXMAC__</span>
+<span class="gi">+    // in response of an open-document apple event</span>
+<span class="gi">+    virtual void         MacOpenFile(const wxString &amp;fileName) ;</span>
+<span class="gi">+    // in response of a print-document apple event</span>
+<span class="gi">+    virtual void         MacPrintFile(const wxString &amp;fileName) ;</span>
+<span class="gi">+#endif</span>
+     protected:
+         void OnBatchBuildDone(CodeBlocksEvent&amp; event);
+         bool LoadConfig();
+<span class="gu">@@ -73,6 +79,7 @@</span>
+         wxDialog* m_pBatchBuildDialog;
+         wxString m_BatchTarget;
+         int m_BatchExitCode;
+<span class="gi">+        MainFrame* m_Frame;</span>
+         bool m_Batch;
+         bool m_BatchNotify;
+         bool m_BatchWindowAutoClose; // default: true
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">afb 2006-11-02 22:35:47</div>

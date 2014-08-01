@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,123 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/scintilla/src/Editor.cxx</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/scintilla/src/Editor.cxx    (revision 2387)</span>
+<span class="gi">+++ src/scintilla/src/Editor.cxx    (working copy)</span>
+<span class="gu">@@ -5,6 +5,18 @@</span>
+ // Copyright 1998-2004 by Neil Hodgson &lt;neilh@scintilla.org&gt;
+ // The License.txt file describes the conditions under which this software may be distributed.
+ 
+<span class="gi">+//Lines tagged //pecan 20060506 is a patch to avoid the GTK drag&#39;n&#39;drop hang bug.</span>
+<span class="gi">+//GTK is not handling a mouse &quot;moving buttonUp&quot; event well. The keyUp event is completely missed</span>
+<span class="gi">+// causing wxGTK to hang in the drag routine waiting for the up event.GTK has the mouse captured,</span>
+<span class="gi">+// so no event will ever be seen by wxGTK.</span>
+<span class="gi">+//This is aggravated by the manner in which scintilla coded the mouse doubleClick.</span>
+<span class="gi">+// It treats it as two single ButtonDown clicks, entering DragNdrop over and over again.</span>
+<span class="gi">+//This patch moves the initiation of the drag into the MouseMove code to avoid the double click</span>
+<span class="gi">+// problem. It will not allow secondary drags until a subsequent mouse up event.</span>
+<span class="gi">+//This patch does not cure the problem, it can still happen if the user quickly drags</span>
+<span class="gi">+// and lifts the mouse key at the same time the mouse is moving. But it&#39;s much harder</span>
+<span class="gi">+// to cause the hang. Pecan</span>
+<span class="gi">+</span>
+ #include &lt;stdlib.h&gt;
+ #include &lt;string.h&gt;
+ #include &lt;stdio.h&gt;
+<span class="gu">@@ -442,6 +454,9 @@</span>
+     hsEnd = -1;
+ 
+     llc.SetLevel(LineLayoutCache::llcCaret);
+<span class="gi">+    #ifdef __WXGTK__</span>
+<span class="gi">+    m_mouseButtonDownCnt = 0;   //pecan 20060507</span>
+<span class="gi">+    #endif</span>
+ }
+ 
+ Editor::~Editor() {
+<span class="gu">@@ -1212,7 +1227,7 @@</span>
+ where most code reside, and the lines after the caret, eg. the body of a function.
+ 
+      |        |       |      |                                            |
+<span class="gd">-slop | strict | jumps | even | Caret can go to the margin                 | When reaching limitÝ(caret going out of</span>
+<span class="gi">+slop | strict | jumps | even | Caret can go to the margin                 | When reaching limit (caret going out of</span>
+      |        |       |      |                                            | visibility or going into the UZ) display is...
+ -----+--------+-------+------+--------------------------------------------+--------------------------------------------------------------
+   0  |   0    |   0   |   0  | Yes                                        | moved to put caret on top/on right
+<span class="gu">@@ -5037,6 +5052,9 @@</span>
+ 
+ void Editor::ButtonDown(Point pt, unsigned int curTime, bool shift, bool ctrl, bool alt) {
+     //Platform::DebugPrintf(&quot;Scintilla:ButtonDown %d %d = %d alt=%d\n&quot;, curTime, lastClickTime, curTime - lastClickTime, alt);
+<span class="gi">+    #ifdef __WXGTK__</span>
+<span class="gi">+    m_mouseButtonDownCnt++;    //pecan 20060507</span>
+<span class="gi">+    #endif</span>
+     ptMouseLast = pt;
+     int newPos = PositionFromLocation(pt);
+     newPos = MovePositionOutsideChar(newPos, currentPos - newPos);
+<span class="gu">@@ -5124,12 +5142,18 @@</span>
+             }
+             if (!shift) {
+                 inDragDrop = PointInSelection(pt) &amp;&amp; !SelectionEmpty();
+<span class="gi">+                #ifdef __WXGTK__</span>
+<span class="gi">+                if (m_mouseButtonDownCnt&gt;1)     //pecan 20060507</span>
+<span class="gi">+                    inDragDrop = false;         //pecan 20060507</span>
+<span class="gi">+                #endif</span>
+             }
+             if (inDragDrop) {
+<span class="gi">+                #ifndef __WXGTK__       //for GTK, code moved to ButtonMove() //pecan 20060507</span>
+                 SetMouseCapture(false);
+                 SetDragPosition(newPos);
+                 CopySelectionRange(&amp;drag);
+                 StartDrag();
+<span class="gi">+                #endif</span>
+             } else {
+                 SetDragPosition(invalidPosition);
+                 SetMouseCapture(true);
+<span class="gu">@@ -5203,6 +5227,18 @@</span>
+     }
+     ptMouseLast = pt;
+     //Platform::DebugPrintf(&quot;Move %d %d\n&quot;, pt.x, pt.y);
+<span class="gi">+    #ifdef __WXGTK__        //pecan 20060507</span>
+<span class="gi">+    // code moved here from ButtonDown to avoid GTK doubleClick/drag hang bug</span>
+<span class="gi">+    if (inDragDrop) {</span>
+<span class="gi">+        SetMouseCapture(false);</span>
+<span class="gi">+        int newPos = PositionFromLocation(pt);</span>
+<span class="gi">+        SetDragPosition(newPos);</span>
+<span class="gi">+        CopySelectionRange(&amp;drag);</span>
+<span class="gi">+        m_mouseButtonDownCnt++; //don&#39;t do again until mouse ButtonUp //pecan 20060507</span>
+<span class="gi">+        StartDrag();</span>
+<span class="gi">+    }</span>
+<span class="gi">+    #endif  //pecan 20060507</span>
+<span class="gi">+</span>
+     if (HaveMouseCapture()) {
+ 
+         // Slow down autoscrolling/selection
+<span class="gu">@@ -5289,7 +5325,10 @@</span>
+ }
+ 
+ void Editor::ButtonUp(Point pt, unsigned int curTime, bool ctrl) {
+<span class="gd">-    //Platform::DebugPrintf(&quot;ButtonUp %d\n&quot;, HaveMouseCapture());</span>
+<span class="gi">+    //Platform::DebugPrintf(&quot;ButtonUp mouseCapture%d downCnt:%d&quot;, HaveMouseCapture(), m_mouseButtonDownCnt);</span>
+<span class="gi">+    #ifdef __WXGTK__</span>
+<span class="gi">+    m_mouseButtonDownCnt = 0;   //pecan 20060507</span>
+<span class="gi">+    #endif</span>
+     if (HaveMouseCapture()) {
+         if (PointInSelMargin(pt)) {
+             DisplayCursor(Window::cursorReverseArrow);
+<span class="gh">Index: src/scintilla/src/Editor.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/scintilla/src/Editor.h    (revision 2387)</span>
+<span class="gi">+++ src/scintilla/src/Editor.h    (working copy)</span>
+<span class="gu">@@ -528,6 +528,8 @@</span>
+ 
+     virtual sptr_t DefWndProc(unsigned int iMessage, uptr_t wParam, sptr_t lParam) = 0;
+ 
+<span class="gi">+    int m_mouseButtonDownCnt;   //pecan 20060507</span>
+<span class="gi">+</span>
+ public:
+     // Public so the COM thunks can access it.
+     bool IsUnicodeMode() const;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">pecan 2006-05-07 23:01:17</div>

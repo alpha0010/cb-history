@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,131 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/ThreadSearch/ThreadSearchLoggerList.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/ThreadSearch/ThreadSearchLoggerList.h    (revision 6200)</span>
+<span class="gi">+++ src/plugins/contrib/ThreadSearch/ThreadSearchLoggerList.h    (working copy)</span>
+<span class="gu">@@ -64,6 +64,8 @@</span>
+     /** Double click event handler */
+     void OnLoggerListDoubleClick(wxListEvent&amp; event);
+ 
+<span class="gi">+    /** Clicked in the header of the list control */</span>
+<span class="gi">+    void OnColumnClick(wxListEvent&amp; event);</span>
+ protected:
+     /** SetListColumns
+       * The SimpleListLog constructor does not set the provided columns on Linux.
+<span class="gu">@@ -110,8 +112,11 @@</span>
+     /** Deletes all items from the List */
+     void DeleteListItems();
+ 
+<span class="gi">+private:</span>
+     wxListCtrl* m_pListLog;
+     long        m_IndexOffset;
+<span class="gi">+    int         m_SortColumn;</span>
+<span class="gi">+    bool        m_Ascending;</span>
+ };
+ 
+ #endif // THREAD_SEARCH_LOGGER_LIST_H
+<span class="gh">Index: src/plugins/contrib/ThreadSearch/ThreadSearchLoggerList.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/ThreadSearch/ThreadSearchLoggerList.cpp    (revision 6200)</span>
+<span class="gi">+++ src/plugins/contrib/ThreadSearch/ThreadSearchLoggerList.cpp    (working copy)</span>
+<span class="gu">@@ -29,8 +29,10 @@</span>
+                                                InsertIndexManager::eFileSorting fileSorting,
+                                                wxPanel* pParent,
+                                                long id)
+<span class="gd">-                       : ThreadSearchLoggerBase(threadSearchView, threadSearchPlugin, fileSorting)</span>
+<span class="gd">-                       , m_IndexOffset(0)</span>
+<span class="gi">+                       : ThreadSearchLoggerBase(threadSearchView, threadSearchPlugin, fileSorting),</span>
+<span class="gi">+                       m_IndexOffset(0),</span>
+<span class="gi">+                       m_SortColumn(-1),</span>
+<span class="gi">+                       m_Ascending(true)</span>
+ {
+     m_pListLog = new wxListCtrl(pParent, id, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxSUNKEN_BORDER);
+     m_pListLog-&gt;SetMinSize(wxSize(100,100));
+<span class="gu">@@ -203,6 +205,7 @@</span>
+         m_pListLog-&gt;SetItem(index, 1, filename.GetFullName()); // File name
+         m_pListLog-&gt;SetItem(index, 2, words[i]);               // Line index starting from 1
+         m_pListLog-&gt;SetItem(index, 3, words[i+1]);             // File line matching search expression
+<span class="gi">+        m_pListLog-&gt;SetItemData(index, 0);</span>
+ 
+         // We update preview log for first list item
+         if ( m_pListLog-&gt;GetItemCount() == 1 )
+<span class="gu">@@ -259,6 +262,10 @@</span>
+                         (wxObjectEventFunction)(wxEventFunction)(wxCommandEventFunction)
+                         &amp;ThreadSearchLoggerList::OnLoggerListDoubleClick, NULL, static_cast&lt;wxEvtHandler*&gt;(this));
+ 
+<span class="gi">+    pEvtHandler-&gt;Connect(id, wxEVT_COMMAND_LIST_COL_CLICK,</span>
+<span class="gi">+                         (wxObjectEventFunction) (wxEventFunction) (wxListEventFunction)</span>
+<span class="gi">+                         &amp;ThreadSearchLoggerList::OnColumnClick, NULL, static_cast&lt;wxEvtHandler*&gt;(this));</span>
+<span class="gi">+</span>
+ #if wxUSE_MENUS
+     pEvtHandler-&gt;Connect(id, wxEVT_CONTEXT_MENU,
+             (wxObjectEventFunction)(wxEventFunction)(wxCommandEventFunction)
+<span class="gu">@@ -285,6 +292,10 @@</span>
+             (wxObjectEventFunction)(wxEventFunction)(wxCommandEventFunction)
+             &amp;ThreadSearchLoggerList::OnLoggerListDoubleClick, NULL, static_cast&lt;wxEvtHandler*&gt;(this));
+ 
+<span class="gi">+    pEvtHandler-&gt;Disconnect(id, wxEVT_COMMAND_LIST_COL_CLICK,</span>
+<span class="gi">+                            (wxObjectEventFunction) (wxEventFunction) (wxListEventFunction)</span>
+<span class="gi">+                            &amp;ThreadSearchLoggerList::OnColumnClick, NULL, static_cast&lt;wxEvtHandler*&gt;(this));</span>
+<span class="gi">+</span>
+ #if wxUSE_MENUS
+     pEvtHandler-&gt;Disconnect(id, wxEVT_CONTEXT_MENU,
+             (wxObjectEventFunction)(wxEventFunction)(wxCommandEventFunction)
+<span class="gu">@@ -399,6 +410,318 @@</span>
+         m_pListLog-&gt;SetItem(index, 1, _(&quot;=========&quot;));
+         m_pListLog-&gt;SetItem(index, 2, _(&quot;===&quot;));
+         m_pListLog-&gt;SetItem(index, 3, _(&quot;============&quot;));
+<span class="gi">+        m_pListLog-&gt;SetItemData(index, 1);</span>
+         m_IndexOffset = m_pListLog-&gt;GetItemCount();
+     }
+<span class="gi">+</span>
+<span class="gi">+    m_SortColumn = -1;</span>
+<span class="gi">+    m_Ascending = true;</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+int Compare(long a, long b)</span>
+<span class="gi">+{</span>
+<span class="gi">+    return (a &lt; b ? -1 : (a &gt; b ? 1 : 0));</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+struct ItemLine</span>
+<span class="gi">+{</span>
+<span class="gi">+    long line;</span>
+<span class="gi">+    long searchIndex;</span>
+<span class="gi">+    bool searchHeader;</span>
+<span class="gi">+};</span>
+<span class="gi">+</span>
+<span class="gi">+int SortLineAscending(long item1, long item2, long data)</span>
+<span class="gi">+{</span>
+<span class="gi">+    ItemLine const &amp;i1 = *reinterpret_cast&lt;ItemLine const *&gt;(item1);</span>
+<span class="gi">+    ItemLine const &amp;i2 = *reinterpret_cast&lt;ItemLine const *&gt;(item2);</span>
+<span class="gi">+</span>
+<span class="gi">+    int c = Compare(i1.searchIndex, i2.searchIndex);</span>
+<span class="gi">+    if (c)</span>
+<span class="gi">+        return c;</span>
+<span class="gi">+    if (i1.searchHeader != i2.searchHeader)</span>
+<span class="gi">+        return i1.searchHeader ? -1 : 1;</span>
+<span class="gi">+</span>
+<span class="gi">+    return Compare(i1.line, i2.line);</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+int SortLineDescending(long item1, long item2, long data)</span>
+<span class="gi">+{</span>
+<span class="gi">+    ItemLine const &amp;i1 = *reinterpret_cast&lt;ItemLine const *&gt;(item1);</span>
+<span class="gi">+    ItemLine const &amp;i2 = *reinterpret_cast&lt;ItemLine const *&gt;(item2);</span>
+<span class="gi">+</span>
+<span class="gi">+    int c = Compare(i1.searchIndex, i2.searchIndex);</span>
+<span class="gi">+    if (c)</span>
+<span class="gi">+        return c;</span>
+<span class="gi">+    if (i1.searchHeader != i2.searchHeader)</span>
+<span class="gi">+        return i1.searchHeader ? -1 : 1;</span>
+<span class="gi">+</span>
+<span class="gi">+    re</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">jenslody 2010-03-07 14:57:32</div>

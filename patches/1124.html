@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,87 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/src/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/main.cpp    (revision 2546)</span>
+<span class="gi">+++ src/src/main.cpp    (working copy)</span>
+<span class="gu">@@ -107,6 +107,7 @@</span>
+ int idFileSaveAllFiles = XRCID(&quot;idFileSaveAllFiles&quot;);
+ int idFileSaveProject = XRCID(&quot;idFileSaveProject&quot;);
+ int idFileSaveProjectAs = XRCID(&quot;idFileSaveProjectAs&quot;);
+<span class="gi">+int idFileOpenDefWorkspace = XRCID(&quot;idFileOpenDefWorkspace&quot;);</span>
+ int idFileSaveWorkspace = XRCID(&quot;idFileSaveWorkspace&quot;);
+ int idFileSaveWorkspaceAs = XRCID(&quot;idFileSaveWorkspaceAs&quot;);
+ int idFileCloseWorkspace = XRCID(&quot;idFileCloseWorkspace&quot;);
+<span class="gu">@@ -220,6 +222,7 @@</span>
+     EVT_UPDATE_UI(idFileSave, MainFrame::OnFileMenuUpdateUI)
+     EVT_UPDATE_UI(idFileSaveAs, MainFrame::OnFileMenuUpdateUI)
+     EVT_UPDATE_UI(idFileSaveAllFiles, MainFrame::OnFileMenuUpdateUI)
+<span class="gi">+    EVT_UPDATE_UI(idFileOpenDefWorkspace, MainFrame::OnFileMenuUpdateUI)</span>
+     EVT_UPDATE_UI(idFileSaveWorkspace, MainFrame::OnFileMenuUpdateUI)
+     EVT_UPDATE_UI(idFileSaveWorkspaceAs, MainFrame::OnFileMenuUpdateUI)
+     EVT_UPDATE_UI(idFileCloseWorkspace, MainFrame::OnFileMenuUpdateUI)
+<span class="gu">@@ -289,6 +293,7 @@</span>
+     EVT_MENU(idFileSaveAllFiles,  MainFrame::OnFileSaveAllFiles)
+     EVT_MENU(idFileSaveProject,  MainFrame::OnProjectSaveProject)
+     EVT_MENU(idFileSaveProjectAs,  MainFrame::OnProjectSaveProjectAs)
+<span class="gi">+    EVT_MENU(idFileOpenDefWorkspace,  MainFrame::OnFileOpenDefWorkspace)</span>
+     EVT_MENU(idFileSaveWorkspace,  MainFrame::OnFileSaveWorkspace)
+     EVT_MENU(idFileSaveWorkspaceAs,  MainFrame::OnFileSaveWorkspaceAs)
+     EVT_MENU(idFileCloseWorkspace,  MainFrame::OnFileCloseWorkspace)
+<span class="gu">@@ -1878,6 +1889,15 @@</span>
+     DoUpdateStatusBar();
+ }
+ 
+<span class="gi">+void MainFrame::OnFileOpenDefWorkspace(wxCommandEvent&amp; event)</span>
+<span class="gi">+{</span>
+<span class="gi">+    ProjectManager *pman = Manager::Get()-&gt;GetProjectManager();</span>
+<span class="gi">+    if (pman-&gt;GetWorkspace() </span>
+<span class="gi">+     &amp;&amp; pman-&gt;GetWorkspace()-&gt;IsDefault() == false</span>
+<span class="gi">+     &amp;&amp; pman-&gt;LoadWorkspace())</span>
+<span class="gi">+        AddToRecentProjectsHistory(pman-&gt;GetWorkspace()-&gt;GetFilename());</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ void MainFrame::OnFileSaveWorkspace(wxCommandEvent&amp; event)
+ {
+     if (Manager::Get()-&gt;GetProjectManager()-&gt;SaveWorkspace())
+<span class="gu">@@ -2658,6 +2678,7 @@</span>
+     mbar-&gt;Enable(idFileSaveAllFiles, ed);
+     mbar-&gt;Enable(idFileSaveProject, prj &amp;&amp; prj-&gt;GetModified() &amp;&amp; canCloseProject);
+     mbar-&gt;Enable(idFileSaveProjectAs, prj &amp;&amp; canCloseProject);
+<span class="gi">+    mbar-&gt;Enable(idFileOpenDefWorkspace, !(Manager::Get()-&gt;GetProjectManager()-&gt;GetWorkspace()-&gt;IsDefault()) &amp;&amp; canCloseProject);</span>
+     mbar-&gt;Enable(idFileSaveWorkspace, Manager::Get()-&gt;GetProjectManager() &amp;&amp; canCloseProject);
+     mbar-&gt;Enable(idFileSaveWorkspaceAs, Manager::Get()-&gt;GetProjectManager() &amp;&amp; canCloseProject);
+     mbar-&gt;Enable(idFileCloseWorkspace, Manager::Get()-&gt;GetProjectManager() &amp;&amp; canCloseProject);
+<span class="gh">Index: src/src/main.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/main.h    (revision 2546)</span>
+<span class="gi">+++ src/src/main.h    (working copy)</span>
+<span class="gu">@@ -54,6 +54,7 @@</span>
+         void OnFileSave(wxCommandEvent&amp; event);
+         void OnFileSaveAs(wxCommandEvent&amp; event);
+         void OnFileSaveAllFiles(wxCommandEvent&amp; event);
+<span class="gi">+        void OnFileOpenDefWorkspace(wxCommandEvent&amp; event);</span>
+         void OnFileSaveWorkspace(wxCommandEvent&amp; event);
+         void OnFileSaveWorkspaceAs(wxCommandEvent&amp; event);
+         void OnFileCloseWorkspace(wxCommandEvent&amp; event);
+<span class="gh">Index: src/src/resources/main_menu.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/resources/main_menu.xrc    (revision 2546)</span>
+<span class="gi">+++ src/src/resources/main_menu.xrc    (working copy)</span>
+<span class="gu">@@ -67,6 +67,10 @@</span>
+         &lt;help&gt;Save active project under a different name&lt;/help&gt;
+       &lt;/object&gt;
+       &lt;object class=&quot;separator&quot;/&gt;
+<span class="gi">+      &lt;object class=&quot;wxMenuItem&quot; name=&quot;idFileOpenDefWorkspace&quot;&gt;</span>
+<span class="gi">+        &lt;label&gt;Open default workspace&lt;/label&gt;</span>
+<span class="gi">+        &lt;help&gt;Open the default workspace&lt;/help&gt;</span>
+<span class="gi">+      &lt;/object&gt;</span>
+       &lt;object class=&quot;wxMenuItem&quot; name=&quot;idFileSaveWorkspace&quot;&gt;
+         &lt;label&gt;Save &amp;amp;workspace&lt;/label&gt;
+         &lt;help&gt;Save current workspace&lt;/help&gt;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

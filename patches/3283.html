@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,117 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 8021)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -552,6 +552,66 @@</span>
+         }
+     }
+ 
+<span class="gi">+    wxString GetUrl()</span>
+<span class="gi">+    {</span>
+<span class="gi">+        cbStyledTextCtrl* control = m_pOwner-&gt;GetControl();</span>
+<span class="gi">+        if (!control)</span>
+<span class="gi">+            return wxEmptyString;</span>
+<span class="gi">+</span>
+<span class="gi">+        wxRegEx reUrl(wxT(&quot;***:(((ht|f)tp(s?)\\:\\/\\/)|(www\\.))(([a-zA-Z0-9\\-\\._]+(\\.[a-zA-Z0-9\\-\\._]+)+)|localhost)(\\/?)([a-zA-Z0-9\\-\\.\\?\\,\\&#39;\\/\\\\\\+&amp;amp;%\\$#_]*)?([\\d\\w\\.\\/\\%\\+\\-\\=\\&amp;amp;\\?\\:\\\\\\&amp;quot;\\&#39;\\,\\|\\~\\;]*)&quot;));</span>
+<span class="gi">+        wxString url = control-&gt;GetSelectedText();</span>
+<span class="gi">+        // Is the URL selected?</span>
+<span class="gi">+        if (reUrl.Matches(url))</span>
+<span class="gi">+            return reUrl.GetMatch(url);</span>
+<span class="gi">+        // else is there a URL near the cursor?</span>
+<span class="gi">+</span>
+<span class="gi">+        // Find out start position</span>
+<span class="gi">+        int startPos = control-&gt;GetCurrentPos();</span>
+<span class="gi">+        const wxString space = wxT(&quot; \n\r\t{}&quot;);</span>
+<span class="gi">+        wxChar curCh = control-&gt;GetCharAt(startPos);</span>
+<span class="gi">+        while ( (startPos &gt; 0) &amp;&amp; (space.Find(curCh) == -1) )</span>
+<span class="gi">+        {</span>
+<span class="gi">+            startPos--;</span>
+<span class="gi">+            curCh = control-&gt;GetCharAt(startPos);</span>
+<span class="gi">+        }</span>
+<span class="gi">+</span>
+<span class="gi">+        // Find out end position</span>
+<span class="gi">+        int endPos = control-&gt;GetCurrentPos();</span>
+<span class="gi">+        int maxPos = control-&gt;GetLineEndPosition(control-&gt;GetLineCount());</span>
+<span class="gi">+        curCh = control-&gt;GetCharAt(endPos);</span>
+<span class="gi">+        while ( (endPos &lt; maxPos) &amp;&amp; (space.Find(curCh) == -1) )</span>
+<span class="gi">+        {</span>
+<span class="gi">+            endPos++;</span>
+<span class="gi">+            curCh = control-&gt;GetCharAt(endPos);</span>
+<span class="gi">+        }</span>
+<span class="gi">+</span>
+<span class="gi">+        url = control-&gt;GetTextRange(startPos, endPos);</span>
+<span class="gi">+        if ( (control-&gt;GetLexer() == wxSCI_LEX_CPP)</span>
+<span class="gi">+                &amp;&amp; ( (control-&gt;GetStyleAt(control-&gt;GetCurrentPos()) == wxSCI_C_STRING)</span>
+<span class="gi">+                     || (control-&gt;GetStyleAt(control-&gt;GetCurrentPos()) == wxSCI_C_STRINGEOL) ) )</span>
+<span class="gi">+        {</span>
+<span class="gi">+            url.Replace(wxT(&quot;\\n&quot;), wxT(&quot;\n&quot;));</span>
+<span class="gi">+            url.Replace(wxT(&quot;\\r&quot;), wxT(&quot;\r&quot;));</span>
+<span class="gi">+            url.Replace(wxT(&quot;\\t&quot;), wxT(&quot;\t&quot;));</span>
+<span class="gi">+        }</span>
+<span class="gi">+</span>
+<span class="gi">+        if (reUrl.Matches(url))</span>
+<span class="gi">+        {</span>
+<span class="gi">+            wxString match = reUrl.GetMatch(url);</span>
+<span class="gi">+            if ( (url.Find(match) + startPos &lt; control-&gt;GetCurrentPos())</span>
+<span class="gi">+                    &amp;&amp; (url.Find(match) + startPos + (int)match.Length() &gt; control-&gt;GetCurrentPos()) )</span>
+<span class="gi">+            {</span>
+<span class="gi">+                url = match;</span>
+<span class="gi">+            }</span>
+<span class="gi">+            else</span>
+<span class="gi">+                url = wxEmptyString; // nope, too far from cursor, return invalid (empty)</span>
+<span class="gi">+        }</span>
+<span class="gi">+        else</span>
+<span class="gi">+            url = wxEmptyString; // nope, return invalid (empty)</span>
+<span class="gi">+</span>
+<span class="gi">+        return url;</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+     //vars
+     bool m_strip_trailing_spaces;
+     bool m_ensure_final_line_end;
+<span class="gu">@@ -609,6 +669,7 @@</span>
+ const int idAddFileToProject = wxNewId();
+ const int idRemoveFileFromProject = wxNewId();
+ const int idShowFileInProject = wxNewId();
+<span class="gi">+const int idOpenUrl = wxNewId();</span>
+ 
+ const int idBookmarkAdd = wxNewId();
+ const int idBookmarkRemove = wxNewId();
+<span class="gu">@@ -661,6 +722,7 @@</span>
+     EVT_MENU(idSplitHorz, cbEditor::OnContextMenuEntry)
+     EVT_MENU(idSplitVert, cbEditor::OnContextMenuEntry)
+     EVT_MENU(idUnsplit, cbEditor::OnContextMenuEntry)
+<span class="gi">+    EVT_MENU(idOpenUrl, cbEditor::OnContextMenuEntry)</span>
+ 
+     EVT_SCI_ZOOM(-1, cbEditor::OnZoom)
+     EVT_SCI_ZOOM(-1, cbEditor::OnZoom)
+<span class="gu">@@ -2673,6 +2735,12 @@</span>
+     }
+     else
+     {
+<span class="gi">+        if(!noeditor &amp;&amp; !m_pData-&gt;GetUrl().IsEmpty())</span>
+<span class="gi">+        {</span>
+<span class="gi">+            popup-&gt;InsertSeparator(0);</span>
+<span class="gi">+            popup-&gt;Insert(0, idOpenUrl, _(&quot;Open link in browser&quot;));</span>
+<span class="gi">+        }</span>
+<span class="gi">+</span>
+         wxMenu* splitMenu = new wxMenu;
+         splitMenu-&gt;Append(idSplitHorz, _(&quot;Horizontally&quot;));
+         splitMenu-&gt;Append(idSplitVert, _(&quot;Vertically&quot;));
+<span class="gu">@@ -2933,6 +3001,8 @@</span>
+         UnfoldBlockFromLine();
+     else if (id == idFoldingToggleCurrent)
+         ToggleFoldBlockFromLine();
+<span class="gi">+    else if (id == idOpenUrl)</span>
+<span class="gi">+        wxLaunchDefaultBrowser(m_pData-&gt;GetUrl());</span>
+     else if (id == idSplitHorz)
+         Split(stHorizontal);
+     else if (id == idSplitVert)
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">ollydbg 2012-04-28 07:59:47</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,89 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/editorconfigurationdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorconfigurationdlg.cpp    (revision 8148)</span>
+<span class="gi">+++ src/sdk/editorconfigurationdlg.cpp    (working copy)</span>
+<span class="gu">@@ -121,6 +121,7 @@</span>
+     XRCCTRL(*this, &quot;chkSelectionBraceCompletion&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/selection_brace_completion&quot;), false));
+     XRCCTRL(*this, &quot;chkTabIndents&quot;,               wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/tab_indents&quot;),                true));
+     XRCCTRL(*this, &quot;chkBackspaceUnindents&quot;,       wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/backspace_unindents&quot;),        true));
+<span class="gi">+    XRCCTRL(*this, &quot;chkAutoEscape&quot;,               wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/auto_escape&quot;),                false));</span>
+     XRCCTRL(*this, &quot;chkWordWrap&quot;,                 wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/word_wrap&quot;),                  false));
+     XRCCTRL(*this, &quot;chkWordWrapStyleHomeEnd&quot;,     wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/word_wrap_style_home_end&quot;),   true));
+     XRCCTRL(*this, &quot;chkPosixRegex&quot;,               wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/use_posix_style_regexes&quot;),    false));
+<span class="gu">@@ -801,6 +802,7 @@</span>
+         cfg-&gt;Write(_T(&quot;/selection_brace_completion&quot;),          XRCCTRL(*this, &quot;chkSelectionBraceCompletion&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/tab_indents&quot;),                         XRCCTRL(*this, &quot;chkTabIndents&quot;,               wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/backspace_unindents&quot;),                 XRCCTRL(*this, &quot;chkBackspaceUnindents&quot;,       wxCheckBox)-&gt;GetValue());
+<span class="gi">+        cfg-&gt;Write(_T(&quot;/auto_escape&quot;),                         XRCCTRL(*this, &quot;chkAutoEscape&quot;,               wxCheckBox)-&gt;GetValue());</span>
+         cfg-&gt;Write(_T(&quot;/word_wrap&quot;),                           XRCCTRL(*this, &quot;chkWordWrap&quot;,                 wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/word_wrap_style_home_end&quot;),            XRCCTRL(*this, &quot;chkWordWrapStyleHomeEnd&quot;,     wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/use_posix_style_regexes&quot;),             XRCCTRL(*this, &quot;chkPosixRegex&quot;,               wxCheckBox)-&gt;GetValue());
+<span class="gh">Index: src/sdk/resources/editor_configuration.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/editor_configuration.xrc    (revision 8148)</span>
+<span class="gi">+++ src/sdk/resources/editor_configuration.xrc    (working copy)</span>
+<span class="gu">@@ -1,6 +1,9 @@</span>
+<span class="gd">-&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;</span>
+<span class="gi">+&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot; ?&gt;</span>
+ &lt;resource xmlns=&quot;http://www.wxwidgets.org/wxxrc&quot;&gt;
+   &lt;object class=&quot;wxScrollingDialog&quot; name=&quot;dlgConfigureEditor&quot;&gt;
+<span class="gi">+    &lt;title&gt;Configure editor&lt;/title&gt;</span>
+<span class="gi">+    &lt;centered&gt;1&lt;/centered&gt;</span>
+<span class="gi">+    &lt;style&gt;wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER&lt;/style&gt;</span>
+     &lt;object class=&quot;wxBoxSizer&quot;&gt;
+       &lt;orient&gt;wxVERTICAL&lt;/orient&gt;
+       &lt;object class=&quot;sizeritem&quot;&gt;
+<span class="gu">@@ -37,7 +40,7 @@</span>
+         &lt;border&gt;5&lt;/border&gt;
+       &lt;/object&gt;
+       &lt;object class=&quot;sizeritem&quot;&gt;
+<span class="gd">-        &lt;object class=&quot;wxStaticLine&quot; name=&quot;ID_STATICLINE1&quot;/&gt;</span>
+<span class="gi">+        &lt;object class=&quot;wxStaticLine&quot; name=&quot;ID_STATICLINE1&quot; /&gt;</span>
+         &lt;flag&gt;wxEXPAND|wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;
+       &lt;/object&gt;
+       &lt;object class=&quot;sizeritem&quot;&gt;
+<span class="gu">@@ -50,6 +53,7 @@</span>
+                   &lt;object class=&quot;wxNotebook&quot; name=&quot;wxID_ANY&quot;&gt;
+                     &lt;object class=&quot;notebookpage&quot;&gt;
+                       &lt;object class=&quot;wxPanel&quot; name=&quot;wxID_ANY&quot;&gt;
+<span class="gi">+                        &lt;pos&gt;33,178&lt;/pos&gt;</span>
+                         &lt;object class=&quot;wxBoxSizer&quot;&gt;
+                           &lt;orient&gt;wxVERTICAL&lt;/orient&gt;
+                           &lt;object class=&quot;sizeritem&quot;&gt;
+<span class="gu">@@ -386,7 +390,6 @@</span>
+                                     &lt;/object&gt;
+                                     &lt;flag&gt;wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;
+                                   &lt;/object&gt;
+<span class="gd">-                                                                    </span>
+                                   &lt;object class=&quot;sizeritem&quot;&gt;
+                                     &lt;object class=&quot;wxCheckBox&quot; name=&quot;chkHighlightCaretLine&quot;&gt;
+                                       &lt;label&gt;Highlight line under caret&lt;/label&gt;
+<span class="gu">@@ -420,40 +423,29 @@</span>
+                             &lt;border&gt;5&lt;/border&gt;
+                           &lt;/object&gt;
+                         &lt;/object&gt;
+<span class="gd">-                        &lt;pos&gt;33,178&lt;/pos&gt;</span>
+                       &lt;/object&gt;
+                       &lt;label&gt;Editor settings&lt;/label&gt;
+                     &lt;/object&gt;
+                     &lt;object class=&quot;notebookpage&quot;&gt;
+                       &lt;object class=&quot;wxPanel&quot; name=&quot;wxID_ANY&quot;&gt;
+<span class="gd">-                        &lt;object class=&quot;wxBoxSizer&quot; name=&quot;wxID_ANY&quot;&gt;</span>
+<span class="gi">+                        &lt;pos&gt;64,15&lt;/pos&gt;</span>
+<span class="gi">+                        &lt;object class=&quot;wxBoxSizer&quot;&gt;</span>
+                           &lt;orient&gt;wxVERTICAL&lt;/orient&gt;
+<span class="gd">-                                                    </span>
+<span class="gd">-                                                    </span>
+<span class="gd">-                                                    </span>
+<span class="gd">-                                                    </span>
+                           &lt;object class=&quot;sizeritem&quot;&gt;
+                             &lt;object class=&quot;wxStati
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">alpha0010 2011-11-25 15:16:10</div>

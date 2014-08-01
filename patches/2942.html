@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,82 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/editorconfigurationdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorconfigurationdlg.cpp    (revision 6508)</span>
+<span class="gi">+++ src/sdk/editorconfigurationdlg.cpp    (working copy)</span>
+<span class="gu">@@ -114,6 +114,7 @@</span>
+     m_EnableChangebar = cfg-&gt;ReadBool(_T(&quot;/margin/use_changebar&quot;), true);
+     XRCCTRL(*this, &quot;chkUseChangebar&quot;, wxCheckBox)-&gt;SetValue(m_EnableChangebar);
+     XRCCTRL(*this, &quot;chkShowIndentGuides&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/show_indent_guides&quot;), false));
+<span class="gi">+    XRCCTRL(*this, &quot;chkBraceSmartIndent&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/brace_smart_indent&quot;), true));</span>
+     XRCCTRL(*this, &quot;chkTabIndents&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/tab_indents&quot;), true));
+     XRCCTRL(*this, &quot;chkBackspaceUnindents&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/backspace_unindents&quot;), true));
+     XRCCTRL(*this, &quot;chkWordWrap&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/word_wrap&quot;), false));
+<span class="gu">@@ -881,6 +882,7 @@</span>
+         cfg-&gt;Write(_T(&quot;/brace_completion&quot;),                    XRCCTRL(*this, &quot;chkBraceCompletion&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/use_tab&quot;),                             XRCCTRL(*this, &quot;chkUseTab&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/show_indent_guides&quot;),                  XRCCTRL(*this, &quot;chkShowIndentGuides&quot;, wxCheckBox)-&gt;GetValue());
+<span class="gi">+        cfg-&gt;Write(_T(&quot;/brace_smart_indent&quot;),                  XRCCTRL(*this, &quot;chkBraceSmartIndent&quot;, wxCheckBox)-&gt;GetValue());</span>
+         cfg-&gt;Write(_T(&quot;/tab_indents&quot;),                         XRCCTRL(*this, &quot;chkTabIndents&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/backspace_unindents&quot;),                 XRCCTRL(*this, &quot;chkBackspaceUnindents&quot;, wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/word_wrap&quot;),                           XRCCTRL(*this, &quot;chkWordWrap&quot;, wxCheckBox)-&gt;GetValue());
+<span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 6508)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -3038,19 +3038,24 @@</span>
+                     case wxSCI_LEX_CPP:
+                     case wxSCI_LEX_D:
+                         {
+<span class="gd">-                            int string_style = control-&gt;GetLexer() == wxSCI_LEX_CPP ? wxSCI_C_STRING : wxSCI_D_STRING;</span>
+<span class="gd">-</span>
+<span class="gd">-                            int brace_position = m_pData-&gt;GetFirstBraceInLine(string_style);</span>
+<span class="gd">-                            if (brace_position &gt;= 0)</span>
+<span class="gi">+                            ConfigManager* configManager = Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;));</span>
+<span class="gi">+                            bool braceIndent = configManager-&gt;ReadBool(_T(&quot;/brace_smart_indent&quot;), true);</span>
+<span class="gi">+                            if (braceIndent)</span>
+                             {
+<span class="gd">-                                if(control-&gt;GetUseTabs())</span>
+<span class="gi">+                                int style = control-&gt;GetLexer() == wxSCI_LEX_CPP ? wxSCI_C_STRING : wxSCI_D_STRING;</span>
+<span class="gi">+</span>
+<span class="gi">+                                int brace_position = m_pData-&gt;GetFirstBraceInLine(style);</span>
+<span class="gi">+                                if (brace_position &gt;= 0)</span>
+                                 {
+<span class="gd">-                                    brace_position /= control-&gt;GetTabWidth();</span>
+<span class="gd">-                                    indent = wxString(_T(&#39;\t&#39;), brace_position);</span>
+<span class="gi">+                                    if (control-&gt;GetUseTabs())</span>
+<span class="gi">+                                    {</span>
+<span class="gi">+                                        brace_position /= control-&gt;GetTabWidth();</span>
+<span class="gi">+                                        indent = wxString(_T(&#39;\t&#39;), brace_position);</span>
+<span class="gi">+                                    }</span>
+<span class="gi">+                                    else</span>
+<span class="gi">+                                        indent = wxString(_T(&#39; &#39;), brace_position); // n spaces</span>
+<span class="gi">+                                    break;</span>
+                                 }
+<span class="gd">-                                else</span>
+<span class="gd">-                                    indent = wxString(_T(&#39; &#39;), brace_position); // n spaces</span>
+<span class="gd">-                                break;</span>
+                             }
+                         }
+ 
+<span class="gh">Index: src/sdk/resources/editor_configuration.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/editor_configuration.xrc    (revision 6508)</span>
+<span class="gi">+++ src/sdk/resources/editor_configuration.xrc    (working copy)</span>
+<span class="gu">@@ -292,6 +292,12 @@</span>
+                                                             &lt;flag&gt;wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;
+                                                         &lt;/object&gt;
+                                                         &lt;object class=&quot;sizeritem&quot;&gt;
+<span class="gi">+                                                            &lt;object class=&quot;wxCheckBox&quot; name=&quot;chkBraceSmartIndent&quot;&gt;</span>
+<span class="gi">+                                                                &lt;label&gt;Brace Smart Indent&lt;/label&gt;</span>
+<span class="gi">+                                                            &lt;/object&gt;</span>
+<span class="gi">+                                                            &lt;flag&gt;wxALIGN_LEFT|wxALIGN_TOP&lt;/flag&gt;</span>
+<span class="gi">+                                                        &lt;/object&gt;</span>
+<span class="gi">+</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">tpetrov 2010-08-21 19:43:18</div>

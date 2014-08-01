@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,24 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">diff --git a/src/plugins/contrib/IncrementalSearch/IncrementalSearch.cpp b/src/plugins/contrib/IncrementalSearch/IncrementalSearch.cpp</span>
+<span class="gh">index 548cf52..ed348b2 100644</span>
+<span class="gd">--- a/src/plugins/contrib/IncrementalSearch/IncrementalSearch.cpp</span>
+<span class="gi">+++ b/src/plugins/contrib/IncrementalSearch/IncrementalSearch.cpp</span>
+<span class="gu">@@ -96,7 +96,10 @@ void IncrementalSearch::OnAttach()</span>
+     // (see: does not need) this plugin...
+     m_pEditor = Manager::Get()-&gt;GetEditorManager()-&gt;GetBuiltinActiveEditor();
+     wxMenuBar* mbar = Manager::Get()-&gt;GetAppFrame()-&gt;GetMenuBar();
+<span class="gd">-    mbar-&gt;Enable(idIncSearchFocus, m_pEditor &amp;&amp; m_pEditor-&gt;GetControl());</span>
+<span class="gi">+    if (mbar-&gt;FindItem(idIncSearchFocus)) // if BuildMenu is called afterwards this may not exist yet</span>
+<span class="gi">+    {</span>
+<span class="gi">+        mbar-&gt;Enable(idIncSearchFocus, m_pEditor &amp;&amp; m_pEditor-&gt;GetControl());</span>
+<span class="gi">+    }</span>
+ 
+     Manager::Get()-&gt;RegisterEventSink(cbEVT_EDITOR_ACTIVATED, new cbEventFunctor&lt;IncrementalSearch, CodeBlocksEvent&gt;(this, &amp;IncrementalSearch::OnEditorEvent));
+     Manager::Get()-&gt;RegisterEventSink(cbEVT_EDITOR_DEACTIVATED, new cbEventFunctor&lt;IncrementalSearch, CodeBlocksEvent&gt;(this, &amp;IncrementalSearch::OnEditorEvent));
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">carjay 2012-07-07 13:04:51</div>

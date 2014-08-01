@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,72 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/editorconfigurationdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editorconfigurationdlg.cpp    (revision 2890)</span>
+<span class="gi">+++ src/sdk/editorconfigurationdlg.cpp    (arbetskopia)</span>
+<span class="gu">@@ -213,7 +213,12 @@</span>
+     wxString key;
+     key.Printf(_T(&quot;/default_code/set%d&quot;), IdxToFileType[m_DefCodeFileType]);
+     XRCCTRL(*this, &quot;txtDefCode&quot;, wxTextCtrl)-&gt;SetValue(cfg-&gt;Read(key, wxEmptyString));
+<span class="gi">+#ifdef __WXMAC__</span>
+<span class="gi">+    // 8 point is not readable on Mac OS X, increase font size:</span>
+<span class="gi">+    wxFont tmpFont(10, wxMODERN, wxNORMAL, wxNORMAL);</span>
+<span class="gi">+#else</span>
+     wxFont tmpFont(8, wxMODERN, wxNORMAL, wxNORMAL);
+<span class="gi">+#endif</span>
+     XRCCTRL(*this, &quot;txtDefCode&quot;, wxTextCtrl)-&gt;SetFont(tmpFont);
+     // read them all in the array
+     for(size_t idx = 0; idx &lt; sizeof(IdxToFileType)/sizeof(*IdxToFileType); ++ idx)
+<span class="gu">@@ -457,7 +462,12 @@</span>
+ 
+ void EditorConfigurationDlg::UpdateSampleFont(bool askForNewFont)
+ {
+<span class="gi">+#ifdef __WXMAC__</span>
+<span class="gi">+    // 8 point is not readable on Mac OS X, increase font size:</span>
+<span class="gi">+    wxFont tmpFont(10, wxMODERN, wxNORMAL, wxNORMAL);</span>
+<span class="gi">+#else</span>
+     wxFont tmpFont(8, wxMODERN, wxNORMAL, wxNORMAL);
+<span class="gi">+#endif</span>
+     wxString fontstring = Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;))-&gt;Read(_T(&quot;/font&quot;), wxEmptyString);
+ 
+     if (!fontstring.IsEmpty())
+<span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 2890)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (arbetskopia)</span>
+<span class="gu">@@ -819,7 +819,12 @@</span>
+ 
+     ConfigManager* mgr = Manager::Get()-&gt;GetConfigManager(_T(&quot;editor&quot;));
+ 
+<span class="gi">+#ifdef __WXMAC__</span>
+<span class="gi">+    // 8 point is not readable on Mac OS X, increase font size:</span>
+<span class="gi">+    wxFont font(10, wxMODERN, wxNORMAL, wxNORMAL);</span>
+<span class="gi">+#else</span>
+     wxFont font(8, wxMODERN, wxNORMAL, wxNORMAL);
+<span class="gi">+#endif</span>
+     wxString fontstring = mgr-&gt;Read(_T(&quot;/font&quot;), wxEmptyString);
+     int eolmode = wxSCI_EOL_CRLF;
+     if (!fontstring.IsEmpty())
+<span class="gh">Index: src/sdk/messagelog.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/messagelog.cpp    (revision 2890)</span>
+<span class="gi">+++ src/sdk/messagelog.cpp    (arbetskopia)</span>
+<span class="gu">@@ -49,7 +49,12 @@</span>
+ 
+ wxFont MessageLog::GetDefaultLogFont(bool fixedPitchFont)
+ {
+<span class="gi">+#ifdef __WXMAC__</span>
+<span class="gi">+    // 8 point is not readable on Mac OS X, increase font size:</span>
+<span class="gi">+    int size = Manager::Get()-&gt;GetConfigManager(_T(&quot;message_manager&quot;))-&gt;ReadInt(_T(&quot;/log_font_size&quot;), 10);</span>
+<span class="gi">+#else</span>
+     int size = Manager::Get()-&gt;GetConfigManager(_T(&quot;message_manager&quot;))-&gt;ReadInt(_T(&quot;/log_font_size&quot;), 8);
+<span class="gi">+#endif</span>
+     wxFont font(size,
+                 fixedPitchFont ? wxFONTFAMILY_MODERN : wxFONTFAMILY_DEFAULT,
+                 wxFONTSTYLE_NORMAL,
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

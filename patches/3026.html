@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,74 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: include/projectmanager.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- include/projectmanager.h    (revision 6404)</span>
+<span class="gi">+++ include/projectmanager.h    (working copy)</span>
+<span class="gu">@@ -250,11 +250,12 @@</span>
+         int AskForBuildTargetIndex(cbProject* project = 0L);
+         /** Utility function. Displays a multiple selection list of a project&#39;s
+           * build targets to choose from.
+<span class="gi">+          * @param filename The name of the file which will be added to targets.</span>
+           * @param project The project to use. If NULL, the active project is used.
+           * @return An integer array containing the selected build targets indices.
+           * This array will be empty if no build targets were selected.
+           */
+<span class="gd">-        wxArrayInt AskForMultiBuildTargetIndex(cbProject* project = 0L);</span>
+<span class="gi">+        wxArrayInt AskForMultiBuildTargetIndex(const wxString &amp;filename, cbProject* project = 0L);</span>
+         /** Load a workspace.
+           * @param filename The workspace to open.
+           * @return True if the workspace loads succefully, false if not.
+<span class="gh">Index: sdk/projectmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- sdk/projectmanager.cpp    (revision 6404)</span>
+<span class="gi">+++ sdk/projectmanager.cpp    (working copy)</span>
+<span class="gu">@@ -1272,6 +1272,9 @@</span>
+     if (!project)
+         return 0;
+ 
+<span class="gi">+    wxFileName fname(filename);</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+     // do we have to ask for target?
+     if (targets.GetCount() == 0)
+     {
+<span class="gu">@@ -1281,14 +1284,13 @@</span>
+         // else display multiple target selection dialog
+         else
+         {
+<span class="gd">-            targets = AskForMultiBuildTargetIndex(project);</span>
+<span class="gi">+            targets = AskForMultiBuildTargetIndex(fname.GetFullName(), project);</span>
+             if (targets.GetCount() == 0)
+                 return 0;
+         }
+     }
+ 
+     // make sure filename is relative to project path
+<span class="gd">-    wxFileName fname(filename);</span>
+     fname.Normalize(wxPATH_NORM_DOTS | wxPATH_NORM_ABSOLUTE, project-&gt;GetBasePath());
+     fname.MakeRelativeTo(project-&gt;GetBasePath());
+ 
+<span class="gu">@@ -1399,7 +1401,7 @@</span>
+     return target;
+ }
+ 
+<span class="gd">-wxArrayInt ProjectManager::AskForMultiBuildTargetIndex(cbProject* project)</span>
+<span class="gi">+wxArrayInt ProjectManager::AskForMultiBuildTargetIndex(const wxString &amp;filename, cbProject* project)</span>
+ {
+     wxArrayInt indices;
+     cbProject* prj = project;
+<span class="gu">@@ -1414,7 +1416,7 @@</span>
+     for (int i = 0; i &lt; count; ++i)
+         array.Add(prj-&gt;GetBuildTarget(i)-&gt;GetTitle());
+ 
+<span class="gd">-    MultiSelectDlg dlg(0, array, true, _(&quot;Select the targets this file should belong to:&quot;));</span>
+<span class="gi">+    MultiSelectDlg dlg(0, array, true, _(&quot;Select the targets this file (&quot;) + filename + _(&quot;) should belong to:&quot;));</span>
+     PlaceWindow(&amp;dlg);
+     if (dlg.ShowModal() == wxID_OK)
+         indices = dlg.GetSelectedIndices();
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

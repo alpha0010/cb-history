@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,77 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable">Recently, I&#39;ve been running a pgm under the debugger that
+causes CB to crash when I delete a breakpoint. But the pgm runs ok
+when not being debugged.
+
+So I placed asm(int3) traps until I bracked the problem.
+It seems that GdbCmd_RemoveBreakpoint::ParseOutput is assigning
+a -1 to a breakpoint that has already been deleted.
+Here is a way to reproduce the error.
+
+I do not know the debugger well enough to know how to fix it.
+
+In debuggerstate.cpp at line 191, place a trap and note
+the bp address that&#39;s being deleted.
+
+DebuggerBreakpoint* DebuggerState::RemoveBreakpoint(int idx, bool deleteit)
+{
+    // do we have a valid index?
+    if (idx &lt; 0 || idx &gt;= (int)m_Breakpoints.GetCount())
+        return 0;
+    // yes, remove it from the list
+    DebuggerBreakpoint* bp = m_Breakpoints[idx];
+    m_Breakpoints.RemoveAt(idx);
+
+    // notify driver if it is active
+    if (m_pDriver)
+        m_pDriver-&gt;RemoveBreakpoint(bp);
+
+    if (deleteit)
+    {
+        asm(&quot;int3&quot;); /*trap*/ //&lt;===============
+        delete bp; //&lt;= look at bp address
+        return 0;
+    }
+    return bp;
+}
+
+
+In gdb_command.h at line 777, place the following trap.
+when the debugger stops at &quot;cmd-&gt;ParseOutput(buffer.Left(idx));&quot;
+step int the GdbCmd_RemoveBreakpoint() routine and
+look at m_BP of the line: &quot;m_BP-&gt;index = -1;&quot;.
+m_BP is the exact address of the bp that got previously deleted.
+
+class GdbCmd_RemoveBreakpoint : public DebuggerCmd
+{
+    &lt; lines skipped&gt;
+
+//        DebugLog(wxString::Format(_T(&quot;Command parsing output (cmd: %s): %s&quot;), cmd-&gt;m_Cmd.c_str(), buffer.Left(idx).c_str()));
+        RemoveTopCommand(false);
+        buffer.Remove(idx);
+        // remove the &#39;&gt;&gt;&gt;&gt;&gt;&gt;&#39; part of the prompt (or what&#39;s left of it)
+        int cnt = 6; // max 6 &#39;&gt;&#39;
+        while (buffer.Last() == _T(&#39;&gt;&#39;) &amp;&amp; cnt--)
+            buffer.RemoveLast();
+        if (buffer.Last() == _T(&#39;\n&#39;))
+            buffer.RemoveLast();
+        wxString cmdString = cmd-&gt;m_Cmd;               /*trap*/
+        if (cmdString.StartsWith(_T(&quot;delete &quot;))) asm(&quot;int3&quot;); /*trap*/
+        cmd-&gt;ParseOutput(buffer.Left(idx));
+        delete cmd;
+        RunQueue();
+    }
+
+
+
+This is the culprit: line 508 in gdb_commands.h . m_BP has alread been deleted.
+
+            // invalidate bp number
+            m_BP-&gt;index = -1;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mandrav 2008-02-02 12:09:51</div>

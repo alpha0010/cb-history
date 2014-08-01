@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,117 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/todo/addtododlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/todo/addtododlg.cpp    (revision 2976)</span>
+<span class="gi">+++ src/plugins/todo/addtododlg.cpp    (working copy)</span>
+<span class="gu">@@ -26,10 +26,18 @@</span>
+     }
+     if (m_Types.Index(_T(&quot;TODO&quot;)) == wxNOT_FOUND)
+         cmb-&gt;Append(_T(&quot;TODO&quot;));
+<span class="gi">+    if (m_Types.Index(_T(&quot;@todo&quot;)) == wxNOT_FOUND)</span>
+<span class="gi">+        cmb-&gt;Append(_T(&quot;@todo&quot;));</span>
+<span class="gi">+    if (m_Types.Index(_T(&quot;\\todo&quot;)) == wxNOT_FOUND)</span>
+<span class="gi">+        cmb-&gt;Append(_T(&quot;\\todo&quot;));</span>
+     if (m_Types.Index(_T(&quot;FIXME&quot;)) == wxNOT_FOUND)
+         cmb-&gt;Append(_T(&quot;FIXME&quot;));
+     if (m_Types.Index(_T(&quot;NOTE&quot;)) == wxNOT_FOUND)
+         cmb-&gt;Append(_T(&quot;NOTE&quot;));
+<span class="gi">+    if (m_Types.Index(_T(&quot;@note&quot;)) == wxNOT_FOUND)</span>
+<span class="gi">+        cmb-&gt;Append(_T(&quot;@note&quot;));</span>
+<span class="gi">+    if (m_Types.Index(_T(&quot;\\note&quot;)) == wxNOT_FOUND)</span>
+<span class="gi">+        cmb-&gt;Append(_T(&quot;\\note&quot;));</span>
+ 
+     wxString lastType = Manager::Get()-&gt;GetConfigManager(_T(&quot;todo_list&quot;))-&gt;Read(_T(&quot;last_used_type&quot;));
+     wxString lastStyle = Manager::Get()-&gt;GetConfigManager(_T(&quot;todo_list&quot;))-&gt;Read(_T(&quot;last_used_style&quot;));
+<span class="gh">Index: src/plugins/todo/addtododlg.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/todo/addtododlg.h    (revision 2976)</span>
+<span class="gi">+++ src/plugins/todo/addtododlg.h    (working copy)</span>
+<span class="gu">@@ -17,9 +17,10 @@</span>
+ enum ToDoCommentType
+ {
+     tdctCpp = 0, // C++ style,
+<span class="gd">-    tdctC, // C style</span>
+<span class="gi">+    tdctC,       // C style</span>
+<span class="gi">+    tdctDoxygen, // Doxygen style</span>
+     tdctWarning, // compiler warning
+<span class="gd">-    tdctError // compiler error</span>
+<span class="gi">+    tdctError    // compiler error</span>
+ };
+ 
+ class AddTodoDlg : public wxDialog
+<span class="gh">Index: src/plugins/todo/resources/add_todo.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/todo/resources/add_todo.xrc    (revision 2976)</span>
+<span class="gi">+++ src/plugins/todo/resources/add_todo.xrc    (working copy)</span>
+<span class="gu">@@ -73,6 +73,7 @@</span>
+               &lt;content&gt;
+                 &lt;item&gt;C++ style comment&lt;/item&gt;
+                 &lt;item&gt;C style comment&lt;/item&gt;
+<span class="gi">+                &lt;item&gt;Doxygen style comment&lt;/item&gt;</span>
+                 &lt;item&gt;Compiler warning&lt;/item&gt;
+                 &lt;item&gt;Compiler error&lt;/item&gt;
+               &lt;/content&gt;
+<span class="gu">@@ -137,4 +138,4 @@</span>
+     &lt;/object&gt;
+     &lt;style&gt;wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER&lt;/style&gt;
+   &lt;/object&gt;
+<span class="gd">-&lt;/resource&gt;</span>
+\ No newline at end of file
+<span class="gi">+&lt;/resource&gt;</span>
+<span class="gh">Index: src/plugins/todo/todolist.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/todo/todolist.cpp    (revision 2976)</span>
+<span class="gi">+++ src/plugins/todo/todolist.cpp    (working copy)</span>
+<span class="gu">@@ -151,7 +151,6 @@</span>
+ 
+ bool ToDoList::BuildToolBar(wxToolBar* toolBar)
+ {
+<span class="gd">-    //NotImplemented(&quot;ToDoList::BuildToolBar()&quot;);</span>
+     return false;
+ }
+ 
+<span class="gu">@@ -170,12 +169,17 @@</span>
+ 
+     Manager::Get()-&gt;GetConfigManager(_T(&quot;todo_list&quot;))-&gt;Read(_T(&quot;types&quot;), &amp;m_Types);
+ 
+<span class="gd">-    if(m_Types.GetCount()==0)</span>
+<span class="gi">+    if(m_Types.GetCount() == 0)</span>
+     {
+         m_Types.Add(_T(&quot;TODO&quot;));
+<span class="gi">+        m_Types.Add(_T(&quot;@todo&quot;));</span>
+<span class="gi">+        m_Types.Add(_T(&quot;\\todo&quot;));</span>
+         m_Types.Add(_T(&quot;FIXME&quot;));
+         m_Types.Add(_T(&quot;NOTE&quot;));
+<span class="gi">+        m_Types.Add(_T(&quot;@note&quot;));</span>
+<span class="gi">+        m_Types.Add(_T(&quot;\\note&quot;));</span>
+     }
+<span class="gi">+</span>
+     SaveTypes();
+ }
+ 
+<span class="gu">@@ -282,6 +286,9 @@</span>
+         case tdctCpp:
+             buffer &lt;&lt; _T(&quot;// &quot;);
+             break;
+<span class="gi">+        case tdctDoxygen:</span>
+<span class="gi">+            buffer &lt;&lt; _T(&quot;/// &quot;);</span>
+<span class="gi">+            break;</span>
+         case tdctWarning:
+             buffer &lt;&lt; _T(&quot;#warning &quot;);
+             break;
+<span class="gu">@@ -317,7 +324,7 @@</span>
+     if (CmtType == tdctWarning || CmtType == tdctError)
+         buffer &lt;&lt; _T(&quot;&quot;);
+ 
+<span class="gd">-    else if (CmtType == tdctC)// || dlg.GetPosition() == tdpCurrent)</span>
+<span class="gi">+    else if (CmtType == tdctC)</span>
+         buffer &lt;&lt; _T(&quot; */&quot;);
+ 
+     // add newline char(s), only if dlg.GetPosition() != tdpCurrent
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">sethjackson 2006-09-18 18:07:07</div>

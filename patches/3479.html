@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,112 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/include/scriptingmanager.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/scriptingmanager.h    (revision 9158)</span>
+<span class="gi">+++ src/include/scriptingmanager.h    (working copy)</span>
+<span class="gu">@@ -18,6 +18,7 @@</span>
+ #include &quot;manager.h&quot;
+ #include &quot;menuitemsmanager.h&quot;
+ #include &lt;wx/intl.h&gt;
+<span class="gi">+#include &quot;sqplus.h&quot;</span>
+ 
+ struct SquirrelError;
+ 
+<span class="gu">@@ -255,4 +256,6 @@</span>
+         DECLARE_EVENT_TABLE()
+ };
+ 
+<span class="gi">+void PrintSquirrelToWxString(wxString &amp;msg,const SQChar *s, va_list&amp; vl);</span>
+<span class="gi">+</span>
+ #endif // SCRIPTING_H
+ 
+<span class="gh">Index: src/sdk/scriptingmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/scriptingmanager.cpp    (revision 9158)</span>
+<span class="gi">+++ src/sdk/scriptingmanager.cpp    (working copy)</span>
+<span class="gu">@@ -29,7 +29,7 @@</span>
+ #include &quot;crc32.h&quot;
+ #include &quot;menuitemsmanager.h&quot;
+ #include &quot;genericmultilinenotesdlg.h&quot;
+<span class="gd">-#include &quot;sqplus.h&quot;</span>
+<span class="gi">+//#include &quot;sqplus.h&quot;</span>
+ #include &quot;scriptbindings.h&quot;
+ #include &quot;sc_plugin.h&quot;
+ #include &quot;sqstdstring.h&quot;
+<span class="gu">@@ -40,26 +40,44 @@</span>
+ static wxString s_ScriptErrors;
+ static wxString capture;
+ 
+<span class="gi">+void PrintSquirrelToWxString(wxString &amp;msg,const SQChar * s, va_list&amp; vl)</span>
+<span class="gi">+{</span>
+<span class="gi">+    //wxString msg;</span>
+<span class="gi">+    int buffer_size = 2048;</span>
+<span class="gi">+    SQChar *tmp_buffer;</span>
+<span class="gi">+    for(;;buffer_size*=2)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        tmp_buffer = new SQChar [buffer_size];</span>
+<span class="gi">+        int retvalue = vsnprintf(tmp_buffer,buffer_size,s,vl);</span>
+<span class="gi">+        if(retvalue &lt; buffer_size)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            // Buffersize was large enough</span>
+<span class="gi">+            msg = cbC2U(tmp_buffer);</span>
+<span class="gi">+            delete[] tmp_buffer;</span>
+<span class="gi">+            break;</span>
+<span class="gi">+        }</span>
+<span class="gi">+        // Buffer size was not enough</span>
+<span class="gi">+        delete[] tmp_buffer;</span>
+<span class="gi">+    }</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ static void ScriptsPrintFunc(HSQUIRRELVM /*v*/, const SQChar * s, ...)
+ {
+<span class="gd">-    static SQChar temp[2048];</span>
+     va_list vl;
+     va_start(vl,s);
+<span class="gd">-    scvsprintf( temp,s,vl);</span>
+<span class="gd">-    wxString msg = cbC2U(temp);</span>
+<span class="gd">-    Manager::Get()-&gt;GetLogManager()-&gt;DebugLog(msg);</span>
+<span class="gi">+    wxString msg;</span>
+<span class="gi">+    PrintSquirrelToWxString(msg,s,vl);</span>
+     va_end(vl);
+<span class="gd">-</span>
+     s_ScriptErrors &lt;&lt; msg;
+ }
+ 
+ static void CaptureScriptOutput(HSQUIRRELVM /*v*/, const SQChar * s, ...)
+ {
+<span class="gd">-    static SQChar temp[2048];</span>
+     va_list vl;
+     va_start(vl,s);
+<span class="gd">-    scvsprintf(temp,s,vl);</span>
+<span class="gd">-    ::capture.append(cbC2U(temp));</span>
+<span class="gi">+    wxString msg;</span>
+<span class="gi">+    PrintSquirrelToWxString(msg,s,vl);</span>
+<span class="gi">+    ::capture.append(msg);</span>
+     va_end(vl);
+ }
+ 
+<span class="gh">Index: src/src/scriptconsole.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/scriptconsole.cpp    (revision 9158)</span>
+<span class="gi">+++ src/src/scriptconsole.cpp    (working copy)</span>
+<span class="gu">@@ -46,11 +46,10 @@</span>
+ 
+ static void ScriptConsolePrintFunc(HSQUIRRELVM /*v*/, const SQChar * s, ...)
+ {
+<span class="gd">-    static SQChar temp[2048];</span>
+     va_list vl;
+     va_start(vl,s);
+<span class="gd">-    scvsprintf( temp,s,vl);</span>
+<span class="gd">-    wxString msg = cbC2U(temp);</span>
+<span class="gi">+    wxString msg;</span>
+<span class="gi">+    PrintSquirrelToWxString(msg,s,vl);</span>
+     va_end(vl);
+ 
+     if (s_Console)
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">ollydbg 2013-06-17 05:48:13</div>

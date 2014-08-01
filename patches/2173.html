@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,105 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/src/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/main.cpp    (Revision 4590)</span>
+<span class="gi">+++ src/src/main.cpp    (Arbeitskopie)</span>
+<span class="gu">@@ -206,6 +206,8 @@</span>
+ int idEditCommentSelected = XRCID(&quot;idEditCommentSelected&quot;);
+ int idEditUncommentSelected = XRCID(&quot;idEditUncommentSelected&quot;);
+ int idEditToggleCommentSelected = XRCID(&quot;idEditToggleCommentSelected&quot;);
+<span class="gi">+int idEditStreamCommentSelected = XRCID(&quot;idEditStreamCommentSelected&quot;);</span>
+<span class="gi">+int idEditBoxCommentSelected = XRCID(&quot;idEditBoxCommentSelected&quot;);</span>
+ int idEditAutoComplete = XRCID(&quot;idEditAutoComplete&quot;);
+ 
+ int idViewLayoutDelete = XRCID(&quot;idViewLayoutDelete&quot;);
+<span class="gu">@@ -296,6 +298,8 @@</span>
+     EVT_UPDATE_UI(idEditAutoComplete, MainFrame::OnEditMenuUpdateUI)
+     EVT_UPDATE_UI(idEditUncommentSelected, MainFrame::OnEditMenuUpdateUI)
+     EVT_UPDATE_UI(idEditToggleCommentSelected, MainFrame::OnEditMenuUpdateUI)
+<span class="gi">+    EVT_UPDATE_UI(idEditStreamCommentSelected, MainFrame::OnEditMenuUpdateUI)</span>
+<span class="gi">+    EVT_UPDATE_UI(idEditBoxCommentSelected, MainFrame::OnEditMenuUpdateUI)</span>
+ 
+     EVT_UPDATE_UI(idSearchFind, MainFrame::OnSearchMenuUpdateUI)
+     EVT_UPDATE_UI(idSearchFindInFiles, MainFrame::OnSearchMenuUpdateUI)
+<span class="gu">@@ -408,6 +412,8 @@</span>
+     EVT_MENU(idEditAutoComplete, MainFrame::OnEditAutoComplete)
+     EVT_MENU(idEditUncommentSelected, MainFrame::OnEditUncommentSelected)
+     EVT_MENU(idEditToggleCommentSelected, MainFrame::OnEditToggleCommentSelected)
+<span class="gi">+    EVT_MENU(idEditStreamCommentSelected, MainFrame::OnEditStreamCommentSelected)</span>
+<span class="gi">+    EVT_MENU(idEditBoxCommentSelected, MainFrame::OnEditBoxCommentSelected)</span>
+ 
+     EVT_MENU(idSearchFind, MainFrame::OnSearchFind)
+     EVT_MENU(idSearchFindInFiles, MainFrame::OnSearchFind)
+<span class="gu">@@ -2839,81 +2845,174 @@</span>
+         ed-&gt;GetControl()-&gt;SelectAll();
+ }
+ 
+<span class="gd">-wxString GetCommentToken(cbStyledTextCtrl* stc)</span>
+<span class="gi">+CommentToken GetCommentToken(cbStyledTextCtrl* stc)</span>
+ {
+<span class="gd">-    wxString comment;</span>
+<span class="gi">+    CommentToken comment;</span>
+<span class="gi">+    comment.lineComment        = _T(&quot;&quot;);</span>
+<span class="gi">+    comment.streamCommentStart = _T(&quot;&quot;);</span>
+<span class="gi">+    comment.streamCommentEnd   = _T(&quot;&quot;);</span>
+<span class="gi">+    comment.boxCommentStart    = _T(&quot;&quot;);</span>
+<span class="gi">+    comment.boxCommentMid      = _T(&quot;&quot;);</span>
+<span class="gi">+    comment.boxCommentEnd      = _T(&quot;&quot;);</span>
+<span class="gi">+</span>
+     switch(stc-&gt;GetLexer())
+     {
+<span class="gd">-        case wxSCI_LEX_CONTAINER: comment = _T(&quot;&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_NULL: comment = _T(&quot;&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_PYTHON: comment = _T(&quot;#&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_CPP: comment = _T(&quot;//&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_HTML: comment = _T(&quot;//&quot;); break; // PHP uses HTML lexer</span>
+<span class="gd">-        case wxSCI_LEX_XML: comment = _T(&quot;&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_PERL: comment = _T(&quot;#&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_SQL: comment = _T(&quot;--&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_VB: comment = _T(&quot;&#39;&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_PROPERTIES: comment = _T(&quot;#&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_ERRORLIST: comment = _T(&quot;&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_MAKEFILE: comment = _T(&quot;#&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_BATCH: comment = _T(&quot;REM &quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_XCODE: comment = _T(&quot;&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_LATEX: comment = _T(&quot;%&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_LUA: comment = _T(&quot;--&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_DIFF: comment = _T(&quot;&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_CONF: comment = _T(&quot;&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_PASCAL: comment = _T(&quot;//&quot;); break;  //delphi style comments, otherwise use { } or (* and *)</span>
+<span class="gd">-        case wxSCI_LEX_AVE: comment = _T(&quot;&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_ADA: comment = _T(&quot;--&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_LISP: comment = _T(&quot;;&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_RUBY: comment = _T(&quot;#&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_EIFFEL: comment = _T(&quot;--&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_EIFFELKW: comment = _T(&quot;--&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_TCL: comment = _T(&quot;&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_NNCRONTAB: comment = _T(&quot;&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_BULLANT: comment = _T(&quot;&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_VBSCRIPT: comment = _T(&quot;&#39;&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_BAAN: comment = _T(&quot;&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_MATLAB: comment = _T(&quot;%&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_SCRIPTOL: comment = _T(&quot;`&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_ASM: comment = _T(&quot;#&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_CPPNOCASE: comment = _T(&quot;//&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_FORTRAN: comment = _T(&quot;!&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_CSS: comment = _T(&quot;&quot;); break; // uses /* and */</span>
+<span class="gd">-        case wxSCI_LEX_POV: comment = _T(&quot;//@-&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_LOUT: comment = _T(&quot;#&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_ESCRIPT: comment = _T(&quot;&quot;); break; //couldn&#39;t find</span>
+<span class="gd">-        case wxSCI_LEX_PS: comment = _T(&quot;%&quot;); break; // not sure if it&#39;s only one % or multiple</span>
+<span class="gd">-        case wxSCI_LEX_NSIS: comment = _T(&quot;&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_MMIXAL: comment = _T(&quot;&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_CLW: comment = _T(&quot;&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_CLWNOCASE: comment = _T(&quot;&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_LOT: comment = _T(&quot;&quot;); break;</span>
+<span class="gd">-        case wxSCI_LEX_YAML: comment = _T(&quot;&quot;); break;</span>
+<span class="gd">-</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">buergi 2007-09-16 16:29:27</div>

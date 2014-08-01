@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,93 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/include/compiletargetbase.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/compiletargetbase.h    (revision 6178)</span>
+<span class="gi">+++ src/include/compiletargetbase.h    (working copy)</span>
+<span class="gu">@@ -114,6 +114,8 @@</span>
+         virtual const wxString&amp; GetTitle() const; ///&lt; Read the target&#39;s title
+         virtual void SetTitle(const wxString&amp; title); ///&lt; Set the target&#39;s title
+         virtual void SetOutputFilename(const wxString&amp; filename); ///&lt; Set the target&#39;s output filename
+<span class="gi">+        virtual void SetImportLibraryFilename(const wxString&amp; filename); ///&lt; Set the target&#39;s import library filename</span>
+<span class="gi">+        virtual void SetDefinitionFileFilename(const wxString&amp; filename); ///&lt; Set the target&#39;s definition file filename</span>
+         virtual void SetWorkingDir(const wxString&amp; dirname); ///&lt; Set the target&#39;s working dir on execution (valid only for executable targets)
+         virtual void SetObjectOutput(const wxString&amp; dirname); ///&lt; Set the target&#39;s objects output dir
+         virtual void SetDepsOutput(const wxString&amp; dirname); ///&lt; Set the target&#39;s dependencies output dir
+<span class="gu">@@ -126,6 +128,7 @@</span>
+         virtual wxString SuggestOutputFilename(); ///&lt; Suggest a filename based on the target&#39;s type
+         virtual wxString GetExecutableFilename() const; ///&lt; Read the target&#39;s executable filename (produced if target type is ttExecutable)
+         virtual wxString GetDynamicLibFilename(); ///&lt; Read the target&#39;s dynamic library filename (produced if target type is ttDynamicLib)
+<span class="gi">+        virtual wxString GetDynamicLibImportFilename(); ///&lt; Read the target&#39;s dynamic library import filename (produced if target type is ttDynamicLib)</span>
+         virtual wxString GetDynamicLibDefFilename(); ///&lt; Read the target&#39;s dynamic library definition file filename (produced if target type is ttDynamicLib)
+         virtual wxString GetStaticLibFilename(); ///&lt; Read the target&#39;s static library filename (produced if target type is ttStaticLib)
+         virtual wxString GetNativeFilename(); ///&lt; Read the target&#39;s native filename (produced if target type is ttNative)
+<span class="gu">@@ -147,6 +150,8 @@</span>
+         wxString m_Filename;
+         wxString m_Title;
+         wxString m_OutputFilename;
+<span class="gi">+        wxString m_ImportLibraryFilename;</span>
+<span class="gi">+        wxString m_DefinitionFileFilename;</span>
+         wxString m_WorkingDir;
+         wxString m_ObjectOutput;
+         wxString m_DepsOutput;
+<span class="gh">Index: src/include/macrosmanager.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/macrosmanager.h    (revision 6178)</span>
+<span class="gi">+++ src/include/macrosmanager.h    (working copy)</span>
+<span class="gu">@@ -58,6 +58,7 @@</span>
+     wxString            m_TargetOutputDir;
+     wxString            m_TargetName;
+     wxString            m_TargetOutputBaseName;
+<span class="gi">+    wxString            m_TargetOutputFilename;</span>
+     wxString            m_TargetFilename;
+
+     MacrosMap           m_Macros;
+<span class="gh">Index: src/include/projectoptionsdlg.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/projectoptionsdlg.h    (revision 6178)</span>
+<span class="gi">+++ src/include/projectoptionsdlg.h    (working copy)</span>
+<span class="gu">@@ -35,6 +35,8 @@</span>
+         void OnCopyBuildTargetClick(wxCommandEvent&amp; event);
+         void OnRemoveBuildTargetClick(wxCommandEvent&amp; event);
+         void OnBrowseOutputFilenameClick(wxCommandEvent&amp; event);
+<span class="gi">+        void OnBrowseImportLibraryFilenameClick(wxCommandEvent&amp; event);</span>
+<span class="gi">+        void OnBrowseDefinitionFileFilenameClick(wxCommandEvent&amp; event);</span>
+         void OnBrowseDirClick(wxCommandEvent&amp; event);
+         void OnVirtualTargets(wxCommandEvent&amp; event);
+         void OnEditDepsClick(wxCommandEvent&amp; event);
+<span class="gu">@@ -46,6 +48,8 @@</span>
+         void OnPlatform(wxCommandEvent&amp; event);
+         void OnUpdateUI(wxUpdateUIEvent&amp; event);
+         void OnOK(wxCommandEvent&amp; event);
+<span class="gi">+        void OnCreateDefFileClick(wxCommandEvent&amp; event);</span>
+<span class="gi">+        void OnCreateImportFileClick(wxCommandEvent&amp; event);</span>
+
+         void OnScriptsOverviewSelChanged(wxTreeEvent&amp; event);
+         void OnCheckScripts(wxCommandEvent&amp; event);
+<span class="gh">Index: src/sdk/compilercommandgenerator.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/compilercommandgenerator.cpp    (revision 6178)</span>
+<span class="gi">+++ src/sdk/compilercommandgenerator.cpp    (working copy)</span>
+<span class="gu">@@ -447,47 +447,106 @@</span>
+     FixPathSeparators(compiler, result);
+     m_Output[target] = result;
+
+<span class="gd">-    // Replace Variables FIRST to address the $(VARIABLE)libfoo.a problem</span>
+<span class="gd">-    // if $(VARIABLE) expands to /bar/ then wxFileName will still consider $(VARIABLE)libfoo.a a filename,</span>
+<span class="gd">-    // not a fully qualified path, so we will prepend lib to /bar/libfoo.a incorrectly</span>
+<span class="gd">-    // NOTE (thomas#1#): A better solution might be to use a regex, but finding an universal regex might not be easy...</span>
+<span class="gd">-    wxString fnameString(target-&gt;GetOutputFilename());</span>
+<span class="gd">-    Manager::Get()-&gt;GetMacrosManager()-&gt;ReplaceMacros(fnameString, target);</span>
+<span class="gd">-    wxFileName fname(fnameString);</span>
+<span class="gi">+    // static/import library name</span>
+<span class="gi">+    switch (target-&gt;GetTargetType())</span>
+<span class="gi">+    {</span>
+<span class="gi">+        case ttDynamicLib:</span>
+<span class="gi">+</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mortenmacfly 2010-02-26 17:01:47</div>

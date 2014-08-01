@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,150 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: classwizard.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- classwizard.cpp    (revision 3111)</span>
+<span class="gi">+++ classwizard.cpp    (working copy)</span>
+<span class="gu">@@ -71,34 +71,32 @@</span>
+ {
+     ProjectManager* prjMan = Manager::Get()-&gt;GetProjectManager();
+     cbProject* prj = prjMan-&gt;GetActiveProject();
+<span class="gd">-    if (prj)</span>
+<span class="gd">-        wxSetWorkingDirectory(prj-&gt;GetBasePath());</span>
+ 
+<span class="gd">-    ClassWizardDlg dlg(Manager::Get()-&gt;GetAppWindow());</span>
+<span class="gi">+    ClassWizardDlg dlg(Manager::Get()-&gt;GetAppWindow());</span>
+     PlaceWindow(&amp;dlg);
+<span class="gd">-    if (dlg.ShowModal() == wxID_OK)</span>
+<span class="gd">-    {</span>
+<span class="gd">-        if (!prj)</span>
+<span class="gd">-        {</span>
+<span class="gd">-            cbMessageBox(    _(&quot;The new class has been created.&quot;),</span>
+<span class="gd">-                            _(&quot;Information&quot;),</span>
+<span class="gd">-                            wxOK | wxICON_INFORMATION,</span>
+<span class="gd">-                            Manager::Get()-&gt;GetAppWindow());</span>
+<span class="gd">-        }</span>
+<span class="gd">-        else if( cbMessageBox( _(&quot;The new class has been created.\n&quot;</span>
+<span class="gd">-                            &quot;Do you want to add it to the current project?&quot;),</span>
+<span class="gd">-                            _(&quot;Add to project?&quot;),</span>
+<span class="gd">-                            wxYES_NO | wxYES_DEFAULT | wxICON_QUESTION,</span>
+<span class="gd">-                            Manager::Get()-&gt;GetAppWindow()) == wxID_YES)</span>
+<span class="gd">-        {</span>
+<span class="gi">+    if (dlg.ShowModal() == wxID_OK)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        if (!prj)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            cbMessageBox(    _(&quot;The new class has been created.&quot;),</span>
+<span class="gi">+                            _(&quot;Information&quot;),</span>
+<span class="gi">+                            wxOK | wxICON_INFORMATION,</span>
+<span class="gi">+                            Manager::Get()-&gt;GetAppWindow());</span>
+<span class="gi">+        }</span>
+<span class="gi">+        else if( cbMessageBox( _(&quot;The new class has been created.\n&quot;</span>
+<span class="gi">+                            &quot;Do you want to add it to the current project?&quot;),</span>
+<span class="gi">+                            _(&quot;Add to project?&quot;),</span>
+<span class="gi">+                            wxYES_NO | wxYES_DEFAULT | wxICON_QUESTION,</span>
+<span class="gi">+                            Manager::Get()-&gt;GetAppWindow()) == wxID_YES)</span>
+<span class="gi">+        {</span>
+             wxArrayInt targets;
+<span class="gd">-            prjMan-&gt;AddFileToProject(dlg.GetHeaderFilename(), prj, targets);</span>
+<span class="gd">-            if (targets.GetCount() != 0)</span>
+<span class="gd">-                prjMan-&gt;AddFileToProject(dlg.GetImplementationFilename(), prj, targets);</span>
+<span class="gd">-            prjMan-&gt;RebuildTree();</span>
+<span class="gd">-        }</span>
+<span class="gd">-        return 0;</span>
+<span class="gd">-    }</span>
+<span class="gi">+            prjMan-&gt;AddFileToProject(dlg.GetHeaderFilename(), prj, targets);</span>
+<span class="gi">+            if ((targets.GetCount() != 0) &amp;&amp; (dlg.GetImplementationFilename() != _T(&quot;&quot;)) )</span>
+<span class="gi">+                prjMan-&gt;AddFileToProject(dlg.GetImplementationFilename(), prj, targets);</span>
+<span class="gi">+            prjMan-&gt;RebuildTree();</span>
+<span class="gi">+        }</span>
+<span class="gi">+        return 0;</span>
+<span class="gi">+    }</span>
+ 
+<span class="gd">-    return -1;</span>
+<span class="gi">+    return -1;</span>
+ }
+<span class="gh">Index: classwizard.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- classwizard.h    (revision 3111)</span>
+<span class="gi">+++ classwizard.h    (working copy)</span>
+<span class="gu">@@ -12,7 +12,7 @@</span>
+         virtual void OnAttach();
+         virtual void OnRelease(bool appShutDown);
+         virtual int Configure(){ return -1; }
+<span class="gd">-        virtual int Execute();</span>
+<span class="gi">+        virtual int Execute();</span>
+ };
+ 
+ #endif // CLASSWIZARD_H
+<span class="gh">Index: classwizarddlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- classwizarddlg.cpp    (revision 3111)</span>
+<span class="gi">+++ classwizarddlg.cpp    (working copy)</span>
+<span class="gu">@@ -40,82 +40,159 @@</span>
+ #include &quot;manager.h&quot;
+ #endif
+ #include &quot;classwizarddlg.h&quot;
+<span class="gi">+#include &lt;wx/tokenzr.h&gt;</span>
+<span class="gi">+#include &lt;wx/dirdlg.h&gt;</span>
+ 
+<span class="gi">+namespace {</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+<span class="gi">+void ForceDirectory(const wxFileName &amp; filename)</span>
+<span class="gi">+{</span>
+<span class="gi">+    wxFileName parentname(filename);</span>
+<span class="gi">+    parentname.RemoveLastDir();</span>
+<span class="gi">+    if (filename!=parentname)</span>
+<span class="gi">+        ForceDirectory(parentname);</span>
+<span class="gi">+    if (!wxDirExists(filename.GetPath()))</span>
+<span class="gi">+        wxMkdir(filename.GetPath());</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+ BEGIN_EVENT_TABLE(ClassWizardDlg, wxDialog)
+<span class="gd">-    EVT_UPDATE_UI(-1, ClassWizardDlg::OnUpdateUI)</span>
+<span class="gd">-    EVT_BUTTON(XRCID(&quot;wxID_OK&quot;), ClassWizardDlg::OnOKClick)</span>
+<span class="gd">-    EVT_BUTTON(XRCID(&quot;wxID_CANCEL&quot;), ClassWizardDlg::OnCancelClick)</span>
+<span class="gd">-    EVT_TEXT(XRCID(&quot;txtName&quot;), ClassWizardDlg::OnNameChange)</span>
+<span class="gi">+    EVT_UPDATE_UI(-1, ClassWizardDlg::OnUpdateUI)</span>
+<span class="gi">+    EVT_BUTTON(XRCID(&quot;wxID_OK&quot;), ClassWizardDlg::OnOKClick)</span>
+<span class="gi">+    EVT_BUTTON(XRCID(&quot;wxID_CANCEL&quot;), ClassWizardDlg::OnCancelClick)</span>
+<span class="gi">+    EVT_TEXT(XRCID(&quot;txtName&quot;), ClassWizardDlg::OnNameChange)</span>
+<span class="gi">+    EVT_TEXT(XRCID(&quot;txtInheritance&quot;), ClassWizardDlg::OnAncestorChange)</span>
+<span class="gi">+    EVT_BUTTON(XRCID(&quot;btnBaseDir&quot;), ClassWizardDlg::OnBaseDirClick)</span>
+ END_EVENT_TABLE()
+ 
+<span class="gi">+</span>
+ ClassWizardDlg::ClassWizardDlg(wxWindow* parent)
+ {
+<span class="gd">-    wxXmlResource::Get()-&gt;LoadDialog(this, parent, _T(&quot;dlgNewClass&quot;));</span>
+<span class="gi">+    wxXmlResource::Get()-&gt;LoadDialog(this, parent, _T(&quot;dlgNewClass&quot;));</span>
+<span class="gi">+</span>
+<span class="gi">+    ProjectManager* prjMan = Manager::Get()-&gt;GetProjectManager();</span>
+<span class="gi">+    cbProject* prj = prjMan-&gt;GetActiveProject();</span>
+<span class="gi">+    if (prj)</span>
+<span class="gi">+          XRCCTRL(*this, &quot;txtBaseDir&quot;, wxTextCtrl)-&gt;SetValue(prj-&gt;GetBasePath());</span>
+<span class="gi">+    else</span>
+<span class="gi">+          XRCCTRL(*this, &quot;txtBaseDir&quot;, wxTextCtrl)-&gt;SetValue(wxGetWorkingDirectory());</span>
+ }
+ 
+<span class="gi">+</span>
+ ClassWizardDlg::~ClassWizardDlg()
+ {
+ }
+ 
+<span class="gi">+</span>
+ void ClassWizardDlg::DoGuardBlock()
+ {
+<span class="gd">-    m_Header = XRCCTRL(*this, &quot;txtHeader&quot;, wxTextCtrl)-&gt;GetValue();</span>
+<span class="gd">-    wxFileName headerFname(m_Header);</span>
+<span class="gd">-    wxString GuardWord</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">workwind 2006-10-19 16:37:48</div>

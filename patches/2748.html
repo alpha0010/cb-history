@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,137 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">diff -r b79c5d3ddb2d .hgtags</span>
+<span class="gd">--- a/.hgtags    Wed Apr 29 01:03:39 2009 -0400</span>
+<span class="gi">+++ b/.hgtags    Wed Apr 29 11:01:44 2009 -0400</span>
+<span class="gu">@@ -1,3 +1,5 @@</span>
+ 0389ce88fc3525b8d308d522505d939760b32905 svn-5550
+ 84d1ba9c5aca7dc5f46c3dc1df47c5f837b9e1dd baseline
+ 51788dfbc72159481063e7315beede4e7d119a4e baseline
+<span class="gi">+b79c5d3ddb2dc39048b5eda39f3ae63e5eddcbfc baseline</span>
+<span class="gi">+f10e24fc4d48f4a11261a6e7f159e8e0089942f7 workspace-patch-2</span>
+<span class="gh">diff -r b79c5d3ddb2d src/include/cbworkspace.h</span>
+<span class="gd">--- a/src/include/cbworkspace.h    Wed Apr 29 01:03:39 2009 -0400</span>
+<span class="gi">+++ b/src/include/cbworkspace.h    Wed Apr 29 11:01:44 2009 -0400</span>
+<span class="gu">@@ -107,14 +107,26 @@</span>
+           * false, the workspace will be marked as unmodified.
+           */
+         virtual void SetModified(bool modified);
+<span class="gi">+</span>
+<span class="gi">+        /** @brief Set the preferred target for this workspace</span>
+<span class="gi">+          */</span>
+<span class="gi">+        virtual void SetPreferredTarget(const wxString &amp;target);</span>
+<span class="gi">+</span>
+<span class="gi">+        /** @brief Get the preferred target for this workspace</span>
+<span class="gi">+          */</span>
+<span class="gi">+        virtual wxString GetPreferredTarget() const { return m_PreferredTargetName; }</span>
+<span class="gi">+</span>
+     private:
+         bool m_IsOK; // succeeded loading?
+         bool m_IsDefault; // is this the Code::Blocks default workspace?
+         bool m_Modified; // is it modified?
+         wxFileName m_Filename; // filename
+         wxString m_Title; // title
+<span class="gi">+        wxString m_PreferredTargetName;</span>
+ 
+         void Load(); // utility function
+<span class="gi">+        bool SaveLayout();</span>
+<span class="gi">+        bool LoadLayout();</span>
+ };
+ 
+ #endif // CBWORKSPACE_H
+<span class="gh">diff -r b79c5d3ddb2d src/include/workspaceloader.h</span>
+<span class="gd">--- a/src/include/workspaceloader.h    Wed Apr 29 01:03:39 2009 -0400</span>
+<span class="gi">+++ b/src/include/workspaceloader.h    Wed Apr 29 11:01:44 2009 -0400</span>
+<span class="gu">@@ -16,6 +16,9 @@</span>
+ 
+         bool Open(const wxString&amp; filename, wxString&amp; Title);
+         bool Save(const wxString&amp; title, const wxString&amp; filename);
+<span class="gi">+</span>
+<span class="gi">+        bool SaveLayout(const wxString&amp; filename);</span>
+<span class="gi">+        bool LoadLayout(const wxString&amp; filename);</span>
+ };
+ 
+ #endif // WORKSPACELOADER_H
+<span class="gh">diff -r b79c5d3ddb2d src/plugins/compilergcc/compilergcc.cpp</span>
+<span class="gd">--- a/src/plugins/compilergcc/compilergcc.cpp    Wed Apr 29 01:03:39 2009 -0400</span>
+<span class="gi">+++ b/src/plugins/compilergcc/compilergcc.cpp    Wed Apr 29 11:01:44 2009 -0400</span>
+<span class="gu">@@ -1314,6 +1314,18 @@</span>
+     }
+ }
+ 
+<span class="gi">+bool CompilerGCC::IsValidTarget(const wxString &amp;target) const</span>
+<span class="gi">+{</span>
+<span class="gi">+    if ( target.IsEmpty() )</span>
+<span class="gi">+        return false;</span>
+<span class="gi">+    if ( m_Targets.Index(target) == -1 )</span>
+<span class="gi">+        return false;</span>
+<span class="gi">+    ProjectBuildTarget *tgt = Manager::Get()-&gt;GetProjectManager()-&gt;GetActiveProject()-&gt;GetBuildTarget(target);</span>
+<span class="gi">+    if ( tgt &amp;&amp; ! tgt-&gt;SupportsCurrentPlatform() )</span>
+<span class="gi">+        return false;</span>
+<span class="gi">+    return true;</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ void CompilerGCC::DoRecreateTargetMenu()
+ {
+     if (!IsAttached())
+<span class="gu">@@ -1341,9 +1353,14 @@</span>
+             break;
+ 
+         // find out the should-be-selected target
+<span class="gd">-        wxString tgtStr = m_Project-&gt;GetActiveBuildTarget();</span>
+<span class="gd">-        if (tgtStr.IsEmpty())</span>
+<span class="gd">-            tgtStr = m_Project-&gt;GetFirstValidBuildTargetName(); // a default value</span>
+<span class="gi">+        wxString preferredTarget = Manager::Get()-&gt;GetProjectManager()-&gt;GetWorkspace()-&gt;GetPreferredTarget();</span>
+<span class="gi">+        wxString tgtStr = preferredTarget;</span>
+<span class="gi">+        if ( ! IsValidTarget(tgtStr) )</span>
+<span class="gi">+            tgtStr = m_Project-&gt;GetActiveBuildTarget();</span>
+<span class="gi">+        if ( ! IsValidTarget(tgtStr) )</span>
+<span class="gi">+            tgtStr = m_Project-&gt;GetFirstValidBuildTargetName(); // last-chance default</span>
+<span class="gi">+        if ( preferredTarget.IsEmpty() )</span>
+<span class="gi">+            Manager::Get()-&gt;GetProjectManager()-&gt;GetWorkspace()-&gt;SetPreferredTarget(tgtStr);</span>
+ 
+         // fill the menu and combo
+         for (size_t x = 0; x &lt; m_Targets.GetCount(); ++x)
+<span class="gu">@@ -1434,7 +1451,9 @@</span>
+     }
+     for (int i = 0; i &lt; project-&gt;GetBuildTargetsCount(); ++i)
+     {
+<span class="gd">-        m_Targets.Add(project-&gt;GetBuildTarget(i)-&gt;GetTitle());</span>
+<span class="gi">+        ProjectBuildTarget *tgt = project-&gt;GetBuildTarget(i);</span>
+<span class="gi">+        if ( tgt-&gt;SupportsCurrentPlatform() )</span>
+<span class="gi">+            m_Targets.Add( tgt-&gt;GetTitle() );</span>
+     }
+ 
+     // keep the index for the first real target
+<span class="gu">@@ -3158,15 +3177,18 @@</span>
+ 
+ void CompilerGCC::OnSelectTarget(wxCommandEvent&amp; event)
+ {
+<span class="gd">-    int sel = event.GetSelection();</span>
+     if (event.GetId() == idToolTarget)
+     {   // through the toolbar
+<span class="gi">+        int sel = event.GetSelection();</span>
+<span class="gi">+        Manager::Get()-&gt;GetProjectManager()-&gt;GetWorkspace()-&gt;SetPreferredTarget( GetTargetString(sel) );</span>
+         DoUpdateTargetMenu(sel);
+     }
+     else
+     {   // through Build-&gt;SelectTarget
+<span class="gd">-        DoUpdateTargetMenu(event.GetId() - idMenuSelectTargetOther[0]);</span>
+<span class="gd">-        m_ToolTarget-&gt;SetSelection(event.GetId() - idMenuSelectTargetOther[0]);</span>
+<span class="gi">+        int i = event.GetId() - idMenuSelectTargetOther[0];</span>
+<span class="gi">+        Manager::Get()-&gt;GetProjectManager()-&gt;GetWorkspace()-&gt;SetPreferredTarget( GetTargetString(i) );</span>
+<span class="gi">+        DoUpdateTargetMenu(i);</span>
+<span class="gi">+        m_ToolTarget-&gt;SetSelection(i);</span>
+     }
+ } // end of OnSelectTarget
+ 
+<span class="gh">diff -r b79c5d3ddb2d src/plugins/compilergcc/compilergcc.h</span>
+<span class="gd">--- a/src/plugins/compilergcc/compilergcc.h    Wed Apr 29 01:03:39 2009 -0400</span>
+<span class="gi">+++ b/src/plugins/compilergcc/compilergcc.h    Wed Apr 29</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">raybert 2009-04-28 18:27:49</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,206 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: templates/win32/directx_main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- templates/win32/directx_main.cpp    (revision 0)</span>
+<span class="gi">+++ templates/win32/directx_main.cpp    (revision 0)</span>
+<span class="gu">@@ -0,0 +1,162 @@</span>
+<span class="gi">+#include &lt;d3d8.h&gt;</span>
+<span class="gi">+</span>
+<span class="gi">+LPDIRECT3D8       g_pD3D       = NULL;</span>
+<span class="gi">+LPDIRECT3DDEVICE8 g_pD3DDevice = NULL;</span>
+<span class="gi">+</span>
+<span class="gi">+HRESULT InitialiseD3D(HWND hWnd)</span>
+<span class="gi">+{</span>
+<span class="gi">+  // First of all, create the main D3D object. If it is created successfully</span>
+<span class="gi">+  // we should get a pointer to an IDirect3D8 interface.</span>
+<span class="gi">+  g_pD3D = Direct3DCreate8(D3D_SDK_VERSION);</span>
+<span class="gi">+</span>
+<span class="gi">+  if(g_pD3D == NULL)</span>
+<span class="gi">+  {</span>
+<span class="gi">+    return E_FAIL;</span>
+<span class="gi">+  }</span>
+<span class="gi">+</span>
+<span class="gi">+  //Get the current display mode</span>
+<span class="gi">+  D3DDISPLAYMODE d3ddm;</span>
+<span class="gi">+  if(FAILED(g_pD3D-&gt;GetAdapterDisplayMode(D3DADAPTER_DEFAULT, &amp;d3ddm)))</span>
+<span class="gi">+  {</span>
+<span class="gi">+    return E_FAIL;</span>
+<span class="gi">+  }</span>
+<span class="gi">+</span>
+<span class="gi">+  // Create a structure to hold the settings for our device</span>
+<span class="gi">+  D3DPRESENT_PARAMETERS d3dpp;</span>
+<span class="gi">+  ZeroMemory(&amp;d3dpp, sizeof(d3dpp));</span>
+<span class="gi">+</span>
+<span class="gi">+  // Fill the structure: Program shall be windowed,</span>
+<span class="gi">+  // back buffer format matches current display mode</span>
+<span class="gi">+  d3dpp.Windowed         = TRUE;</span>
+<span class="gi">+  d3dpp.SwapEffect       = D3DSWAPEFFECT_COPY_VSYNC;</span>
+<span class="gi">+  d3dpp.BackBufferFormat = d3ddm.Format;</span>
+<span class="gi">+</span>
+<span class="gi">+  //Create a Direct3D device.</span>
+<span class="gi">+  if(FAILED(g_pD3D-&gt;CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hWnd,</span>
+<span class="gi">+            D3DCREATE_SOFTWARE_VERTEXPROCESSING, &amp;d3dpp, &amp;g_pD3DDevice)))</span>
+<span class="gi">+  {</span>
+<span class="gi">+    return E_FAIL;</span>
+<span class="gi">+  }</span>
+<span class="gi">+</span>
+<span class="gi">+  return S_OK;</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+void Render()</span>
+<span class="gi">+{</span>
+<span class="gi">+  if(g_pD3DDevice == NULL)</span>
+<span class="gi">+  {</span>
+<span class="gi">+    return;</span>
+<span class="gi">+  }</span>
+<span class="gi">+</span>
+<span class="gi">+  // Clear the backbuffer to blue</span>
+<span class="gi">+  g_pD3DDevice-&gt;Clear(0, NULL, D3DCLEAR_TARGET,</span>
+<span class="gi">+                      D3DCOLOR_XRGB(0, 0, 255), 1.0f, 0);</span>
+<span class="gi">+</span>
+<span class="gi">+  // Begin the scene</span>
+<span class="gi">+  g_pD3DDevice-&gt;BeginScene();</span>
+<span class="gi">+</span>
+<span class="gi">+  // Fill in here the rendering of other objects</span>
+<span class="gi">+</span>
+<span class="gi">+  // End the scene</span>
+<span class="gi">+  g_pD3DDevice-&gt;EndScene();</span>
+<span class="gi">+</span>
+<span class="gi">+  // Fill back and front buffers so that back buffer will be visible on screen</span>
+<span class="gi">+  g_pD3DDevice-&gt;Present(NULL, NULL, NULL, NULL);</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+void CleanUp()</span>
+<span class="gi">+{</span>
+<span class="gi">+  if(g_pD3DDevice != NULL)</span>
+<span class="gi">+  {</span>
+<span class="gi">+    g_pD3DDevice-&gt;Release();</span>
+<span class="gi">+    g_pD3DDevice = NULL;</span>
+<span class="gi">+  }</span>
+<span class="gi">+</span>
+<span class="gi">+  if(g_pD3D != NULL)</span>
+<span class="gi">+  {</span>
+<span class="gi">+    g_pD3D-&gt;Release();</span>
+<span class="gi">+    g_pD3D = NULL;</span>
+<span class="gi">+  }</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+void MainLoop()</span>
+<span class="gi">+{</span>
+<span class="gi">+  // Enter the main loop</span>
+<span class="gi">+  MSG  msg;</span>
+<span class="gi">+  BOOL bMessage;</span>
+<span class="gi">+</span>
+<span class="gi">+  PeekMessage(&amp;msg, NULL, 0U, 0U, PM_NOREMOVE);</span>
+<span class="gi">+</span>
+<span class="gi">+  while(msg.message != WM_QUIT)</span>
+<span class="gi">+  {</span>
+<span class="gi">+    bMessage = PeekMessage(&amp;msg, NULL, 0U, 0U, PM_REMOVE);</span>
+<span class="gi">+</span>
+<span class="gi">+    if(bMessage)</span>
+<span class="gi">+    {</span>
+<span class="gi">+      // Process message</span>
+<span class="gi">+      TranslateMessage(&amp;msg);</span>
+<span class="gi">+      DispatchMessage(&amp;msg);</span>
+<span class="gi">+    }</span>
+<span class="gi">+    else</span>
+<span class="gi">+    {</span>
+<span class="gi">+      Render(); // No message to process -&gt; render the scene</span>
+<span class="gi">+    }</span>
+<span class="gi">+  }// while</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+// The windows message handler</span>
+<span class="gi">+LRESULT WINAPI WinProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)</span>
+<span class="gi">+{</span>
+<span class="gi">+  switch(msg)</span>
+<span class="gi">+  {</span>
+<span class="gi">+    case WM_DESTROY:</span>
+<span class="gi">+      PostQuitMessage(0);</span>
+<span class="gi">+      return 0;</span>
+<span class="gi">+      break;</span>
+<span class="gi">+</span>
+<span class="gi">+    case WM_KEYUP:</span>
+<span class="gi">+      switch (wParam)</span>
+<span class="gi">+      {</span>
+<span class="gi">+        case VK_ESCAPE:</span>
+<span class="gi">+          // Escape key pressed -&gt; exit</span>
+<span class="gi">+          DestroyWindow(hWnd);</span>
+<span class="gi">+          return 0;</span>
+<span class="gi">+          break;</span>
+<span class="gi">+      }</span>
+<span class="gi">+      break;</span>
+<span class="gi">+  }// switch</span>
+<span class="gi">+</span>
+<span class="gi">+  return DefWindowProc(hWnd, msg, wParam, lParam);</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+// Application main entry point</span>
+<span class="gi">+INT WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, INT)</span>
+<span class="gi">+{</span>
+<span class="gi">+  //Register the window class</span>
+<span class="gi">+  WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WinProc, 0L, 0L,</span>
+<span class="gi">+                    GetModuleHandle(NULL), NULL, NULL, NULL, NULL,</span>
+<span class="gi">+                    &quot;DirectX Project&quot;, NULL };</span>
+<span class="gi">+  RegisterClassEx(&amp;wc);</span>
+<span class="gi">+</span>
+<span class="gi">+  // Create the application&#39;s main window</span>
+<span class="gi">+  HWND hWnd = CreateWindow(&quot;DirectX Project&quot;, &quot;Code::Blocks Template&quot;,</span>
+<span class="gi">+                           WS_OVERLAPPEDWINDOW, 50, 50, 500, 500,</span>
+<span class="gi">+                           GetDesktopWindow(), NULL, wc.hInstance, NULL);</span>
+<span class="gi">+</span>
+<span class="gi">+  // Initialize Direct3D</span>
+<span class="gi">+  if(SUCCEEDED(InitialiseD3D(hWnd)))</span>
+<span class="gi">+  {</span>
+<span class="gi">+    // Show window</span>
+<span class="gi">+    ShowWindow(hWnd, SW_SHOWDEFAULT);</span>
+<span class="gi">+    UpdateWindow(hWnd);</span>
+<span class="gi">+</span>
+<span class="gi">+    //Start game running: Enter the game loop</span>
+<span class="gi">+    MainLoop();</span>
+<span class="gi">+  }</span>
+<span class="gi">+</span>
+<span class="gi">+  CleanUp();</span>
+<span class="gi">+</span>
+<span class="gi">+  UnregisterClass(&quot;DirectX Project&quot;, wc.hInstance);</span>
+<span class="gi">+</span>
+<span class="gi">+  return 0;</span>
+<span class="gi">+}</span>
+
+Property changes on: templates\win32\directx_main.cpp
+___________________________________________________________________
+Name: svn:eol-style
+   + native
+
+<span class="gh">Index: templates/win32/directx_vctk.cbp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- templates/win32/directx_vctk.cbp    (revision 0)</span>
+<span class="gi">+++ templates/win32/directx_vctk.cbp    (revision 0)</span>
+<span class="gu">@@ -0,0 +1,46 @@</span>
+<span class="gi">+&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;yes&quot; ?&gt;</span>
+<span class="gi">+&lt;CodeBlocks_project_file&gt;</span>
+<span class="gi">+    &lt;FileVersion major=&quot;1&quot; minor=&quot;3&quot; /&gt;</span>
+<span class="gi">+    &lt;Project&gt;</span>
+<span class="gi">+        &lt;Option title=&quot;DirectX Project&quot; /&gt;</span>
+<span class="gi">+        &lt;Option compiler=&quot;msvctk&quot; /&gt;</span>
+<span class="gi">+        &lt;Build&gt;</span>
+<span class="gi">+            &lt;Target title=&quot;default&quot;&gt;</span>
+<span class="gi">+                &lt;Option output=&quot;DirectX.exe&quot; /&gt;</span>
+<span class="gi">+                &lt;Option object_output=&quot;.&quot; /&gt;</span>
+<span class="gi">+                &lt;Option type=&quot;0&quot; /&gt;</span>
+<span class="gi">+                &lt;Option compiler=&quot;msvctk&quot; /&gt;</span>
+<span class="gi">+                &lt;Option includeInTargetAll=&quot;1&quot; /&gt;</span>
+<span class="gi">+            &lt;/Target&gt;</span>
+<span class="gi">+        &lt;/Build&gt;</span>
+<span class="gi">+        &lt;Compiler&gt;</span>
+<span class="gi">+            &lt;Add option=&quot;-DWIN32&quot; /&gt;</span>
+<span class="gi">+            &lt;Add option=&quot;-DNDEBUG&quot; /&gt;</span>
+<span class="gi">+            &lt;Add op</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mortenmacfly 2006-02-22 11:40:48</div>

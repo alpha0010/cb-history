@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,57 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/annoyingdialog.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/annoyingdialog.cpp    (revision 3275)</span>
+<span class="gi">+++ src/sdk/annoyingdialog.cpp    (working copy)</span>
+<span class="gu">@@ -101,11 +101,33 @@</span>
+ 
+     wxButton *but1 = new wxButton(this, id1, bTxt1, wxDefaultPosition, wxDefaultSize, 0);
+     but1-&gt;SetDefault();
+<span class="gd">-    buttonArea-&gt;Add(but1, 0, wxALIGN_CENTER|wxALL, 5);</span>
+<span class="gi">+#ifdef __WXGTK__</span>
+<span class="gi">+    if (numButtons == 1)</span>
+<span class="gi">+        buttonArea-&gt;Add(but1, 0, wxALIGN_CENTER|wxALL, 5);</span>
+ 
+     if(growableCol != -1)
+         buttonArea-&gt;Add(1, 1, 0, wxGROW|wxALIGN_CENTER_VERTICAL, 5 );
+ 
+<span class="gi">+    if(numButtons == 2)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        wxButton *but2 = new wxButton(this, id2, bTxt2, wxDefaultPosition, wxDefaultSize, 0);</span>
+<span class="gi">+        but2-&gt;SetDefault();</span>
+<span class="gi">+        buttonArea-&gt;Add(but2, 0, wxALIGN_CENTER|wxALL, 5);</span>
+<span class="gi">+        buttonArea-&gt;Add(but1, 0, wxALIGN_CENTER|wxTOP|wxBOTTOM|wxRIGHT, 5);</span>
+<span class="gi">+    }</span>
+<span class="gi">+    if(numButtons == 3)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        wxButton *but2 = new wxButton(this, id2, bTxt2, wxDefaultPosition, wxDefaultSize, 0);</span>
+<span class="gi">+        wxButton *but3 = new wxButton(this, id3, bTxt3, wxDefaultPosition, wxDefaultSize, 0);</span>
+<span class="gi">+        but3-&gt;SetDefault();</span>
+<span class="gi">+        buttonArea-&gt;Add(but2, 0, wxALIGN_CENTER|wxALL, 5);</span>
+<span class="gi">+        buttonArea-&gt;Add(but3, 0, wxALIGN_CENTER|wxTOP|wxBOTTOM|wxRIGHT, 5);</span>
+<span class="gi">+        buttonArea-&gt;Add(but1, 0, wxALIGN_CENTER|wxTOP|wxBOTTOM|wxRIGHT, 5);</span>
+<span class="gi">+    }</span>
+<span class="gi">+#else</span>
+<span class="gi">+    buttonArea-&gt;Add(but1, 0, wxALIGN_CENTER|wxALL, 5);</span>
+<span class="gi">+    if(growableCol != -1)</span>
+<span class="gi">+        buttonArea-&gt;Add(1, 1, 0, wxGROW|wxALIGN_CENTER_VERTICAL, 5 );</span>
+     if(numButtons &gt; 1)
+     {
+         wxButton *but2 = new wxButton(this, id2, bTxt2, wxDefaultPosition, wxDefaultSize, 0);
+<span class="gu">@@ -118,6 +140,9 @@</span>
+         but3-&gt;SetDefault();
+         buttonArea-&gt;Add(but3, 0, wxALIGN_CENTER|wxTOP|wxBOTTOM|wxRIGHT, 5);
+     }
+<span class="gi">+#endif</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+ //    mainArea-&gt;Add( buttonArea, 0, wxALIGN_CENTER|wxTOP, 10);
+ 
+     outerSizer-&gt;Add( mainArea, 0, wxALIGN_CENTER|wxALL, 5);
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">kaischroeder 2006-11-27 15:09:39</div>

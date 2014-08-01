@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,143 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: codestatexec.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- codestatexec.h    (revision 8065)</span>
+<span class="gi">+++ codestatexec.h    (working copy)</span>
+<span class="gu">@@ -15,23 +15,39 @@</span>
+ #include &quot;language_def.h&quot;
+ 
+ class wxWindow;
+<span class="gi">+class wxProgressDialog;</span>
+ 
+ /** This class computes the statistics of the project&#39;s files and display them.
+  *  @see CodeStat, CodeStatConfigDlg, CodeStatExecDlg, LanguageDef
+  */
+<span class="gi">+</span>
+<span class="gi">+class CodeStatCache;</span>
+<span class="gi">+</span>
+ class CodeStatExecDlg : public wxScrollingDialog
+ {
+<span class="gd">-    public:</span>
+<span class="gd">-        CodeStatExecDlg(wxWindow* parent) : parent(parent){}</span>
+<span class="gd">-        virtual ~CodeStatExecDlg();</span>
+<span class="gd">-        int Execute(LanguageDef languages[NB_FILETYPES_MAX], int nb_languages);</span>
+<span class="gd">-    private:</span>
+<span class="gd">-      void EndModal(int retCode);</span>
+<span class="gd">-      void CountLines(wxFileName filename, LanguageDef &amp;language,</span>
+<span class="gd">-                      long int &amp;code_lines, long int &amp;codecomments_lines,</span>
+<span class="gd">-                      long int &amp;comment_lines, long int &amp;empty_lines, long int &amp;total_lines);</span>
+<span class="gd">-      void AnalyseLine(LanguageDef &amp;language, wxString line, bool &amp;comment, bool &amp;code, bool &amp;multi_line_comment);</span>
+<span class="gd">-      wxWindow* parent;</span>
+<span class="gi">+public:</span>
+<span class="gi">+    CodeStatExecDlg(wxWindow* parent);</span>
+<span class="gi">+    virtual ~CodeStatExecDlg();</span>
+<span class="gi">+    int Execute(LanguageDef languages[NB_FILETYPES_MAX], int nb_languages);</span>
+<span class="gi">+private:</span>
+<span class="gi">+    void EndModal(int retCode);</span>
+<span class="gi">+    void OnSelectProject(wxCommandEvent&amp; evt);</span>
+<span class="gi">+    void OnIdle(wxIdleEvent&amp; evt);</span>
+<span class="gi">+    void ParseProject(int index);</span>
+<span class="gi">+    void DoParseProject(int index);</span>
+<span class="gi">+    void DoParseWorkspace();</span>
+<span class="gi">+    void UpdateProgress();</span>
+<span class="gi">+    void ShowResults(int index);</span>
+<span class="gi">+</span>
+<span class="gi">+    wxWindow* m_parent;</span>
+<span class="gi">+    wxChoice* m_choice;</span>
+<span class="gi">+    wxProgressDialog* m_progress;</span>
+<span class="gi">+    CodeStatCache* m_cache;</span>
+<span class="gi">+    LanguageDef* m_languages;</span>
+<span class="gi">+    int m_nb_languages;</span>
+<span class="gi">+    int m_nb_files;</span>
+<span class="gi">+    int m_current_file;</span>
+<span class="gi">+    bool m_changed;</span>
+ };
+ 
+ #endif // CODESTATEXEC_H
+<span class="gh">Index: resources/main_dialog.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- resources/main_dialog.xrc    (revision 8065)</span>
+<span class="gi">+++ resources/main_dialog.xrc    (working copy)</span>
+<span class="gu">@@ -1,199 +1,232 @@</span>
+ &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot; ?&gt;
+<span class="gd">-&lt;resource xmlns=&quot;http://www.wxwidgets.org/wxxrc&quot;&gt;</span>
+<span class="gd">-  &lt;object class=&quot;wxScrollingDialog&quot; name=&quot;dlgCodeStatExec&quot;&gt;</span>
+<span class="gd">-    &lt;title&gt;Code Statistics&lt;/title&gt;</span>
+<span class="gd">-    &lt;object class=&quot;wxBoxSizer&quot;&gt;</span>
+<span class="gd">-      &lt;orient&gt;wxVERTICAL&lt;/orient&gt;</span>
+<span class="gd">-      &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-        &lt;object class=&quot;wxStaticBoxSizer&quot;&gt;</span>
+<span class="gd">-          &lt;orient&gt;wxVERTICAL&lt;/orient&gt;</span>
+<span class="gd">-          &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-            &lt;object class=&quot;wxGridSizer&quot;&gt;</span>
+<span class="gd">-              &lt;cols&gt;2&lt;/cols&gt;</span>
+<span class="gd">-              &lt;rows&gt;2&lt;/rows&gt;</span>
+<span class="gd">-              &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxStaticText&quot;&gt;</span>
+<span class="gd">-                  &lt;label&gt;Number of files:&lt;/label&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+<span class="gd">-              &lt;/object&gt;</span>
+<span class="gd">-              &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxStaticText&quot; name=&quot;txt_num_files&quot;&gt;</span>
+<span class="gd">-                  &lt;label&gt;999999&lt;/label&gt;</span>
+<span class="gd">-                  &lt;style&gt;wxALIGN_RIGHT&lt;/style&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+<span class="gd">-                &lt;flag&gt;wxALIGN_RIGHT&lt;/flag&gt;</span>
+<span class="gd">-              &lt;/object&gt;</span>
+<span class="gd">-              &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxStaticText&quot;&gt;</span>
+<span class="gd">-                  &lt;label&gt;Files skipped:&lt;/label&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+<span class="gd">-              &lt;/object&gt;</span>
+<span class="gd">-              &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxStaticText&quot; name=&quot;txt_skipped_files&quot;&gt;</span>
+<span class="gd">-                  &lt;label&gt;999999&lt;/label&gt;</span>
+<span class="gd">-                  &lt;style&gt;wxALIGN_RIGHT&lt;/style&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+<span class="gd">-                &lt;flag&gt;wxALIGN_RIGHT&lt;/flag&gt;</span>
+<span class="gd">-              &lt;/object&gt;</span>
+<span class="gd">-              &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxStaticText&quot;&gt;</span>
+<span class="gd">-                  &lt;label&gt;Files not found:&lt;/label&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+<span class="gd">-              &lt;/object&gt;</span>
+<span class="gd">-              &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxStaticText&quot; name=&quot;txt_files_not_found&quot;&gt;</span>
+<span class="gd">-                  &lt;label&gt;999999&lt;/label&gt;</span>
+<span class="gd">-                  &lt;style&gt;wxALIGN_RIGHT&lt;/style&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+<span class="gd">-                &lt;flag&gt;wxALIGN_RIGHT&lt;/flag&gt;</span>
+<span class="gd">-              &lt;/object&gt;</span>
+<span class="gd">-            &lt;/object&gt;</span>
+<span class="gd">-            &lt;flag&gt;wxALL|wxEXPAND&lt;/flag&gt;</span>
+<span class="gd">-            &lt;border&gt;5&lt;/border&gt;</span>
+<span class="gd">-          &lt;/object&gt;</span>
+<span class="gd">-          &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-            &lt;object class=&quot;wxGridSizer&quot;&gt;</span>
+<span class="gd">-              &lt;cols&gt;2&lt;/cols&gt;</span>
+<span class="gd">-              &lt;rows&gt;2&lt;/rows&gt;</span>
+<span class="gd">-              &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxGauge&quot; name=&quot;Gauge_Code&quot;&gt;</span>
+<span class="gd">-                  &lt;range&gt;100&lt;/range&gt;</span>
+<span class="gd">-                  &lt;size&gt;-1,20&lt;/size&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+<span class="gd">-                &lt;flag&gt;wxALL|wxEXPAND&lt;/flag&gt;</span>
+<span class="gd">-                &lt;border&gt;2&lt;/border&gt;</span>
+<span class="gd">-              &lt;/object&gt;</span>
+<span class="gd">-              &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxStaticText&quot; name=&quot;txt_Gauge_Code&quot;&gt;</span>
+<span class="gd">-                  &lt;label&gt;XXXX% Code only&lt;/label&gt;</span>
+<span class="gd">-                &lt;/object&gt;</span>
+<span class="gd">-                &lt;flag&gt;wxALIGN_CENTRE_VERTICAL&lt;/flag&gt;</span>
+<span class="gd">-              &lt;/object&gt;</span>
+<span class="gd">-              &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gd">-                &lt;object class=&quot;wxGauge&quot; name=&quot;Gauge_Code_Comments&quot;&gt;</span>
+<span class="gd">-                  &lt;ra</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">sbezgodov 2012-04-03 21:00:30</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,70 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/menuitemsmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/menuitemsmanager.cpp    (revision 3424)</span>
+<span class="gi">+++ src/sdk/menuitemsmanager.cpp    (working copy)</span>
+<span class="gu">@@ -67,7 +67,7 @@</span>
+ {
+     if (!parent)
+         return 0;
+<span class="gd">-    wxMenuItem* ni = new wxMenuItem(0L, id, caption, helptext);</span>
+<span class="gi">+    wxMenuItem* ni = new wxMenuItem(parent, id, caption, helptext);</span>
+     m_MenuItems.Add(ni);
+     parent-&gt;Insert(index, ni);
+     return ni;
+<span class="gu">@@ -177,7 +178,7 @@</span>
+             {
+                 if (needsSep)
+                 {
+<span class="gd">-                    wxMenuItem* item = new wxMenuItem(0, wxID_SEPARATOR);</span>
+<span class="gi">+                    wxMenuItem* item = new wxMenuItem(menu, wxID_SEPARATOR);</span>
+                     menu-&gt;Insert(insert ? insertIndex : menu-&gt;GetMenuItemCount(), item);
+                 }
+ 
+<span class="gu">@@ -189,7 +190,7 @@</span>
+                 else
+                 {
+                     wxMenu* sub = new wxMenu;
+<span class="gd">-                    wxMenuItem* item = new wxMenuItem(0, -1, current, wxEmptyString, wxITEM_NORMAL, sub);</span>
+<span class="gi">+                    wxMenuItem* item = new wxMenuItem(menu, -1, current, wxEmptyString, wxITEM_NORMAL, sub);</span>
+                     menu-&gt;Insert(insert ? insertIndex : menu-&gt;GetMenuItemCount(), item);
+                     menu = sub;
+                 }
+<span class="gh">Index: src/plugins/codecompletion/classbrowserbuilderthread.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/classbrowserbuilderthread.cpp    (revision 3385)</span>
+<span class="gi">+++ src/plugins/codecompletion/classbrowserbuilderthread.cpp    (working copy)</span>
+<span class="gu">@@ -167,7 +167,7 @@</span>
+ 
+ void ClassBrowserBuilderThread::RemoveInvalidNodes(wxTreeCtrl* tree, wxTreeItemId parent)
+ {
+<span class="gd">-    if (TestDestroy() || Manager::IsAppShuttingDown())</span>
+<span class="gi">+    if (TestDestroy() || Manager::IsAppShuttingDown() || (!(parent.IsOk())) )</span>
+         return;
+ 
+     // recursively enters all existing nodes and deletes the node if the token it references
+<span class="gu">@@ -175,7 +175,7 @@</span>
+ 
+     // we &#39;ll loop backwards so we can delete nodes without problems
+     wxTreeItemId existing = tree-&gt;GetLastChild(parent);
+<span class="gd">-    while (existing)</span>
+<span class="gi">+    while (existing.IsOk())</span>
+     {
+         // recurse
+         if (tree-&gt;ItemHasChildren(existing))
+<span class="gu">@@ -427,7 +427,7 @@</span>
+ 
+ void ClassBrowserBuilderThread::SelectNode(wxTreeItemId node)
+ {
+<span class="gd">-    if (TestDestroy() || Manager::IsAppShuttingDown())</span>
+<span class="gi">+    if (TestDestroy() || Manager::IsAppShuttingDown() || (!(node.IsOk())))</span>
+         return;
+ 
+     m_pTreeBottom-&gt;Freeze();
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">stahta01 2006-12-30 01:19:35</div>

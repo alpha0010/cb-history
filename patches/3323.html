@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,159 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/abbreviations/abbreviations.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/abbreviations/abbreviations.h    (wersja 8496)</span>
+<span class="gi">+++ src/plugins/abbreviations/abbreviations.h    (kopia robocza)</span>
+<span class="gu">@@ -148,10 +148,16 @@</span>
+     void OnEditAutoComplete(wxCommandEvent&amp; /*event*/);
+     void OnEditMenuUpdateUI(wxUpdateUIEvent&amp; event);
+ 
+<span class="gi">+public:</span>
+<span class="gi">+  void EditorEventHook(cbEditor* editor, wxScintillaEvent&amp; event);</span>
+<span class="gi">+</span>
+ private:
+     friend class AbbreviationsConfigPanel;
+     AutoCompleteMap m_AutoCompleteMap;
+ 
+<span class="gi">+    int                     m_EditorHookId;</span>
+<span class="gi">+    /// is AutoComp opened by Abbreviations</span>
+<span class="gi">+    bool m_IsAutoCompVisible;</span>
+ private:
+     DECLARE_EVENT_TABLE();
+ };
+<span class="gh">Index: src/plugins/abbreviations/abbreviations.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/abbreviations/abbreviations.cpp    (wersja 8496)</span>
+<span class="gi">+++ src/plugins/abbreviations/abbreviations.cpp    (kopia robocza)</span>
+<span class="gu">@@ -11,6 +11,8 @@</span>
+ #include &lt;configurationpanel.h&gt;
+ #include &lt;cbstyledtextctrl.h&gt;
+ 
+<span class="gi">+#include &lt;editor_hooks.h&gt;</span>
+<span class="gi">+</span>
+ #include &quot;abbreviations.h&quot;
+ #include &quot;abbreviationsconfigpanel.h&quot;
+ 
+<span class="gu">@@ -44,6 +46,8 @@</span>
+     {
+         NotifyMissingFile(_T(&quot;abbreviations.zip&quot;));
+     }
+<span class="gi">+</span>
+<span class="gi">+    m_IsAutoCompVisible = false;</span>
+ }
+ 
+ // destructor
+<span class="gu">@@ -65,6 +69,10 @@</span>
+ 
+     LoadAutoCompleteConfig();
+     RegisterScripting();
+<span class="gi">+</span>
+<span class="gi">+    // hook to editors</span>
+<span class="gi">+    EditorHooks::HookFunctorBase* myhook = new EditorHooks::HookFunctor&lt;Abbreviations&gt;(this, &amp;Abbreviations::EditorEventHook);</span>
+<span class="gi">+    m_EditorHookId = EditorHooks::RegisterHook(myhook);</span>
+ }
+ 
+ void Abbreviations::OnRelease(bool appShutDown)
+<span class="gu">@@ -82,6 +90,10 @@</span>
+     {
+         m_Singleton = nullptr;
+     }
+<span class="gi">+</span>
+<span class="gi">+    // unregister hook</span>
+<span class="gi">+    // &#39;true&#39; will delete the functor too</span>
+<span class="gi">+    EditorHooks::UnregisterHook(m_EditorHookId, true);</span>
+ }
+ 
+ void Abbreviations::RegisterScripting()
+<span class="gu">@@ -158,8 +170,38 @@</span>
+ 
+ void Abbreviations::OnEditAutoComplete(wxCommandEvent&amp; /*event*/)
+ {
+<span class="gd">-    cbEditor* ed = Manager::Get()-&gt;GetEditorManager()-&gt;GetBuiltinActiveEditor();</span>
+<span class="gd">-    DoAutoComplete(ed);</span>
+<span class="gi">+    cbEditor* editor = Manager::Get()-&gt;GetEditorManager()-&gt;GetBuiltinActiveEditor();</span>
+<span class="gi">+    cbStyledTextCtrl* control = editor-&gt;GetControl();</span>
+<span class="gi">+</span>
+<span class="gi">+    const AutoCompleteMap&amp; acm = m_AutoCompleteMap;</span>
+<span class="gi">+</span>
+<span class="gi">+    int curPos = control-&gt;GetCurrentPos();</span>
+<span class="gi">+    int startPos = control-&gt;WordStartPosition(curPos, true);</span>
+<span class="gi">+    const int endPos = control-&gt;WordEndPosition(curPos, true);</span>
+<span class="gi">+</span>
+<span class="gi">+    const wxString keyword = control-&gt;GetTextRange(startPos, endPos);</span>
+<span class="gi">+    AutoCompleteMap::const_iterator it = acm.find(keyword);</span>
+<span class="gi">+</span>
+<span class="gi">+    if(it != acm.end() )</span>
+<span class="gi">+    {</span>
+<span class="gi">+        DoAutoComplete(editor);</span>
+<span class="gi">+    }</span>
+<span class="gi">+    else</span>
+<span class="gi">+    {</span>
+<span class="gi">+        wxArrayString items;</span>
+<span class="gi">+        for( AutoCompleteMap::const_iterator it = acm.begin(); it != acm.end(); ++it )</span>
+<span class="gi">+        {</span>
+<span class="gi">+            if(it-&gt;first.Lower().StartsWith(keyword) )</span>
+<span class="gi">+            {</span>
+<span class="gi">+                items.Add(it-&gt;first);</span>
+<span class="gi">+            }</span>
+<span class="gi">+        }</span>
+<span class="gi">+        items.Sort();</span>
+<span class="gi">+        wxString itemsStr = GetStringFromArray(items, _T(&quot; &quot;));</span>
+<span class="gi">+        control-&gt;AutoCompShow(endPos-startPos, itemsStr);</span>
+<span class="gi">+        m_IsAutoCompVisible = control-&gt;AutoCompActive();</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+ }
+ 
+ void Abbreviations::OnEditMenuUpdateUI(wxUpdateUIEvent&amp; event)
+<span class="gu">@@ -187,83 +229,77 @@</span>
+     if (control-&gt;CallTipActive())
+         control-&gt;CallTipCancel();
+ 
+<span class="gi">+    m_IsAutoCompVisible = false;</span>
+<span class="gi">+</span>
+     LogManager* msgMan = Manager::Get()-&gt;GetLogManager();
+     int curPos = control-&gt;GetCurrentPos();
+     int wordStartPos = control-&gt;WordStartPosition(curPos, true);
+<span class="gd">-    wxString keyword = control-&gt;GetTextRange(wordStartPos, curPos);</span>
+<span class="gi">+    const int endPos = control-&gt;WordEndPosition(curPos, true);</span>
+<span class="gi">+    wxString keyword = control-&gt;GetTextRange(wordStartPos, endPos);</span>
+     wxString lineIndent = ed-&gt;GetLineIndentString(control-&gt;GetCurrentLine());
+     msgMan-&gt;DebugLog(_T(&quot;Auto-complete keyword: &quot;) + keyword);
+ 
+<span class="gd">-    AutoCompleteMap::iterator it;</span>
+<span class="gd">-    for (it = m_AutoCompleteMap.begin(); it != m_AutoCompleteMap.end(); ++it)</span>
+<span class="gi">+    AutoCompleteMap::iterator it = m_AutoCompleteMap.find(keyword);</span>
+<span class="gi">+    if (it != m_AutoCompleteMap.end() )</span>
+     {
+<span class="gd">-        if (keyword == it-&gt;first)</span>
+<span class="gi">+        // found; auto-complete it</span>
+<span class="gi">+        msgMan-&gt;DebugLog(_T(&quot;Auto-complete match for keyword found.&quot;));</span>
+<span class="gi">+</span>
+<span class="gi">+        // indent code accordingly</span>
+<span class="gi">+        wxString code = it-&gt;second;</span>
+<span class="gi">+        code.Replace(_T(&quot;\n&quot;), _T(&#39;\n&#39;) + lineIndent);</span>
+<span class="gi">+</span>
+<span class="gi">+        // look for and replace macros</span>
+<span class="gi">+        int macroPos = code.Find(_T(&quot;$(&quot;));</span>
+<span class="gi">+        while (macroPos != -1)</span>
+         {
+<span class="gd">-            // found; auto-complete it</span>
+<span class="gd">-            msgMan-&gt;DebugLog(_T(&quot;Auto-complete match for keyword found.&quot;));</span>
+<span class="gi">+            // locate ending parenthesis</span>
+<span class="gi">+            int macroPosEnd = macroPos + 2;</span>
+<span class="gi">+            int len = (int)code.Length();</span>
+<span class="gi">+            while (macroPosEnd &lt; len &amp;&amp; code.GetChar(macroPosEnd) != _T(&#39;)&#39;))</span>
+<span class="gi">+                ++macroPosEnd;</span>
+<span class="gi">+            if (macroPosEnd == len)</span>
+<span class="gi">+                return; // no ending parenthesis</span>
+ 
+<span class="gd">-            // indent code accordingly</span>
+<span class="gd">-            wxStr</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">p2rkw 2012-08-26 13:08:35</div>

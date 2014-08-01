@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,60 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 3808)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -368,6 +368,8 @@</span>
+ const int idCopy = wxNewId();
+ const int idPaste = wxNewId();
+ const int idDelete = wxNewId();
+<span class="gi">+const int idUpperCase = wxNewId();</span>
+<span class="gi">+const int idLowerCase = wxNewId();</span>
+ const int idSelectAll = wxNewId();
+ const int idSwapHeaderSource = wxNewId();
+ const int idBookmarks = wxNewId();
+<span class="gu">@@ -406,6 +408,8 @@</span>
+     EVT_MENU(idCopy, cbEditor::OnContextMenuEntry)
+     EVT_MENU(idPaste, cbEditor::OnContextMenuEntry)
+     EVT_MENU(idDelete, cbEditor::OnContextMenuEntry)
+<span class="gi">+    EVT_MENU(idUpperCase, cbEditor::OnContextMenuEntry)</span>
+<span class="gi">+    EVT_MENU(idLowerCase, cbEditor::OnContextMenuEntry)</span>
+     EVT_MENU(idSelectAll, cbEditor::OnContextMenuEntry)
+     EVT_MENU(idSwapHeaderSource, cbEditor::OnContextMenuEntry)
+     EVT_MENU(idBookmarksToggle, cbEditor::OnContextMenuEntry)
+<span class="gu">@@ -1930,6 +1934,9 @@</span>
+         menu-&gt;Append(idPaste, _(&quot;Paste&quot;));
+         menu-&gt;Append(idDelete, _(&quot;Delete&quot;));
+         menu-&gt;AppendSeparator();
+<span class="gi">+        menu-&gt;Append(idUpperCase, _(&quot;UPPERCASE&quot;));</span>
+<span class="gi">+        menu-&gt;Append(idLowerCase, _(&quot;lowercase&quot;));</span>
+<span class="gi">+        menu-&gt;AppendSeparator();</span>
+         menu-&gt;Append(idSelectAll, _(&quot;Select All&quot;));
+ 
+         bool hasSel = control-&gt;GetSelectionEnd() - control-&gt;GetSelectionStart() != 0;
+<span class="gu">@@ -1945,6 +1952,8 @@</span>
+             menu-&gt;Enable(idPaste, control-&gt;CanPaste());
+ 
+         menu-&gt;Enable(idDelete, hasSel);
+<span class="gi">+        menu-&gt;Enable(idUpperCase, hasSel);</span>
+<span class="gi">+        menu-&gt;Enable(idLowerCase, hasSel);</span>
+     }
+     else if(id == idBookmarks)
+     {
+<span class="gu">@@ -2196,6 +2205,10 @@</span>
+         control-&gt;Paste();
+     else if (id == idDelete)
+         control-&gt;ReplaceSelection(wxEmptyString);
+<span class="gi">+    else if (id == idUpperCase)</span>
+<span class="gi">+        control-&gt;UpperCase();</span>
+<span class="gi">+    else if (id == idLowerCase)</span>
+<span class="gi">+        control-&gt;LowerCase();</span>
+     else if (id == idSelectAll)
+         control-&gt;SelectAll();
+     else if (id == idSwapHeaderSource)
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mandrav 2007-04-12 10:11:07</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,56 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable">From 49089045924bbd3d46cead4e145b2d39f0b497ea Mon Sep 17 00:00:00 2001
+From: =?utf-8?q?Dan=20Hor=C3=A1k?= &lt;dan@danny.cz&gt;
+Date: Mon, 15 Jun 2009 16:07:05 +0200
+Subject: [PATCH] fix GSocket conflict between glib &gt;= 2.21 and wxGTK in rawhide
+
+<span class="gd">---</span>
+ src/plugins/contrib/codesnippets/codesnippets.cpp  |    5 +++++
+ .../contrib/codesnippets/codesnippetstreectrl.cpp  |    5 +++++
+ 2 files changed, 10 insertions(+), 0 deletions(-)
+
+<span class="gh">diff --git a/src/plugins/contrib/codesnippets/codesnippets.cpp b/src/plugins/contrib/codesnippets/codesnippets.cpp</span>
+<span class="gh">index bab4a86..83e117f 100644</span>
+<span class="gd">--- a/src/plugins/contrib/codesnippets/codesnippets.cpp</span>
+<span class="gi">+++ b/src/plugins/contrib/codesnippets/codesnippets.cpp</span>
+<span class="gu">@@ -51,8 +51,13 @@</span>
+ #include &quot;dragscrollevent.h&quot;
+ 
+ #if defined(__WXGTK__)
+<span class="gi">+    // newer versions of glib define its own GSocket but we unfortunately use this</span>
+<span class="gi">+    // name in our own (semi-)public header and so can&#39;t change it -- rename glib</span>
+<span class="gi">+    // one instead</span>
+<span class="gi">+    #define GSocket GlibSocket</span>
+     #include &quot;wx/gtk/win_gtk.h&quot;
+     #include &lt;gdk/gdkx.h&gt;
+<span class="gi">+    #undef GlibSocket</span>
+ #endif
+ 
+ // ----------------------------------------------------------------------------
+<span class="gh">diff --git a/src/plugins/contrib/codesnippets/codesnippetstreectrl.cpp b/src/plugins/contrib/codesnippets/codesnippetstreectrl.cpp</span>
+<span class="gh">index 1d73b53..0aae145 100644</span>
+<span class="gd">--- a/src/plugins/contrib/codesnippets/codesnippetstreectrl.cpp</span>
+<span class="gi">+++ b/src/plugins/contrib/codesnippets/codesnippetstreectrl.cpp</span>
+<span class="gu">@@ -54,8 +54,13 @@</span>
+ #include &quot;dragscrollevent.h&quot;
+ 
+ #if defined(__WXGTK__)
+<span class="gi">+    // newer versions of glib define its own GSocket but we unfortunately use this</span>
+<span class="gi">+    // name in our own (semi-)public header and so can&#39;t change it -- rename glib</span>
+<span class="gi">+    // one instead</span>
+<span class="gi">+    #define GSocket GlibSocket</span>
+     #include &quot;wx/gtk/win_gtk.h&quot;
+     #include &lt;gdk/gdkx.h&gt;
+<span class="gi">+    #undef GlibSocket</span>
+ #endif
+ 
+ IMPLEMENT_DYNAMIC_CLASS(CodeSnippetsTreeCtrl, wxTreeCtrl)
+<span class="gd">-- </span>
+1.6.0.6
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">jenslody 2009-08-28 21:34:21</div>

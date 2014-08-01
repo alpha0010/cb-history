@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,56 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gd">--- codeblocks-1.0svn.orig/src/src/app.cpp    2008-05-01 07:11:56.000000000 +0200</span>
+<span class="gi">+++ codeblocks-1.0svn.work/src/src/app.cpp    2008-05-25 12:24:12.000000000 +0200</span>
+<span class="gu">@@ -687,18 +687,22 @@</span>
+         }
+     }
+ 
+<span class="gd">-    wxTaskBarIcon* tbIcon = new wxTaskBarIcon();</span>
+<span class="gd">-    tbIcon-&gt;SetIcon(</span>
+<span class="gd">-            #ifdef __WXMSW__</span>
+<span class="gd">-                wxICON(A_MAIN_ICON),</span>
+<span class="gd">-            #else</span>
+<span class="gd">-                wxIcon(app),</span>
+<span class="gd">-            #endif // __WXMSW__</span>
+<span class="gd">-                _(&quot;Building &quot;) + wxFileNameFromPath(wxString(argv[argc-1])));</span>
+<span class="gd">-</span>
+<span class="gi">+    wxTaskBarIcon* tbIcon = 0;</span>
+     m_pBatchBuildDialog = m_Frame-&gt;GetBatchBuildDialog();
+     PlaceWindow(m_pBatchBuildDialog);
+<span class="gd">-    m_pBatchBuildDialog-&gt;Show();</span>
+<span class="gi">+    if(!m_Clean)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        tbIcon = new wxTaskBarIcon();</span>
+<span class="gi">+        tbIcon-&gt;SetIcon(</span>
+<span class="gi">+                #ifdef __WXMSW__</span>
+<span class="gi">+                    wxICON(A_MAIN_ICON),</span>
+<span class="gi">+                #else</span>
+<span class="gi">+                    wxIcon(app),</span>
+<span class="gi">+                #endif // __WXMSW__</span>
+<span class="gi">+                    _(&quot;Building &quot;) + wxFileNameFromPath(wxString(argv[argc-1])));</span>
+<span class="gi">+</span>
+<span class="gi">+        m_pBatchBuildDialog-&gt;Show();</span>
+<span class="gi">+    }</span>
+ 
+     if (m_ReBuild)
+     {
+<span class="gu">@@ -744,8 +748,10 @@</span>
+     if (!m_Clean &amp;&amp; m_pBatchBuildDialog)
+         m_pBatchBuildDialog-&gt;ShowModal();
+ 
+<span class="gd">-    tbIcon-&gt;RemoveIcon();</span>
+<span class="gd">-    delete tbIcon;</span>
+<span class="gi">+    if(tbIcon){</span>
+<span class="gi">+        tbIcon-&gt;RemoveIcon();</span>
+<span class="gi">+        delete tbIcon;</span>
+<span class="gi">+    }</span>
+     if (m_pBatchBuildDialog)
+         m_pBatchBuildDialog-&gt;Destroy();
+     m_pBatchBuildDialog = 0;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">jenslody 2008-05-25 15:08:02</div>

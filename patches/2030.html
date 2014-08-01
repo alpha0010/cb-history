@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,80 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.cpp    (revision 4051)</span>
+<span class="gi">+++ plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.cpp    (working copy)</span>
+<span class="gu">@@ -280,6 +280,7 @@</span>
+     Parent-&gt;m_Help = Menu-&gt;m_Help;
+     Parent-&gt;m_Enabled = Menu-&gt;m_Enabled;
+     Parent-&gt;m_Checked = Menu-&gt;m_Checked;
+<span class="gi">+    Parent-&gt;m_Bitmap = Menu-&gt;m_Bitmap;</span>
+ 
+     wxsEvents&amp; Events = Menu-&gt;GetEvents();
+     if ( Events.GetCount()&gt;0 )
+<span class="gu">@@ -566,6 +567,7 @@</span>
+         if ( UseHelp        ) Menu-&gt;m_Help = Item-&gt;m_Help;
+         if ( UseEnabled     ) Menu-&gt;m_Enabled = Item-&gt;m_Enabled;
+         if ( UseChecked     ) Menu-&gt;m_Checked = Item-&gt;m_Checked;
+<span class="gi">+        Menu-&gt;m_Bitmap = Item-&gt;m_Bitmap;</span>
+ 
+         wxsEvents&amp; Events = Menu-&gt;GetEvents();
+         if ( Events.GetCount()&gt;0 )
+<span class="gh">Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.h    (revision 4051)</span>
+<span class="gi">+++ plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenueditor.h    (working copy)</span>
+<span class="gu">@@ -54,6 +54,7 @@</span>
+             wxString  m_Label;
+             wxString  m_Accelerator;
+             wxString  m_Help;
+<span class="gi">+            wxsBitmapData m_Bitmap;</span>
+             wxString  m_ExtraCode;
+             bool      m_Enabled;
+             bool      m_Checked;
+<span class="gh">Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenuitem.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenuitem.cpp    (revision 4051)</span>
+<span class="gi">+++ plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenuitem.cpp    (working copy)</span>
+<span class="gu">@@ -107,6 +107,12 @@</span>
+                         m_Help.c_str(),
+                         ItemType);
+ 
+<span class="gi">+                    if ( !m_Bitmap.IsEmpty() )</span>
+<span class="gi">+                    {</span>
+<span class="gi">+                        wxString BmpCode = m_Bitmap.BuildCode(true,wxEmptyString,Language,wxART_OTHER);</span>
+<span class="gi">+                        Codef(_T(&quot;%ASetBitmap(%s);\n&quot;), BmpCode.c_str());</span>
+<span class="gi">+                    }</span>
+<span class="gi">+</span>
+                     Codef(_T(&quot;%MAppend(%v);\n&quot;),GetVarName().c_str());
+                     if ( !m_Enabled )
+                     {
+<span class="gu">@@ -166,6 +172,10 @@</span>
+             WXS_SHORT_STRING(wxsMenuItem,m_Help,_T(&quot;Help text&quot;),_T(&quot;help&quot;),_T(&quot;&quot;),false);
+             WXS_BOOL(wxsMenuItem,m_Enabled,_T(&quot;Enabled&quot;),_T(&quot;enabled&quot;),true);
+             if ( m_Type == Check ) { WXS_BOOL(wxsMenuItem,m_Checked,_T(&quot;Checked&quot;),_T(&quot;checked&quot;),false); }
+<span class="gi">+            if ( m_Type == Normal )</span>
+<span class="gi">+            {</span>
+<span class="gi">+                WXS_BITMAP(wxsMenuItem,m_Bitmap,_(&quot;Bitmap&quot;),_T(&quot;bitmap&quot;),_T(&quot;wxART_OTHER&quot;))</span>
+<span class="gi">+            }</span>
+             break;
+ 
+         default:;
+<span class="gh">Index: plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenuitem.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenuitem.h    (revision 4051)</span>
+<span class="gi">+++ plugins/contrib/wxSmith/wxwidgets/defitems/wxsmenuitem.h    (working copy)</span>
+<span class="gu">@@ -41,6 +41,7 @@</span>
+         wxString m_Help;                            ///&lt; \brief Help string
+         bool     m_Enabled;                         ///&lt; \brief True to make item enabled
+         bool     m_Checked;                         ///&lt; \brief True to make this item checked
+<span class="gi">+        wxsBitmapData m_Bitmap;                     ///&lt; \brief Bitmap associated with this menu item</span>
+ 
+         friend class wxsMenuEditor;
+ };
+</pre></div>
+
       <h4 class="page-header">History</h4>
       
     </div>

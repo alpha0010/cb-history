@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,125 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/CodeBlocks.cbp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/CodeBlocks.cbp    (revision 3915)</span>
+<span class="gi">+++ src/CodeBlocks.cbp    (working copy)</span>
+<span class="gu">@@ -525,6 +525,9 @@</span>
+         &lt;Unit filename=&quot;include\cbthreadpool_extras.h&quot;&gt;
+             &lt;Option target=&quot;sdk&quot; /&gt;
+         &lt;/Unit&gt;
+<span class="gi">+        &lt;Unit filename=&quot;include\cbtool.h&quot;&gt;</span>
+<span class="gi">+            &lt;Option target=&quot;sdk&quot; /&gt;</span>
+<span class="gi">+        &lt;/Unit&gt;</span>
+         &lt;Unit filename=&quot;include\cbworkspace.h&quot;&gt;
+             &lt;Option target=&quot;sdk&quot; /&gt;
+         &lt;/Unit&gt;
+<span class="gh">Index: src/include/cbtool.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/cbtool.h    (revision 3915)</span>
+<span class="gi">+++ src/include/cbtool.h    (working copy)</span>
+<span class="gu">@@ -3,6 +3,8 @@</span>
+ 
+ #include &lt;wx/string.h&gt;
+ 
+<span class="gi">+#define CB_TOOLS_SEPARATOR _(&quot;---separator---&quot;)</span>
+<span class="gi">+</span>
+ class cbTool
+ {
+   public:
+<span class="gh">Index: src/include/configuretoolsdlg.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/include/configuretoolsdlg.h    (revision 3915)</span>
+<span class="gi">+++ src/include/configuretoolsdlg.h    (working copy)</span>
+<span class="gu">@@ -19,6 +19,7 @@</span>
+         void OnAdd(wxCommandEvent&amp; event);
+         void OnEdit(wxCommandEvent&amp; event);
+         void OnRemove(wxCommandEvent&amp; event);
+<span class="gi">+        void OnAddSeparator(wxCommandEvent&amp; event);</span>
+         void OnUp(wxCommandEvent&amp; event);
+         void OnDown(wxCommandEvent&amp; event);
+         void OnUpdateUI(wxUpdateUIEvent&amp; event);
+<span class="gh">Index: src/sdk/configuretoolsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/configuretoolsdlg.cpp    (revision 3915)</span>
+<span class="gi">+++ src/sdk/configuretoolsdlg.cpp    (working copy)</span>
+<span class="gu">@@ -46,6 +46,7 @@</span>
+     EVT_BUTTON(XRCID(&quot;btnAdd&quot;),     ConfigureToolsDlg::OnAdd)
+     EVT_BUTTON(XRCID(&quot;btnEdit&quot;),     ConfigureToolsDlg::OnEdit)
+     EVT_BUTTON(XRCID(&quot;btnRemove&quot;),     ConfigureToolsDlg::OnRemove)
+<span class="gi">+    EVT_BUTTON(XRCID(&quot;btnAddSeparator&quot;),     ConfigureToolsDlg::OnAddSeparator)</span>
+     EVT_BUTTON(XRCID(&quot;btnUp&quot;),         ConfigureToolsDlg::OnUp)
+     EVT_BUTTON(XRCID(&quot;btnDown&quot;),     ConfigureToolsDlg::OnDown)
+     EVT_UPDATE_UI(-1,                ConfigureToolsDlg::OnUpdateUI)
+<span class="gu">@@ -93,8 +94,12 @@</span>
+     bool hasSel = list-&gt;GetSelection() != -1;
+     bool notFirst = list-&gt;GetSelection() &gt; 0;
+     bool notLast = (list-&gt;GetSelection() &lt; list-&gt;GetCount() -1) &amp;&amp; hasSel;
+<span class="gi">+    bool notSeparator = true;</span>
+ 
+<span class="gd">-    XRCCTRL(*this, &quot;btnEdit&quot;, wxButton)-&gt;Enable(hasSel);</span>
+<span class="gi">+    if(hasSel)</span>
+<span class="gi">+        notSeparator = Manager::Get()-&gt;GetToolsManager()-&gt;GetToolByIndex(list-&gt;GetSelection())-&gt;GetName() != CB_TOOLS_SEPARATOR;</span>
+<span class="gi">+</span>
+<span class="gi">+    XRCCTRL(*this, &quot;btnEdit&quot;, wxButton)-&gt;Enable(hasSel &amp;&amp; notSeparator);</span>
+     XRCCTRL(*this, &quot;btnRemove&quot;, wxButton)-&gt;Enable(hasSel);
+     XRCCTRL(*this, &quot;btnUp&quot;, wxButton)-&gt;Enable(notFirst);
+     XRCCTRL(*this, &quot;btnDown&quot;, wxButton)-&gt;Enable(notLast);
+<span class="gu">@@ -131,6 +136,15 @@</span>
+     }
+ } // end of OnRemove
+ 
+<span class="gi">+void ConfigureToolsDlg::OnAddSeparator(wxCommandEvent&amp; /*event*/)</span>
+<span class="gi">+{</span>
+<span class="gi">+    cbTool tool;</span>
+<span class="gi">+    tool.SetName(CB_TOOLS_SEPARATOR);</span>
+<span class="gi">+    tool.SetCommand(CB_TOOLS_SEPARATOR);</span>
+<span class="gi">+    Manager::Get()-&gt;GetToolsManager()-&gt;AddTool(&amp;tool);</span>
+<span class="gi">+    DoFillList();</span>
+<span class="gi">+} // end of OnAddSeparator</span>
+<span class="gi">+</span>
+ void ConfigureToolsDlg::OnUp(wxCommandEvent&amp; /*event*/)
+ {
+     wxListBox* list = XRCCTRL(*this, &quot;lstTools&quot;, wxListBox);
+<span class="gh">Index: src/sdk/resources/configure_tools.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/configure_tools.xrc    (revision 3915)</span>
+<span class="gi">+++ src/sdk/resources/configure_tools.xrc    (working copy)</span>
+<span class="gu">@@ -52,6 +52,15 @@</span>
+                 &lt;/object&gt;
+                 &lt;flag&gt;wxGROW&lt;/flag&gt;
+               &lt;/object&gt;
+<span class="gi">+              &lt;object class=&quot;spacer&quot;&gt;</span>
+<span class="gi">+                &lt;size&gt;0,16&lt;/size&gt;</span>
+<span class="gi">+              &lt;/object&gt;</span>
+<span class="gi">+              &lt;object class=&quot;sizeritem&quot;&gt;</span>
+<span class="gi">+                &lt;object class=&quot;wxButton&quot; name=&quot;btnAddSeparator&quot;&gt;</span>
+<span class="gi">+                  &lt;label&gt;Add &amp;amp;Separator&lt;/label&gt;</span>
+<span class="gi">+                &lt;/object&gt;</span>
+<span class="gi">+                &lt;flag&gt;wxGROW&lt;/flag&gt;</span>
+<span class="gi">+              &lt;/object&gt;</span>
+             &lt;/object&gt;
+             &lt;flag&gt;wxLEFT|wxEXPAND&lt;/flag&gt;
+             &lt;border&gt;8&lt;/border&gt;
+<span class="gh">Index: src/sdk/toolsmanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/toolsmanager.cpp    (revision 3915)</span>
+<span class="gi">+++ src/sdk/toolsmanager.cpp    (working copy)</span>
+<span class="gu">@@ -327,6 +327,11 @@</span>
+     for (ToolsList::Node* node = m_Tools.GetFirst(); node; node = node-&gt;GetNext())
+     {
+         cbTool* tool = node-&gt;GetData();
+<span class="gi">+        if (tool-&gt;GetName() == CB_TOOLS_SEPARATOR)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            m_ItemsManager.Add(menu, wxID_SEPARATOR, _T(&quot;&quot;), _T(&quot;&quot;));</span>
+<span class="gi">+            continue;</span>
+<span class="gi">+        }</span>
+         if (tool-&gt;GetMenuId() == -1)
+         {
+             tool-&gt;SetMenuId(wxNewId());
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">pauliusz 2007-05-01 21:19:22</div>

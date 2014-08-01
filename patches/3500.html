@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,83 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gd">--- src/plugins/contrib/codesnippets/codesnippetsapp.cpp.orig</span>
+<span class="gi">+++ src/plugins/contrib/codesnippets/codesnippetsapp.cpp</span>
+<span class="gu">@@ -95,7 +95,11 @@</span>
+ END_EVENT_TABLE()
+ 
+ #ifdef __WXMAC__
+<span class="gd">-    #include &quot;wx/mac/corefoundation/cfstring.h&quot;</span>
+<span class="gi">+    #if wxCHECK_VERSION(2,9,0)</span>
+<span class="gi">+        #include &quot;wx/osx/core/cfstring.h&quot;</span>
+<span class="gi">+    #else</span>
+<span class="gi">+        #include &quot;wx/mac/corefoundation/cfstring.h&quot;</span>
+<span class="gi">+    #endif</span>
+     #include &quot;wx/intl.h&quot;
+ 
+     #include &lt;CoreFoundation/CFBundle.h&gt;
+<span class="gu">@@ -112,7 +116,11 @@</span>
+         CFRelease(resourcesURL);
+         CFStringRef cfStrPath = CFURLCopyFileSystemPath(absoluteURL,kCFURLPOSIXPathStyle);
+         CFRelease(absoluteURL);
+<span class="gd">-        return wxMacCFStringHolder(cfStrPath).AsString(wxLocale::GetSystemEncoding());</span>
+<span class="gi">+        #if wxCHECK_VERSION(2,9,0)</span>
+<span class="gi">+          return wxCFStringRef(cfStrPath).AsString(wxLocale::GetSystemEncoding());</span>
+<span class="gi">+        #else</span>
+<span class="gi">+          return wxMacCFStringHolder(cfStrPath).AsString(wxLocale::GetSystemEncoding());</span>
+<span class="gi">+        #endif</span>
+     }
+ #endif
+ 
+<span class="gu">@@ -268,8 +276,6 @@</span>
+     m_KeepAliveFileName = wxEmptyString;
+     m_pFilesHistory = 0;
+ 
+<span class="gd">-    wxStandardPaths stdPaths;</span>
+<span class="gd">-</span>
+     // -------------------------------
+     // initialize version and logging
+     // -------------------------------
+<span class="gu">@@ -325,7 +331,7 @@</span>
+     // Find Config File
+     // -----------------------------------------
+     // Create filename like {%HOME%}\codesnippets.ini
+<span class="gd">-    m_ConfigFolder = Normalize(stdPaths.GetUserDataDir());</span>
+<span class="gi">+    m_ConfigFolder = Normalize(wxStandardPaths::Get().GetUserDataDir());</span>
+     wxString m_ExecuteFolder = Normalize(FindAppPath(wxTheApp-&gt;argv[0], ::wxGetCwd(), wxEmptyString));
+ 
+     #if defined(LOGGING)
+<span class="gu">@@ -1387,8 +1393,6 @@</span>
+ void CodeSnippetsAppFrame::ImportCBResources()
+ // ----------------------------------------------------------------------------
+ {
+<span class="gd">-    wxStandardPaths stdPaths;</span>
+<span class="gd">-</span>
+     // Location of app config folder
+     wxString appConfigFolder =  Normalize(m_ConfigFolder) ;
+ 
+<span class="gu">@@ -1399,7 +1403,7 @@</span>
+     wxString cbExeFolder = Normalize(GetCBExeFolder());
+ 
+     // location of CodeBlocks config folder
+<span class="gd">-    wxString cbConfigFolder = Normalize(stdPaths.GetUserDataDir());</span>
+<span class="gi">+    wxString cbConfigFolder = Normalize(wxStandardPaths::Get().GetUserDataDir());</span>
+     wxString appParent = GetConfig()-&gt;GetAppParent();
+     if ( appParent.empty()) appParent =_T(&quot;codeblocks&quot;);
+     wxString prefixPath;
+<span class="gd">--- src/plugins/contrib/codesnippets/snippetsconfig.cpp.orig</span>
+<span class="gi">+++ src/plugins/contrib/codesnippets/snippetsconfig.cpp</span>
+<span class="gu">@@ -128,8 +128,6 @@</span>
+ {
+         // file will be saved in $HOME/codesnippets.ini
+ 
+<span class="gd">-    wxStandardPaths stdPaths;</span>
+<span class="gd">-</span>
+     #ifdef LOGGING
+      wxString fn(__FUNCTION__, wxConvUTF8);
+      LOGIT( _T(&quot;--- [%s] ---&quot;),fn.c_str() );
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mojca 2013-09-29 18:09:57</div>

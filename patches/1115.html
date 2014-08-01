@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,131 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/src/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/main.cpp    (revision 2541)</span>
+<span class="gi">+++ src/src/main.cpp    (working copy)</span>
+<span class="gu">@@ -1440,30 +1440,35 @@</span>
+     wxString buf = event.GetString();
+     wxString links;
+ 
+<span class="gi">+    links &lt;&lt; _T(&quot;&lt;b&gt;Recent projects&lt;/b&gt;&lt;br&gt;\n&quot;);</span>
+     if (m_ProjectsHistory.GetCount())
+     {
+<span class="gd">-        links &lt;&lt; _T(&quot;&lt;b&gt;Recent projects&lt;/b&gt;&lt;br&gt;\n&quot;);</span>
+         for (int i = 0; i &lt; 9; ++i)
+         {
+             if (i &gt;= (int)m_ProjectsHistory.GetCount())
+                 break;
+<span class="gd">-            links &lt;&lt; wxString::Format(_T(&quot;&lt;a href=\&quot;CB_CMD_OPEN_HISTORY_PROJECT_%d\&quot;&gt;%s&lt;/a&gt;&lt;br&gt;\n&quot;),</span>
+<span class="gi">+            links &lt;&lt; wxString::Format(_T(&quot;&amp;bull; &lt;a href=\&quot;CB_CMD_OPEN_HISTORY_PROJECT_%d\&quot;&gt;%s&lt;/a&gt;&lt;br&gt;\n&quot;),</span>
+                                         i + 1, m_ProjectsHistory.GetHistoryFile(i).c_str());
+         }
+     }
+<span class="gi">+    else</span>
+<span class="gi">+        links &lt;&lt; _T(&quot;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;No recent projects&lt;br&gt;\n&quot;);</span>
+ 
+<span class="gi">+    links &lt;&lt; _T(&quot;&lt;br&gt;&lt;b&gt;Recent files&lt;/b&gt;&lt;br&gt;\n&quot;);</span>
+     if (m_FilesHistory.GetCount())
+     {
+<span class="gd">-        links &lt;&lt; _T(&quot;&lt;br&gt;&lt;b&gt;Recent files&lt;/b&gt;&lt;br&gt;\n&quot;);</span>
+         for (int i = 0; i &lt; 9; ++i)
+         {
+             if (i &gt;= (int)m_FilesHistory.GetCount())
+                 break;
+<span class="gd">-            links &lt;&lt; wxString::Format(_T(&quot;&lt;a href=\&quot;CB_CMD_OPEN_HISTORY_FILE_%d\&quot;&gt;%s&lt;/a&gt;&lt;br&gt;\n&quot;),</span>
+<span class="gi">+            links &lt;&lt; wxString::Format(_T(&quot;&amp;bull; &lt;a href=\&quot;CB_CMD_OPEN_HISTORY_FILE_%d\&quot;&gt;%s&lt;/a&gt;&lt;br&gt;\n&quot;),</span>
+                                         i + 1, m_FilesHistory.GetHistoryFile(i).c_str());
+         }
+     }
+<span class="gi">+    else</span>
+<span class="gi">+        links &lt;&lt; _T(&quot;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;No recent files&lt;br&gt;\n&quot;);</span>
+ 
+<span class="gi">+</span>
+     // update page
+     buf.Replace(_T(&quot;CB_VAR_RECENT_FILES_AND_PROJECTS&quot;), links);
+     ((StartHerePage*)sh)-&gt;SetPageContent(buf);
+<span class="gh">Index: src/src/resources/start_here/start_here.html</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/resources/start_here/start_here.html    (revision 2541)</span>
+<span class="gi">+++ src/src/resources/start_here/start_here.html    (working copy)</span>
+<span class="gu">@@ -1,75 +1,58 @@</span>
+<span class="gd">-&lt;?xml version=&quot;1.0&quot; encoding=&quot;iso-8859-1&quot;?&gt;</span>
+<span class="gd">-&lt;!DOCTYPE html PUBLIC &quot;-//W3C//DTD XHTML 1.0 Transitional//EN&quot;</span>
+<span class="gd">-                      &quot;http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd&quot;&gt;</span>
+<span class="gd">-&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot; xml:lang=&quot;en-US&quot;&gt;</span>
+<span class="gd">-  &lt;head&gt;</span>
+<span class="gd">-    &lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=iso-8859-1&quot; /&gt;</span>
+<span class="gi">+&lt;!DOCTYPE html PUBLIC &quot;-//W3C//DTD HTML 4.01 Transitional//EN&quot;&gt;</span>
+<span class="gi">+&lt;html&gt;</span>
+<span class="gi">+&lt;head&gt;</span>
+     &lt;title&gt;&lt;/title&gt;
+<span class="gi">+    &lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=iso-8859-1&quot;&gt;</span>
+     &lt;style type=&quot;text/css&quot;&gt;
+<span class="gd">-      a {  background-color: inherit;  color: blue;  }</span>
+<span class="gd">-      a:visited {  background-color: inherit;  color: blue;  }</span>
+<span class="gi">+        a {  background-color: inherit;  color: blue;  }</span>
+<span class="gi">+        a:visited {  background-color: inherit;  color: blue;  }</span>
+<span class="gi">+        img { border: 0px }</span>
+     &lt;/style&gt;
+<span class="gd">-  &lt;/head&gt;</span>
+<span class="gd">-  &lt;body&gt;</span>
+<span class="gi">+&lt;/head&gt;</span>
+<span class="gi">+</span>
+<span class="gi">+&lt;body&gt;</span>
+     &lt;div align=&quot;center&quot;&gt;
+<span class="gd">-      &lt;a href=&quot;http://www.codeblocks.org/&quot;&gt;&lt;img style=&quot;border: 0px solid;&quot; alt=&quot;&quot; src=&quot;title.png&quot; /&gt;&lt;/a&gt;&lt;br /&gt;</span>
+<span class="gd">-      &lt;a href=&quot;rev&quot;&gt;&lt;font color=&quot;#9999df&quot;&gt;&lt;small&gt;CB_VAR_REVISION_INFO&lt;/small&gt;&lt;/font&gt;&lt;/a&gt;&lt;br /&gt;</span>
+<span class="gd">-      &lt;br /&gt;</span>
+<span class="gd">-      &lt;table border=&quot;0&quot;&gt;</span>
+<span class="gd">-        &lt;tbody&gt;</span>
+<span class="gd">-          &lt;tr&gt;</span>
+<span class="gd">-            &lt;td&gt;</span>
+<span class="gd">-              &lt;table border=&quot;0&quot;&gt;</span>
+<span class="gd">-                &lt;tbody&gt;</span>
+<span class="gd">-                  &lt;tr&gt;</span>
+<span class="gd">-                    &lt;td width=&quot;56&quot;&gt;&lt;a href=&quot;CB_CMD_NEW_PROJECT&quot;&gt;&lt;img style=&quot;border: 0px solid; width: 47px; height: 42px;&quot; alt=&quot;&quot; src=&quot;new.png&quot; /&gt;&lt;/a&gt;&lt;/td&gt;</span>
+<span class="gd">-                    &lt;td&gt;&lt;a href=&quot;CB_CMD_NEW_PROJECT&quot;&gt;Create a new project&lt;/a&gt;&lt;/td&gt;</span>
+<span class="gd">-                  &lt;/tr&gt;</span>
+<span class="gd">-                  &lt;tr&gt;</span>
+<span class="gd">-                    &lt;td&gt;&lt;a href=&quot;CB_CMD_OPEN_PROJECT&quot;&gt;&lt;img style=&quot;border: 0px solid; width: 47px; height: 47px;&quot; alt=&quot;&quot; src=&quot;open.png&quot; /&gt;&lt;/a&gt;&lt;/td&gt;</span>
+<span class="gd">-                    &lt;td&gt;&lt;a href=&quot;CB_CMD_OPEN_PROJECT&quot;&gt;Open an existing project&lt;/a&gt;&lt;/td&gt;</span>
+<span class="gd">-                  &lt;/tr&gt;</span>
+<span class="gd">-                &lt;/tbody&gt;</span>
+<span class="gd">-              &lt;/table&gt;</span>
+<span class="gd">-            &lt;/td&gt;</span>
+<span class="gd">-            &lt;td rowspan=&quot;3&quot;&gt;</span>
+<span class="gd">-              &lt;table border=&quot;0&quot;&gt;</span>
+<span class="gd">-                &lt;tbody&gt;</span>
+<span class="gd">-                  &lt;tr&gt;</span>
+<span class="gd">-                    &lt;td width=&quot;58&quot;&gt;&lt;img style=&quot;border: 0px solid;&quot; alt=&quot;&quot; src=&quot;reopen.png&quot; /&gt;&lt;/td&gt;</span>
+<span class="gd">-                    &lt;td&gt;CB_VAR_RECENT_FILES_AND_PROJECTS&lt;/td&gt;</span>
+<span class="gd">-                  &lt;/tr&gt;</span>
+<span class="gd">-                &lt;/tbody&gt;</span>
+<span class="gd">-              &lt;/table&gt;</span>
+<span class="gd">-            &lt;/td&gt;</span>
+<span class="gd">-          &lt;/tr&gt;</span>
+<span class="gd">-          &lt;tr&gt;</span>
+<span class="gd">-            &lt;td&gt;&lt;/td&gt;</span>
+<span class="gd">-          &lt;/tr&gt;</span>
+<span class="gd">-          &lt;tr&gt;</span>
+<span class="gd">-            &lt;td&gt;</span>
+<span class="gd">-              &lt;table width=&quot;300&quot;&gt;</span>
+<span class="gd">-                &lt;tbody&gt;</span>
+<span class="gd">-                  &lt;tr&gt;</span>
+<span class="gd">-                    &lt;td width=&quot;56&quot; rowspan=&quot;4&quot;&gt;&lt;img style=&quot;border: 0px solid;&quot; alt=&quot;&quot; src=&quot;www.png&quot; /&gt;&lt;/td&gt;</span>
+<span class="gd">-                  &lt;/tr&gt;</span>
+<span class="gd">-                  &lt;tr&gt;</span>
+<span class="gd">-                    &lt;td&gt;&lt;a href=&quot;http://forums.codeblocks.org/&quot;&gt;Visit the Code::Blocks forums&lt;/a&gt;&lt;/td&gt;</span>
+<span class="gd">-                  &lt;/tr&gt;</span>
+<span class="gd">-                  &lt;tr&gt;</span>
+<span class="gd">-                    &lt;td&gt;&lt;a href=&quot;http://developer.berlios.de/bugs/?func=addbug&amp;amp;group_id=5358&quot;&gt;Report a bug&lt;/a&gt;&lt;/td&gt;</span>
+<span class="gd">-                  &lt;/tr&gt;</span>
+<span class="gd">-                  &lt;tr&gt;</span>
+<span class="gd">-                    &lt;td&gt;</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">kkez 2006-06-09 15:15:52</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,116 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gd">--- C:/CB_20061121_rev3253_win32/share/CodeBlocks/templates/wizard/old_common_functions.script    Tue Jul 25 21:05:04 2006</span>
+<span class="gi">+++ C:/CB_20061121_rev3253_win32/share/CodeBlocks/templates/wizard/common_functions.script    Sat Nov 25 02:01:18 2006</span>
+<span class="gu">@@ -5,31 +5,44 @@</span>
+ // Warnings On
+ function WarningsOn(base, compilerID)
+ {
+<span class="gd">-    if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;msvc*&quot;)))</span>
+<span class="gi">+    if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;msvc*&quot;)))</span>
+     {
+         base.AddCompilerOption(_T(&quot;/W3&quot;));
+     }
+<span class="gd">-    else</span>
+<span class="gi">+    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;gcc&quot;)))</span>
+     {
+         // GCC options are used as fallback
+         base.AddCompilerOption(_T(&quot;-Wall&quot;));
+     }
+<span class="gi">+    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;bcc&quot;)))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        // Set option for genearting warnings with BCC</span>
+<span class="gi">+        base.AddCompilerOption(_T(&quot;-w&quot;));</span>
+<span class="gi">+    }</span>
+ }
+ 
+ // Debug symbols On
+ function DebugSymbolsOn(base, compilerID)
+ {
+<span class="gd">-    if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;msvc*&quot;)))</span>
+<span class="gi">+    if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;msvc*&quot;)))</span>
+     {
+         base.AddCompilerOption(_T(&quot;/Zi&quot;));
+         base.AddCompilerOption(_T(&quot;/D_DEBUG&quot;));
+         base.AddLinkerOption(_T(&quot;/DEBUG&quot;));
+<span class="gi">+        base.AddLinkerOption(_T(&quot;/NODEFAULTLIB:libcmt.lib&quot;));</span>
+<span class="gi">+        base.AddLinkLib(_T(&quot;libcmtd.lib&quot;));</span>
+     }
+<span class="gd">-    else</span>
+<span class="gi">+    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;gcc&quot;)))</span>
+     {
+         // GCC options are used as fallback
+         base.AddCompilerOption(_T(&quot;-g&quot;));
+     }
+<span class="gi">+    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;bcc&quot;)))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        // BCC options for generating debug symbols</span>
+<span class="gi">+        base.AddCompilerOption(_T(&quot;-v&quot;));</span>
+<span class="gi">+        base.AddLinkerOption(_T(&quot;-v&quot;));</span>
+<span class="gi">+    }</span>
+ }
+ 
+ // Optimizations On
+<span class="gu">@@ -40,13 +53,19 @@</span>
+         base.AddCompilerOption(_T(&quot;/Og&quot;));
+         base.AddCompilerOption(_T(&quot;/Ox&quot;));
+         base.AddCompilerOption(_T(&quot;/DNDEBUG&quot;));
+<span class="gi">+        base.AddLinkLib(_T(&quot;libcmt.lib&quot;));</span>
+     }
+<span class="gd">-    else</span>
+<span class="gi">+    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;gcc&quot;)))</span>
+     {
+         // GCC options are used as fallback
+         base.AddCompilerOption(_T(&quot;-O2&quot;));
+         base.AddLinkerOption(_T(&quot;-s&quot;));
+     }
+<span class="gi">+    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;bcc&quot;)))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        // BCC options for optimizations</span>
+<span class="gi">+        base.AddCompilerOption(_T(&quot;-O2&quot;));</span>
+<span class="gi">+    }</span>
+ }
+ 
+ // C++ Exceptions On
+<span class="gu">@@ -56,11 +75,34 @@</span>
+     {
+         base.AddCompilerOption(_T(&quot;/EHsc&quot;));
+     }
+<span class="gd">-    else</span>
+<span class="gi">+    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;gcc&quot;)))</span>
+     {
+         // GCC options are used as fallback
+         base.AddCompilerOption(_T(&quot;-fexceptions&quot;));
+     }
+<span class="gi">+    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;bcc&quot;)))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        // BCC options for exceptions. Not Tested</span>
+<span class="gi">+        base.AddCompilerOption(_T(&quot;-x&quot;));</span>
+<span class="gi">+    }</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+//To include additional Libraries needed for linking</span>
+<span class="gi">+function IncludeAdditionalLib(base, compilerID)</span>
+<span class="gi">+{</span>
+<span class="gi">+    if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;msvc*&quot;)))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        //Add any library which is needed</span>
+<span class="gi">+    }</span>
+<span class="gi">+    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;gcc&quot;)))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        //Add any library which is needed</span>
+<span class="gi">+    }</span>
+<span class="gi">+    else if (GetCompilerFactory().CompilerInheritsFrom(compilerID, _T(&quot;bcc&quot;)))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        base.AddLinkLib(_T(&quot;cw32mt.lib&quot;));</span>
+<span class="gi">+        base.AddLinkLib(_T(&quot;import32.lib&quot;));</span>
+<span class="gi">+    }</span>
+ }
+ 
+ function VerifyDirectory(dir_or_macro)
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mortenmacfly 2006-11-25 17:07:11</div>

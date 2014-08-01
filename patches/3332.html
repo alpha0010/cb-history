@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,125 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/editormanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editormanager.cpp    (revision 8394)</span>
+<span class="gi">+++ src/sdk/editormanager.cpp    (working copy)</span>
+<span class="gu">@@ -58,8 +58,8 @@</span>
+ template&lt;&gt; EditorManager* Mgr&lt;EditorManager&gt;::instance = 0;
+ template&lt;&gt; bool  Mgr&lt;EditorManager&gt;::isShutdown = false;
+ 
+<span class="gd">-int ID_NBEditorManager = wxNewId();</span>
+<span class="gd">-int ID_EditorManager = wxNewId();</span>
+<span class="gi">+int ID_NBEditorManager        = wxNewId();</span>
+<span class="gi">+int ID_EditorManager          = wxNewId();</span>
+ int idEditorManagerCheckFiles = wxNewId();
+ 
+ // static
+<span class="gu">@@ -144,23 +144,36 @@</span>
+     return  ((findText.Find(_T(&quot;\n&quot;)) != wxNOT_FOUND) || (findText.Find(_T(&quot;\r&quot;)) != wxNOT_FOUND));
+ }
+ 
+<span class="gd">-static const int idNBTabSplitHorz = wxNewId();</span>
+<span class="gd">-static const int idNBTabSplitVert = wxNewId();</span>
+<span class="gd">-static const int idNBTabUnsplit = wxNewId();</span>
+<span class="gd">-static const int idNBTabClose = wxNewId();</span>
+<span class="gd">-static const int idNBTabCloseAll = wxNewId();</span>
+<span class="gd">-static const int idNBTabCloseAllOthers = wxNewId();</span>
+<span class="gd">-static const int idNBTabSave = wxNewId();</span>
+<span class="gd">-static const int idNBTabSaveAll = wxNewId();</span>
+<span class="gd">-static const int idNBSwapHeaderSource = wxNewId();</span>
+<span class="gi">+// needed for initialization of variables</span>
+<span class="gi">+int editormanager_RegisterId(int id)</span>
+<span class="gi">+{</span>
+<span class="gi">+    wxRegisterId(id);</span>
+<span class="gi">+    return id;</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+static const int idNBTabSplitHorz            = wxNewId();</span>
+<span class="gi">+static const int idNBTabSplitVert            = wxNewId();</span>
+<span class="gi">+static const int idNBTabUnsplit              = wxNewId();</span>
+<span class="gi">+static const int idNBTabClose                = wxNewId();</span>
+<span class="gi">+static const int idNBTabCloseAll             = wxNewId();</span>
+<span class="gi">+static const int idNBTabCloseAllOthers       = wxNewId();</span>
+<span class="gi">+static const int idNBTabSave                 = wxNewId();</span>
+<span class="gi">+static const int idNBTabSaveAll              = wxNewId();</span>
+<span class="gi">+static const int idNBSwapHeaderSource        = wxNewId();</span>
+ static const int idNBTabOpenContainingFolder = wxNewId();
+<span class="gd">-static const int idNBTabTop = wxNewId();</span>
+<span class="gd">-static const int idNBTabBottom = wxNewId();</span>
+<span class="gd">-static const int idNBProperties = wxNewId();</span>
+<span class="gd">-static const int idNBAddFileToProject = wxNewId();</span>
+<span class="gd">-static const int idNBRemoveFileFromProject = wxNewId();</span>
+<span class="gd">-static const int idNBShowFileInTree = wxNewId();</span>
+<span class="gi">+static const int idNBTabTop                  = wxNewId();</span>
+<span class="gi">+static const int idNBTabBottom               = wxNewId();</span>
+<span class="gi">+static const int idNBProperties              = wxNewId();</span>
+<span class="gi">+static const int idNBAddFileToProject        = wxNewId();</span>
+<span class="gi">+static const int idNBRemoveFileFromProject   = wxNewId();</span>
+<span class="gi">+static const int idNBShowFileInTree          = wxNewId();</span>
+ 
+<span class="gi">+// The following lines reserve 255 consecutive id&#39;s</span>
+<span class="gi">+static const int EditorMaxSwitchTo           = 255;</span>
+<span class="gi">+static const int idNBSwitchFile1             = wxNewId();</span>
+<span class="gi">+static const int idNBSwitchFileMax           = editormanager_RegisterId(idNBSwitchFile1 + EditorMaxSwitchTo - 1);</span>
+<span class="gi">+</span>
+<span class="gi">+</span>
+ /** *******************************************************
+   * struct EditorManagerInternalData                      *
+   * This is the private data holder for the EditorManager *
+<span class="gu">@@ -191,6 +204,7 @@</span>
+     EVT_AUINOTEBOOK_PAGE_CHANGING(ID_NBEditorManager, EditorManager::OnPageChanging)
+     EVT_AUINOTEBOOK_PAGE_CLOSE(ID_NBEditorManager, EditorManager::OnPageClose)
+     EVT_AUINOTEBOOK_TAB_RIGHT_UP(ID_NBEditorManager, EditorManager::OnPageContextMenu)
+<span class="gi">+    EVT_MENU_RANGE(idNBSwitchFile1, idNBSwitchFileMax, EditorManager::OnGenericContextMenuHandler)</span>
+     EVT_MENU(idNBTabSplitHorz, EditorManager::OnGenericContextMenuHandler)
+     EVT_MENU(idNBTabSplitVert, EditorManager::OnGenericContextMenuHandler)
+     EVT_MENU(idNBTabUnsplit, EditorManager::OnGenericContextMenuHandler)
+<span class="gu">@@ -2703,6 +2717,12 @@</span>
+         ed-&gt;Split(cbEditor::stVertical);
+     else if (id == idNBTabUnsplit &amp;&amp; ed)
+         ed-&gt;Unsplit();
+<span class="gi">+    else if (id &gt;= idNBSwitchFile1 &amp;&amp; id &lt;= idNBSwitchFileMax)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        EditorBase *const ed = GetEditor(id - idNBSwitchFile1);</span>
+<span class="gi">+        if (ed)</span>
+<span class="gi">+            SetActiveEditor(ed);</span>
+<span class="gi">+    }</span>
+ }
+ 
+ void EditorManager::OnPageChanged(wxAuiNotebookEvent&amp; event)
+<span class="gu">@@ -2816,6 +2836,28 @@</span>
+     if (event.GetSelection() == -1)
+         return;
+ 
+<span class="gi">+    if (wxGetKeyState(WXK_CONTROL) &amp;&amp; GetEditorsCount() &gt; 1)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        wxMenu* pop = new wxMenu;</span>
+<span class="gi">+        EditorBase* current = GetActiveEditor();</span>
+<span class="gi">+        for (int i = 0; i &lt; EditorMaxSwitchTo &amp;&amp; i &lt; GetEditorsCount(); ++i)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            EditorBase* other = GetEditor(i);</span>
+<span class="gi">+            if (!other)</span>
+<span class="gi">+                continue;</span>
+<span class="gi">+            if (other == current)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                pop-&gt;AppendCheckItem(wxID_ANY, other-&gt;GetShortName()); // do nothing if the current tab is selected</span>
+<span class="gi">+                pop-&gt;FindItemByPosition(pop-&gt;GetMenuItemCount() - 1)-&gt;Check(); // and mark it as active</span>
+<span class="gi">+            }</span>
+<span class="gi">+            else</span>
+<span class="gi">+                pop-&gt;Append(idNBSwitchFile1 + i, other-&gt;GetShortName());</span>
+<span class="gi">+        }</span>
+<span class="gi">+        m_pNotebook-&gt;PopupMenu(pop);</span>
+<span class="gi">+        delete pop;</span>
+<span class="gi">+        return;</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+     // select the notebook that sends the event, because the context menu-entries act on the actual selected tab
+     m_pNotebook-&gt;SetSelection(event.GetSelection());
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">alpha0010 2012-09-09 02:03:50</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,88 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/loggers.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/loggers.cpp    (wersja 8245)</span>
+<span class="gi">+++ src/sdk/loggers.cpp    (kopia robocza)</span>
+<span class="gu">@@ -68,7 +68,8 @@</span>
+ 
+     control-&gt;SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
+ 
+<span class="gd">-    int size = Manager::Get()-&gt;GetConfigManager(_T(&quot;message_manager&quot;))-&gt;ReadInt(_T(&quot;/log_font_size&quot;), platform::macosx ? 10 : 8);</span>
+<span class="gi">+    ConfigManager* mcfg =Manager::Get()-&gt;GetConfigManager(_T(&quot;message_manager&quot;));</span>
+<span class="gi">+    int size = mcfg-&gt;ReadInt(_T(&quot;/log_font_size&quot;), platform::macosx ? 10 : 8);</span>
+ 
+     wxFont default_font(size, fixed ? wxFONTFAMILY_MODERN : wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+     wxFont bold_font(default_font);
+<span class="gu">@@ -108,7 +109,7 @@</span>
+     style[warning].SetFont(italic_font);
+ 
+     style[error].SetFont(bold_font);
+<span class="gd">-    style[error].SetTextColour(BlendTextColour(*wxRED));</span>
+<span class="gi">+    style[error].SetTextColour( mcfg-&gt;ReadColour(_T(&quot;/log_error_text_colour&quot;),wxColour(0xf0, 0x00, 0x00)) );    // red</span>
+ 
+     style[critical].SetFont(bold_font);
+     style[critical].SetTextColour(BlendTextColour(*wxWHITE));     // we&#39;re setting both fore and background colors here
+<span class="gu">@@ -279,7 +280,8 @@</span>
+     if (!control)
+         return;
+ 
+<span class="gd">-    int size = Manager::Get()-&gt;GetConfigManager(_T(&quot;message_manager&quot;))-&gt;ReadInt(_T(&quot;/log_font_size&quot;), platform::macosx ? 10 : 8);</span>
+<span class="gi">+    ConfigManager *mcfg = Manager::Get()-&gt;GetConfigManager(_T(&quot;message_manager&quot;));</span>
+<span class="gi">+    int size = mcfg-&gt;ReadInt(_T(&quot;/log_font_size&quot;), platform::macosx ? 10 : 8);</span>
+     wxFont default_font(size, fixed ? wxFONTFAMILY_MODERN : wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+     wxFont bold_font(default_font);
+     wxFont italic_font(default_font);
+<span class="gu">@@ -306,9 +308,9 @@</span>
+     style[failure].colour = BlendTextColour(wxColour(0x00, 0x00, 0xa0));
+ 
+     style[warning].font = italic_font;
+<span class="gd">-    style[warning].colour = BlendTextColour(wxColour(0x00, 0x00, 0xa0));    // navy blue</span>
+<span class="gi">+    style[warning].colour = mcfg-&gt;ReadColour(_T(&quot;/log_warning_text_colour&quot;),wxColour(0x00, 0x00, 0xa0));    // navy blue</span>
+ 
+<span class="gd">-    style[error].colour = BlendTextColour(*wxRED);</span>
+<span class="gi">+    style[error].colour = mcfg-&gt;ReadColour(_T(&quot;/log_error_text_colour&quot;),wxColour(0xf0, 0x00, 0x00));    // red</span>
+ 
+     style[critical].font = bold_font;
+     style[critical].colour = BlendTextColour(wxColour(0x0a, 0x00, 0x00));   // maroon
+<span class="gh">Index: src/src/environmentsettingsdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/environmentsettingsdlg.cpp    (wersja 8245)</span>
+<span class="gi">+++ src/src/environmentsettingsdlg.cpp    (kopia robocza)</span>
+<span class="gu">@@ -71,6 +71,8 @@</span>
+     EVT_BUTTON(XRCID(&quot;btnAuiInactiveCaptionGradientColour&quot;), EnvironmentSettingsDlg::OnChooseColour)
+     EVT_BUTTON(XRCID(&quot;btnAuiInactiveCaptionTextColour&quot;), EnvironmentSettingsDlg::OnChooseColour)
+     EVT_BUTTON(XRCID(&quot;btnResetDefaultColours&quot;), EnvironmentSettingsDlg::OnResetDefaultColours)
+<span class="gi">+    EVT_BUTTON(XRCID(&quot;btnLogWarningTextColour&quot;), EnvironmentSettingsDlg::OnChooseColour)</span>
+<span class="gi">+    EVT_BUTTON(XRCID(&quot;btnLogErrorTextColour&quot;), EnvironmentSettingsDlg::OnChooseColour)</span>
+     EVT_CHECKBOX(XRCID(&quot;chkUseIPC&quot;), EnvironmentSettingsDlg::OnUseIpcCheck)
+     EVT_CHECKBOX(XRCID(&quot;chkDoPlace&quot;), EnvironmentSettingsDlg::OnPlaceCheck)
+     EVT_CHECKBOX(XRCID(&quot;chkPlaceHead&quot;), EnvironmentSettingsDlg::OnHeadCheck)
+<span class="gu">@@ -142,6 +144,8 @@</span>
+     XRCCTRL(*this, &quot;rbSettingsIconsSize&quot;, wxRadioBox)-&gt;SetSelection(cfg-&gt;ReadInt(_T(&quot;/environment/settings_size&quot;), 0));
+     XRCCTRL(*this, &quot;chkShowStartPage&quot;, wxCheckBox)-&gt;SetValue(cfg-&gt;ReadBool(_T(&quot;/environment/start_here_page&quot;), true));
+     XRCCTRL(*this, &quot;spnLogFontSize&quot;, wxSpinCtrl)-&gt;SetValue(mcfg-&gt;ReadInt(_T(&quot;/log_font_size&quot;), 8));
+<span class="gi">+    XRCCTRL(*this, &quot;btnLogWarningTextColour&quot;, wxButton)-&gt;SetBackgroundColour(mcfg-&gt;ReadColour(_T(&quot;/log_warning_text_colour&quot;), wxColour(0x00, 0x00, 0xa0) )); //navy blue</span>
+<span class="gi">+    XRCCTRL(*this, &quot;btnLogErrorTextColour&quot;, wxButton)-&gt;SetBackgroundColour(mcfg-&gt;ReadColour(_T(&quot;/log_error_text_colour&quot;), wxColour(0xf0, 0x00, 0x00) )); //red</span>
+ 
+     bool en = mcfg-&gt;ReadBool(_T(&quot;/auto_hide&quot;), false);
+     XRCCTRL(*this, &quot;chkAutoHideMessages&quot;, wxCheckBox)-&gt;SetValue(en);
+<span class="gu">@@ -524,6 +528,9 @@</span>
+             cfg-&gt;Write(_T(&quot;/locale/language&quot;), wxEmptyString);
+ 
+         mcfg-&gt;Write(_T(&quot;/log_font_size&quot;),                    (int)  XRCCTRL(*this, &quot;spnLogFontSize&quot;, wxSpinCtrl)-&gt;GetValue());
+<span class="gi">+        mcfg-&gt;Write(_T(&quot;/log_warning_text_colour&quot;),                 XRCCTRL(*this, &quot;btnLogWarningTextColour&quot;, wxButton)-&gt;GetBackgroundColour());</span>
+<span class="gi">+        mcfg-&gt;Write(_T(&quot;/log_error_text_colour&quot;),                 XRCCTRL(*this, &quot;btnLogErrorTextColour&quot;, wxButton)-&gt;GetBackgroundColour());</span>
+<span class="gi">+</span>
+         cfg-&gt;Write(_T(&quot;/dialog_placement/do_place&quot;),         (bool) XRCCTRL(*this, &quot;chkDoPlace&quot;,     wxCheckBox)-&gt;GetValue());
+         cfg-&gt;Write(_T(&quot;/dialog_placement/dialog_position&quot;),  (int)  XRCCTRL(*this, &quot;chkPlaceHead&quot;,   wxCheckBox)-&gt;GetValue() ? pdlHead : pdlCentre);
+ 
+<span class="gh">Index: src/src/resources/env_settings.xrc</span>
+<span class="gh">======================</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">p2rkw 2012-08-26 13:01:41</div>

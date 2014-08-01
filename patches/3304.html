@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,111 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/src/main.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/main.h    (revision 8097)</span>
+<span class="gi">+++ src/src/main.h    (working copy)</span>
+<span class="gu">@@ -165,6 +165,7 @@</span>
+         void OnEditLineTranspose(wxCommandEvent&amp; event);
+         void OnEditLineCopy(wxCommandEvent&amp; event);
+         void OnEditLinePaste(wxCommandEvent&amp; event);
+<span class="gi">+        void OnEditLineMove(wxCommandEvent&amp; event);</span>
+         void OnEditUpperCase(wxCommandEvent&amp; event);
+         void OnEditLowerCase(wxCommandEvent&amp; event);
+         void OnEditInsertNewLine(wxCommandEvent&amp; event);
+<span class="gh">Index: src/src/resources/main_menu.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/resources/main_menu.xrc    (revision 8097)</span>
+<span class="gi">+++ src/src/resources/main_menu.xrc    (working copy)</span>
+<span class="gu">@@ -418,6 +418,16 @@</span>
+             &lt;label&gt;Paste&lt;/label&gt;
+             &lt;help&gt;Paste before current line&lt;/help&gt;
+           &lt;/object&gt;
+<span class="gi">+          &lt;object class=&quot;wxMenuItem&quot; name=&quot;idEditLineUp&quot;&gt;</span>
+<span class="gi">+            &lt;label&gt;Move up&lt;/label&gt;</span>
+<span class="gi">+            &lt;accel&gt;Alt-UP&lt;/accel&gt;</span>
+<span class="gi">+            &lt;help&gt;Transpose current line(s) up&lt;/help&gt;</span>
+<span class="gi">+          &lt;/object&gt;</span>
+<span class="gi">+          &lt;object class=&quot;wxMenuItem&quot; name=&quot;idEditLineDown&quot;&gt;</span>
+<span class="gi">+            &lt;label&gt;Move down&lt;/label&gt;</span>
+<span class="gi">+            &lt;accel&gt;Alt-DOWN&lt;/accel&gt;</span>
+<span class="gi">+            &lt;help&gt;Transpose current line(s) down&lt;/help&gt;</span>
+<span class="gi">+          &lt;/object&gt;</span>
+         &lt;/object&gt;
+         &lt;object class=&quot;wxMenu&quot; name=&quot;idEditSpecialCommandsCase&quot;&gt;
+           &lt;label&gt;Case&lt;/label&gt;
+<span class="gh">Index: src/src/main.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/src/main.cpp    (revision 8097)</span>
+<span class="gi">+++ src/src/main.cpp    (working copy)</span>
+<span class="gu">@@ -226,6 +226,8 @@</span>
+ int idEditLineTranspose           = XRCID(&quot;idEditLineTranspose&quot;);
+ int idEditLineCopy                = XRCID(&quot;idEditLineCopy&quot;);
+ int idEditLinePaste               = XRCID(&quot;idEditLinePaste&quot;);
+<span class="gi">+int idEditLineUp                  = XRCID(&quot;idEditLineUp&quot;);</span>
+<span class="gi">+int idEditLineDown                = XRCID(&quot;idEditLineDown&quot;);</span>
+ int idEditSpecialCommandsCase     = XRCID(&quot;idEditSpecialCommandsCase&quot;);
+ int idEditUpperCase               = XRCID(&quot;idEditUpperCase&quot;);
+ int idEditLowerCase               = XRCID(&quot;idEditLowerCase&quot;);
+<span class="gu">@@ -444,6 +446,8 @@</span>
+     EVT_MENU(idEditLineTranspose,         MainFrame::OnEditLineTranspose)
+     EVT_MENU(idEditLineCopy,              MainFrame::OnEditLineCopy)
+     EVT_MENU(idEditLinePaste,             MainFrame::OnEditLinePaste)
+<span class="gi">+    EVT_MENU(idEditLineUp,                MainFrame::OnEditLineMove)</span>
+<span class="gi">+    EVT_MENU(idEditLineDown,              MainFrame::OnEditLineMove)</span>
+     EVT_MENU(idEditUpperCase,             MainFrame::OnEditUpperCase)
+     EVT_MENU(idEditLowerCase,             MainFrame::OnEditLowerCase)
+     EVT_MENU(idEditInsertNewLine,         MainFrame::OnEditInsertNewLine)
+<span class="gu">@@ -3239,6 +3243,47 @@</span>
+     }
+ }
+ 
+<span class="gi">+void MainFrame::OnEditLineMove(wxCommandEvent&amp; event)</span>
+<span class="gi">+{</span>
+<span class="gi">+    cbEditor* ed = Manager::Get()-&gt;GetEditorManager()-&gt;GetBuiltinActiveEditor();</span>
+<span class="gi">+    if (ed)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        cbStyledTextCtrl* ctrl = ed-&gt;GetControl();</span>
+<span class="gi">+        if (ctrl-&gt;GetSelections() &gt; 1)</span>
+<span class="gi">+            return;</span>
+<span class="gi">+        int startPos = ctrl-&gt;PositionFromLine(ctrl-&gt;LineFromPosition(ctrl-&gt;GetSelectionStart()));</span>
+<span class="gi">+        int endPos = ctrl-&gt;PositionFromLine(ctrl-&gt;LineFromPosition(ctrl-&gt;GetSelectionEnd()) + 1) - 1;</span>
+<span class="gi">+        if (event.GetId() == idEditLineUp)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            if (startPos &lt; 2)</span>
+<span class="gi">+                return;</span>
+<span class="gi">+            ctrl-&gt;BeginUndoAction();</span>
+<span class="gi">+            wxString line = ctrl-&gt;GetTextRange(ctrl-&gt;PositionFromLine(ctrl-&gt;LineFromPosition(startPos) - 1),</span>
+<span class="gi">+                                               startPos);</span>
+<span class="gi">+            ctrl-&gt;InsertText(endPos + 1, line);</span>
+<span class="gi">+            ctrl-&gt;DeleteRange(startPos - line.Length(), line.Length());</span>
+<span class="gi">+            startPos -= line.Length();</span>
+<span class="gi">+            endPos -= line.Length();</span>
+<span class="gi">+            ctrl-&gt;EndUndoAction();</span>
+<span class="gi">+        }</span>
+<span class="gi">+        else</span>
+<span class="gi">+        {</span>
+<span class="gi">+            if (ctrl-&gt;LineFromPosition(ctrl-&gt;GetSelectionEnd()) == ctrl-&gt;GetLineCount())</span>
+<span class="gi">+                return;</span>
+<span class="gi">+            ctrl-&gt;BeginUndoAction();</span>
+<span class="gi">+            wxString line = ctrl-&gt;GetTextRange(endPos + 1,</span>
+<span class="gi">+                                               ctrl-&gt;PositionFromLine(ctrl-&gt;LineFromPosition(endPos + 1) + 1));</span>
+<span class="gi">+            ctrl-&gt;DeleteRange(endPos + 1, line.Length());</span>
+<span class="gi">+            ctrl-&gt;InsertText(startPos, line);</span>
+<span class="gi">+            startPos += line.Length();</span>
+<span class="gi">+            endPos += line.Length();</span>
+<span class="gi">+            ctrl-&gt;EndUndoAction();</span>
+<span class="gi">+        }</span>
+<span class="gi">+        ctrl-&gt;SetSelectionStart(startPos);</span>
+<span class="gi">+        ctrl-&gt;SetSelectionEnd(endPos);</span>
+<span class="gi">+    }</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+ void MainFrame::OnEditUpperCase(wxCommandEvent&amp; /*event*/)
+ {
+     cbEditor* ed = Manager::Get()-&gt;GetEditorManager()-&gt;GetBuiltinActiveEditor();
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mortenmacfly 2012-07-10 05:52:08</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,165 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/compilergcc/compilergcc.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilergcc.h    (revision 5296)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilergcc.h    (working copy)</span>
+<span class="gu">@@ -52,6 +52,7 @@</span>
+ {
+     bsNone = 0,
+     bsProjectPreBuild,
+<span class="gi">+    bsTargetClean,</span>
+     bsTargetPreBuild,
+     bsTargetBuild,
+     bsTargetPostBuild,
+<span class="gu">@@ -67,6 +68,12 @@</span>
+     ltAll       = 0xff
+ };
+ 
+<span class="gi">+enum BuildAction</span>
+<span class="gi">+{</span>
+<span class="gi">+    baClean = 0,</span>
+<span class="gi">+    baBuild</span>
+<span class="gi">+};</span>
+<span class="gi">+</span>
+ class wxTimerEvent;
+ class wxComboBox;
+ class wxStaticText;
+<span class="gu">@@ -187,13 +194,15 @@</span>
+         void LogMessage(const wxString&amp; message, CompilerLineType lt = cltNormal, LogTarget log = ltAll, bool forceErrorColour = false, bool isTitle = false, bool updateProgress = false);
+         void SaveBuildLog();
+         void InitBuildLog(bool workspaceBuild);
+<span class="gd">-        void PrintBanner(cbProject* prj = 0, ProjectBuildTarget* target = 0);</span>
+<span class="gd">-        bool UseMake(ProjectBuildTarget* target = 0);</span>
+<span class="gi">+        void PrintBanner(BuildAction action, cbProject* prj = 0, ProjectBuildTarget* target = 0);</span>
+<span class="gi">+        bool UseMake(cbProject *prj = 0);</span>
+         bool CompilerValid(ProjectBuildTarget* target = 0);
+         ProjectBuildTarget* GetBuildTargetForFile(ProjectFile* pf);
+         ProjectBuildTarget* GetBuildTargetForFile(const wxString&amp; file);
+         wxString GetMakeCommandFor(MakeCommand cmd, cbProject* project, ProjectBuildTarget* target);
+<span class="gd">-        int DoBuild();</span>
+<span class="gi">+        int DoBuild(bool clean, bool build);</span>
+<span class="gi">+        int DoBuild(const wxString&amp; target, bool clean, bool build);</span>
+<span class="gi">+        int DoWorkspaceBuild(const wxString&amp; target, bool clean, bool build);</span>
+         void CalculateWorkspaceDependencies(wxArrayInt&amp; deps);
+         void CalculateProjectDependencies(cbProject* prj, wxArrayInt&amp; deps);
+         void InitBuildState(BuildJob job, const wxString&amp; target);
+<span class="gu">@@ -276,6 +285,9 @@</span>
+         BuildState m_NextBuildState;
+         cbProject* m_pLastBuildingProject;
+         ProjectBuildTarget* m_pLastBuildingTarget;
+<span class="gi">+        // Clean and Build</span>
+<span class="gi">+        bool m_Clean;</span>
+<span class="gi">+        bool m_Build;</span>
+         // to decide if post-build steps should run
+         bool m_RunTargetPostBuild;
+         bool m_RunProjectPostBuild;
+<span class="gh">Index: src/plugins/compilergcc/compilergcc.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/compilergcc/compilergcc.cpp    (revision 5296)</span>
+<span class="gi">+++ src/plugins/compilergcc/compilergcc.cpp    (working copy)</span>
+<span class="gu">@@ -363,6 +363,8 @@</span>
+     m_pLastBuildingTarget = 0;
+     m_RunTargetPostBuild = false;
+     m_RunProjectPostBuild = false;
+<span class="gi">+    m_Clean = false;</span>
+<span class="gi">+    m_Build = false;</span>
+     m_DeleteTempMakefile = true;
+     m_IsWorkspaceOperation = false;
+ 
+<span class="gu">@@ -967,6 +969,9 @@</span>
+     if (m_IsWorkspaceOperation)
+         return;
+ 
+<span class="gi">+    if (IsProcessRunning())</span>
+<span class="gi">+        return;</span>
+<span class="gi">+</span>
+     CodeBlocksLogEvent evtSwitch(cbEVT_SWITCH_TO_LOG_WINDOW, m_Log);
+     Manager::Get()-&gt;ProcessEvent(evtSwitch);
+ 
+<span class="gu">@@ -1475,15 +1480,16 @@</span>
+     m_LastTempMakefile = _T(&quot;&quot;);
+ }
+ 
+<span class="gd">-bool CompilerGCC::UseMake(ProjectBuildTarget* target)</span>
+<span class="gi">+bool CompilerGCC::UseMake(cbProject *prj)</span>
+ {
+<span class="gd">-    if (!m_Project)</span>
+<span class="gi">+    if (!prj)</span>
+<span class="gi">+        prj = m_Project;</span>
+<span class="gi">+    if (!prj)</span>
+         return false;
+<span class="gd">-    wxString idx = m_Project-&gt;GetCompilerID();</span>
+<span class="gi">+    wxString idx = prj-&gt;GetCompilerID();</span>
+     if (CompilerFactory::GetCompiler(idx))
+     {
+<span class="gd">-        if (m_Project-&gt;IsMakefileCustom())</span>
+<span class="gd">-            return true;</span>
+<span class="gi">+        return prj-&gt;IsMakefileCustom();</span>
+     }
+     return false;
+ }
+<span class="gu">@@ -1553,7 +1559,7 @@</span>
+         }
+     }
+ 
+<span class="gd">-    PrintBanner();</span>
+<span class="gi">+    PrintBanner(baBuild);</span>
+     wxSetWorkingDirectory(m_Project-&gt;GetBasePath());
+ 
+     if (UseMake())
+<span class="gu">@@ -1572,7 +1578,7 @@</span>
+     return true;
+ }
+ 
+<span class="gd">-void CompilerGCC::PrintBanner(cbProject* prj, ProjectBuildTarget* target)</span>
+<span class="gi">+void CompilerGCC::PrintBanner(BuildAction action, cbProject* prj, ProjectBuildTarget* target)</span>
+ {
+     if (!CompilerValid(target))
+         return;
+<span class="gu">@@ -1583,8 +1589,14 @@</span>
+     if (!prj)
+         prj = m_Project;
+ 
+<span class="gi">+    wxString Action = _(&quot;Build&quot;);</span>
+<span class="gi">+    if (action ==  baClean)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        Action = _(&quot;Clean&quot;);</span>
+<span class="gi">+    }</span>
+     wxString banner;
+<span class="gd">-    banner.Printf(_(&quot;-------------- Build: %s in %s ---------------&quot;),</span>
+<span class="gi">+    banner.Printf(_(&quot;-------------- %s: %s in %s ---------------&quot;),</span>
+<span class="gi">+                    Action.c_str(),</span>
+                     target
+                         ? target-&gt;GetTitle().c_str()
+                         : _(&quot;\&quot;no target\&quot;&quot;),
+<span class="gu">@@ -1922,63 +1934,7 @@</span>
+ 
+ int CompilerGCC::Clean(const wxString&amp; target)
+ {
+<span class="gd">-    wxString realTarget = target;</span>
+<span class="gd">-    if (realTarget.IsEmpty())</span>
+<span class="gd">-        realTarget = GetTargetString();</span>
+<span class="gd">-    if (realTarget.IsEmpty())</span>
+<span class="gd">-        return -1;</span>
+<span class="gd">-</span>
+<span class="gd">-    if (!m_IsWorkspaceOperation)</span>
+<span class="gd">-    {</span>
+<span class="gd">-        DoPrepareQueue();</span>
+<span class="gd">-    }</span>
+<span class="gd">-</span>
+<span class="gd">-    wxArrayString clean;</span>
+<span class="gd">-    if (!m_Project)</span>
+<span class="gd">-    {</span>
+<span class="gd">-        if (!Manager::Get()-&gt;GetEditorManager()-&gt;GetActiveEditor())</span>
+<span class="gd">-          return -1;</span>
+<span class="gd">-</span>
+<span class="gd">-        DirectCommands dc(this, CompilerFactory::GetDefaultCompiler(), 0, m_PageIndex);</span>
+<span class="gd">-        clean = dc.GetCleanSingleFileCommand(</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">gryphon 2008-11-02 19:03:53</div>

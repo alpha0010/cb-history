@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,122 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/codecompletion/parser/tokenizer.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/parser/tokenizer.h    (revision 5716)</span>
+<span class="gi">+++ src/plugins/codecompletion/parser/tokenizer.h    (working copy)</span>
+<span class="gu">@@ -111,7 +111,10 @@</span>
+         {
+             ++m_TokenIndex;
+             if (IsEOF())
+<span class="gi">+            {</span>
+<span class="gi">+                m_TokenIndex = m_BufferLen;</span>
+                 return false;
+<span class="gi">+            }</span>
+ 
+             if (CurrentChar() == _T(&#39;\n&#39;))
+                 ++m_LineNumber;
+<span class="gu">@@ -121,7 +124,10 @@</span>
+         {
+             m_TokenIndex += amount;
+             if (IsEOF())
+<span class="gi">+            {</span>
+<span class="gi">+                m_TokenIndex = m_BufferLen;</span>
+                 return false;
+<span class="gi">+            }</span>
+ 
+             if (CurrentChar() == _T(&#39;\n&#39;))
+                 ++m_LineNumber;
+<span class="gu">@@ -136,12 +142,9 @@</span>
+ 
+     wxChar CurrentCharMoveNext()
+     {
+<span class="gd">-        size_t i = m_TokenIndex++;</span>
+<span class="gd">-</span>
+         if(m_TokenIndex &lt; m_BufferLen)
+<span class="gd">-            return m_Buffer.GetChar(i);</span>
+<span class="gd">-        else</span>
+<span class="gd">-            return 0;</span>
+<span class="gi">+            m_TokenIndex++;</span>
+<span class="gi">+        return CurrentChar();</span>
+     };
+ 
+     wxChar NextChar() const
+<span class="gh">Index: src/plugins/codecompletion/parser/tokenizer.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/parser/tokenizer.cpp    (revision 5716)</span>
+<span class="gi">+++ src/plugins/codecompletion/parser/tokenizer.cpp    (working copy)</span>
+<span class="gu">@@ -100,8 +100,10 @@</span>
+ bool Tokenizer::InitFromBuffer(const wxString&amp; buffer)
+ {
+     BaseInit();
+<span class="gi">+    m_BufferLen = buffer.Length();</span>
+<span class="gi">+    m_Buffer.Alloc(m_BufferLen + 1);</span>
+     m_Buffer = buffer;
+<span class="gd">-    m_BufferLen = buffer.Length();</span>
+<span class="gi">+    m_Buffer += _T(&#39; &#39;);</span>
+     m_IsOK = true;
+     m_Filename.Clear();
+     return true;
+<span class="gu">@@ -140,14 +142,14 @@</span>
+         // same code as in cbC2U() but with the addition of the string length (3rd param in unicode version)
+         // and the fallback encoding conversion
+ #if wxUSE_UNICODE
+<span class="gd">-        m_Buffer = wxString(data, wxConvUTF8, m_BufferLen);</span>
+<span class="gi">+        m_Buffer = wxString(data, wxConvUTF8, m_BufferLen + 1);</span>
+         if (m_Buffer.Length() == 0)
+         {
+             // could not read as utf-8 encoding, try iso8859-1
+<span class="gd">-            m_Buffer = wxString(data, wxConvISO8859_1, m_BufferLen);</span>
+<span class="gi">+            m_Buffer = wxString(data, wxConvISO8859_1, m_BufferLen + 1);</span>
+         }
+ #else
+<span class="gd">-        m_Buffer = wxString(data, m_BufferLen);</span>
+<span class="gi">+        m_Buffer = wxString(data, m_BufferLen + 1);</span>
+ #endif
+ 
+         if (m_BufferLen != m_Buffer.Length())
+<span class="gu">@@ -157,6 +159,10 @@</span>
+             m_BufferLen = m_Buffer.Length();
+ //            asm(&quot;int $3;&quot;);
+         }
+<span class="gi">+</span>
+<span class="gi">+        // add &#39;sentinel&#39; to the end of the string (not counted to the length of the string)</span>
+<span class="gi">+        m_Buffer += _T(&#39; &#39;);</span>
+<span class="gi">+</span>
+         return data != 0;
+     };
+ 
+<span class="gu">@@ -170,6 +176,13 @@</span>
+         return false;
+     m_BufferLen = m_Buffer.Length();
+ 
+<span class="gi">+    // add &#39;sentinel&#39; to the end of the string (not counted to the length of the string)</span>
+<span class="gi">+</span>
+<span class="gi">+    // (In the above cbRead() we don&#39;t specify the allocated length of m_Buffer so the</span>
+<span class="gi">+    // call below might force reallocation of the string. However the documentation of</span>
+<span class="gi">+    // wxWidgets says that the available memory in string is always a multiple of 16,</span>
+<span class="gi">+    // so we have only 1/16 probability that this happens)</span>
+<span class="gi">+    m_Buffer += _T(&#39; &#39;);</span>
+     return true;
+ }
+ 
+<span class="gu">@@ -296,7 +309,12 @@</span>
+         wxChar last = PreviousChar();
+         // if DOS line endings, we &#39;ve hit \r and we skip to \n...
+         if (last == &#39;\r&#39;)
+<span class="gd">-            last = m_Buffer.GetChar(m_TokenIndex - 2);</span>
+<span class="gi">+        {</span>
+<span class="gi">+            if (m_TokenIndex - 2 &gt;= 0)</span>
+<span class="gi">+                last = m_Buffer.GetChar(m_TokenIndex - 2);</span>
+<span class="gi">+            else</span>
+<span class="gi">+                last = _T(&#39;\0&#39;);</span>
+<span class="gi">+        }</span>
+         if (IsEOF() || last != &#39;\\&#39;)
+             break;
+         else
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">techy 2009-07-30 20:32:42</div>

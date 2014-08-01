@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,145 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/EditorTweaks/EditorTweaks.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/EditorTweaks/EditorTweaks.cpp    (revision 8526)</span>
+<span class="gi">+++ src/plugins/contrib/EditorTweaks/EditorTweaks.cpp    (working copy)</span>
+<span class="gu">@@ -40,34 +40,35 @@</span>
+ 
+ }
+ 
+<span class="gd">-int id_et= wxNewId();</span>
+<span class="gd">-int id_et_WordWrap= wxNewId();</span>
+<span class="gd">-int id_et_ShowLineNumbers= wxNewId();</span>
+<span class="gd">-int id_et_TabChar = wxNewId();</span>
+<span class="gd">-int id_et_TabIndent = wxNewId();</span>
+<span class="gd">-int id_et_TabSize2 = wxNewId();</span>
+<span class="gd">-int id_et_TabSize4 = wxNewId();</span>
+<span class="gd">-int id_et_TabSize6 = wxNewId();</span>
+<span class="gd">-int id_et_TabSize8 = wxNewId();</span>
+<span class="gd">-int id_et_ShowEOL = wxNewId();</span>
+<span class="gi">+int id_et                     = wxNewId();</span>
+<span class="gi">+int id_et_WordWrap            = wxNewId();</span>
+<span class="gi">+int id_et_ShowLineNumbers     = wxNewId();</span>
+<span class="gi">+int id_et_TabChar             = wxNewId();</span>
+<span class="gi">+int id_et_TabIndent           = wxNewId();</span>
+<span class="gi">+int id_et_TabSize2            = wxNewId();</span>
+<span class="gi">+int id_et_TabSize4            = wxNewId();</span>
+<span class="gi">+int id_et_TabSize6            = wxNewId();</span>
+<span class="gi">+int id_et_TabSize8            = wxNewId();</span>
+<span class="gi">+int id_et_ShowEOL             = wxNewId();</span>
+ int id_et_StripTrailingBlanks = wxNewId();
+ int id_et_EnsureConsistentEOL = wxNewId();
+<span class="gd">-int id_et_EOLCRLF = wxNewId();</span>
+<span class="gd">-int id_et_EOLCR = wxNewId();</span>
+<span class="gd">-int id_et_EOLLF = wxNewId();</span>
+<span class="gd">-int id_et_Fold1= wxNewId();</span>
+<span class="gd">-int id_et_Fold2= wxNewId();</span>
+<span class="gd">-int id_et_Fold3= wxNewId();</span>
+<span class="gd">-int id_et_Fold4= wxNewId();</span>
+<span class="gd">-int id_et_Fold5= wxNewId();</span>
+<span class="gd">-int id_et_Unfold1= wxNewId();</span>
+<span class="gd">-int id_et_Unfold2= wxNewId();</span>
+<span class="gd">-int id_et_Unfold3= wxNewId();</span>
+<span class="gd">-int id_et_Unfold4= wxNewId();</span>
+<span class="gd">-int id_et_Unfold5= wxNewId();</span>
+<span class="gd">-int id_et_align_others= wxNewId();</span>
+<span class="gd">-int id_et_SuppressInsertKey= wxNewId();</span>
+<span class="gd">-int id_et_ConvertBraces= wxNewId();</span>
+<span class="gi">+int id_et_EOLCRLF             = wxNewId();</span>
+<span class="gi">+int id_et_EOLCR               = wxNewId();</span>
+<span class="gi">+int id_et_EOLLF               = wxNewId();</span>
+<span class="gi">+int id_et_Fold1               = wxNewId();</span>
+<span class="gi">+int id_et_Fold2               = wxNewId();</span>
+<span class="gi">+int id_et_Fold3               = wxNewId();</span>
+<span class="gi">+int id_et_Fold4               = wxNewId();</span>
+<span class="gi">+int id_et_Fold5               = wxNewId();</span>
+<span class="gi">+int id_et_Unfold1             = wxNewId();</span>
+<span class="gi">+int id_et_Unfold2             = wxNewId();</span>
+<span class="gi">+int id_et_Unfold3             = wxNewId();</span>
+<span class="gi">+int id_et_Unfold4             = wxNewId();</span>
+<span class="gi">+int id_et_Unfold5             = wxNewId();</span>
+<span class="gi">+int id_et_align_others        = wxNewId();</span>
+<span class="gi">+int id_et_align_auto          = wxNewId();</span>
+<span class="gi">+int id_et_SuppressInsertKey   = wxNewId();</span>
+<span class="gi">+int id_et_ConvertBraces       = wxNewId();</span>
+ 
+ // events handling
+ BEGIN_EVENT_TABLE(EditorTweaks, cbPlugin)
+<span class="gu">@@ -114,7 +116,8 @@</span>
+ 
+     EVT_MENU(id_et_SuppressInsertKey, EditorTweaks::OnSuppressInsert)
+     EVT_MENU(id_et_ConvertBraces, EditorTweaks::OnConvertBraces)
+     EVT_MENU(id_et_align_others, EditorTweaks::OnAlignOthers)
+<span class="gi">+    EVT_MENU(id_et_align_auto, EditorTweaks::OnAlignAuto)</span>
+ END_EVENT_TABLE()
+ 
+ // constructor
+<span class="gu">@@ -573,14 +592,15 @@</span>
+     for ( unsigned int i = 0; i &lt; AlignerMenuEntries.size() ; i++ )
+         alignerMenu-&gt;Append(AlignerMenuEntries[i].id, AlignerMenuEntries[i].MenuName + _T(&quot;\t&quot;)  + _T(&quot;[&quot;) + AlignerMenuEntries[i].ArgumentString + _T(&quot;]&quot;));
+     alignerMenu-&gt;AppendSeparator();
+<span class="gd">-    alignerMenu-&gt;Append(id_et_align_others, _T(&quot;more ...&quot;));</span>
+<span class="gi">+    alignerMenu-&gt;Append(id_et_align_auto,   _T(&quot;Auto&quot;));</span>
+<span class="gi">+    alignerMenu-&gt;Append(id_et_align_others, _T(&quot;More ...&quot;));</span>
+ 
+     // attach aligner menu
+     menu-&gt;AppendSeparator();
+     menu-&gt;Append(wxID_ANY, _T(&quot;Aligner&quot;), alignerMenu);
+ 
+     return; // DISABLED ALL OF THE STUFF BELOW (IT IS ALREADY IN THE MAIN MENU BAR)
+<span class="gd">-</span>
+<span class="gi">+#if 0</span>
+     // build &quot;editor tweaks&quot; menu
+     wxMenu *submenu=new wxMenu(); //_(&quot;Editor Tweaks&quot;)
+ 
+<span class="gu">@@ -642,7 +662,7 @@</span>
+     submenu-&gt;Append( id_et_EnsureConsistentEOL, _( &quot;Make EOLs Consistent Now&quot; ), _( &quot;Convert End-of-Line Characters to the Active Setting&quot; ) );
+ 
+     menu-&gt;Append(wxID_ANY, _T(&quot;Editor Tweaks&quot;), submenu);
+<span class="gd">-</span>
+<span class="gi">+#endif</span>
+ }
+ 
+ void EditorTweaks::OnWordWrap(wxCommandEvent &amp;/*event*/)
+<span class="gu">@@ -945,6 +965,86 @@</span>
+     }
+ }
+ 
+<span class="gi">+void EditorTweaks::OnAlignAuto(wxCommandEvent&amp; WXUNUSED(event))</span>
+<span class="gi">+{</span>
+<span class="gi">+    cbEditor* ed = Manager::Get()-&gt;GetEditorManager()-&gt;GetBuiltinActiveEditor();</span>
+<span class="gi">+    if (!ed)</span>
+<span class="gi">+        return;</span>
+<span class="gi">+    cbStyledTextCtrl* stc = ed-&gt;GetControl();</span>
+<span class="gi">+    if (!stc)</span>
+<span class="gi">+        return;</span>
+<span class="gi">+    int line_start = wxSCI_INVALID_POSITION;</span>
+<span class="gi">+    int line_end   = wxSCI_INVALID_POSITION;</span>
+<span class="gi">+    if (!GetSelectionLines(line_start, line_end))</span>
+<span class="gi">+        return;</span>
+<span class="gi">+    wxArrayString lines;</span>
+<span class="gi">+    for (int i = line_start; i &lt;= line_end; ++i)</span>
+<span class="gi">+        lines.Add(stc-&gt;GetLine(i));</span>
+<span class="gi">+    if (lines.GetCount() &lt; 2)</span>
+<span class="gi">+        return;</span>
+<span class="gi">+    int lexer = stc-&gt;GetLexer();</span>
+<span class="gi">+    wxArrayString out;</span>
+<span class="gi">+    for (size_t i = 0; i &lt; lines.GetCount(); ++i)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        lines[i].Replace(wxT(&quot;\t&quot;), wxT(&quot; &quot;));</span>
+<span class="gi">+        // buffer assignment operators and commas in C++</span>
+<span class="gi">+        if (lexer == wxSCI_LEX_CPP)</span>
+<span class="gi">+        {</span>
+<span class="gi">+            const wxString op = wxT(&quot;=&lt;&gt;!+-*/%&amp;^| &quot;); // do not split compound operators</span>
+<span class="gi">+            for (int j = lines[i].Length() - 2; j &gt;= 0; --j)</span>
+<span class="gi">+            {</span>
+<span class="gi">+                if (   lines[i][j] == wxT(&#39;,&#39;)</span>
+<span class="gi">+                    || (lines[i][j] == w</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mortenmacfly 2012-11-07 10:12:51</div>

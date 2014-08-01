@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,83 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/finddlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/finddlg.cpp    (revision 2366)</span>
+<span class="gi">+++ src/sdk/finddlg.cpp    (working copy)</span>
+<span class="gu">@@ -57,7 +57,7 @@</span>
+     EVT_ACTIVATE(                       FindDlg::OnActivate)
+ END_EVENT_TABLE()
+ 
+<span class="gd">-FindDlg::FindDlg(wxWindow* parent, const wxString&amp; initial, bool hasSelection, bool findInFilesOnly)</span>
+<span class="gi">+FindDlg::FindDlg(wxWindow* parent, const wxString&amp; initial, bool hasSelection, bool findInFilesOnly, bool findInFilesActive)</span>
+     : FindReplaceBase(parent, initial, hasSelection),
+     m_Complete(!findInFilesOnly)
+ {
+<span class="gu">@@ -113,6 +113,11 @@</span>
+ 
+     if (!m_Complete)
+         XRCCTRL(*this, &quot;nbFind&quot;, wxNotebook)-&gt;DeletePage(0); // no active editor, so only find-in-files
+<span class="gi">+    else if (findInFilesActive)</span>
+<span class="gi">+    {</span>
+<span class="gi">+        XRCCTRL(*this, &quot;nbFind&quot;, wxNotebook)-&gt;SetSelection(1); // Search-&gt;Find in Files was selected</span>
+<span class="gi">+        XRCCTRL(*this, &quot;cmbFind2&quot;, wxComboBox)-&gt;SetFocus();</span>
+<span class="gi">+    }</span>
+ }
+ 
+ FindDlg::~FindDlg()
+<span class="gu">@@ -125,9 +130,11 @@</span>
+     cfg-&gt;Write(CONF_GROUP _T(&quot;/search_hidden&quot;), XRCCTRL(*this, &quot;chkSearchHidden&quot;, wxCheckBox)-&gt;GetValue());
+ 
+     // save last searches (up to 10)
+<span class="gd">-    wxComboBox* combo = XRCCTRL(*this, &quot;cmbFind1&quot;, wxComboBox);</span>
+<span class="gd">-    if (!m_Complete)</span>
+<span class="gi">+    wxComboBox* combo;</span>
+<span class="gi">+    if (IsFindInFiles())</span>
+         combo = XRCCTRL(*this, &quot;cmbFind2&quot;, wxComboBox);
+<span class="gi">+    else</span>
+<span class="gi">+        combo = XRCCTRL(*this, &quot;cmbFind1&quot;, wxComboBox);</span>
+     wxArrayString previous;
+     for (int i = 0; (i &lt; combo-&gt;GetCount()) &amp;&amp; (i &lt; 10); ++i)
+     {
+<span class="gu">@@ -311,7 +318,8 @@</span>
+ 
+ void FindDlg::OnActivate(wxActivateEvent&amp; event)
+ {
+<span class="gd">-    if (!m_Complete &amp;&amp; XRCCTRL(*this, &quot;cmbFind2&quot;, wxComboBox))</span>
+<span class="gi">+    // Why is there the second part in the expression? Is this really necessary?</span>
+<span class="gi">+    if (IsFindInFiles() &amp;&amp; XRCCTRL(*this, &quot;cmbFind2&quot;, wxComboBox))</span>
+         XRCCTRL(*this, &quot;cmbFind2&quot;, wxComboBox)-&gt;SetFocus();
+     else
+         XRCCTRL(*this, &quot;cmbFind1&quot;, wxComboBox)-&gt;SetFocus();
+<span class="gh">Index: src/sdk/finddlg.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/finddlg.h    (revision 2366)</span>
+<span class="gi">+++ src/sdk/finddlg.h    (working copy)</span>
+<span class="gu">@@ -10,7 +10,7 @@</span>
+ class FindDlg : public FindReplaceBase
+ {
+     public:
+<span class="gd">-        FindDlg(wxWindow* parent, const wxString&amp; initial = wxEmptyString, bool hasSelection = false, bool findInFilesOnly = false);</span>
+<span class="gi">+        FindDlg(wxWindow* parent, const wxString&amp; initial = wxEmptyString, bool hasSelection = false, bool findInFilesOnly = false, bool findInFilesActive = false);</span>
+         ~FindDlg();
+         wxString GetFindString() const;
+         wxString GetReplaceString() const{ return wxEmptyString; }
+<span class="gh">Index: src/sdk/editormanager.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/editormanager.cpp    (revision 2366)</span>
+<span class="gi">+++ src/sdk/editormanager.cpp    (working copy)</span>
+<span class="gu">@@ -1109,7 +1109,7 @@</span>
+ 
+     FindReplaceBase* dlg;
+     if (!replace)
+<span class="gd">-        dlg = new FindDlg(Manager::Get()-&gt;GetAppWindow(), phraseAtCursor, hasSelection, explicitly_find_in_files || !ed);</span>
+<span class="gi">+        dlg = new FindDlg(Manager::Get()-&gt;GetAppWindow(), phraseAtCursor, hasSelection, !ed, explicitly_find_in_files);</span>
+     else
+         dlg = new ReplaceDlg(Manager::Get()-&gt;GetAppWindow(), phraseAtCursor, hasSelection);
+ 
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">dermeister 2006-04-01 13:19:27</div>

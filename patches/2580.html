@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,172 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable">########################################
+<span class="gd">--- src/plugins/compilergcc/compilergcc.cpp        Mon Oct 06 00:44:38 2008</span>
+<span class="gi">+++ src/plugins/compilergcc/compilergcc.cpp        Thu Oct 09 07:28:43 2008</span>
+<span class="gu">@@ -966,6 +966,8 @@</span>
+ {
+     if (m_IsWorkspaceOperation)
+         return;
+<span class="gi">+    if (IsProcessRunning())</span>
+<span class="gi">+        return;</span>
+ 
+     CodeBlocksLogEvent evtSwitch(cbEVT_SWITCH_TO_LOG_WINDOW, m_Log);
+     Manager::Get()-&gt;ProcessEvent(evtSwitch);
+<span class="gu">@@ -1475,16 +1477,15 @@</span>
+     m_LastTempMakefile = _T(&quot;&quot;);
+ }
+ 
+<span class="gd">-bool CompilerGCC::UseMake(ProjectBuildTarget* target)</span>
+<span class="gi">+bool CompilerGCC::UseMake(cbProject *prj)</span>
+ {
+<span class="gd">-    if (!m_Project)</span>
+<span class="gi">+    if (!prj)</span>
+<span class="gi">+        prj = m_Project;</span>
+<span class="gi">+    if (!prj)</span>
+         return false;
+<span class="gd">-    wxString idx = m_Project-&gt;GetCompilerID();</span>
+<span class="gi">+    wxString idx = prj-&gt;GetCompilerID();</span>
+     if (CompilerFactory::GetCompiler(idx))
+<span class="gd">-    {</span>
+<span class="gd">-        if (m_Project-&gt;IsMakefileCustom())</span>
+<span class="gd">-            return true;</span>
+<span class="gd">-    }</span>
+<span class="gi">+        return prj-&gt;IsMakefileCustom();</span>
+     return false;
+ }
+ 
+<span class="gu">@@ -1962,7 +1963,11 @@</span>
+         {
+             wxString cmd = GetMakeCommandFor(mcClean, bjt.project, bt);
+             m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, bjt.project, bt));
+<span class="gd">-            return DoRunQueue();</span>
+<span class="gi">+            while (m_CommandQueue.GetCount()) {</span>
+<span class="gi">+                DoRunQueue();</span>
+<span class="gi">+                Manager::Yield();</span>
+<span class="gi">+            }</span>
+<span class="gi">+            LogMessage(cmd);</span>
+         }
+         else
+         {
+<span class="gu">@@ -2005,7 +2010,7 @@</span>
+         wxSetWorkingDirectory(m_Project-&gt;GetBasePath());
+     CompilerFactory::GetCompiler(m_CompilerId)-&gt;Init(m_Project);
+ 
+<span class="gd">-    if (UseMake(target))</span>
+<span class="gi">+    if (UseMake())</span>
+     {
+         wxString cmd = GetMakeCommandFor(mcDistClean, m_Project, target);
+         m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, m_Project, target));
+<span class="gu">@@ -2241,7 +2246,14 @@</span>
+         case bsTargetBuild:
+         {
+             // run target build
+<span class="gd">-            cmds = dc.GetCompileCommands(bt);</span>
+<span class="gi">+            if (UseMake(m_pBuildingProject)) {</span>
+<span class="gi">+                wxString cmd = GetMakeCommandFor(mcBuild, m_pBuildingProject, bt);</span>
+<span class="gi">+                cmds.Add(cmd);</span>
+<span class="gi">+                LogMessage(cmd);</span>
+<span class="gi">+            } else {</span>
+<span class="gi">+                cmds = dc.GetCompileCommands(bt);</span>
+<span class="gi">+            }</span>
+<span class="gi">+</span>
+             bool hasCommands = cmds.GetCount();
+             m_RunTargetPostBuild = hasCommands;
+             m_RunProjectPostBuild = hasCommands;
+<span class="gu">@@ -2434,16 +2446,7 @@</span>
+     if (!bt || !CompilerValid(bt))
+         return -2;
+ 
+<span class="gd">-    wxString cmd;</span>
+<span class="gd">-    if (UseMake())</span>
+<span class="gd">-    {</span>
+<span class="gd">-        wxString cmd = GetMakeCommandFor(mcBuild, bj.project, bt);</span>
+<span class="gd">-        m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, bj.project, bt));</span>
+<span class="gd">-    }</span>
+<span class="gd">-    else</span>
+<span class="gd">-    {</span>
+<span class="gd">-        BuildStateManagement();</span>
+<span class="gd">-    }</span>
+<span class="gi">+    BuildStateManagement();</span>
+     return 0;
+ }
+ 
+<span class="gu">@@ -2533,38 +2536,12 @@</span>
+     if (!m_IsWorkspaceOperation)
+         DoPrepareQueue();
+ 
+<span class="gd">-    if (UseMake())</span>
+<span class="gd">-    {</span>
+<span class="gd">-        // make sure all project files are saved</span>
+<span class="gd">-        if (m_Project &amp;&amp; !m_Project-&gt;SaveAllFiles())</span>
+<span class="gd">-            Manager::Get()-&gt;GetLogManager()-&gt;Log(_(&quot;Could not save all files...&quot;));</span>
+<span class="gd">-</span>
+<span class="gd">-        // generate build jobs</span>
+<span class="gd">-        PreprocessJob(m_Project, realTarget);</span>
+<span class="gd">-        if (m_BuildJobTargetsList.empty())</span>
+<span class="gd">-            return -1;</span>
+<span class="gd">-</span>
+<span class="gd">-        // loop all jobs and add them in the queue</span>
+<span class="gd">-        while (!m_BuildJobTargetsList.empty())</span>
+<span class="gd">-        {</span>
+<span class="gd">-            BuildJobTarget bjt = GetNextJob();</span>
+<span class="gd">-            ProjectBuildTarget* bt = bjt.project-&gt;GetBuildTarget(bjt.targetName);</span>
+<span class="gd">-            if (bt)</span>
+<span class="gd">-            {</span>
+<span class="gd">-                wxString cmd = GetMakeCommandFor(mcBuild, bjt.project, bt);</span>
+<span class="gd">-                m_CommandQueue.Add(new CompilerCommand(cmd, wxEmptyString, bjt.project, bt));</span>
+<span class="gd">-            }</span>
+<span class="gd">-        }</span>
+<span class="gd">-    }</span>
+<span class="gd">-    else</span>
+<span class="gd">-    {</span>
+<span class="gd">-        PreprocessJob(m_Project, realTarget);</span>
+<span class="gd">-        if (m_BuildJobTargetsList.empty())</span>
+<span class="gd">-            return -1;</span>
+<span class="gd">-        InitBuildState(bjProject, realTarget);</span>
+<span class="gd">-        if (DoBuild())</span>
+<span class="gd">-            return -2;</span>
+<span class="gd">-    }</span>
+<span class="gi">+    PreprocessJob(m_Project, realTarget);</span>
+<span class="gi">+    if (m_BuildJobTargetsList.empty())</span>
+<span class="gi">+        return -1;</span>
+<span class="gi">+    InitBuildState(bjProject, realTarget);</span>
+<span class="gi">+    if (DoBuild())</span>
+<span class="gi">+        return -2;</span>
+     return DoRunQueue();
+ }
+ 
+<span class="gu">@@ -2602,39 +2579,8 @@</span>
+     if (cmp)
+         cmp-&gt;Init(m_Project);
+ 
+<span class="gd">-    if (UseMake())</span>
+<span class="gd">-    {</span>
+<span class="gd">-        CompilerCommand* cc;</span>
+<span class="gd">-        wxString cmd;</span>
+<span class="gd">-</span>
+<span class="gd">-        // generate build jobs</span>
+<span class="gd">-        PreprocessJob(m_Project, realTarget);</span>
+<span class="gd">-        if (m_BuildJobTargetsList.empty())</span>
+<span class="gd">-            return -1;</span>
+<span class="gd">-</span>
+<span class="gd">-        // loop all jobs and add them in the queue</span>
+<span class="gd">-        while (!m_BuildJobTargetsList.empty())</span>
+<span class="gd">-        {</span>
+<span class="gd">-            BuildJobTarget bjt = GetNextJob();</span>
+<span class="gd">-            ProjectBuildTarget* bt = bjt.project-&gt;GetBuildTarget(bjt.targetName);</span>
+<span class="gd">-            if (bt)</span>
+<span class="gd">-            {</span>
+<span class="gd">-                cmd = GetMakeCommandFor(mcClean, bjt.project, bt);</span>
+<span class="gd">-                cc = new CompilerCommand(cmd, wxEmptyString, bjt.project, bt);</span>
+<span class="gd">-                m_CommandQueue.Add(cc);</span>
+<span class="gd">-</span>
+<span class="gd">-                cmd = GetMakeCommandFor(mcBuild, bjt.project, bt);</span>
+<span class="gd">-                cc = new Com</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">jenslody 2009-01-29 23:36:55</div>

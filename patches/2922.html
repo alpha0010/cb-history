@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,104 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/AutoVersioning/AutoVersioning.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/AutoVersioning/AutoVersioning.cpp    (revision 7020)</span>
+<span class="gi">+++ src/plugins/contrib/AutoVersioning/AutoVersioning.cpp    (working copy)</span>
+<span class="gu">@@ -19,6 +19,8 @@</span>
+ #include &lt;projectmanager.h&gt;
+ #include &lt;tinyxml/tinyxml.h&gt;
+ #endif
+<span class="gi">+#include &lt;tinyxml/tinywxuni.h&gt;</span>
+<span class="gi">+#include &lt;wx/textfile.h&gt;</span>
+ 
+ #include &quot;projectloader_hooks.h&quot;
+ 
+<span class="gu">@@ -173,6 +175,11 @@</span>
+                 {
+                     Config.Settings.DateDeclarations = Help?true:false;
+                 }
+<span class="gi">+                // GJH 03/03/10 Added manifest updating.</span>
+<span class="gi">+                if(pElem-&gt;QueryIntAttribute(&quot;update_manifest&quot;, &amp;Help) == TIXML_SUCCESS)</span>
+<span class="gi">+                {</span>
+<span class="gi">+                    Config.Settings.UpdateManifest = Help?true:false;</span>
+<span class="gi">+                }</span>
+                 if(pElem-&gt;QueryIntAttribute(&quot;do_auto_increment&quot;, &amp;Help) == TIXML_SUCCESS)
+                 {
+                     Config.Settings.DoAutoIncrement = Help?true:false;
+<span class="gu">@@ -255,6 +262,8 @@</span>
+             TiXmlElement Settings(&quot;Settings&quot;);
+             Settings.SetAttribute(&quot;autoincrement&quot;, NewConfig.Settings.Autoincrement);
+             Settings.SetAttribute(&quot;date_declarations&quot;, NewConfig.Settings.DateDeclarations);
+<span class="gi">+            // GJH 03/03/10 Added manifest updating.</span>
+<span class="gi">+            Settings.SetAttribute(&quot;update_manifest&quot;, NewConfig.Settings.UpdateManifest);</span>
+             Settings.SetAttribute(&quot;do_auto_increment&quot;, NewConfig.Settings.DoAutoIncrement);
+             Settings.SetAttribute(&quot;ask_to_increment&quot;, NewConfig.Settings.AskToIncrement);
+             Settings.SetAttribute(&quot;language&quot;, NewConfig.Settings.Language.c_str());
+<span class="gu">@@ -478,6 +487,8 @@</span>
+ 
+     VersionEditorDialog.SetAuto(GetConfig().Settings.Autoincrement);
+     VersionEditorDialog.SetDates(GetConfig().Settings.DateDeclarations);
+<span class="gi">+    // GJH 03/03/10 Added manifest updating.</span>
+<span class="gi">+    VersionEditorDialog.SetManifest(GetConfig().Settings.UpdateManifest);</span>
+ 
+     VersionEditorDialog.SetSvn(GetConfig().Settings.Svn);
+     VersionEditorDialog.SetSvnDirectory(cbC2U(GetConfig().Settings.SvnDirectory.c_str()));
+<span class="gu">@@ -513,6 +524,8 @@</span>
+     GetConfig().Scheme.BuildTimesToIncrementMinor = VersionEditorDialog.GetBuildTimesToMinorIncrement();
+     GetConfig().Settings.Autoincrement = VersionEditorDialog.GetAuto();
+     GetConfig().Settings.DateDeclarations = VersionEditorDialog.GetDates();
+<span class="gi">+    // GJH 03/03/10 Added manifest updating.</span>
+<span class="gi">+    GetConfig().Settings.UpdateManifest = VersionEditorDialog.GetManifest();</span>
+     GetConfig().Settings.AskToIncrement = VersionEditorDialog.GetCommitAsk();
+     GetConfig().Settings.DoAutoIncrement = VersionEditorDialog.GetCommit();
+     GetConfig().Settings.Language = cbU2C(VersionEditorDialog.GetLanguage());
+<span class="gu">@@ -646,7 +659,7 @@</span>
+     {
+         wxString revision,date;
+         if (!QuerySvn(cbC2U(GetConfig().Settings.SvnDirectory.c_str()), revision, date))
+<span class="gd">-            wxMessageBox(_(&quot;Svn configuration files not found.\nVerify the Autoversioning svn directory.&quot;),_(&quot;Error&quot;),wxICON_ERROR);</span>
+<span class="gi">+            wxMessageBox(_(&quot;Possible Causes:\n-You don&#39;t have SVN installed.\n-Incompatible version of SVN.\n-SVN configuration files not found.\n\nVerify the Autoversioning SVN directory.&quot;),_(&quot;SVN Error&quot;),wxICON_ERROR);</span>
+         headerOutput &lt;&lt; _T(&quot;\t&quot;) &lt;&lt; _T(&quot;\n&quot;);
+         headerOutput &lt;&lt; _T(&quot;\t&quot;) &lt;&lt; _T(&quot;//SVN Version&quot;) &lt;&lt; _T(&quot;\n&quot;);
+         headerOutput &lt;&lt; _T(&quot;\t&quot;) &lt;&lt; _T(&quot;static const char &quot;) &lt;&lt; prefix &lt;&lt; _T(&quot;SVN_REVISION[] = &quot;) &lt;&lt; _T(&quot;\&quot;&quot;) + revision + _T(&quot;\&quot;&quot;)&lt;&lt; _T(&quot;;\n&quot;);
+<span class="gu">@@ -675,6 +688,59 @@</span>
+     m_timerStatus-&gt;Start(1000);
+ }
+ 
+<span class="gi">+/*! \brief     Update manifest.xml with the latest version string.</span>
+<span class="gi">+ * \author     Gary Harris</span>
+<span class="gi">+ * \date        03/03/10</span>
+<span class="gi">+ *</span>
+<span class="gi">+ * \return void</span>
+<span class="gi">+ *</span>
+<span class="gi">+ * This function inserts a new version string into the project&#39;s manifest.xml.</span>
+<span class="gi">+ * It searches for the line containing the XML string &quot;&lt;Value version=&quot;X.Y.ZZZ&quot; /&gt;&quot;</span>
+<span class="gi">+ * and builds and inserts a new version string based on the current AutoVersion</span>
+<span class="gi">+ * values.</span>
+<span class="gi">+ * \note I first used TinyXML to do the XML work but it trashes some text when rewriting the file,</span>
+<span class="gi">+ * in particular text in the &quot;thanks to&quot; field that is on lines following the value field. This is usually</span>
+<span class="gi">+ * done to wrap text onto subsequent lines in the plug-in&#39;s About dialogue and is probably not strictly</span>
+<span class="gi">+ * valid XML. TinyXML seems not to like text on following lines.</span>
+<span class="gi">+ */</span>
+<span class="gi">+void AutoVersioning::UpdateManifest()</span>
+<span class="gi">+{</span>
+<span class="gi">+    wxFileName fnManifest(Manager::Get()-&gt;GetProjectManager()-&gt;GetActiveProject()-&gt;GetCommonTopLevelPath() + wxT(&quot;manifest.xml&quot;));</span>
+<span class="gi">+    wxString sPathManifest(fnManifest.GetFullPath());</span>
+<span class="gi">+    if (wxFile::Exists(sPathManifest))</span>
+<span class="gi">+    {</span>
+<span class="gi">+        wxTextFile fileManifest(sPathManifest);</span>
+<span class="gi">+        fileManifest.Open();</span>
+<span class="gi">+        if(fileManifest.IsOpened()){</span>
+<span class="gi">+            fileManifest.GetFirstLine();</span>
+<span class="gi">+            wxString sLine;</span>
+<span class="gi">+            size_t i;</span>
+<span class="gi">+            while(!(sLine = fileManifest.GetNextLine()).IsEmpty())</span>
+<span class="gi">+            {</span>
+<span class="gi">+                if(sLine.Find(wxT(&quot;&lt;Value</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">cryogen 2010-02-03 06:57:09</div>

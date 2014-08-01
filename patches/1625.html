@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,151 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/cbeditor.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/cbeditor.cpp    (revision 3196)</span>
+<span class="gi">+++ src/sdk/cbeditor.cpp    (working copy)</span>
+<span class="gu">@@ -1447,21 +1447,31 @@</span>
+         return false;
+     }
+
+<span class="gd">-    // set this once; the debugger won&#39;t change without a restart</span>
+<span class="gd">-    static cbDebuggerPlugin* debugger = 0;</span>
+<span class="gd">-    if (!debugger)</span>
+<span class="gi">+// Notify debugger plugins</span>
+<span class="gi">+    PluginsArray arr = Manager::Get()-&gt;GetPluginManager()-&gt;GetOffersFor(ptDebugger);</span>
+<span class="gi">+    if (!arr.GetCount())</span>
+<span class="gi">+        return false;</span>
+<span class="gi">+    bool accepted=false;</span>
+<span class="gi">+    for(size_t i=0;i&lt;arr.GetCount();i++)</span>
+     {
+<span class="gd">-        PluginsArray arr = Manager::Get()-&gt;GetPluginManager()-&gt;GetOffersFor(ptDebugger);</span>
+<span class="gd">-        if (!arr.GetCount())</span>
+<span class="gd">-            return false;</span>
+<span class="gd">-        debugger = (cbDebuggerPlugin*)arr[0];</span>
+<span class="gi">+        cbDebuggerPlugin* debugger = (cbDebuggerPlugin*)arr[i];</span>
+         if (!debugger)
+<span class="gd">-            return false;</span>
+<span class="gi">+            continue; //kinda scary if this isn&#39;t a debugger? perhaps this should be a logged error??</span>
+<span class="gi">+        if (debugger-&gt;AddBreakpoint(m_Filename, line))</span>
+<span class="gi">+        {</span>
+<span class="gi">+            accepted=true;</span>
+<span class="gi">+        }</span>
+     }
+<span class="gd">-</span>
+<span class="gd">-    if (debugger-&gt;AddBreakpoint(m_Filename, line))</span>
+<span class="gi">+// If at least one breakpoint changed, return true</span>
+<span class="gi">+// (could still cause problems if one debugger previously responded to add but another</span>
+<span class="gi">+// now responds to remove of that bp - hopefully the debuggers are coded sufficiently well</span>
+<span class="gi">+// that this doesn&#39;t happen)</span>
+<span class="gi">+    if(accepted)</span>
+<span class="gi">+    {</span>
+         MarkerToggle(BREAKPOINT_MARKER, line);
+<span class="gd">-    return true;</span>
+<span class="gi">+        return true;</span>
+<span class="gi">+    }</span>
+<span class="gi">+    return false;</span>
+ }
+
+ bool cbEditor::RemoveBreakpoint(int line, bool notifyDebugger)
+<span class="gu">@@ -1477,21 +1487,26 @@</span>
+         return false;
+     }
+
+<span class="gd">-    // set this once; the debugger won&#39;t change without a restart</span>
+<span class="gd">-    static cbDebuggerPlugin* debugger = 0;</span>
+<span class="gd">-    if (!debugger)</span>
+<span class="gi">+    PluginsArray arr = Manager::Get()-&gt;GetPluginManager()-&gt;GetOffersFor(ptDebugger);</span>
+<span class="gi">+    if (!arr.GetCount())</span>
+<span class="gi">+        return false;</span>
+<span class="gi">+    bool accepted=false;</span>
+<span class="gi">+    for(size_t i=0;i&lt;arr.GetCount();i++)</span>
+     {
+<span class="gd">-        PluginsArray arr = Manager::Get()-&gt;GetPluginManager()-&gt;GetOffersFor(ptDebugger);</span>
+<span class="gd">-        if (!arr.GetCount())</span>
+<span class="gd">-            return false;</span>
+<span class="gd">-        debugger = (cbDebuggerPlugin*)arr[0];</span>
+<span class="gi">+        cbDebuggerPlugin* debugger = (cbDebuggerPlugin*)arr[i];</span>
+         if (!debugger)
+<span class="gd">-            return false;</span>
+<span class="gi">+            continue; //kinda scary if this isn&#39;t a debugger? perhaps this should be a logged error??</span>
+<span class="gi">+        if (debugger-&gt;RemoveBreakpoint(m_Filename, line))</span>
+<span class="gi">+        {</span>
+<span class="gi">+            accepted=true;</span>
+<span class="gi">+        }</span>
+     }
+<span class="gd">-</span>
+<span class="gd">-    if (debugger-&gt;RemoveBreakpoint(m_Filename, line))</span>
+<span class="gi">+    if(accepted)</span>
+<span class="gi">+    {</span>
+         MarkerToggle(BREAKPOINT_MARKER, line);
+<span class="gd">-    return true;</span>
+<span class="gi">+        return true;</span>
+<span class="gi">+    }</span>
+<span class="gi">+    return false;</span>
+ }
+
+ void cbEditor::ToggleBreakpoint(int line, bool notifyDebugger)
+<span class="gu">@@ -1507,17 +1522,24 @@</span>
+     PluginsArray arr = Manager::Get()-&gt;GetPluginManager()-&gt;GetOffersFor(ptDebugger);
+     if (!arr.GetCount())
+         return;
+<span class="gd">-    cbDebuggerPlugin* debugger = (cbDebuggerPlugin*)arr[0];</span>
+<span class="gd">-    if (HasBreakpoint(line))</span>
+<span class="gi">+    bool toggle=false;</span>
+<span class="gi">+    for(size_t i=0;i&lt;arr.GetCount();i++)</span>
+     {
+<span class="gd">-        if (debugger-&gt;RemoveBreakpoint(m_Filename, line))</span>
+<span class="gd">-            MarkerToggle(BREAKPOINT_MARKER, line);</span>
+<span class="gi">+        cbDebuggerPlugin* debugger = (cbDebuggerPlugin*)arr[i];</span>
+<span class="gi">+        if (HasBreakpoint(line))</span>
+<span class="gi">+        {</span>
+<span class="gi">+            if (debugger-&gt;RemoveBreakpoint(m_Filename, line))</span>
+<span class="gi">+                toggle=true;</span>
+<span class="gi">+        }</span>
+<span class="gi">+        else</span>
+<span class="gi">+        {</span>
+<span class="gi">+            if (debugger-&gt;AddBreakpoint(m_Filename, line))</span>
+<span class="gi">+                toggle=true;</span>
+<span class="gi">+        }</span>
+     }
+<span class="gd">-    else</span>
+<span class="gd">-    {</span>
+<span class="gd">-        if (debugger-&gt;AddBreakpoint(m_Filename, line))</span>
+<span class="gd">-            MarkerToggle(BREAKPOINT_MARKER, line);</span>
+<span class="gd">-    }</span>
+<span class="gi">+    if(toggle)</span>
+<span class="gi">+        MarkerToggle(BREAKPOINT_MARKER, line);</span>
+<span class="gi">+    return;</span>
+ }
+
+ bool cbEditor::HasBreakpoint(int line) const
+<span class="gu">@@ -2255,23 +2277,18 @@</span>
+             m_pData-&gt;SetLineNumberColWidth();
+         }
+
+<span class="gd">-        // get hold of debugger plugin</span>
+<span class="gd">-        static cbDebuggerPlugin* debugger = 0;</span>
+<span class="gd">-        // because the debugger plugin will *not* change throughout the</span>
+<span class="gd">-        // program&#39;s lifetime, we can speed things up by keeping it in a static</span>
+<span class="gd">-        // local variable...</span>
+<span class="gd">-        if (!debugger)</span>
+<span class="gi">+        // NB: I don&#39;t think polling for each debugger every time will slow things down enough</span>
+<span class="gi">+        // to worry about unless there are automated tasks that call this routine regularly</span>
+<span class="gi">+        PluginsArray arr = Manager::Get()-&gt;GetPluginManager()-&gt;GetOffersFor(ptDebugger);</span>
+<span class="gi">+        int startline = m_pControl-&gt;LineFromPosition(event.GetPosition());</span>
+<span class="gi">+        if (!arr.GetCount())</span>
+<span class="gi">+            return;</span>
+<span class="gi">+        for(size_t i=0;i&lt;arr.GetCount();i++)</span>
+         {
+<span class="gd">-            PluginsArray arr = Manager::Get()-&gt;GetPluginManager()-&gt;GetOffersFor(ptDebugger);</span>
+<span class="gd">-            if (arr.GetCount())</span>
+<span class="gd">-                debugger = (cbDebuggerPlugin*)arr[0];</span>
+<span class="gi">+            cbDebuggerPlugin* debugger = (cbDebuggerPlugin*)arr[i];</span>
+<span class="gi">+            debugger-&gt;Edito</span>
+<em><strong>file truncated...</strong></em>
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">dmoore 2006-11-07 21:02:32</div>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,105 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/contrib/EditorTweaks/EditorTweaks.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/EditorTweaks/EditorTweaks.cpp    (revision 8623)</span>
+<span class="gi">+++ src/plugins/contrib/EditorTweaks/EditorTweaks.cpp    (working copy)</span>
+<span class="gu">@@ -69,6 +69,7 @@</span>
+ int id_et_align_auto          = wxNewId();
+ int id_et_SuppressInsertKey   = wxNewId();
+ int id_et_ConvertBraces       = wxNewId();
+<span class="gi">+int id_et_ScrollTimer         = wxNewId();</span>
+ 
+ // events handling
+ BEGIN_EVENT_TABLE(EditorTweaks, cbPlugin)
+<span class="gu">@@ -117,10 +118,13 @@</span>
+     EVT_MENU(id_et_ConvertBraces,     EditorTweaks::OnConvertBraces)
+     EVT_MENU(id_et_align_others,      EditorTweaks::OnAlignOthers)
+     EVT_MENU(id_et_align_auto,        EditorTweaks::OnAlignAuto)
+<span class="gi">+</span>
+<span class="gi">+    EVT_TIMER(id_et_ScrollTimer, EditorTweaks::OnScrollTimer)</span>
+ END_EVENT_TABLE()
+ 
+ // constructor
+<span class="gd">-EditorTweaks::EditorTweaks()</span>
+<span class="gi">+EditorTweaks::EditorTweaks() :</span>
+<span class="gi">+    m_scrollTimer(this, id_et_ScrollTimer)</span>
+ {
+     // Make sure our resources are available.
+     // In the generated boilerplate code we have no resources but when
+<span class="gu">@@ -1181,7 +1185,7 @@</span>
+     return found_lines;
+ }
+ 
+<span class="gd">-void EditorTweaks::DoBufferEditorPos(int delta)</span>
+<span class="gi">+void EditorTweaks::DoBufferEditorPos(int delta, bool isScrollTimer)</span>
+ {
+     if (m_buffer_caret == -1)
+         m_buffer_caret = Manager::Get()-&gt;GetConfigManager(wxT(&quot;EditorTweaks&quot;))-&gt;ReadInt(wxT(&quot;/buffer_caret&quot;), 4);
+<span class="gu">@@ -1193,12 +1197,31 @@</span>
+     cbStyledTextCtrl* stc = ed-&gt;GetControl();
+     if (!stc || stc-&gt;AutoCompActive() || stc-&gt;LinesOnScreen() &lt; 10) // ignore small editors
+         return;
+<span class="gd">-    const int dist = stc-&gt;VisibleFromDocLine(stc-&gt;GetCurrentLine()) + delta - stc-&gt;GetFirstVisibleLine();</span>
+<span class="gi">+    const int firstVisibleLine = stc-&gt;GetFirstVisibleLine();</span>
+<span class="gi">+    const int dist = stc-&gt;VisibleFromDocLine(stc-&gt;GetCurrentLine()) + delta - firstVisibleLine;</span>
+     if (dist &lt; 0 || dist &gt; stc-&gt;LinesOnScreen()) // caret is off screen (see bug #18795)
+<span class="gi">+    {</span>
+<span class="gi">+        if (!isScrollTimer &amp;&amp; !m_scrollTimer.IsRunning())</span>
+<span class="gi">+            m_scrollTimer.Start(5, wxTIMER_ONE_SHOT); // check to see if we moved into place</span>
+         return;
+<span class="gi">+    }</span>
+     const int buffer = (m_buffer_caret &gt; 4 ? (stc-&gt;LinesOnScreen() &gt;&gt; 1) - 2 : m_buffer_caret);
+<span class="gi">+    int remaining = 0;</span>
+     if (dist &lt; buffer)
+<span class="gd">-        stc-&gt;LineScroll(0, -1); // scroll up</span>
+<span class="gi">+    {</span>
+<span class="gi">+        remaining = buffer - dist - 1;</span>
+<span class="gi">+        stc-&gt;LineScroll(0, (remaining &gt; 3 ? -2 : -1)); // scroll up</span>
+<span class="gi">+    }</span>
+     else if (dist &gt;= stc-&gt;LinesOnScreen() - buffer)
+<span class="gd">-        stc-&gt;LineScroll(0, 1); // scroll down</span>
+<span class="gi">+    {</span>
+<span class="gi">+        remaining = dist + buffer - stc-&gt;LinesOnScreen();</span>
+<span class="gi">+        stc-&gt;LineScroll(0, (remaining &gt; 3 ? 2 : 1)); // scroll down</span>
+<span class="gi">+    }</span>
+<span class="gi">+    if (!m_scrollTimer.IsRunning() &amp;&amp; remaining &gt; 0 &amp;&amp; firstVisibleLine != stc-&gt;GetFirstVisibleLine())</span>
+<span class="gi">+        m_scrollTimer.Start(4 + (30 / remaining), wxTIMER_ONE_SHOT); // smooth scroll required lines</span>
+ }
+<span class="gi">+</span>
+<span class="gi">+void EditorTweaks::OnScrollTimer(wxTimerEvent&amp; WXUNUSED(event))</span>
+<span class="gi">+{</span>
+<span class="gi">+    DoBufferEditorPos(0, true);</span>
+<span class="gi">+}</span>
+<span class="gh">Index: src/plugins/contrib/EditorTweaks/EditorTweaks.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/contrib/EditorTweaks/EditorTweaks.h    (revision 8623)</span>
+<span class="gi">+++ src/plugins/contrib/EditorTweaks/EditorTweaks.h    (working copy)</span>
+<span class="gu">@@ -136,17 +136,19 @@</span>
+         void AlignToString(const wxString AlignmentString);
+         wxString GetPadding(const wxString&amp; Padding, const int Count);
+         bool GetSelectionLines(int&amp; LineStart, int&amp; LineEnd);
+<span class="gd">-        void DoBufferEditorPos(int delta = 0);</span>
+<span class="gi">+        void DoBufferEditorPos(int delta = 0, bool isScrollTimer = false);</span>
+<span class="gi">+        void OnScrollTimer(wxTimerEvent&amp; event);</span>
+ 
+         std::vector&lt;AlignerMenuEntry&gt; AlignerMenuEntries;
+ 
+     private:
+<span class="gd">-        int m_EditorHookId;</span>
+<span class="gi">+        int  m_EditorHookId;</span>
+         bool m_suppress_insert;
+         bool m_convert_braces;
+         int  m_buffer_caret;
+         wxMenu *m_tweakmenu;
+         wxMenuItem *m_tweakmenuitem;
+<span class="gi">+        wxTimer m_scrollTimer;</span>
+ 
+         DECLARE_EVENT_TABLE();
+ };
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">alpha0010 2012-11-26 00:26:07</div>

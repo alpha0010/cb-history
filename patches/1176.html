@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,58 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/sdk/selecttargetdlg.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/selecttargetdlg.cpp (revision 2639)</span>
+<span class="gi">+++ src/sdk/selecttargetdlg.cpp (working copy)</span>
+<span class="gu">@@ -117,7 +117,17 @@</span>
+         ProjectBuildTarget* target = m_pProject-&gt;GetBuildTarget(m_Selected);
+         if (target)
+         {
+<span class="gd">-            target-&gt;SetExecutionParameters(XRCCTRL(*this, &quot;txtParams&quot;, wxTextCtrl)-&gt;GetValue());</span>
+<span class="gi">+               /* Search all &#39;\n&#39; in the program-parameters and replace them by</span>
+<span class="gi">+                  &#39; &#39;. This is necessary because a multiline text control may add</span>
+<span class="gi">+                  &#39;\n&#39; to the text but these characters must not be part of the</span>
+<span class="gi">+                  parameters when executing the program. */</span>
+<span class="gi">+               wxString execution_parameters = XRCCTRL(*this, &quot;txtParams&quot;, wxTextCtrl)-&gt;GetValue();</span>
+<span class="gi">+               wxString::size_type pos = 0;</span>
+<span class="gi">+</span>
+<span class="gi">+               while ((pos = execution_parameters.find(&#39;\n&#39;, pos)) != wxString::npos)</span>
+<span class="gi">+                               execution_parameters[pos] = &#39; &#39;;</span>
+<span class="gi">+</span>
+<span class="gi">+            target-&gt;SetExecutionParameters(execution_parameters);</span>
+             target-&gt;SetHostApplication(XRCCTRL(*this, &quot;txtHostApp&quot;, wxTextCtrl)-&gt;GetValue());
+         }
+     }
+<span class="gh">Index: src/sdk/resources/select_target.xrc</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/sdk/resources/select_target.xrc (revision 2639)</span>
+<span class="gi">+++ src/sdk/resources/select_target.xrc (working copy)</span>
+<span class="gu">@@ -1,7 +1,7 @@</span>
+ &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+ &lt;resource&gt;
+   &lt;object class=&quot;wxDialog&quot; name=&quot;dlgSelectTarget&quot;&gt;
+<span class="gd">-    &lt;title&gt;Select target&lt;/title&gt;</span>
+<span class="gi">+     &lt;title&gt;Select target&lt;/title&gt;</span>
+     &lt;centered&gt;1&lt;/centered&gt;
+     &lt;style&gt;wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxRESIZE_BOX&lt;/style&gt;
+     &lt;object class=&quot;wxBoxSizer&quot;&gt;
+<span class="gu">@@ -30,9 +30,12 @@</span>
+         &lt;border&gt;8&lt;/border&gt;
+       &lt;/object&gt;
+       &lt;object class=&quot;sizeritem&quot;&gt;
+<span class="gd">-        &lt;object class=&quot;wxTextCtrl&quot; name=&quot;txtParams&quot;/&gt;</span>
+<span class="gi">+        &lt;object class=&quot;wxTextCtrl&quot; name=&quot;txtParams&quot;&gt;</span>
+<span class="gi">+          &lt;style&gt;wxTE_MULTILINE&lt;/style&gt;</span>
+<span class="gi">+               &lt;/object&gt;</span>
+         &lt;flag&gt;wxLEFT|wxRIGHT|wxEXPAND&lt;/flag&gt;
+         &lt;border&gt;8&lt;/border&gt;
+<span class="gi">+        &lt;minsize&gt;240,70&lt;/minsize&gt;</span>
+       &lt;/object&gt;
+       &lt;object class=&quot;sizeritem&quot;&gt;
+         &lt;object class=&quot;wxStaticText&quot;&gt;
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">dermeister 2006-06-30 10:04:59</div>

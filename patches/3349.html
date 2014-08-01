@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 
+    <link rel="stylesheet" href="../pygments.css">
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -60,6 +62,145 @@
           </dl>
         </div>
       </div>
+      <div class="highlight"><pre class="pre-scrollable"><span class="gh">Index: src/plugins/codecompletion/nativeparser.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/nativeparser.cpp    (revision 8449)</span>
+<span class="gi">+++ src/plugins/codecompletion/nativeparser.cpp    (working copy)</span>
+<span class="gu">@@ -849,7 +849,7 @@</span>
+     return MarkItemsByAI(&amp;searchData, result, reallyUseAI, isPrefix, caseSensitive, caretPos);
+ }
+ 
+<span class="gd">-void NativeParser::GetCallTips(int chars_per_line, wxArrayString &amp;items, int&amp; typedCommas)</span>
+<span class="gi">+void NativeParser::GetCallTips(int chars_per_line, wxArrayString &amp;items, int&amp; typedCommas, int pos)</span>
+ {
+     items.Clear();
+     typedCommas = 0;
+<span class="gu">@@ -865,7 +865,8 @@</span>
+     TRACE(_T(&quot;NativeParser::GetCallTips()&quot;));
+ 
+     ccSearchData searchData = { ed-&gt;GetControl(), ed-&gt;GetFilename() };
+<span class="gd">-    int pos = searchData.control-&gt;GetCurrentPos();</span>
+<span class="gi">+    if (pos == wxNOT_FOUND)</span>
+<span class="gi">+        pos = searchData.control-&gt;GetCurrentPos();</span>
+     int nest = 0;
+     while (--pos &gt; 0)
+     {
+<span class="gh">Index: src/plugins/codecompletion/codecompletion.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/codecompletion.h    (revision 8449)</span>
+<span class="gi">+++ src/plugins/codecompletion/codecompletion.h    (working copy)</span>
+<span class="gu">@@ -196,6 +196,7 @@</span>
+ 
+     /** show code suggestion list*/
+     void DoCodeComplete();
+<span class="gi">+    void DoShowCallTip(int caretPos = wxNOT_FOUND);</span>
+ 
+     /** ContextMenu-&gt;Insert-&gt; declaration/implementation*/
+     int DoClassMethodDeclImpl();
+<span class="gh">Index: src/plugins/codecompletion/codecompletion.cpp</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/codecompletion.cpp    (revision 8449)</span>
+<span class="gi">+++ src/plugins/codecompletion/codecompletion.cpp    (working copy)</span>
+<span class="gu">@@ -1005,6 +1005,11 @@</span>
+ 
+ void CodeCompletion::ShowCallTip()
+ {
+<span class="gi">+    DoShowCallTip();</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+<span class="gi">+void CodeCompletion::DoShowCallTip(int caretPos)</span>
+<span class="gi">+{</span>
+     if (!IsAttached() || !m_InitDone)
+         return;
+ 
+<span class="gu">@@ -1021,7 +1026,9 @@</span>
+         return;
+ 
+     // calculate the size of the calltips window
+<span class="gd">-    int pos = ed-&gt;GetControl()-&gt;GetCurrentPos();</span>
+<span class="gi">+    int pos = caretPos;</span>
+<span class="gi">+    if (pos == wxNOT_FOUND)</span>
+<span class="gi">+        pos = ed-&gt;GetControl()-&gt;GetCurrentPos();</span>
+     wxPoint p = ed-&gt;GetControl()-&gt;PointFromPosition(pos); // relative point
+     int pixelWidthPerChar = ed-&gt;GetControl()-&gt;TextWidth(wxSCI_STYLE_LINENUMBER, _T(&quot;W&quot;));
+     int maxCalltipLineSizeInChars = (ed-&gt;GetSize().x - p.x) / pixelWidthPerChar;
+<span class="gu">@@ -1041,7 +1048,7 @@</span>
+     int start = 0, end = 0, count = 0, typedCommas = 0;
+ 
+     wxArrayString items;
+<span class="gd">-    m_NativeParser.GetCallTips(maxCalltipLineSizeInChars, items, typedCommas);</span>
+<span class="gi">+    m_NativeParser.GetCallTips(maxCalltipLineSizeInChars, items, typedCommas, caretPos);</span>
+     std::set&lt; wxString, std::less&lt;wxString&gt; &gt; unique_tips; // check against this before inserting a new tip in the list
+     wxString definition;
+     for (unsigned int i = 0; i &lt; items.GetCount(); ++i)
+<span class="gu">@@ -2514,6 +2521,13 @@</span>
+         return;
+     }
+ 
+<span class="gi">+    int pos = ed-&gt;GetControl()-&gt;PositionFromPointClose(event.GetX(), event.GetY());</span>
+<span class="gi">+    if (pos &lt; 0 || pos &gt;= ed-&gt;GetControl()-&gt;GetLength())</span>
+<span class="gi">+    {</span>
+<span class="gi">+        event.Skip();</span>
+<span class="gi">+        return;</span>
+<span class="gi">+    }</span>
+<span class="gi">+</span>
+     // ignore comments, strings, preprocesor, etc
+     int style = event.GetInt();
+     if (   (style != wxSCI_C_DEFAULT)
+<span class="gu">@@ -2522,17 +2536,11 @@</span>
+         &amp;&amp; (style != wxSCI_C_WORD2)
+         &amp;&amp; (style != wxSCI_C_GLOBALCLASS) )
+     {
+<span class="gi">+        DoShowCallTip(pos);</span>
+         event.Skip();
+         return;
+     }
+ 
+<span class="gd">-    int pos = ed-&gt;GetControl()-&gt;PositionFromPointClose(event.GetX(), event.GetY());</span>
+<span class="gd">-    if (pos &lt; 0 || pos &gt;= ed-&gt;GetControl()-&gt;GetLength())</span>
+<span class="gd">-    {</span>
+<span class="gd">-        event.Skip();</span>
+<span class="gd">-        return;</span>
+<span class="gd">-    }</span>
+<span class="gd">-</span>
+     TRACE(_T(&quot;OnEditorTooltip&quot;));
+ 
+     TokenIdxSet result;
+<span class="gu">@@ -2572,7 +2580,9 @@</span>
+ 
+         CC_LOCKER_TRACK_TT_MTX_UNLOCK(s_TokenTreeMutex)
+ 
+<span class="gd">-        if (!calltip.IsEmpty())</span>
+<span class="gi">+        if (calltip.IsEmpty())</span>
+<span class="gi">+            DoShowCallTip(pos);</span>
+<span class="gi">+        else</span>
+         {
+             calltip.RemoveLast(); // last \n
+ 
+<span class="gu">@@ -2593,6 +2603,8 @@</span>
+             TRACE(calltip);
+         }
+     }
+<span class="gi">+    else</span>
+<span class="gi">+        DoShowCallTip(pos);</span>
+ 
+     event.Skip();
+ }
+<span class="gh">Index: src/plugins/codecompletion/nativeparser.h</span>
+<span class="gh">===================================================================</span>
+<span class="gd">--- src/plugins/codecompletion/nativeparser.h    (revision 8449)</span>
+<span class="gi">+++ src/plugins/codecompletion/nativeparser.h    (working copy)</span>
+<span class="gu">@@ -202,7 +202,7 @@</span>
+      * @param items array to store result in.
+      * @param typedCommas how much comma characters the user has typed in the current line before the cursor.
+      */
+<span class="gd">-    void GetCallTips(int chars_per_line, wxArrayString&amp; items, int &amp;typedCommas);</span>
+<span class="gi">+    void GetCallTips(int chars_per_line, wxArrayString&amp; items, int &amp;typedCommas, int pos = wxNOT_FOUND);</span>
+ 
+     /** Word start position in the editor
+      * @return position index
+</pre></div>
+
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
         <div class="panel-heading">mortenmacfly 2012-10-12 08:49:49</div>
