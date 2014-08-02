@@ -8,6 +8,7 @@ import math
 import bz2
 import os
 import shutil
+import subprocess
 
 from pygments import highlight
 from pygments.lexers import DiffLexer
@@ -182,6 +183,8 @@ spaceRe = re.compile(ur'        .*\n.*        ', re.DOTALL)
 
 urlRe = re.compile(ur'(((ht|f)tp(s?)\:\/\/)|(www\.))(([a-zA-Z0-9\-\._]+(\.[a-zA-Z0-9\-\._]+)+)|localhost)(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?([\d\w\.\/\%\+\-\=\&amp;\?\:\\\&quot;\'\,\|\~\;]*)')
 
+svnRevRe = re.compile(ur'git-svn-id.*?@(\d+)')
+
 bugRe     = re.compile(ur'bug_id=([0-9]+)')
 featureRe = re.compile(ur'feature_id=([0-9]+)')
 patchRe   = re.compile(ur'patch_id=([0-9]+)')
@@ -300,6 +303,12 @@ for ticket in docTree.getroot():
                 ticketOut["$$STATUS$$"] = "Closed"
                 lastMod = max(lastMod, int(prop.text))
                 ticketOut["$$CLOSE_DATE$$"] = DT.datetime.utcfromtimestamp(int(prop.text)).isoformat(" ")
+                repoStat = ""
+                if not int(ticket.attrib["id"]) in statusDb or not statusDb[int(ticket.attrib["id"])]["status"] in ["Rejected", "Out of date"]:
+                    repoStat = subprocess.check_output(["git", "--git-dir=../codeblocks_sf/.git", "log", "--until", ticketOut["$$CLOSE_DATE$$"], "-1"])
+                revMatch = svnRevRe.search(repoStat)
+                if revMatch:
+                    ticketOut["$$CLOSE_DATE$$"] += ' <a href="http://cb.biplab.in/websvn/log.php?sr=' + revMatch.group(1) + '"><span class="glyphicon glyphicon-link"></span></a>'
             else:
                 ticketOut["$$STATUS$$"] = "Open"
                 ticketOut["$$CLOSE_DATE$$"] = "&nbsp;"
@@ -357,7 +366,7 @@ for ticket in docTree.getroot():
                 hlCode = prop.text.replace("\t", "    ")
                 if len(hlCode) > 5200:
                     hlCode = hlCode[:5000].rstrip() + "\nfile truncated..."
-                ticketOut["$$PATCH$$"] = highlight(hlCode, DiffLexer(), HtmlFormatter().replace('<pre', '<pre class="pre-scrollable"', 1).replace('file truncated...', '<em><strong>file truncated...</strong></em>')
+                ticketOut["$$PATCH$$"] = highlight(hlCode, DiffLexer(), HtmlFormatter()).replace('<pre', '<pre class="pre-scrollable"', 1).replace('file truncated...', '<em><strong>file truncated...</strong></em>')
                 ticketOut["$$PYGMENTS$$"] = '\n\n    <link rel="stylesheet" href="../pygments.css">'
 
     if "HISTORY" not in ticketOut:
