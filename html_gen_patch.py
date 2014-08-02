@@ -304,7 +304,7 @@ for ticket in docTree.getroot():
                 lastMod = max(lastMod, int(prop.text))
                 ticketOut["$$CLOSE_DATE$$"] = DT.datetime.utcfromtimestamp(int(prop.text)).isoformat(" ")
                 repoStat = ""
-                if not int(ticket.attrib["id"]) in statusDb or not statusDb[int(ticket.attrib["id"])]["status"] in ["Rejected", "Out of date"]:
+                if not int(ticket.attrib["id"]) in statusDb or not statusDb[int(ticket.attrib["id"])]["status"] in ["Rejected", "Out of date", "Postponed"]:
                     repoStat = subprocess.check_output(["git", "--git-dir=../codeblocks_sf/.git", "log", "--until", ticketOut["$$CLOSE_DATE$$"], "-1"])
                 revMatch = svnRevRe.search(repoStat)
                 if revMatch:
