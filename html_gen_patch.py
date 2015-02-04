@@ -64,7 +64,7 @@ patchTemplate = r"""<!DOCTYPE html>
           $$SUMMARY$$
           <dl class="dl-horizontal">
             <dt>Download</dt>
-            <dd><a href="$$SHORT_NAME$$.patch">$$SHORT_NAME$$.patch</a></dd>
+            <dd><a href="$$SHORT_NAME$$.patch">$$SHORT_NAME$$.patch</a> ($$PATCH_SIZE$$)</dd>
           </dl>
         </div>
         <div class="col-sm-4">
@@ -359,6 +359,10 @@ for ticket in docTree.getroot():
 
         elif prop.tag == "code": #and prop.text != "InvalidBinaryFile":
             ticketOut["code"] = prop.text
+            if len(prop.text) < 1000:
+                ticketOut["$$PATCH_SIZE$$"] = "%d bytes" % len(prop.text)
+            else:
+                ticketOut["$$PATCH_SIZE$$"] = "%.1f KB" % (len(prop.text) / 1024.0)
             if prop.text == "InvalidBinaryFile":
                 ticketOut["$$PATCH$$"] = "<em>Patch is corrupt.</em>"
                 ticketOut["$$PYGMENTS$$"] = ""
