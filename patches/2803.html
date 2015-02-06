@@ -45,7 +45,7 @@
     <div class="container" role="main">
       <div class="row">
         <div class="col-sm-8">
-          <h3>Patch #2803 <small>2009-07-30 20:48:57</small></h3>
+          <h3>Patch #2803 <small>2009-07-30 20:48</small></h3>
           <h4>techy</h4>
           Faster header/source swapping
           <dl class="dl-horizontal">
@@ -57,7 +57,7 @@
           <dl class="dl-horizontal">
             <dt>Category</dt><dd>Application::Bugfix</dd>
             <dt>Status</dt><dd>Accepted</dd>
-            <dt>Close date</dt><dd>2009-12-31 14:31:07 <a href="http://cb.biplab.in/websvn/log.php?sr=6012"><span class="glyphicon glyphicon-link"></span></a></dd>
+            <dt>Close date</dt><dd>2009-12-31 14:31 <a href="http://cb.biplab.in/websvn/log.php?sr=6012"><span class="glyphicon glyphicon-link"></span></a></dd>
             <dt>Assigned to</dt><dd>mortenmacfly</dd>
           </dl>
         </div>
@@ -210,20 +210,20 @@
 
       <h4 class="page-header">History</h4>
       <div class="panel panel-default">
-        <div class="panel-heading">techy 2009-07-30 21:04:20</div>
+        <div class="panel-heading">techy 2009-07-30 21:04</div>
         <div class="panel-body">
           <p>Right now when swapping header/source, CodeBlocks first builds a list of directories where the header/source might be located and then tries to find it in these directories (with all possibilities of extensions). This is a rather brute-force approach which is terribly slow for projects with lots of directories (it takes like 3 seconds when pressing F11 when the full project I'm developing at work is loaded). Instead, we can first look if we find the file among the opened files (which is quite probable - it is definitely there when pressing F11 for the second time on the same pair of header/source) and then among the project files. I kept the original way of header/source swapping when this method fails (it's up to you if you keep it or decide to remove it). Actually, the directory list for the project is built while the file is being searched in the project files so no time is lost.</p>
           <p>A nice side-effect (actually the original reason why I started looking at the code) is that with this patch the capitalization of extensions doesn't matter. For instance in our project we use .C and .H extensions and the original method just failed to find them because it was searching for .c and .h.</p>
         </div>
       </div>
       <div class="panel panel-default">
-        <div class="panel-heading">mortenmacfly 2009-08-24 06:59:02</div>
+        <div class="panel-heading">mortenmacfly 2009-08-24 06:59</div>
         <div class="panel-body">
           <p>The capitalisation modification is no good, unfortunately. It breaks some projects on Linux, where there is a difference between a file named "file.c" and "file.C". Both can be in one directory. Could you pinpoint me to the part that ignores the case? (I would need to remove that.) Thanks!</p>
         </div>
       </div>
       <div class="panel panel-default">
-        <div class="panel-heading">techy 2009-08-30 21:49:46</div>
+        <div class="panel-heading">techy 2009-08-30 21:49</div>
         <div class="panel-body">
           <pre class="pre-scrollable">Well, I'd really prefer to avoid the original way of swapping headers/sources. What you originally did was:
 
@@ -258,7 +258,7 @@ Please look at the updated patch. There are only three extra lines compared to t
         </div>
       </div>
       <div class="panel panel-default">
-        <div class="panel-heading">mortenmacfly 2009-10-06 09:47:48</div>
+        <div class="panel-heading">mortenmacfly 2009-10-06 09:47</div>
         <div class="panel-body">
           <p>I realised a bug in this patch (that cases C:B to crash).</p>
           <p>Notice this line:</p>
@@ -270,7 +270,7 @@ Please look at the updated patch. There are only three extra lines compared to t
         </div>
       </div>
       <div class="panel panel-default">
-        <div class="panel-heading">techy 2009-11-07 00:21:29</div>
+        <div class="panel-heading">techy 2009-11-07 00:21</div>
         <div class="panel-body">
           <p>(Sorry for late reply, I have been very busy recently.)</p>
           <p>Do you still experience the problem? Do you have a testcase how to reproduce it? It is very strange because when looking into the code there is</p>
@@ -290,7 +290,7 @@ Please look at the updated patch. There are only three extra lines compared to t
         </div>
       </div>
       <div class="panel panel-default">
-        <div class="panel-heading">techy 2009-11-10 23:47:55</div>
+        <div class="panel-heading">techy 2009-11-10 23:47</div>
         <div class="panel-body">
           <p>OK, after looking at Patch #2841and <a href="../bugs/16338.html" data-toggle="tooltip" title="'Swap header / source' issue">Bug #016338</a>, here is a revised version of the previous patch. Basically, there is one more initial step:</p>
           <p>0. Seatch for header/source in the active file's directory</p>
@@ -299,7 +299,7 @@ Please look at the updated patch. There are only three extra lines compared to t
         </div>
       </div>
       <div class="panel panel-default">
-        <div class="panel-heading">mortenmacfly 2009-11-11 14:56:30</div>
+        <div class="panel-heading">mortenmacfly 2009-11-11 14:56</div>
         <div class="panel-body">
           <p>Why did you remove</p>
           <p>ProjectManager::GetHeaderSource(const wxFileName &amp;fname)</p>
@@ -308,19 +308,19 @@ Please look at the updated patch. There are only three extra lines compared to t
         </div>
       </div>
       <div class="panel panel-default">
-        <div class="panel-heading">techy 2009-11-11 16:23:25</div>
+        <div class="panel-heading">techy 2009-11-11 16:23</div>
         <div class="panel-body">
           <p>Hi, I removed it because the function is not needed any more (and it wasn't completely correct because it would find only e.g. "cpp" or "CPP", but not "Cpp"). For project and target include files the header/source search works differently now if you have a closer look.</p>
         </div>
       </div>
       <div class="panel panel-default">
-        <div class="panel-heading">techy 2009-12-20 18:46:00</div>
+        <div class="panel-heading">techy 2009-12-20 18:46</div>
         <div class="panel-body">
           <p>This is a very slightly modified previous version of the patch - we can try to find the file among the open files even if no project is opened - moved this part of the code before we check whether we have a project opened. Apart from that, the patch is unchanged.</p>
         </div>
       </div>
       <div class="panel panel-default">
-        <div class="panel-heading">techy 2009-12-28 16:27:17</div>
+        <div class="panel-heading">techy 2009-12-28 16:27</div>
         <div class="panel-body">
           <p>Ahhh - C++ implicit conversion related bug. There was this code:</p>
           <p>if (wxIsupper(testedFile.GetExt()[0]) == extStartsWithCapital)</p>
@@ -337,14 +337,14 @@ Please look at the updated patch. There are only three extra lines compared to t
         </div>
       </div>
       <div class="panel panel-default">
-        <div class="panel-heading">mortenmacfly 2009-12-28 17:34:39</div>
+        <div class="panel-heading">mortenmacfly 2009-12-28 17:34</div>
         <div class="panel-body">
           <p>Good catch! ;-)</p>
           <p>I am about to commit some of your patches, soon. Probably already today evening if I hopefully find the time. I've quite some patches pending... It's hard to have some spare time these days... :-(</p>
         </div>
       </div>
       <div class="panel panel-default">
-        <div class="panel-heading">techy 2009-12-28 18:17:08</div>
+        <div class="panel-heading">techy 2009-12-28 18:17</div>
         <div class="panel-body">
           <p>Great!</p>
           <p>One more (hopefully last) change - the dialogue saying "The file seems not to exist. Do you want to create it?" when header/source is not found is pretty annoying - most of the time I hit this is when the source file doesn't have its own header file and I have never pressed "Yes" in this dialogue. Therefore I think that "No" should be the default value, which is the only change made in this patch.</p>
