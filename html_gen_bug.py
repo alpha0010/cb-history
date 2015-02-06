@@ -166,7 +166,7 @@ bugListTemplate = r"""<!DOCTYPE html>
 </html>
 """
 
-bugEntryTemplate = r"""<tr><td>$$NUMBER$$</td><td><a href="bugs/$$NUMBER$$.html">$$SUMMARY$$</a></td><td>$$CATEGORY$$</td><td>$$PLATFORM$$</td><td>$$STATUS$$</td><td>$$OPEN_DATE$$</td><td>$$ASSIGNED$$</td><td>$$AUTHOR$$</td></tr>"""
+bugEntryTemplate = r"""<tr><td>$$NUMBER_STAT$$</td><td><a href="bugs/$$NUMBER$$.html">$$SUMMARY$$</a></td><td>$$CATEGORY$$</td><td>$$PLATFORM$$</td><td>$$STATUS$$</td><td>$$OPEN_DATE$$</td><td>$$ASSIGNED$$</td><td>$$AUTHOR$$</td></tr>"""
 
 assignedFilterTemplate = r"""<li><a tabindex="-1" href="$$URL$$">$$NAME$$</a></li>"""
 
@@ -320,12 +320,12 @@ for ticket in docTree.getroot():
                     ticketOut["$$DETAILS$$"] += "<p>" + lineTxt.strip() + "</p>"
 
         elif prop.tag == "date":
-            ticketOut["$$OPEN_DATE$$"] = DT.datetime.utcfromtimestamp(int(prop.text)).isoformat(" ")
+            ticketOut["$$OPEN_DATE$$"] = DT.datetime.utcfromtimestamp(int(prop.text)).isoformat(" ")[:-3]
             lastMod = max(lastMod, int(prop.text))
 
         elif prop.tag == "close_date":
             if int(prop.text) > 0:
-                ticketOut["$$CLOSE_DATE$$"] = DT.datetime.utcfromtimestamp(int(prop.text)).isoformat(" ")
+                ticketOut["$$CLOSE_DATE$$"] = DT.datetime.utcfromtimestamp(int(prop.text)).isoformat(" ")[:-3]
             else:
                 ticketOut["$$CLOSE_DATE$$"] = "&nbsp;"
 
@@ -334,7 +334,7 @@ for ticket in docTree.getroot():
                 ticketOut["HISTORY"] = []
             post = { "$$COMMENTS$$": "",
                      "$$AUTHOR$$": (cgi.escape(userIdDict[ prop[2].text ]) if prop[2].text in userIdDict else "ID_" + prop[2].text),
-                     "$$TIME_STAMP$$": DT.datetime.utcfromtimestamp(int(prop[3].text)).isoformat(" ") }
+                     "$$TIME_STAMP$$": DT.datetime.utcfromtimestamp(int(prop[3].text)).isoformat(" ")[:-3] }
             if len(prop[1].text) > 2000 or "===================================================================" in prop[1].text or spaceRe.search(prop[1].text):
                 lastIdx = 0
                 para = ""
@@ -374,6 +374,9 @@ for ticket in docTree.getroot():
 
     if "HISTORY" not in ticketOut:
         ticketOut["$$HISTORY$$"] = ""
+        ticketOut["$$NUMBER_STAT$$"] = ticketOut["$$NUMBER$$"]
+    else:
+        ticketOut["$$NUMBER_STAT$$"] = '<table style="width:100%%"><tr><td>%s</td><td class="text-right"><span class="badge">%d</span></td></tr></table>' % (ticketOut["$$NUMBER$$"], len(ticketOut["HISTORY"]))
     ticketsOut.append(ticketOut)
 
     debugLimit -= 1

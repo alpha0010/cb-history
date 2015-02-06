@@ -176,7 +176,7 @@ featureListTemplate = r"""<!DOCTYPE html>
 </html>
 """
 
-featureEntryTemplate = r"""<tr><td>$$NUMBER$$</td><td><a href="features/$$NUMBER$$.html">$$SUMMARY$$</a></td><td>$$CATEGORY$$</td><td>$$STATUS$$</td><td>$$OPEN_DATE$$</td><td>$$ASSIGNED$$</td><td>$$AUTHOR$$</td></tr>"""
+featureEntryTemplate = r"""<tr><td>$$NUMBER_STAT$$</td><td><a href="features/$$NUMBER$$.html">$$SUMMARY$$</a></td><td>$$CATEGORY$$</td><td>$$STATUS$$</td><td>$$OPEN_DATE$$</td><td>$$ASSIGNED$$</td><td>$$AUTHOR$$</td></tr>"""
 
 assignedFilterTemplate = r"""<li><a tabindex="-1" href="$$URL$$">$$NAME$$</a></li>"""
 
@@ -427,18 +427,21 @@ for ticket in lookupDb["trackers"]["feature"]["artifacts"]:
                 ticketOut["HISTORY"] = []
             post = { "$$COMMENTS$$": textProc,
                      "$$AUTHOR$$": cgi.escape(comment["submitter"]["nick"]),
-                     "$$TIME_STAMP$$": fromisotime(comment["date"]).isoformat(" ") }
+                     "$$TIME_STAMP$$": fromisotime(comment["date"]).isoformat(" ")[:-3] }
             ticketOut["HISTORY"].append(post)
         else:
             ticketOut["$$DETAILS$$"] = textProc
             ticketOut["$$AUTHOR$$"] = cgi.escape(comment["submitter"]["nick"])
-            ticketOut["$$OPEN_DATE$$"] = fromisotime(comment["date"]).isoformat(" ")
+            ticketOut["$$OPEN_DATE$$"] = fromisotime(comment["date"]).isoformat(" ")[:-3]
     for change in ticket["history"]:
         if change["field"] == "status" and change["new"] != "Open":
-            ticketOut["$$CLOSE_DATE$$"] = fromisotime(change["date"]).isoformat(" ")
+            ticketOut["$$CLOSE_DATE$$"] = fromisotime(change["date"]).isoformat(" ")[:-3]
 
     if "HISTORY" not in ticketOut:
         ticketOut["$$HISTORY$$"] = ""
+        ticketOut["$$NUMBER_STAT$$"] = ticketOut["$$NUMBER$$"]
+    else:
+        ticketOut["$$NUMBER_STAT$$"] = '<table style="width:100%%"><tr><td>%s</td><td class="text-right"><span class="badge">%d</span></td></tr></table>' % (ticketOut["$$NUMBER$$"], len(ticketOut["HISTORY"]))
     if "$$CLOSE_DATE$$" not in ticketOut:
         ticketOut["$$CLOSE_DATE$$"] = "&nbsp;"
     ticketsOut.append(ticketOut)
