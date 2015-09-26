@@ -188,6 +188,7 @@ svnRevRe = re.compile(ur'git-svn-id.*?@(\d+)')
 bugRe     = re.compile(ur'bug_id=([0-9]+)')
 featureRe = re.compile(ur'feature_id=([0-9]+)')
 patchRe   = re.compile(ur'patch_id=([0-9]+)')
+forumsRe  = re.compile(ur'forums\.codeblocks\.org\S+?topic[=,]([0-9]+)')
 
 linkTipDict = {}
 for line in open("data/linkTips.txt"):
@@ -205,6 +206,14 @@ def getMappedUrl(url):
         urlMatch = re.search(patchRe, url)
         if urlMatch:
             return [urlMatch.group(1) + ".html", linkTipDict[urlMatch.group(0)]]
+    if "forums" in url:
+        urlMatch = re.search(forumsRe, url)
+        if urlMatch:
+            key = "forums=" + urlMatch.group(1)
+            if key in linkTipDict:
+                return [url, linkTipDict[key]]
+    if url in linkTipDict:
+        return [url, linkTipDict[url]]
     return [url, ""]
 
 ticketRe = re.compile(ur'\b(patch|bug|features? +requests?|features?|requests?) *(?::|is|fix)? *#? *(\d{3,6})\b', re.IGNORECASE)
