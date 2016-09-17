@@ -22,7 +22,7 @@ patchTemplate = r"""<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Patch $$NUMBER$$ - Code::Blocks History</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css">$$PYGMENTS$$
   </head>
   <body role="document">
     <div class="navbar navbar-inverse" role="navigation">
@@ -357,9 +357,9 @@ for ticket in docTree.getroot():
             else:
                 hlCode = prop.text.replace("\t", "    ")
                 if len(hlCode) > 5200:
-                    hlCode = hlCode[:5000].rstrip() + "\nfile truncated..."
-                ticketOut["$$PATCH$$"] = highlight(hlCode, DiffLexer(), HtmlFormatter()).replace('<pre', '<pre class="pre-scrollable"', 1).replace('file truncated...', '<em><strong>file truncated...</strong></em>')
-                ticketOut["$$PYGMENTS$$"] = '\n\n    <link rel="stylesheet" href="../pygments.css">'
+                    hlCode = hlCode[:5000].rstrip() + "\ndownload for full patch..."
+                ticketOut["$$PATCH$$"] = highlight(hlCode, DiffLexer(), HtmlFormatter()).replace('<pre', '<pre class="pre-scrollable"', 1).replace('download for full patch...', '<em><strong>download for full patch...</strong></em>')
+                ticketOut["$$PYGMENTS$$"] = '\n    <link rel="stylesheet" href="../pygments.css">'
 
     if "HISTORY" not in ticketOut:
         ticketOut["$$HISTORY$$"] = ""
